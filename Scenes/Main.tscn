@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3 uid="uid://m2468013579"]
+
+[ext_resource type="PackedScene" uid="uid://c1234567890" path="res://Scenes/Player.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://p1357924680" path="res://Scenes/Platform.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://d1112223334" path="res://Scenes/PauseMenu.tscn" id="3"]
+[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="4"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector2(960, 300)
+
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="Platform1" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(960, 900)
+
+[node name="Platform2" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(450, 675)
+
+[node name="Platform3" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(1470, 675)
+
+[node name="Platform4" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(960, 450)
+
+[node name="Platform5" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(300, 375)
+
+[node name="Platform6" parent="Platforms" instance=ExtResource("2")]
+position = Vector2(1620, 375)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(960, 540)
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+script = ExtResource("4")
+PlayerPath = NodePath("../Player")
+
+[node name="PauseMenu" parent="." instance=ExtResource("3")]

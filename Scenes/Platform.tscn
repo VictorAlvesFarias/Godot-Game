@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3 uid="uid://p1357924680"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(200, 20)
+
+[node name="Platform" type="StaticBody2D"]
+collision_layer = 1
+collision_mask = 0
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="Sprite" type="Polygon2D" parent="."]
+color = Color(0, 0, 0, 0)
+polygon = PackedVector2Array(-100, -10, 100, -10, 100, 10, -100, 10)
+
+[node name="Border" type="Line2D" parent="Sprite"]
+points = PackedVector2Array(-100, -10, 100, -10, 100, 10, -100, 10, -100, -10)
+width = 3.0
+default_color = Color(1, 1, 1, 1)

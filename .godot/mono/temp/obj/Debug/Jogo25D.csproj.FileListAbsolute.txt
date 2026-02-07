@@ -1,0 +1,17 @@
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\Jogo25D.deps.json
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\Jogo25D.runtimeconfig.json
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\Jogo25D.dll
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\Jogo25D.pdb
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\GodotSharp.dll
+E:\Downloads\TestingGameGodot\.godot\mono\temp\bin\Debug\GodotSharpEditor.dll
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.csproj.AssemblyReference.cache
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.GeneratedMSBuildEditorConfig.editorconfig
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.AssemblyInfoInputs.cache
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.AssemblyInfo.cs
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.csproj.CoreCompileInputs.cache
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.csproj.Up2Date
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.dll
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\refint\Jogo25D.dll
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.pdb
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\Jogo25D.genruntimeconfig.cache
+E:\Downloads\TestingGameGodot\.godot\mono\temp\obj\Debug\ref\Jogo25D.dll
