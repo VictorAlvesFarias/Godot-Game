@@ -12,7 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.5)
+color = Color(0, 0, 0, 1)
 
 [node name="Panel" type="Panel" parent="."]
 anchors_preset = 8
@@ -20,10 +20,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -300.0
-offset_top = -200.0
-offset_right = 300.0
-offset_bottom = 200.0
+offset_left = -200.0
+offset_top = -260.0
+offset_right = 200.0
+offset_bottom = 260.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -34,32 +34,65 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -210.0
-offset_top = -140.0
-offset_right = 210.0
-offset_bottom = 140.0
+offset_left = -180.0
+offset_top = -240.0
+offset_right = 180.0
+offset_bottom = 240.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 25
+theme_override_constants/separation = 15
 
 [node name="Label" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 60
+theme_override_font_sizes/font_size = 42
 text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="FullscreenButton" type="Button" parent="Panel/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "TOGGLE FULLSCREEN"
-
 [node name="ResetButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 22
 text = "RESET"
+
+[node name="NetworkContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NetworkLabel" type="Label" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "MULTIPLAYER"
+horizontal_alignment = 1
+
+[node name="PortInput" type="LineEdit" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Port"
+alignment = 1
+
+[node name="HostButton" type="Button" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "HOST"
+
+[node name="AddressInput" type="LineEdit" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "IP:Port"
+alignment = 1
+
+[node name="ConnectButton" type="Button" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "CONNECT"
+
+[node name="StatusLabel" type="Label" parent="Panel/VBoxContainer/NetworkContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Status: Desconectado"
+horizontal_alignment = 1
 
 [node name="ExitButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 22
 text = "EXIT"

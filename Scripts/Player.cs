@@ -27,6 +27,9 @@ public partial class Player : CharacterBody2D
 
 	// Gravidade do projeto
 	private float gravity;
+	
+	// Multiplayer
+	private MultiplayerSynchronizer sync;
 
 	public override void _Ready()
 	{
@@ -38,10 +41,36 @@ public partial class Player : CharacterBody2D
 		
 		// Carrega a cena do projétil
 		BulletScene = GD.Load<PackedScene>("res://Scenes/Bullet.tscn");
+		
+		// Configurar multiplayer
+		SetupMultiplayer();
+	}
+	
+	private void SetupMultiplayer()
+	{
+		// Criar e configurar MultiplayerSynchronizer
+		sync = new MultiplayerSynchronizer();
+		AddChild(sync);
+		
+		// Configurar propriedades replicadas
+		sync.SetMultiplayerAuthority(GetMultiplayerAuthority());
+		sync.ReplicationConfig = new SceneReplicationConfig();
+		
+		// Adicionar propriedades para sincronização
+		sync.ReplicationConfig.AddProperty(".:position");
+		sync.ReplicationConfig.AddProperty(".:rotation");
+		
+		// Desabilitar processamento se não for o dono
+		SetPhysicsProcess(IsMultiplayerAuthority());
+		SetProcess(IsMultiplayerAuthority());
 	}
 
 	public override void _PhysicsProcess(double delta)
 	{
+		// Só processar física se for o dono deste player
+		if (!IsMultiplayerAuthority())
+			return;
+			
 		Vector2 velocity = Velocity;
 
 		// Sistema de dash
@@ -104,16 +133,26 @@ public partial class Player : CharacterBody2D
 		// Iniciar dash
 		if (Input.IsActionJustPressed("dash") && canDash && !isDashing)
 		{
-			// Determinar direção do dash
+			// Determinar direção do dash (horizontal e vertical)
 			float horizontalDir = Input.GetAxis("move_left", "move_right");
+			float verticalDir = 0;
+			
+			if (Input.IsActionPressed("move_up"))
+			{
+				verticalDir = -1;
+			}
+			else if (Input.IsActionPressed("move_down"))
+			{
+				verticalDir = 1;
+			}
 			
 			// Se não estiver pressionando nenhuma direção, dash para a direita por padrão
-			if (horizontalDir == 0)
+			if (horizontalDir == 0 && verticalDir == 0)
 			{
 				horizontalDir = 1;
 			}
 
-			dashDirection = new Vector2(horizontalDir, 0).Normalized();
+			dashDirection = new Vector2(horizontalDir, verticalDir).Normalized();
 			isDashing = true;
 			canDash = false;
 			dashTimer = 0.0f;
@@ -155,17 +194,27 @@ public partial class Player : CharacterBody2D
 	{
 		if (BulletScene != null)
 		{
-			// Criar instância do projétil
-			Bullet bullet = BulletScene.Instantiate<Bullet>();
-
 			// Obter posição do mouse no mundo
 			Vector2 mousePos = GetGlobalMousePosition();
 
 			// Calcular direção do player para o mouse
 			Vector2 direction = (mousePos - GlobalPosition).Normalized();
 
+			// Chamar RPC para spawnar a bala em todos os clientes
+			Rpc(nameof(SpawnBullet), GlobalPosition, direction);
+		}
+	}
+	
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void SpawnBullet(Vector2 spawnPosition, Vector2 direction)
+	{
+		if (BulletScene != null)
+		{
+			// Criar instância do projétil
+			Bullet bullet = BulletScene.Instantiate<Bullet>();
+
 			// Configurar posição do projétil (50 pixels à frente do player)
-			bullet.GlobalPosition = GlobalPosition + (direction * 50);
+			bullet.GlobalPosition = spawnPosition + (direction * 50);
 			bullet.Direction = direction;
 			bullet.Shooter = this;
 
@@ -176,6 +225,9 @@ public partial class Player : CharacterBody2D
 
 	public void ResetPosition()
 	{
+		if (!IsMultiplayerAuthority())
+			return;
+			
 		GlobalPosition = initialPosition;
 		Velocity = Vector2.Zero;
 	}

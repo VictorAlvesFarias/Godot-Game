@@ -1,11 +1,19 @@
-[gd_scene load_steps=5 format=3 uid="uid://m2468013579"]
+[gd_scene load_steps=8 format=3 uid="uid://m2468013579"]
 
 [ext_resource type="PackedScene" uid="uid://c1234567890" path="res://Scenes/Player.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://p1357924680" path="res://Scenes/Platform.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://d1112223334" path="res://Scenes/PauseMenu.tscn" id="3"]
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="4"]
+[ext_resource type="Script" path="res://Scripts/FullscreenToggle.cs" id="5"]
+[ext_resource type="Script" path="res://Scripts/NetworkManager.cs" id="6"]
 
 [node name="Main" type="Node2D"]
+
+[node name="FullscreenToggle" type="Node" parent="."]
+script = ExtResource("5")
+
+[node name="NetworkManager" type="Node" parent="."]
+script = ExtResource("6")
 
 [node name="Player" parent="." instance=ExtResource("1")]
 position = Vector2(960, 300)
