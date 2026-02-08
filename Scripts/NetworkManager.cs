@@ -73,7 +73,7 @@ public partial class NetworkManager : Node
 	private void RemoveInitialPlayer()
 	{
 		var initialPlayer = spawnParent?.GetNodeOrNull<Player>("Player");
-		if (initialPlayer != null && !initialPlayer.IsInGroup("players"))
+		if (initialPlayer != null)
 		{
 			initialPlayer.QueueFree();
 			GD.Print("Player inicial removido");

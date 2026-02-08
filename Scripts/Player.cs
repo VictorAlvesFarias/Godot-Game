@@ -70,15 +70,16 @@ public partial class Player : CharacterBody2D
 	
 	private void SetupMultiplayer()
 	{
-		// Desabilitar processamento se não for o dono
-		SetPhysicsProcess(IsMultiplayerAuthority());
-		SetProcess(IsMultiplayerAuthority());
+		// Configuração de multiplayer concluída
 	}
 
 	public override void _PhysicsProcess(double delta)
 	{
 		// Só processar física se for o dono deste player
-		if (!IsMultiplayerAuthority())
+		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+		
+		// Se tem multiplayer, verificar se este peer é o dono deste player
+		if (hasMultiplayer && GetMultiplayerAuthority() != Multiplayer.GetUniqueId())
 			return;
 			
 		Vector2 velocity = Velocity;
@@ -261,7 +262,9 @@ public partial class Player : CharacterBody2D
 
 	public void ResetPosition()
 	{
-		if (!IsMultiplayerAuthority())
+		// Verificar se este peer é o dono deste player
+		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+		if (hasMultiplayer && GetMultiplayerAuthority() != Multiplayer.GetUniqueId())
 			return;
 			
 		GlobalPosition = initialPosition;

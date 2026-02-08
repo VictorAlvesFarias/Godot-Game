@@ -70,13 +70,21 @@ public partial class PauseMenu : CanvasLayer
 	{
 		// Encontrar o player local
 		Player localPlayer = null;
+		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
+		
 		var players = GetTree().GetNodesInGroup("players");
 		foreach (Node node in players)
 		{
-			if (node is Player p && p.IsMultiplayerAuthority())
+			if (node is Player p)
 			{
-				localPlayer = p;
-				break;
+				// Se não tem multiplayer, pegar o primeiro player
+				// Se tem multiplayer, pegar apenas o player que pertence a este peer
+				if (!hasMultiplayer || p.GetMultiplayerAuthority() == localPeerId)
+				{
+					localPlayer = p;
+					break;
+				}
 			}
 		}
 		

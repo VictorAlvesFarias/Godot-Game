@@ -34,14 +34,15 @@ public partial class HealthHUD : Label
 		
 		// Se não houver multiplayer ativo, pegar o primeiro player
 		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
 		
 		foreach (Node node in players)
 		{
 			if (node is Player player)
 			{
 				// Se não tem multiplayer, pegar o primeiro player encontrado
-				// Se tem multiplayer, pegar apenas o player com autoridade
-				if (!hasMultiplayer || player.IsMultiplayerAuthority())
+				// Se tem multiplayer, pegar apenas o player que pertence a este peer
+				if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 				{
 					localPlayer = player;
 					break;

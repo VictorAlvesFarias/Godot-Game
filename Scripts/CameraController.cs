@@ -9,7 +9,7 @@ public partial class CameraController : Camera2D
 	{
 		// Garantir que a câmera está ativa
 		Enabled = true;
-		
+
 		// Tentar encontrar o player
 		FindLocalPlayer();
 	}
@@ -21,14 +21,14 @@ public partial class CameraController : Camera2D
 		{
 			FindLocalPlayer();
 		}
-		
+
 		if (player != null && IsInstanceValid(player))
 		{
 			// Seguir o player (a suavização está configurada na cena)
 			GlobalPosition = player.GlobalPosition;
 		}
 	}
-	
+
 	private void FindLocalPlayer()
 	{
 		// Primeiro tentar usar o caminho exportado
@@ -38,20 +38,28 @@ public partial class CameraController : Camera2D
 			if (player != null)
 				return;
 		}
-		
+
 		// Procurar por um player com autoridade de multiplayer (player local)
+		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
+
 		var players = GetTree().GetNodesInGroup("players");
 		foreach (Node node in players)
 		{
-			if (node is Node2D player2D && player2D.IsMultiplayerAuthority())
+			if (node is Node2D player2D)
 			{
-				player = player2D;
-				GD.Print($"Câmera seguindo: {player.Name}");
-				return;
+				// Se não tem multiplayer, pegar o primeiro player
+				// Se tem multiplayer, pegar apenas o player que pertence a este peer
+				if (!hasMultiplayer || player2D.GetMultiplayerAuthority() == localPeerId)
+				{
+					player = player2D;
+					GD.Print($"Câmera seguindo: {player.Name}");
+					return;
+				}
 			}
+
+			// Fallback: procurar qualquer player na cena (para modo single player)
+			player = GetTree().Root.FindChild("Player", true, false) as Node2D;
 		}
-		
-		// Fallback: procurar qualquer player na cena (para modo single player)
-		player = GetTree().Root.FindChild("Player", true, false) as Node2D;
-	}
+	}	
 }
