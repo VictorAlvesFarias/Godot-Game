@@ -41,8 +41,15 @@ public partial class Bullet : Area2D
 		// Ignorar colisão com o player que disparou
 		if (body == Shooter)
 			return;
+		
+		// Verificar se colidiu com um player
+		if (body is Player player)
+		{
+			// Causar dano ao player (RPC para sincronizar)
+			player.Rpc(nameof(Player.TakeDamage), 1);
+		}
 			
-		// Destruir o projétil ao colidir com qualquer outra coisa
+		// Destruir o projétil ao colidir
 		QueueFree();
 	}
 }

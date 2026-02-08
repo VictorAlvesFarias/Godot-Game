@@ -22,6 +22,10 @@ public partial class Player : CharacterBody2D
 	private bool canShoot = true;
 	private float shootTimer = 0.0f;
 
+	// Sistema de vida
+	[Export] public int MaxHealth = 5;
+	public int CurrentHealth { get; private set; }
+
 	// Posição inicial para reset
 	private Vector2 initialPosition;
 
@@ -38,8 +42,14 @@ public partial class Player : CharacterBody2D
 
 	public override void _Ready()
 	{
+		// Adicionar ao grupo de players
+		AddToGroup("players");
+		
 		// Salvar posição inicial
 		initialPosition = GlobalPosition;
+		
+		// Inicializar vida
+		CurrentHealth = MaxHealth;
 		
 		// Obtém a gravidade das configurações do projeto
 		gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
@@ -256,6 +266,10 @@ public partial class Player : CharacterBody2D
 			
 		GlobalPosition = initialPosition;
 		Velocity = Vector2.Zero;
+		
+		// Restaurar vida completa
+		CurrentHealth = MaxHealth;
+		GD.Print($"Player {Name} resetado com {CurrentHealth} corações");
 	}
 	
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -283,6 +297,32 @@ public partial class Player : CharacterBody2D
 		{
 			sprite.DefaultColor = Colors.White;
 			dashFlashTimer = 0.0f;
+		}
+	}
+	
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	public void TakeDamage(int damage)
+	{
+		CurrentHealth -= damage;
+		GD.Print($"Player {Name} recebeu {damage} de dano. Vida restante: {CurrentHealth}/{MaxHealth}");
+		
+		// Efeito visual de dano (flash vermelho)
+		if (sprite != null)
+		{
+			sprite.DefaultColor = new Color(1f, 0.3f, 0.3f); // Vermelho
+			// Criar timer para restaurar cor
+			GetTree().CreateTimer(0.1).Timeout += () => 
+			{
+				if (sprite != null && IsInstanceValid(sprite))
+					sprite.DefaultColor = Colors.White;
+			};
+		}
+		
+		// Verificar se morreu
+		if (CurrentHealth <= 0)
+		{
+			GD.Print($"Player {Name} morreu! Resetando posição...");
+			ResetPosition();
 		}
 	}
 }
