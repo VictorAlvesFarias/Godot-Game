@@ -1,2 +1,29 @@
+# Visual Studio
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Godot
+.import/
+.mono/
+data_*/
+mono_crash.*.json
+
+# .NET
 Microsoft.NET.Sdk.DefaultItems.targets
 _TargetFrameworkDirectories

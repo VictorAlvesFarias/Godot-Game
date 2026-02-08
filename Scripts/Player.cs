@@ -51,24 +51,15 @@ public partial class Player : CharacterBody2D
 		dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
 		sprite = GetNodeOrNull<Line2D>("Sprite/Border");
 		
+		// Obter referência ao MultiplayerSynchronizer
+		sync = GetNodeOrNull<MultiplayerSynchronizer>("MultiplayerSynchronizer");
+		
 		// Configurar multiplayer
 		SetupMultiplayer();
 	}
 	
 	private void SetupMultiplayer()
 	{
-		// Criar e configurar MultiplayerSynchronizer
-		sync = new MultiplayerSynchronizer();
-		AddChild(sync);
-		
-		// Configurar propriedades replicadas
-		sync.SetMultiplayerAuthority(GetMultiplayerAuthority());
-		sync.ReplicationConfig = new SceneReplicationConfig();
-		
-		// Adicionar propriedades para sincronização
-		sync.ReplicationConfig.AddProperty(".:position");
-		sync.ReplicationConfig.AddProperty(".:rotation");
-		
 		// Desabilitar processamento se não for o dono
 		SetPhysicsProcess(IsMultiplayerAuthority());
 		SetProcess(IsMultiplayerAuthority());
@@ -231,18 +222,30 @@ public partial class Player : CharacterBody2D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void SpawnBullet(Vector2 spawnPosition, Vector2 direction)
 	{
-		if (BulletScene != null)
+		if (BulletScene == null)
 		{
-			// Criar instância do projétil
-			Bullet bullet = BulletScene.Instantiate<Bullet>();
+			GD.PrintErr("BulletScene is null!");
+			return;
+		}
+		
+		// Criar instância do projétil
+		Bullet bullet = BulletScene.Instantiate<Bullet>();
 
-			// Configurar posição do projétil (50 pixels à frente do player)
-			bullet.GlobalPosition = spawnPosition + (direction * 50);
-			bullet.Direction = direction;
-			bullet.Shooter = this;
+		// Configurar posição do projétil (50 pixels à frente do player)
+		bullet.GlobalPosition = spawnPosition + (direction * 50);
+		bullet.Direction = direction;
+		bullet.Shooter = this;
 
-			// Adicionar o projétil à cena principal
-			Owner.AddChild(bullet);
+		// Adicionar o projétil à cena principal
+		Node mainScene = GetTree().Root.GetNodeOrNull("Main");
+		if (mainScene != null)
+		{
+			mainScene.AddChild(bullet);
+		}
+		else
+		{
+			GD.PrintErr("Main scene not found!");
+			bullet.QueueFree();
 		}
 	}
 
