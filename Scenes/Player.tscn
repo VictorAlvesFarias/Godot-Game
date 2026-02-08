@@ -21,3 +21,25 @@ polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
 points = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20, -20, -20)
 width = 3.0
 default_color = Color(1, 1, 1, 1)
+
+[node name="DashTrail" type="Line2D" parent="."]
+visible = false
+width = 2.0
+default_color = Color(1, 1, 1, 0.5)
+
+[node name="DashParticles" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 20
+lifetime = 0.4
+one_shot = true
+explosiveness = 0.8
+emission_shape = 1
+emission_sphere_radius = 10.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 100.0
+initial_velocity_max = 200.0
+scale_amount_min = 2.0
+scale_amount_max = 4.0
+color = Color(1, 1, 1, 1)

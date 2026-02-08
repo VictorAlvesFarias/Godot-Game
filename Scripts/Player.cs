@@ -30,6 +30,11 @@ public partial class Player : CharacterBody2D
 	
 	// Multiplayer
 	private MultiplayerSynchronizer sync;
+	
+	// Efeitos visuais
+	private CpuParticles2D dashParticles;
+	private Line2D sprite;
+	private float dashFlashTimer = 0.0f;
 
 	public override void _Ready()
 	{
@@ -41,6 +46,10 @@ public partial class Player : CharacterBody2D
 		
 		// Carrega a cena do projétil
 		BulletScene = GD.Load<PackedScene>("res://Scenes/Bullet.tscn");
+		
+		// Obter referências dos efeitos visuais
+		dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
+		sprite = GetNodeOrNull<Line2D>("Sprite/Border");
 		
 		// Configurar multiplayer
 		SetupMultiplayer();
@@ -156,6 +165,9 @@ public partial class Player : CharacterBody2D
 			isDashing = true;
 			canDash = false;
 			dashTimer = 0.0f;
+			
+			// Ativar efeitos visuais do dash
+			ActivateDashEffects();
 		}
 
 		// Controlar duração do dash
@@ -165,6 +177,17 @@ public partial class Player : CharacterBody2D
 			if (dashTimer >= DashDuration)
 			{
 				isDashing = false;
+				DeactivateDashEffects();
+			}
+		}
+		
+		// Atualizar efeito de flash
+		if (dashFlashTimer > 0)
+		{
+			dashFlashTimer -= (float)delta;
+			if (dashFlashTimer <= 0 && sprite != null)
+			{
+				sprite.DefaultColor = Colors.White;
 			}
 		}
 	}
@@ -230,5 +253,31 @@ public partial class Player : CharacterBody2D
 			
 		GlobalPosition = initialPosition;
 		Velocity = Vector2.Zero;
+	}
+	
+	private void ActivateDashEffects()
+	{
+		// Emitir partículas
+		if (dashParticles != null)
+		{
+			dashParticles.Emitting = true;
+		}
+		
+		// Flash no sprite
+		if (sprite != null)
+		{
+			sprite.DefaultColor = new Color(0.5f, 1f, 1f); // Ciano claro
+			dashFlashTimer = DashDuration;
+		}
+	}
+	
+	private void DeactivateDashEffects()
+	{
+		// Restaurar cor do sprite
+		if (sprite != null)
+		{
+			sprite.DefaultColor = Colors.White;
+			dashFlashTimer = 0.0f;
+		}
 	}
 }
