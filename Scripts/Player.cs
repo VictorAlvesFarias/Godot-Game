@@ -270,9 +270,15 @@ public partial class Player : CharacterBody2D
 		GlobalPosition = initialPosition;
 		Velocity = Vector2.Zero;
 		
-		// Restaurar vida completa
+		// Restaurar vida completa via RPC para sincronizar
+		Rpc(nameof(RestoreHealthRpc));
+	}
+	
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RestoreHealthRpc()
+	{
 		CurrentHealth = MaxHealth;
-		GD.Print($"Player {Name} resetado com {CurrentHealth} corações");
+		GD.Print($"Player {Name} vida restaurada: {CurrentHealth}/{MaxHealth} corações");
 	}
 	
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -306,6 +312,10 @@ public partial class Player : CharacterBody2D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	public void TakeDamage(int damage)
 	{
+		// Ignorar dano se já está morto (evita dano negativo em loop)
+		if (CurrentHealth <= 0)
+			return;
+			
 		CurrentHealth -= damage;
 		GD.Print($"Player {Name} recebeu {damage} de dano. Vida restante: {CurrentHealth}/{MaxHealth}");
 		
