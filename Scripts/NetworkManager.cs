@@ -127,6 +127,13 @@ public partial class NetworkManager : Node
 		GD.Print($"Player {peerId} spawnado");
 	}
 	
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void SpawnPlayerOnClient(long peerId, Vector2 position)
+	{
+		// Este método é chamado nos clientes para spawnar players
+		SpawnPlayer(peerId, position);
+	}
+	
 	// Sinais do multiplayer
 	private void OnPeerConnected(long id)
 	{
@@ -141,10 +148,24 @@ public partial class NetworkManager : Node
 				300
 			);
 			
+			// Spawnar o player do novo peer em todos os clientes (inclusive servidor)
 			SpawnPlayer(id, spawnPos);
+			Rpc(nameof(SpawnPlayerOnClient), id, spawnPos);
 			
-			// Notificar o novo player sobre os players existentes
-			RpcId(id, nameof(SyncExistingPlayers));
+			// Enviar informações sobre os players existentes para o novo cliente
+			var players = GetTree().GetNodesInGroup("players");
+			foreach (Node node in players)
+			{
+				if (node is Player player && player.Name != $"Player{id}")
+				{
+					// Extrair o ID do nome do player
+					string playerName = player.Name;
+					long existingPlayerId = long.Parse(playerName.Replace("Player", ""));
+					
+					// Enviar para o novo cliente
+					RpcId(id, nameof(SpawnPlayerOnClient), existingPlayerId, player.Position);
+				}
+			}
 		}
 	}
 	
@@ -179,12 +200,5 @@ public partial class NetworkManager : Node
 	{
 		GD.Print("Servidor desconectado");
 		Disconnect();
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-	private void SyncExistingPlayers()
-	{
-		// Este método é chamado no cliente para sincronizar os players existentes
-		// O servidor já spawnou todos os players, então não precisamos fazer nada aqui
 	}
 }
