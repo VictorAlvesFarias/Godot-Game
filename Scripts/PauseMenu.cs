@@ -68,10 +68,22 @@ public partial class PauseMenu : CanvasLayer
     
 	private void OnResetPressed()
 	{
-		// Resetar posição do player
-		if (player != null)
+		// Encontrar o player local
+		Player localPlayer = null;
+		var players = GetTree().GetNodesInGroup("players");
+		foreach (Node node in players)
 		{
-			player.ResetPosition();
+			if (node is Player p && p.IsMultiplayerAuthority())
+			{
+				localPlayer = p;
+				break;
+			}
+		}
+		
+		// Resetar posição do player local
+		if (localPlayer != null && IsInstanceValid(localPlayer))
+		{
+			localPlayer.ResetPosition();
 		}
 		
 		// Fechar o menu

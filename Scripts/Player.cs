@@ -157,24 +157,24 @@ public partial class Player : CharacterBody2D
 			canDash = false;
 			dashTimer = 0.0f;
 			
-			// Ativar efeitos visuais do dash
-			ActivateDashEffects();
-		}
+		// Ativar efeitos visuais do dash (local e remoto)
+		Rpc(nameof(ActivateDashEffectsRpc));
+	}
 
-		// Controlar duração do dash
-		if (isDashing)
+	// Controlar duração do dash
+	if (isDashing)
+	{
+		dashTimer += (float)delta;
+		if (dashTimer >= DashDuration)
 		{
-			dashTimer += (float)delta;
-			if (dashTimer >= DashDuration)
-			{
-				isDashing = false;
-				DeactivateDashEffects();
-			}
+			isDashing = false;
+			Rpc(nameof(DeactivateDashEffectsRpc));
 		}
-		
-		// Atualizar efeito de flash
-		if (dashFlashTimer > 0)
-		{
+	}
+	
+	// Controlar fade do flash do dash
+	if (dashFlashTimer > 0)
+	{
 			dashFlashTimer -= (float)delta;
 			if (dashFlashTimer <= 0 && sprite != null)
 			{
@@ -258,7 +258,8 @@ public partial class Player : CharacterBody2D
 		Velocity = Vector2.Zero;
 	}
 	
-	private void ActivateDashEffects()
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void ActivateDashEffectsRpc()
 	{
 		// Emitir partículas
 		if (dashParticles != null)
@@ -274,7 +275,8 @@ public partial class Player : CharacterBody2D
 		}
 	}
 	
-	private void DeactivateDashEffects()
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void DeactivateDashEffectsRpc()
 	{
 		// Restaurar cor do sprite
 		if (sprite != null)
