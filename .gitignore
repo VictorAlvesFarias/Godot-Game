@@ -19,6 +19,7 @@ bld/
 [Oo]bj/
 
 # Godot
+.godot/
 .import/
 .mono/
 data_*/
