@@ -309,7 +309,7 @@ public partial class Player : CharacterBody2D
 		}
 	}
 	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	public void TakeDamage(int damage)
 	{
 		// Ignorar dano se já está morto (evita dano negativo em loop)

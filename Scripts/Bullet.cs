@@ -45,8 +45,9 @@ public partial class Bullet : Area2D
 		// Verificar se colidiu com um player
 		if (body is Player player)
 		{
-			// Causar dano ao player (RPC para sincronizar)
-			player.Rpc(nameof(Player.TakeDamage), 1);
+			// Causar dano ao player - enviar apenas para o dono do player atingido
+			int targetPeerId = player.GetMultiplayerAuthority();
+			player.RpcId(targetPeerId, nameof(Player.TakeDamage), 1);
 		}
 			
 		// Destruir o projétil ao colidir
