@@ -11,6 +11,7 @@ public partial class Bullet : Area2D
 	// Tempo de vida do projétil
 	[Export] public float Lifetime = 3.0f;
 	private float timer = 0.0f;
+	private bool isDestroyed = false;
 	
 	// Referência ao player que disparou
 	public Node2D Shooter;
@@ -26,20 +27,24 @@ public partial class Bullet : Area2D
 		// Mover o projétil na direção definida
 		Position += Direction * Speed * (float)delta;
 
-		// Incrementar timer
-		timer += (float)delta;
-
-		// Destruir o projétil após o tempo de vida
-		if (timer >= Lifetime)
+		// Apenas o servidor gerencia o tempo de vida
+		if (Multiplayer.IsServer())
 		{
-			QueueFree();
+			// Incrementar timer
+			timer += (float)delta;
+
+			// Destruir o projétil após o tempo de vida
+			if (timer >= Lifetime && !isDestroyed)
+			{
+				DestroyBulletSync();
+			}
 		}
 	}
 
 	private void OnBodyEntered(Node2D body)
 	{
 		// Apenas o servidor processa colisões para evitar dano duplicado
-		if (!Multiplayer.IsServer())
+		if (!Multiplayer.IsServer() || isDestroyed)
 			return;
 
 		// Ignorar colisão com o player que disparou
@@ -54,6 +59,15 @@ public partial class Bullet : Area2D
 		}
 			
 		// Destruir o projétil ao colidir
+		DestroyBulletSync();
+	}
+
+	private void DestroyBulletSync()
+	{
+		if (isDestroyed)
+			return;
+			
+		isDestroyed = true;
 		Rpc(nameof(DestroyBullet));
 	}
 
