@@ -39,9 +39,26 @@ public partial class CameraController : Camera2D
 				return;
 		}
 
-		// Procurar por um player com autoridade de multiplayer (player local)
-		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
+		// Verificar se multiplayer está realmente ativo e pronto
+		int localPeerId = 1;
+		bool hasMultiplayer = false;
+		
+		// Verificar múltiplas condições antes de tentar acessar GetUniqueId
+		if (Multiplayer != null && 
+		    Multiplayer.MultiplayerPeer != null && 
+		    Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+		{
+			try
+			{
+				localPeerId = Multiplayer.GetUniqueId();
+				hasMultiplayer = true;
+			}
+			catch
+			{
+				// Multiplayer ainda não está pronto
+				hasMultiplayer = false;
+			}
+		}
 
 		var players = GetTree().GetNodesInGroup("players");
 		foreach (Node node in players)

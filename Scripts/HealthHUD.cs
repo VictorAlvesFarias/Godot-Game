@@ -36,18 +36,21 @@ public partial class HealthHUD : Label
 		int localPeerId = 1;
 		bool hasMultiplayer = false;
 		
-		try
+		// Verificar múltiplas condições antes de tentar acessar GetUniqueId
+		if (Multiplayer != null && 
+		    Multiplayer.MultiplayerPeer != null && 
+		    Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
 		{
-			hasMultiplayer = Multiplayer != null && Multiplayer.HasMultiplayerPeer();
-			if (hasMultiplayer)
+			try
 			{
 				localPeerId = Multiplayer.GetUniqueId();
+				hasMultiplayer = true;
 			}
-		}
-		catch
-		{
-			// Multiplayer ainda não está totalmente inicializado
-			hasMultiplayer = false;
+			catch
+			{
+				// Multiplayer ainda não está pronto
+				hasMultiplayer = false;
+			}
 		}
 		
 		foreach (Node node in players)

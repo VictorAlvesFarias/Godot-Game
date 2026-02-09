@@ -22,6 +22,9 @@ public partial class Player : CharacterBody2D
 
     private bool canShoot = true;
     private float shootTimer;
+    
+    private float damageColorTimer = 0f;
+    private const float DamageColorDuration = 0.3f;
 
     private float inputX;
     private float inputY;
@@ -67,6 +70,16 @@ public partial class Player : CharacterBody2D
         if (!isDashing && isOwner)
         {
             HandleShooting((float)delta);
+        }
+        
+        // Timer para voltar a cor ao normal após dano
+        if (damageColorTimer > 0)
+        {
+            damageColorTimer -= (float)delta;
+            if (damageColorTimer <= 0 && sprite != null && !isDashing)
+            {
+                sprite.DefaultColor = Colors.White;
+            }
         }
     }
 
@@ -224,11 +237,26 @@ public partial class Player : CharacterBody2D
             return;
 
         CurrentHealth -= damage;
-
-        if (sprite != null)
-            sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
+        
+        // Sincronizar a vida e efeito visual com todos os clientes
+        Rpc(nameof(SyncHealth), CurrentHealth);
+        Rpc(nameof(ShowDamageEffect));
 
         if (CurrentHealth <= 0)
             HandleResetPosition();
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void ShowDamageEffect()
+    {
+        if (sprite != null)
+            sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
+        damageColorTimer = DamageColorDuration;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void SyncHealth(int health)
+    {
+        CurrentHealth = health;
     }
 }

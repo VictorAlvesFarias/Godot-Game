@@ -4,7 +4,8 @@ using System;
 public partial class NetworkManager : Node
 {
 	private const int MaxPlayers = 4;
-	private const int DefaultPort = 7777;
+	private const int DefaultPort = 9876;
+	private const string DefaultAddress = "127.0.0.1";
 	
 	[Export] public PackedScene PlayerScene;
 	
@@ -52,7 +53,7 @@ public partial class NetworkManager : Node
 		SpawnPlayer(1, new Vector2(960, 300));
 	}
 	
-	public void JoinServer(string address, int port = DefaultPort)
+	public void JoinServer(string address = DefaultAddress, int port = DefaultPort)
 	{
 		peer = new ENetMultiplayerPeer();
 		Error error = peer.CreateClient(address, port);
