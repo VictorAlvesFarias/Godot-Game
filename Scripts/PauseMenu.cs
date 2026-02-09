@@ -68,39 +68,34 @@ public partial class PauseMenu : CanvasLayer
     
 	private void OnResetPressed()
 	{
-		// Encontrar o player local
 		Player localPlayer = null;
 		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
 		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
-		
 		var players = GetTree().GetNodesInGroup("players");
+
 		foreach (Node node in players)
 		{
 			if (node is Player p)
 			{
-				// Se não tem multiplayer, pegar o primeiro player
-				// Se tem multiplayer, pegar apenas o player que pertence a este peer
 				if (!hasMultiplayer || p.GetMultiplayerAuthority() == localPeerId)
 				{
 					localPlayer = p;
+	
 					break;
 				}
 			}
 		}
 		
-		// Resetar posição do player local
 		if (localPlayer != null && IsInstanceValid(localPlayer))
 		{
-			localPlayer.ResetPosition();
+			localPlayer.HandleResetPosition();
 		}
 		
-		// Fechar o menu
 		TogglePause();
 	}
 
 	private void OnExitPressed()
 	{
-		// Sair do jogo
 		GetTree().Quit();
 	}
 	

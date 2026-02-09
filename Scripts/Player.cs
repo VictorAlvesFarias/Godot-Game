@@ -2,340 +2,233 @@ using Godot;
 
 public partial class Player : CharacterBody2D
 {
-	// Variáveis de movimento
-	[Export] public float Speed = 300.0f;
-	[Export] public float JumpVelocity = -750.0f;
+    [Export] public float Speed { get; set; } = 300.0f;
+    [Export] public float JumpVelocity { get; set; } = -750.0f;
+    [Export] public float DashSpeed { get; set; } = 800.0f;
+    [Export] public float DashDuration { get; set; } = 0.2f;
+    [Export] public float DashCooldown { get; set; } = 0.5f;
+    [Export] public float FireRate { get; set; } = 0.2f;
+    [Export] public int MaxHealth { get; set; } = 5;
 
-	// Variáveis de dash
-	[Export] public float DashSpeed = 800.0f;
-	[Export] public float DashDuration = 0.2f;
-	[Export] public float DashCooldown = 0.5f;
-	private bool isDashing = false;
-	private bool canDash = true;
-	private float dashTimer = 0.0f;
-	private float dashCooldownTimer = 0.0f;
-	private Vector2 dashDirection = Vector2.Zero;
+    public int CurrentHealth { get; set; }
+    public Vector2 InitialPosition { get; set; }
+    public float Gravity { get; set; }
 
-	// Variáveis de tiro
-	[Export] public PackedScene BulletScene;
-	[Export] public float FireRate = 0.2f;  // Tempo entre tiros
-	private bool canShoot = true;
-	private float shootTimer = 0.0f;
+    private bool isDashing;
+    private bool canDash = true;
+    private float dashTimer;
+    private float dashCooldownTimer;
+    private Vector2 dashDirection = Vector2.Zero;
 
-	// Sistema de vida
-	[Export] public int MaxHealth = 5;
-	public int CurrentHealth { get; private set; }
+    private bool canShoot = true;
+    private float shootTimer;
 
-	// Posição inicial para reset
-	private Vector2 initialPosition;
+    private float inputX;
+    private float inputY;
+    private bool inputJump;
+    private bool inputDash;
 
-	// Gravidade do projeto
-	private float gravity;
-	
-	// Multiplayer
-	private MultiplayerSynchronizer sync;
-	
-	// Efeitos visuais
-	private CpuParticles2D dashParticles;
-	private Line2D sprite;
-	private float dashFlashTimer = 0.0f;
+    private CpuParticles2D dashParticles;
+    private Line2D sprite;
+    private PackedScene bulletScene;
 
-	public override void _Ready()
-	{
-		// Adicionar ao grupo de players
-		AddToGroup("players");
-		
-		// Salvar posição inicial
-		initialPosition = GlobalPosition;
-		
-		// Inicializar vida
-		CurrentHealth = MaxHealth;
-		
-		// Obtém a gravidade das configurações do projeto
-		gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-		
-		// Carrega a cena do projétil
-		BulletScene = GD.Load<PackedScene>("res://Scenes/Bullet.tscn");
-		
-		// Obter referências dos efeitos visuais
-		dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
-		sprite = GetNodeOrNull<Line2D>("Sprite/Border");
-		
-		// Obter referência ao MultiplayerSynchronizer
-		sync = GetNodeOrNull<MultiplayerSynchronizer>("MultiplayerSynchronizer");
-		
-		// Configurar multiplayer
-		SetupMultiplayer();
-	}
-	
-	private void SetupMultiplayer()
-	{
-		// Configuração de multiplayer concluída
-	}
+    public override void _Ready()
+    {
+        AddToGroup("players");
+        InitialPosition = GlobalPosition;
+        CurrentHealth = MaxHealth;
+        Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 
-	public override void _PhysicsProcess(double delta)
-	{
-		// Só processar física se for o dono deste player
-		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-		
-		// Se tem multiplayer, verificar se este peer é o dono deste player
-		if (hasMultiplayer && GetMultiplayerAuthority() != Multiplayer.GetUniqueId())
-			return;
-			
-		Vector2 velocity = Velocity;
+        bulletScene = GD.Load<PackedScene>("res://Scenes/Bullet.tscn");
+        dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
+        sprite = GetNodeOrNull<Line2D>("Sprite/Border");
+    }
 
-		// Sistema de dash
-		HandleDash(delta);
+    public override void _PhysicsProcess(double delta)
+    {
+        bool isServer = GetMultiplayerAuthority() == 1;
+        bool isOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
 
-		// Se estiver em dash, aplicar movimento de dash
-		if (isDashing)
-		{
-			velocity = dashDirection * DashSpeed;
-		}
-		else
-		{
-			// Aplicar gravidade
-			if (!IsOnFloor())
-			{
-				velocity.Y += gravity * (float)delta;
-			}
+        if (isOwner)
+        {
+            HandleInput();
+            Rpc(nameof(ServerReceiveInput), inputX, inputY, inputJump, inputDash);
+        }
 
-			// Pulo
-			if (Input.IsActionJustPressed("move_up") && IsOnFloor())
-			{
-				velocity.Y = JumpVelocity;
-			}
+        if (isServer)
+        {
+            HandleMovement((float)delta, inputX, inputJump, inputDash);
+        }
+        else if (isOwner)
+        {
+            HandleMovement((float)delta, inputX, inputJump, inputDash);
+        }
 
-			// Movimento horizontal
-			float direction = Input.GetAxis("move_left", "move_right");
-			if (direction != 0)
-			{
-				velocity.X = direction * Speed;
-			}
-			else
-			{
-				velocity.X = Mathf.MoveToward(velocity.X, 0, Speed);
-			}
-		}
+        if (!isDashing && isOwner)
+        {
+            HandleShooting((float)delta);
+        }
+    }
 
-		Velocity = velocity;
-		MoveAndSlide();
+    public void HandleInput()
+    {
+        inputX = Input.GetAxis("move_left", "move_right");
+        inputY = Input.GetAxis("move_up", "move_down");
+        inputJump = Input.IsActionJustPressed("move_up");
+        inputDash = Input.IsActionJustPressed("dash");
+    }
 
-		// Sistema de tiro (não pode atirar durante dash)
-		if (!isDashing)
-		{
-			HandleShooting(delta);
-		}
-	}
+    public void HandleMovement(float delta, float x, bool jump, bool dash)
+    {
+        Vector2 v = Velocity;
 
-	private void HandleDash(double delta)
-	{
-		// Timer de cooldown
-		if (!canDash)
-		{
-			dashCooldownTimer += (float)delta;
-			if (dashCooldownTimer >= DashCooldown)
-			{
-				canDash = true;
-				dashCooldownTimer = 0.0f;
-			}
-		}
+        if (!canDash)
+        {
+            dashCooldownTimer += delta;
+            if (dashCooldownTimer >= DashCooldown)
+            {
+                canDash = true;
+                dashCooldownTimer = 0;
+            }
+        }
 
-		// Iniciar dash
-		if (Input.IsActionJustPressed("dash") && canDash && !isDashing)
-		{
-			// Determinar direção do dash (horizontal e vertical)
-			float horizontalDir = Input.GetAxis("move_left", "move_right");
-			float verticalDir = 0;
-			
-			if (Input.IsActionPressed("move_up"))
-			{
-				verticalDir = -1;
-			}
-			else if (Input.IsActionPressed("move_down"))
-			{
-				verticalDir = 1;
-			}
-			
-			// Se não estiver pressionando nenhuma direção, dash para a direita por padrão
-			if (horizontalDir == 0 && verticalDir == 0)
-			{
-				horizontalDir = 1;
-			}
+        if (dash && canDash && !isDashing)
+        {
+            Vector2 direction = new Vector2(x, inputY);
+            if (direction.Length() == 0)
+                direction = Vector2.Right;
+            dashDirection = direction.Normalized();
+            isDashing = true;
+            canDash = false;
+            dashTimer = 0;
+            Rpc(nameof(ActivateDashEffectsRpc));
+        }
 
-			dashDirection = new Vector2(horizontalDir, verticalDir).Normalized();
-			isDashing = true;
-			canDash = false;
-			dashTimer = 0.0f;
-			
-		// Ativar efeitos visuais do dash (local e remoto)
-		Rpc(nameof(ActivateDashEffectsRpc));
-	}
+        if (isDashing)
+        {
+            dashTimer += delta;
+            v = dashDirection * DashSpeed;
 
-	// Controlar duração do dash
-	if (isDashing)
-	{
-		dashTimer += (float)delta;
-		if (dashTimer >= DashDuration)
-		{
-			isDashing = false;
-			Rpc(nameof(DeactivateDashEffectsRpc));
-		}
-	}
-	
-	// Controlar fade do flash do dash
-	if (dashFlashTimer > 0)
-	{
-			dashFlashTimer -= (float)delta;
-			if (dashFlashTimer <= 0 && sprite != null)
-			{
-				sprite.DefaultColor = Colors.White;
-			}
-		}
-	}
+            if (dashTimer >= DashDuration)
+            {
+                isDashing = false;
+                Rpc(nameof(DeactivateDashEffectsRpc));
+            }
+        }
+        else
+        {
+            if (!IsOnFloor())
+                v.Y += Gravity * delta;
 
-	private void HandleShooting(double delta)
-	{
-		// Timer para controlar taxa de disparo
-		if (!canShoot)
-		{
-			shootTimer += (float)delta;
-			if (shootTimer >= FireRate)
-			{
-				canShoot = true;
-				shootTimer = 0.0f;
-			}
-		}
+            if (jump && IsOnFloor())
+                v.Y = JumpVelocity;
 
-		// Disparar ao clicar com o mouse
-		if (Input.IsActionPressed("shoot") && canShoot)
-		{
-			Shoot();
-			canShoot = false;
-		}
-	}
+            if (x != 0)
+                v.X = x * Speed;
+            else
+                v.X = Mathf.MoveToward(v.X, 0, Speed);
+        }
 
-	private void Shoot()
-	{
-		if (BulletScene != null)
-		{
-			// Obter posição do mouse no mundo
-			Vector2 mousePos = GetGlobalMousePosition();
+        Velocity = v;
+        MoveAndSlide();
+    }
 
-			// Calcular direção do player para o mouse
-			Vector2 direction = (mousePos - GlobalPosition).Normalized();
+    public void HandleResetPosition()
+    {
+        Rpc(nameof(ResetPosition));
+        Rpc(nameof(RestoreHealthRpc));
+    }
 
-			// Chamar RPC para spawnar a bala em todos os clientes
-			Rpc(nameof(SpawnBullet), GlobalPosition, direction);
-		}
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void SpawnBullet(Vector2 spawnPosition, Vector2 direction)
-	{
-		if (BulletScene == null)
-		{
-			GD.PrintErr("BulletScene is null!");
-			return;
-		}
-		
-		// Criar instância do projétil
-		Bullet bullet = BulletScene.Instantiate<Bullet>();
+    public void HandleShooting(float delta)
+    {
+        if (!canShoot)
+        {
+            shootTimer += delta;
+            if (shootTimer >= FireRate)
+            {
+                canShoot = true;
+                shootTimer = 0;
+            }
+        }
 
-		// Configurar posição do projétil (50 pixels à frente do player)
-		bullet.GlobalPosition = spawnPosition + (direction * 50);
-		bullet.Direction = direction;
-		bullet.Shooter = this;
+        if (Input.IsActionPressed("shoot") && canShoot && bulletScene != null)
+        {
+            Vector2 dir = (GetGlobalMousePosition() - GlobalPosition).Normalized();
+            Rpc(nameof(SpawnBullet), GlobalPosition, dir);
+            canShoot = false;
+        }
+    }
 
-		// Adicionar o projétil à cena principal
-		Node mainScene = GetTree().Root.GetNodeOrNull("Main");
-		if (mainScene != null)
-		{
-			mainScene.AddChild(bullet);
-		}
-		else
-		{
-			GD.PrintErr("Main scene not found!");
-			bullet.QueueFree();
-		}
-	}
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
+    public void ServerReceiveInput(float x, float y, bool jump, bool dash)
+    {
+        inputX = x;
+        inputY = y;
+        inputJump = jump;
+        inputDash = dash;
+    }
 
-	public void ResetPosition()
-	{
-		// Verificar se este peer é o dono deste player
-		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-		if (hasMultiplayer && GetMultiplayerAuthority() != Multiplayer.GetUniqueId())
-			return;
-			
-		GlobalPosition = initialPosition;
-		Velocity = Vector2.Zero;
-		
-		// Restaurar vida completa via RPC para sincronizar
-		Rpc(nameof(RestoreHealthRpc));
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RestoreHealthRpc()
-	{
-		CurrentHealth = MaxHealth;
-		GD.Print($"Player {Name} vida restaurada: {CurrentHealth}/{MaxHealth} corações");
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void ActivateDashEffectsRpc()
-	{
-		// Emitir partículas
-		if (dashParticles != null)
-		{
-			dashParticles.Emitting = true;
-		}
-		
-		// Flash no sprite
-		if (sprite != null)
-		{
-			sprite.DefaultColor = new Color(0.5f, 1f, 1f); // Ciano claro
-			dashFlashTimer = DashDuration;
-		}
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void DeactivateDashEffectsRpc()
-	{
-		// Restaurar cor do sprite
-		if (sprite != null)
-		{
-			sprite.DefaultColor = Colors.White;
-			dashFlashTimer = 0.0f;
-		}
-	}
-	
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	public void TakeDamage(int damage)
-	{
-		// Ignorar dano se já está morto (evita dano negativo em loop)
-		if (CurrentHealth <= 0)
-			return;
-			
-		CurrentHealth -= damage;
-		GD.Print($"Player {Name} recebeu {damage} de dano. Vida restante: {CurrentHealth}/{MaxHealth}");
-		
-		// Efeito visual de dano (flash vermelho)
-		if (sprite != null)
-		{
-			sprite.DefaultColor = new Color(1f, 0.3f, 0.3f); // Vermelho
-			// Criar timer para restaurar cor
-			GetTree().CreateTimer(0.1).Timeout += () => 
-			{
-				if (sprite != null && IsInstanceValid(sprite))
-					sprite.DefaultColor = Colors.White;
-			};
-		}
-		
-		// Verificar se morreu
-		if (CurrentHealth <= 0)
-		{
-			GD.Print($"Player {Name} morreu! Resetando posição...");
-			ResetPosition();
-		}
-	}
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void SpawnBullet(Vector2 spawnPosition, Vector2 direction)
+    {
+        Bullet bullet = bulletScene.Instantiate<Bullet>();
+        bullet.GlobalPosition = spawnPosition + (direction * 50);
+        bullet.Direction = direction;
+        bullet.Shooter = this;
+
+        Node mainScene = GetTree().Root.GetNodeOrNull("Main");
+        if (mainScene != null)
+            mainScene.AddChild(bullet);
+        else
+            bullet.QueueFree();
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void ResetPosition()
+    {
+        GlobalPosition = InitialPosition;
+        Velocity = Vector2.Zero;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void RestoreHealthRpc()
+    {
+        CurrentHealth = MaxHealth;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void ActivateDashEffectsRpc()
+    { 
+        if (dashParticles != null)
+            dashParticles.Emitting = true;
+
+        if (sprite != null)
+            sprite.DefaultColor = new Color(0.5f, 1f, 1f);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void DeactivateDashEffectsRpc()
+    {
+        if (sprite != null)
+            sprite.DefaultColor = Colors.White;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+    public void TakeDamage(int damage)
+    {
+        // Apenas o servidor processa o dano
+        if (!Multiplayer.IsServer())
+            return;
+
+        if (CurrentHealth <= 0)
+            return;
+
+        CurrentHealth -= damage;
+
+        if (sprite != null)
+            sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
+
+        if (CurrentHealth <= 0)
+            HandleResetPosition();
+    }
 }

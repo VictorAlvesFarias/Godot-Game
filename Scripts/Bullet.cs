@@ -38,6 +38,10 @@ public partial class Bullet : Area2D
 
 	private void OnBodyEntered(Node2D body)
 	{
+		// Apenas o servidor processa colisões para evitar dano duplicado
+		if (!Multiplayer.IsServer())
+			return;
+
 		// Ignorar colisão com o player que disparou
 		if (body == Shooter)
 			return;
@@ -45,12 +49,17 @@ public partial class Bullet : Area2D
 		// Verificar se colidiu com um player
 		if (body is Player player)
 		{
-			// Causar dano ao player - enviar apenas para o dono do player atingido
-			int targetPeerId = player.GetMultiplayerAuthority();
-			player.RpcId(targetPeerId, nameof(Player.TakeDamage), 1);
+			// Causar dano ao player
+			player.Rpc(nameof(Player.TakeDamage), 1);
 		}
 			
 		// Destruir o projétil ao colidir
+		Rpc(nameof(DestroyBullet));
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+	private void DestroyBullet()
+	{
 		QueueFree();
 	}
 }

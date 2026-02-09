@@ -32,9 +32,23 @@ public partial class HealthHUD : Label
 	{
 		var players = GetTree().GetNodesInGroup("players");
 		
-		// Se não houver multiplayer ativo, pegar o primeiro player
-		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
+		// Verificar se multiplayer está realmente ativo e pronto
+		int localPeerId = 1;
+		bool hasMultiplayer = false;
+		
+		try
+		{
+			hasMultiplayer = Multiplayer != null && Multiplayer.HasMultiplayerPeer();
+			if (hasMultiplayer)
+			{
+				localPeerId = Multiplayer.GetUniqueId();
+			}
+		}
+		catch
+		{
+			// Multiplayer ainda não está totalmente inicializado
+			hasMultiplayer = false;
+		}
 		
 		foreach (Node node in players)
 		{
