@@ -6,18 +6,16 @@ public partial class HealthHUD : Label
 
 	public override void _Ready()
 	{
-		// Nada a fazer aqui - configurações visuais já estão no .tscn
+		return;
 	}
 
 	public override void _Process(double delta)
 	{
-		// Tentar encontrar o player local se ainda não foi encontrado
 		if (localPlayer == null || !IsInstanceValid(localPlayer))
 		{
 			FindLocalPlayer();
 		}
 
-		// Atualizar display de corações
 		if (localPlayer != null && IsInstanceValid(localPlayer))
 		{
 			UpdateHealthDisplay();
@@ -31,15 +29,11 @@ public partial class HealthHUD : Label
 	private void FindLocalPlayer()
 	{
 		var players = GetTree().GetNodesInGroup("players");
+		var localPeerId = 1;
+		var hasMultiplayer = false;
 		
-		// Verificar se multiplayer está realmente ativo e pronto
-		int localPeerId = 1;
-		bool hasMultiplayer = false;
-		
-		// Verificar múltiplas condições antes de tentar acessar GetUniqueId
-		if (Multiplayer != null && 
-		    Multiplayer.MultiplayerPeer != null && 
-		    Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+
+		if (Multiplayer != null && Multiplayer.MultiplayerPeer != null && Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
 		{
 			try
 			{
@@ -48,7 +42,6 @@ public partial class HealthHUD : Label
 			}
 			catch
 			{
-				// Multiplayer ainda não está pronto
 				hasMultiplayer = false;
 			}
 		}
@@ -57,11 +50,10 @@ public partial class HealthHUD : Label
 		{
 			if (node is Player player)
 			{
-				// Se não tem multiplayer, pegar o primeiro player encontrado
-				// Se tem multiplayer, pegar apenas o player que pertence a este peer
 				if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 				{
 					localPlayer = player;
+
 					break;
 				}
 			}
@@ -70,15 +62,15 @@ public partial class HealthHUD : Label
 
 	private void UpdateHealthDisplay()
 	{
-		// Desenhar corações cheios baseado na vida atual
-		string hearts = "";
+		var hearts = "";
+
 		for (int i = 0; i < localPlayer.CurrentHealth; i++)
 		{
 			hearts += "♥ ";
 		}
 		
-		// Desenhar corações vazios para vida perdida
-		int lostHealth = localPlayer.MaxHealth - localPlayer.CurrentHealth;
+		var lostHealth = localPlayer.MaxHealth - localPlayer.CurrentHealth;
+
 		for (int i = 0; i < lostHealth; i++)
 		{
 			hearts += "♡ ";

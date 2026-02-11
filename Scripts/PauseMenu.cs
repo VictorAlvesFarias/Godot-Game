@@ -88,7 +88,7 @@ public partial class PauseMenu : CanvasLayer
 		
 		if (localPlayer != null && IsInstanceValid(localPlayer))
 		{
-			localPlayer.HandleResetPosition();
+            localPlayer.Rpc(nameof(Player.ResetPlayer));
 		}
 		
 		TogglePause();
