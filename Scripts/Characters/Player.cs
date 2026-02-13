@@ -47,6 +47,7 @@ namespace Jogo25D.Characters
     public bool inputAttack;
     public Vector2 mousePosition;
     public bool isOwner;
+        public Vector2 InitialPosition;
 
     public CpuParticles2D dashParticles;
     public Line2D sprite;
@@ -60,9 +61,10 @@ namespace Jogo25D.Characters
         Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
         dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
         sprite = GetNodeOrNull<Line2D>("Sprite/Border");
-        
-        // Obter referência ao inventário de armas
-        weaponInventory = GetNodeOrNull<WeaponInventory>("WeaponInventory");
+            InitialPosition=GlobalPosition;
+
+            // Obter referência ao inventário de armas
+            weaponInventory = GetNodeOrNull<WeaponInventory>("WeaponInventory");
         
         if (weaponInventory != null)
         {
@@ -117,7 +119,7 @@ namespace Jogo25D.Characters
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
     public void ResetPlayer()
     {
-        GlobalPosition = new Vector2(1060, 300);
+            GlobalPosition = InitialPosition;
         Velocity = Vector2.Zero;
         CurrentHealth = MaxHealth;
     }

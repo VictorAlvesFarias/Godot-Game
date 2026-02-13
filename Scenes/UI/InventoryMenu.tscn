@@ -1,0 +1,180 @@
+[gd_scene format=3 uid="uid://ja876543210"]
+
+[ext_resource type="Script" uid="uid://dcx547xxyf64n" path="res://Scripts/UI/InventoryUI.cs" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.1, 0.1, 0.1, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
+bg_color = Color(0.2, 0.2, 0.2, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4"]
+bg_color = Color(0.15, 0.15, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+
+[node name="InventoryMenu" type="CanvasLayer" unique_id=822533050]
+layer = 10
+script = ExtResource("1")
+
+[node name="MainControl" type="Control" parent="." unique_id=1162509881]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="MainControl" unique_id=1708525733]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_1")
+
+[node name="MarginContainer" type="MarginContainer" parent="MainControl/Panel" unique_id=205939822]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainControl/Panel/MarginContainer" unique_id=1303335873]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="MainControl/Panel/MarginContainer/VBoxContainer" unique_id=2017803713]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "INVENTÁRIO"
+horizontal_alignment = 1
+
+[node name="GridContainer" type="GridContainer" parent="MainControl/Panel/MarginContainer/VBoxContainer" unique_id=660222036]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 4
+
+[node name="Slot0" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1090871875]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot1" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=381333766]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot2" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=498042968]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot3" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=503477463]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot4" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=87342152]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot5" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=718471754]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot6" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=461514863]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot7" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=144396287]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot8" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1378226912]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot9" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1717757996]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot10" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1398166368]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot11" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1906592294]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot12" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1851675413]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot13" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1788576210]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot14" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=691256510]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="Slot15" type="Panel" parent="MainControl/Panel/MarginContainer/VBoxContainer/GridContainer" unique_id=1711087358]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2")
+
+[node name="ContextMenu" type="Panel" parent="MainControl" unique_id=144501025]
+visible = false
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 0
+offset_right = 120.0
+offset_bottom = 30.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_4")
+
+[node name="Container" type="VBoxContainer" parent="MainControl/ContextMenu" unique_id=1657897818]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0

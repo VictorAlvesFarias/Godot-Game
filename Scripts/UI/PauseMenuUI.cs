@@ -4,7 +4,7 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-    public partial class PauseMenuUI : CanvasLayer
+	public partial class PauseMenuUI : CanvasLayer
 {
 	private Button resetButton;
 	private Button exitButton;
@@ -69,7 +69,7 @@ namespace Jogo25D.UI
 		Visible = !Visible;
 		GetTree().Paused = Visible;
 	}
-    
+	
 	private void OnResetPressed()
 	{
 		Player localPlayer = null;
@@ -92,7 +92,7 @@ namespace Jogo25D.UI
 		
 		if (localPlayer != null && IsInstanceValid(localPlayer))
 		{
-            localPlayer.Rpc(nameof(Player.ResetPlayer));
+			localPlayer.Rpc(nameof(Player.ResetPlayer));
 		}
 		
 		TogglePause();
@@ -203,5 +203,5 @@ namespace Jogo25D.UI
 			statusLabel.Modulate = Colors.White;
 		}
 	}
-    }
+	}
 }
