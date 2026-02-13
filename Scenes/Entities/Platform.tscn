@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://p1358a24680"]
 
-[ext_resource type="Script" uid="uid://3bspl5ctgov1" path="res://Scenes/Entities/Platform.cs" id="1_1pdp2"]
-[ext_resource type="Texture2D" uid="uid://vs6111tn6fax" path="res://Scripts/UI/white.jpg" id="2_cwfpi"]
+[ext_resource type="Script" uid="uid://3bspl5ctgov1" path="res://Scripts/Entities/Platform.cs" id="1_1pdp2"]
+[ext_resource type="Texture2D" uid="uid://vs6111tn6fax" path="res://Assets/Textures/white.jpg" id="2_cwfpi"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1pdp2"]
 size = Vector2(10000, 500)

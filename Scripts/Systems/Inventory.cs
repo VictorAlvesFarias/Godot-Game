@@ -177,6 +177,7 @@ namespace Jogo25D.Systems
         /// <summary>
         /// Equipa um item do inventário
         /// </summary>
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
         public bool EquipItem(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)

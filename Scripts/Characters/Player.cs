@@ -317,7 +317,7 @@ namespace Jogo25D.Characters
 
             if (CurrentHealth <= 0)
             {
-                Rpc(nameof(ResetPlayer));
+                ResetPlayer();
             }
         }
 

@@ -512,7 +512,7 @@ namespace Jogo25D.UI
 
 			if (option == "Equipar")
 			{
-				inventory.EquipItem(selectedSlotIndex);
+                inventory.Rpc(nameof(Inventory.EquipItem),selectedSlotIndex);
 			}
 
 			contextMenu.Visible = false;
