@@ -7,8 +7,6 @@
 [ext_resource type="Script" uid="uid://csx5gjyhu1wrl" path="res://Scripts/Systems/FullscreenToggle.cs" id="5"]
 [ext_resource type="Script" uid="uid://rfxn0b444nr" path="res://Scripts/Systems/NetworkManager.cs" id="6"]
 [ext_resource type="PackedScene" uid="uid://hud1234568aa" path="res://Scenes/UI/HUD.tscn" id="7"]
-[ext_resource type="Script" uid="uid://bgavyybijnrmw" path="res://Scripts/Systems/InventorySystem.cs" id="10"]
-[ext_resource type="Script" uid="uid://cnoq8j4h0lmax" path="res://Scripts/Systems/InventoryIntegration.cs" id="11"]
 [ext_resource type="PackedScene" uid="uid://ja876543210" path="res://Scenes/UI/InventoryMenu.tscn" id="12"]
 
 [node name="Main" type="Node2D" unique_id=756475699]
@@ -19,14 +17,6 @@ script = ExtResource("5")
 
 [node name="NetworkManager" type="Node" parent="." unique_id=657623526]
 script = ExtResource("6")
-
-[node name="InventorySystem" type="Node" parent="." unique_id=779937493]
-script = ExtResource("10")
-
-[node name="InventoryIntegration" type="Node" parent="." unique_id=1112029981]
-script = ExtResource("11")
-InventorySystemPath = NodePath("../InventorySystem")
-PlayerGroupName = "players"
 
 [node name="Player" parent="." unique_id=478898229 instance=ExtResource("1")]
 position = Vector2(-2, -190)

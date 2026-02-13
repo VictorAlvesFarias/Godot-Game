@@ -11,8 +11,6 @@ namespace Jogo25D.UI
 	/// </summary>
 	public partial class InventoryUI : CanvasLayer
 	{
-		[Export] public NodePath InventorySystemPath { get; set; }
-		
 		private InventorySystem inventorySystem;
 		private GridContainer gridContainer;
 		private Panel contextMenu;
@@ -41,16 +39,6 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			// Obter referência ao sistema de inventário
-			if (InventorySystemPath != null)
-			{
-				inventorySystem = GetNode<InventorySystem>(InventorySystemPath);
-				if (inventorySystem != null)
-				{
-					inventorySystem.InventoryChanged += OnInventoryChanged;
-				}
-			}
-
 			// Obter referências dos nós da cena
 			mainControl = GetNode<Control>("MainControl");
 			panel = GetNode<Panel>("MainControl/Panel");
@@ -58,17 +46,96 @@ namespace Jogo25D.UI
 			contextMenu = GetNode<Panel>("MainControl/ContextMenu");
 			contextMenuContainer = GetNode<VBoxContainer>("MainControl/ContextMenu/Container");
 			
-			// Configurar os 16 slots
-			for (int i = 0; i < 16; i++)
-			{
-				SetupSlot(i);
-			}
+			// Buscar o InventorySystem do player local
+			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
 			// Ajustar tamanho do painel
 			CallDeferred(nameof(AdjustPanelSize));
 
 			// Iniciar oculto
 			Visible = false;
+		}
+
+		/// <summary>
+		/// Encontra o InventorySystem do player local (com autoridade multiplayer)
+		/// </summary>
+		private void FindLocalPlayerInventorySystem()
+		{
+			// Desconectar do inventorySystem anterior se existir
+			if (inventorySystem != null && IsInstanceValid(inventorySystem))
+			{
+				inventorySystem.InventoryChanged -= OnInventoryChanged;
+			}
+			inventorySystem = null;
+			
+			var players = GetTree().GetNodesInGroup("players");
+			var localPeerId = 1;
+			var hasMultiplayer = false;
+
+			if (Multiplayer != null && Multiplayer.MultiplayerPeer != null &&
+				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+			{
+				try
+				{
+					localPeerId = Multiplayer.GetUniqueId();
+					hasMultiplayer = true;
+				}
+				catch
+				{
+					hasMultiplayer = false;
+				}
+			}
+
+			foreach (Node node in players)
+			{
+				if (node is Jogo25D.Characters.Player player)
+				{
+					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
+					{
+						// Encontrou o player local, buscar InventorySystem
+						inventorySystem = player.GetNodeOrNull<InventorySystem>("InventorySystem");
+						if (inventorySystem != null)
+						{
+							inventorySystem.InventoryChanged += OnInventoryChanged;
+							GD.Print($"[InventoryUI] InventorySystem encontrado para player local (PeerID: {localPeerId})");
+							
+							// Verificar se slots já foram inicializados (slots[0] não é null)
+							if (slots[0] == null)
+							{
+								// Inicializar UI com dados do inventário
+								InitializeSlots();
+							}
+							else
+							{
+								// Apenas atualizar dados se os slots já existem
+								OnInventoryChanged();
+							}
+						}
+						else
+						{
+							GD.PrintErr("[InventoryUI] InventorySystem não encontrado no player local!");
+						}
+						break;
+					}
+				}
+			}
+
+			if (inventorySystem == null)
+			{
+				GD.PrintErr("[InventoryUI] Nenhum InventorySystem do player local encontrado!");
+			}
+		}
+
+		private void InitializeSlots()
+		{
+			// Configurar todos os 16 slots
+			for (int i = 0; i < 16; i++)
+			{
+				SetupSlot(i);
+			}
+
+			// Atualizar dados iniciais do inventário
+			OnInventoryChanged();
 		}
 
 		public override void _ExitTree()
@@ -307,6 +374,20 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
+			// Verificar se o inventorySystem é válido antes de abrir
+			if (inventorySystem == null || !IsInstanceValid(inventorySystem))
+			{
+				GD.Print("[InventoryUI] InventorySystem inválido, tentando re-buscar...");
+				FindLocalPlayerInventorySystem();
+				
+				// Se ainda não encontrou, não abrir o inventário
+				if (inventorySystem == null || !IsInstanceValid(inventorySystem))
+				{
+					GD.PrintErr("[InventoryUI] Não foi possível encontrar InventorySystem válido!");
+					return;
+				}
+			}
+			
 			Visible = !Visible;
 			
 			if (Visible)

@@ -11,14 +11,14 @@ namespace Jogo25D.Systems
     public partial class InventoryIntegration : Node
     {
         [Export] public NodePath InventorySystemPath { get; set; }
-        [Export] public string PlayerGroupName { get; set; } = "players";
+        [Export] public NodePath WeaponInventoryPath { get; set; }
         
         private InventorySystem inventorySystem;
         private WeaponInventory weaponInventory;
 
         public override void _Ready()
         {
-            // Conectar os dois sistemas
+            // Conectar ao InventorySystem (irmão neste Player)
             if (InventorySystemPath != null)
             {
                 inventorySystem = GetNode<InventorySystem>(InventorySystemPath);
@@ -36,60 +36,25 @@ namespace Jogo25D.Systems
                 GD.PrintErr("[InventoryIntegration] InventorySystemPath é null!");
             }
 
-            // Encontrar o WeaponInventory do player local dinamicamente
-            CallDeferred(nameof(FindLocalPlayerWeaponInventory));
-
-            // Aguardar um frame para garantir que tudo está inicializado
-            CallDeferred(nameof(InitializeWeaponsInInventory));
-        }
-
-        /// <summary>
-        /// Encontra o WeaponInventory do player local (com autoridade multiplayer)
-        /// </summary>
-        private void FindLocalPlayerWeaponInventory()
-        {
-            var players = GetTree().GetNodesInGroup(PlayerGroupName);
-            var localPeerId = 1;
-            var hasMultiplayer = false;
-
-            if (Multiplayer != null && Multiplayer.MultiplayerPeer != null &&
-                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+            // Conectar ao WeaponInventory (irmão neste Player)
+            if (WeaponInventoryPath != null)
             {
-                try
+                weaponInventory = GetNode<WeaponInventory>(WeaponInventoryPath);
+                if (weaponInventory != null)
                 {
-                    localPeerId = Multiplayer.GetUniqueId();
-                    hasMultiplayer = true;
+                    GD.Print("[InventoryIntegration] WeaponInventory conectado!");
+                    
+                    // Inicializar armas no inventário
+                    CallDeferred(nameof(InitializeWeaponsInInventory));
                 }
-                catch
+                else
                 {
-                    hasMultiplayer = false;
+                    GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado no path!");
                 }
             }
-
-            foreach (Node node in players)
+            else
             {
-                if (node is Jogo25D.Characters.Player player)
-                {
-                    if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
-                    {
-                        // Encontrou o player local, buscar WeaponInventory
-                        weaponInventory = player.GetNode<WeaponInventory>("WeaponInventory");
-                        if (weaponInventory != null)
-                        {
-                            GD.Print($"[InventoryIntegration] WeaponInventory encontrado para player local (PeerID: {localPeerId})");
-                        }
-                        else
-                        {
-                            GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado no player local!");
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if (weaponInventory == null)
-            {
-                GD.PrintErr("[InventoryIntegration] Nenhum WeaponInventory do player local encontrado!");
+                GD.PrintErr("[InventoryIntegration] WeaponInventoryPath é null!");
             }
         }
 
@@ -140,11 +105,6 @@ namespace Jogo25D.Systems
             if (weaponInventory == null || !IsInstanceValid(weaponInventory))
             {
                 GD.PrintErr("[InventoryIntegration] WeaponInventory é null ou foi disposed!");
-                return;
-            }
-            
-            if (item.Type != ItemType.Weapon)
-            {
                 return;
             }
 

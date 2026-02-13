@@ -1,9 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://c1234567890"]
+[gd_scene load_steps=8 format=3 uid="uid://c1234567890"]
 
 [ext_resource type="Script" path="res://Scripts/Characters/Player.cs" id="1"]
 [ext_resource type="Script" path="res://Scripts/Systems/WeaponInventory.cs" id="2"]
 [ext_resource type="PackedScene" path="res://Scenes/Weapons/RangedWeapon.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://Scenes/Weapons/MeleeWeapon.tscn" id="4"]
+[ext_resource type="Script" uid="uid://bgavyybijnrmw" path="res://Scripts/Systems/InventorySystem.cs" id="5_inventory"]
+[ext_resource type="Script" uid="uid://cnoq8j4h0lmax" path="res://Scripts/Systems/InventoryIntegration.cs" id="6_integration"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
 size = Vector2(40, 40)
@@ -63,6 +65,14 @@ WeaponOffset = 25.0
 [node name="RangedWeapon" parent="WeaponInventory" instance=ExtResource("3")]
 
 [node name="MeleeWeapon" parent="WeaponInventory" instance=ExtResource("4")]
+
+[node name="InventorySystem" type="Node" parent="."]
+script = ExtResource("5_inventory")
+
+[node name="InventoryIntegration" type="Node" parent="."]
+script = ExtResource("6_integration")
+InventorySystemPath = NodePath("../InventorySystem")
+WeaponInventoryPath = NodePath("../WeaponInventory")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_1")
