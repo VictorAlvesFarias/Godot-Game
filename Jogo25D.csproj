@@ -16,12 +16,16 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="Assets\Textures\white.jpg" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include=".gitignore" />
     <None Include="Assets\Audio\Music\.gitkeep" />
     <None Include="Assets\Audio\SFX\.gitkeep" />
     <None Include="Assets\Fonts\.gitkeep" />
     <None Include="Assets\Sprites\.gitkeep" />
     <None Include="Assets\Textures\.gitkeep" />
+    <None Include="Assets\Textures\white.jpg.import" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
     <None Include="Scenes\Characters\Player.tscn" />
