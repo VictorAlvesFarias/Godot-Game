@@ -11,7 +11,7 @@ namespace Jogo25D.Systems
     public partial class InventoryIntegration : Node
     {
         [Export] public NodePath InventorySystemPath { get; set; }
-        [Export] public NodePath WeaponInventoryPath { get; set; }
+        [Export] public string PlayerGroupName { get; set; } = "players";
         
         private InventorySystem inventorySystem;
         private WeaponInventory weaponInventory;
@@ -36,24 +36,70 @@ namespace Jogo25D.Systems
                 GD.PrintErr("[InventoryIntegration] InventorySystemPath é null!");
             }
 
-            if (WeaponInventoryPath != null)
-            {
-                weaponInventory = GetNode<WeaponInventory>(WeaponInventoryPath);
-                if (weaponInventory != null)
-                {
-                }
-                else
-                {
-                    GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado no path!");
-                }
-            }
-            else
-            {
-                GD.PrintErr("[InventoryIntegration] WeaponInventoryPath é null!");
-            }
+            // Encontrar o WeaponInventory do player local dinamicamente
+            CallDeferred(nameof(FindLocalPlayerWeaponInventory));
 
             // Aguardar um frame para garantir que tudo está inicializado
             CallDeferred(nameof(InitializeWeaponsInInventory));
+        }
+
+        /// <summary>
+        /// Encontra o WeaponInventory do player local (com autoridade multiplayer)
+        /// </summary>
+        private void FindLocalPlayerWeaponInventory()
+        {
+            var players = GetTree().GetNodesInGroup(PlayerGroupName);
+            var localPeerId = 1;
+            var hasMultiplayer = false;
+
+            if (Multiplayer != null && Multiplayer.MultiplayerPeer != null &&
+                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+            {
+                try
+                {
+                    localPeerId = Multiplayer.GetUniqueId();
+                    hasMultiplayer = true;
+                }
+                catch
+                {
+                    hasMultiplayer = false;
+                }
+            }
+
+            foreach (Node node in players)
+            {
+                if (node is Jogo25D.Characters.Player player)
+                {
+                    if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
+                    {
+                        // Encontrou o player local, buscar WeaponInventory
+                        weaponInventory = player.GetNode<WeaponInventory>("WeaponInventory");
+                        if (weaponInventory != null)
+                        {
+                            GD.Print($"[InventoryIntegration] WeaponInventory encontrado para player local (PeerID: {localPeerId})");
+                        }
+                        else
+                        {
+                            GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado no player local!");
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (weaponInventory == null)
+            {
+                GD.PrintErr("[InventoryIntegration] Nenhum WeaponInventory do player local encontrado!");
+            }
+        }
+
+        public override void _ExitTree()
+        {
+            // Desconectar sinais para evitar erros ao destruir a cena
+            if (inventorySystem != null && IsInstanceValid(inventorySystem))
+            {
+                inventorySystem.ItemEquipped -= OnItemEquipped;
+            }
         }
 
         /// <summary>
@@ -61,13 +107,13 @@ namespace Jogo25D.Systems
         /// </summary>
         private void InitializeWeaponsInInventory()
         {
-            if (inventorySystem == null)
+            if (inventorySystem == null || !IsInstanceValid(inventorySystem))
             {
                 GD.PrintErr("[InventoryIntegration] InventorySystem não encontrado!");
                 return;
             }
             
-            if (weaponInventory == null)
+            if (weaponInventory == null || !IsInstanceValid(weaponInventory))
             {
                 GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado!");
                 return;
@@ -91,9 +137,9 @@ namespace Jogo25D.Systems
         /// </summary>
         private void OnItemEquipped(InventoryItem item, int slotIndex)
         {
-            if (weaponInventory == null)
+            if (weaponInventory == null || !IsInstanceValid(weaponInventory))
             {
-                GD.PrintErr("[InventoryIntegration] WeaponInventory é null!");
+                GD.PrintErr("[InventoryIntegration] WeaponInventory é null ou foi disposed!");
                 return;
             }
             
@@ -149,7 +195,8 @@ namespace Jogo25D.Systems
         /// </summary>
         public void AddWeapon(Weapon weapon)
         {
-            if (weaponInventory == null || inventorySystem == null) return;
+            if (weaponInventory == null || !IsInstanceValid(weaponInventory) || 
+                inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
 
             // Adicionar ao WeaponInventory
             weaponInventory.AddChild(weapon);

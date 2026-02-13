@@ -26,13 +26,29 @@ namespace Jogo25D.UI
 		private Control mainControl;
 		private Panel panel;
 
+		public override void _UnhandledInput(InputEvent @event)
+		{
+			// Fechar context menu ao clicar fora
+			if (contextMenu.Visible && @event is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
+			{
+				var rect = contextMenu.GetGlobalRect();
+				if (!rect.HasPoint(mouseEvent.GlobalPosition))
+				{
+					contextMenu.Visible = false;
+				}
+			}
+		}
+
 		public override void _Ready()
 		{
 			// Obter referência ao sistema de inventário
 			if (InventorySystemPath != null)
 			{
 				inventorySystem = GetNode<InventorySystem>(InventorySystemPath);
-				inventorySystem.InventoryChanged += OnInventoryChanged;
+				if (inventorySystem != null)
+				{
+					inventorySystem.InventoryChanged += OnInventoryChanged;
+				}
 			}
 
 			// Obter referências dos nós da cena
@@ -55,7 +71,32 @@ namespace Jogo25D.UI
 			Visible = false;
 		}
 
-		private void SetupSlot(int index)
+		public override void _ExitTree()
+		{
+			// Desconectar sinais para evitar erros ao destruir a cena
+			if (inventorySystem != null && IsInstanceValid(inventorySystem))
+			{
+				inventorySystem.InventoryChanged -= OnInventoryChanged;
+			}
+		}
+
+        public override void _Input(InputEvent @event)
+        {
+            // Toggle inventário com I ou TAB
+            if (Input.IsActionJustPressed("toggle_inventory"))
+            {
+                ToggleInventory();
+                GetViewport().SetInputAsHandled();
+            }
+            // ESC fecha o inventário se estiver aberto
+            else if (@event.IsActionPressed("ui_cancel") && Visible)
+            {
+                ToggleInventory();
+                GetViewport().SetInputAsHandled();
+            }
+        }
+
+        private void SetupSlot(int index)
 		{
 			slots[index] = GetNode<Panel>($"MainControl/Panel/MarginContainer/VBoxContainer/GridContainer/Slot{index}");
 			
@@ -116,7 +157,7 @@ namespace Jogo25D.UI
 
 		private void OnSlotInput(int slotIndex, InputEvent @event)
 		{
-			if (inventorySystem == null) return;
+			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
 
 			var slot = inventorySystem.GetSlot(slotIndex);
 			
@@ -139,6 +180,8 @@ namespace Jogo25D.UI
 
 		private void UpdateSlot(int index)
 		{
+			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			
 			var slot = inventorySystem.GetSlot(index);
 			
 			if (slot.IsEmpty || slot.Item == null)
@@ -189,6 +232,8 @@ namespace Jogo25D.UI
 
 		private void ShowContextMenuForSlot(int slotIndex, Vector2 position)
 		{
+			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			
 			var slot = inventorySystem.GetSlot(slotIndex);
 			if (slot.IsEmpty) return;
 
@@ -220,7 +265,7 @@ namespace Jogo25D.UI
 
 		private void OnContextMenuOption(string option)
 		{
-			if (selectedSlotIndex < 0 || inventorySystem == null) return;
+			if (selectedSlotIndex < 0 || inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
 
 			var slot = inventorySystem.GetSlot(selectedSlotIndex);
 			if (slot.IsEmpty) return;
@@ -231,19 +276,6 @@ namespace Jogo25D.UI
 			}
 
 			contextMenu.Visible = false;
-		}
-
-		public override void _UnhandledInput(InputEvent @event)
-		{
-			// Fechar context menu ao clicar fora
-			if (contextMenu.Visible && @event is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
-			{
-				var rect = contextMenu.GetGlobalRect();
-				if (!rect.HasPoint(mouseEvent.GlobalPosition))
-				{
-					contextMenu.Visible = false;
-				}
-			}
 		}
 
 		private void AdjustPanelSize()
@@ -264,26 +296,12 @@ namespace Jogo25D.UI
 
 		private void OnInventoryChanged()
 		{
+			if (!IsInstanceValid(this)) return;
+			
 			// Atualizar todos os slots
 			for (int i = 0; i < 16; i++)
 			{
 				UpdateSlot(i);
-			}
-		}
-
-		public override void _Input(InputEvent @event)
-		{
-			// Toggle inventário com I ou TAB
-			if (Input.IsActionJustPressed("toggle_inventory"))
-			{
-				ToggleInventory();
-				GetViewport().SetInputAsHandled();
-			}
-			// ESC fecha o inventário se estiver aberto
-			else if (@event.IsActionPressed("ui_cancel") && Visible)
-			{
-				ToggleInventory();
-				GetViewport().SetInputAsHandled();
 			}
 		}
 
@@ -300,7 +318,7 @@ namespace Jogo25D.UI
 
 		public void AddItemToInventory(InventoryItem item, int quantity = 1)
 		{
-			if (inventorySystem != null)
+			if (inventorySystem != null && IsInstanceValid(inventorySystem))
 			{
 				inventorySystem.AddItem(item, quantity);
 			}

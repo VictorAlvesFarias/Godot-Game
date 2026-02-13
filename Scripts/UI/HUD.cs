@@ -11,7 +11,7 @@ namespace Jogo25D.UI
 	/// </summary>
 	public partial class HUD : CanvasLayer
 	{
-		[Export] public NodePath WeaponInventoryPath { get; set; }
+		[Export] public string PlayerGroupName { get; set; } = "players";
 		
 		private Label fpsLabel;
 		private Label healthLabel;
@@ -32,11 +32,16 @@ namespace Jogo25D.UI
 			healthLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthLabel");
 			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 		
-			// Conectar ao WeaponInventory
-			if (WeaponInventoryPath != null)
+			// Conectar ao WeaponInventory do player local dinamicamente
+			CallDeferred(nameof(FindLocalPlayerWeaponInventory));
+		}
+
+		public override void _ExitTree()
+		{
+			// Desconectar sinais para evitar erros ao destruir a cena
+			if (weaponInventory != null && IsInstanceValid(weaponInventory))
 			{
-				weaponInventory.WeaponChanged += OnWeaponChanged;
-				UpdateWeaponDisplay();
+				weaponInventory.WeaponChanged -= OnWeaponChanged;
 			}
 		}
 
@@ -164,6 +169,9 @@ namespace Jogo25D.UI
 					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 					{
 						localPlayer = player;
+					
+						// Também buscar o WeaponInventory quando encontrar o player
+						FindLocalPlayerWeaponInventory();
 						break;
 					}
 				}
@@ -172,6 +180,19 @@ namespace Jogo25D.UI
 		#endregion
 
 		#region Weapon Display
+		private void FindLocalPlayerWeaponInventory()
+		{
+			if (localPlayer != null && IsInstanceValid(localPlayer))
+			{
+				weaponInventory = localPlayer.GetNode<WeaponInventory>("WeaponInventory");
+				if (weaponInventory != null && IsInstanceValid(weaponInventory))
+				{
+					weaponInventory.WeaponChanged += OnWeaponChanged;
+					UpdateWeaponDisplay();
+				}
+			}
+		}
+
 		private void OnWeaponChanged(Weapon weapon, int index)
 		{
 			UpdateWeaponDisplay();
@@ -179,7 +200,7 @@ namespace Jogo25D.UI
 
 		private void UpdateWeaponDisplay()
 		{
-			if (weaponInventory == null || weaponInventory.CurrentWeapon == null)
+			if (weaponInventory == null || !IsInstanceValid(weaponInventory) || weaponInventory.CurrentWeapon == null)
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;
