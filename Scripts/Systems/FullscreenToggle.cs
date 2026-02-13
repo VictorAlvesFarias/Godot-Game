@@ -1,6 +1,8 @@
 using Godot;
 
-public partial class FullscreenToggle : Node
+namespace Jogo25D.UI
+{
+    public partial class FullscreenToggle : Node
 {
 	private bool isProcessing = false;
 
@@ -39,4 +41,5 @@ public partial class FullscreenToggle : Node
 		var newMode = DisplayServer.WindowGetMode();
 		GD.Print($"Novo modo: {newMode}");
 	}
+    }
 }

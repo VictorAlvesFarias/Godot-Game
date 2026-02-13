@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Jogo25D.Scripts
+namespace Jogo25D.Characters
 {
     public partial class PlayerAttack : Area2D
     {
@@ -20,10 +20,7 @@ namespace Jogo25D.Scripts
 
         public override void _Ready()
         {
-            BodyEntered += (Node2D body) =>
-            {
-                OnBodyEntered(body);
-            };
+            BodyEntered += OnBodyEntered;
         }
 
         public override void _PhysicsProcess(double delta)

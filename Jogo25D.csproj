@@ -18,17 +18,18 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Assets\**" />
-    <EmbeddedResource Remove="Assets\**" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="Assets\Audio\Music\.gitkeep" />
+    <None Include="Assets\Audio\SFX\.gitkeep" />
+    <None Include="Assets\Fonts\.gitkeep" />
+    <None Include="Assets\Sprites\.gitkeep" />
+    <None Include="Assets\Textures\.gitkeep" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
-    <None Include="Scenes\Bullet.tscn" />
-    <None Include="Scenes\Main.tscn" />
-    <None Include="Scenes\PauseMenu.tscn" />
-    <None Include="Scenes\Platform.tscn" />
-    <None Include="Scenes\Player.tscn" />
+    <None Include="Scenes\Characters\Player.tscn" />
+    <None Include="Scenes\Entities\Bullet.tscn" />
+    <None Include="Scenes\Entities\Platform.tscn" />
+    <None Include="Scenes\Levels\Main.tscn" />
+    <None Include="Scenes\UI\PauseMenu.tscn" />
   </ItemGroup>
 </Project>

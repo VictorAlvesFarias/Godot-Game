@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://ranged_weapon_01"]
+
+[ext_resource type="Script" path="res://Scripts/Weapons/RangedWeapon.cs" id="1"]
+
+[node name="RangedWeapon" type="Node2D"]
+script = ExtResource("1")
+WeaponName = "Pistola"
+Damage = 1
+AttackCooldown = 0.3
+BulletSpeed = 800.0
+BulletLifetime = 2.0
+FireRate = 0.3
+
+[node name="Sprite" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 20, 0)
+width = 3.0
+default_color = Color(0.8, 0.8, 0.8, 1)
+
+[node name="MuzzleFlash" type="Line2D" parent="."]
+visible = false
+points = PackedVector2Array(20, -3, 25, 0, 20, 3)
+width = 2.0
+default_color = Color(1, 1, 0.5, 1)

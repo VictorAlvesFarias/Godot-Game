@@ -1,7 +1,10 @@
 using Godot;
 using System;
+using Jogo25D.Characters;
 
-public partial class NetworkManager : Node
+namespace Jogo25D.Systems
+{
+    public partial class NetworkManager : Node
 {
 	private const int MaxPlayers = 4;
 	private const int DefaultPort = 9876;
@@ -19,7 +22,7 @@ public partial class NetworkManager : Node
 		Instance = this;
 		
 		// Carregar cena do player
-		PlayerScene = GD.Load<PackedScene>("res://Scenes/Player.tscn");
+		PlayerScene = GD.Load<PackedScene>("res://Scenes/Characters/Player.tscn");
 		
 		// Conectar sinais do multiplayer
 		Multiplayer.PeerConnected += OnPeerConnected;
@@ -202,4 +205,5 @@ public partial class NetworkManager : Node
 		GD.Print("Servidor desconectado");
 		Disconnect();
 	}
+    }
 }

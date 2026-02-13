@@ -1,6 +1,8 @@
 using Godot;
 
-public partial class CameraController : Camera2D
+namespace Jogo25D.Systems
+{
+    public partial class CameraController : Camera2D
 {
 	[Export] public NodePath PlayerPath;
 	private Node2D player;
@@ -79,4 +81,5 @@ public partial class CameraController : Camera2D
 			player = GetTree().Root.FindChild("Player", true, false) as Node2D;
 		}
 	}	
+    }
 }

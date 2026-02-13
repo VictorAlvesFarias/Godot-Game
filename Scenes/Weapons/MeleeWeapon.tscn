@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://melee_weapon_01"]
+
+[ext_resource type="Script" path="res://Scripts/Weapons/MeleeWeapon.cs" id="1"]
+
+[node name="MeleeWeapon" type="Node2D"]
+script = ExtResource("1")
+WeaponName = "Espada"
+Damage = 2
+AttackCooldown = 0.5
+Range = 80.0
+AttackDuration = 0.2
+AttackAngle = 90.0
+ShowDebugArea = true
+
+[node name="Sprite" type="Line2D" parent="."]
+points = PackedVector2Array(0, -5, 0, -35)
+width = 4.0
+default_color = Color(0.7, 0.7, 0.8, 1)
+
+[node name="Handle" type="Polygon2D" parent="."]
+color = Color(0.4, 0.3, 0.2, 1)
+polygon = PackedVector2Array(-3, 0, 3, 0, 3, 10, -3, 10)

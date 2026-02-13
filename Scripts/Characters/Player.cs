@@ -1,10 +1,15 @@
 using Godot;
-using Jogo25D.Scripts;
+using Jogo25D.Characters;
+using Jogo25D.Systems;
+using Jogo25D.Weapons;
 using System;
 using System.Globalization;
 using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
-public partial class Player : CharacterBody2D
+
+namespace Jogo25D.Characters
+{
+    public partial class Player : CharacterBody2D
 {
     #region Base stats
     
@@ -29,13 +34,9 @@ public partial class Player : CharacterBody2D
 
     #endregion
 
-    #region Shoot
+    #region Weapon System
 
-    [Export] public bool CanShoot { get; set; } = true;
-    [Export] public float FireRate { get; set; } = 0.5f;
-    [Export] public float ShootTimer { get; set; }
-    [Export] public float DamageEffectTimer { get; set; } = 0f;
-    [Export] public float DamageColorDuration { get; set; } = 0.3f;
+    private WeaponInventory weaponInventory;
 
     #endregion
 
@@ -49,16 +50,28 @@ public partial class Player : CharacterBody2D
 
     public CpuParticles2D dashParticles;
     public Line2D sprite;
-    public PackedScene bulletScene;
+    public float DamageEffectTimer { get; set; } = 0f;
+    public float DamageColorDuration { get; set; } = 0.3f;
 
     public override void _Ready()
     {
         AddToGroup("players");
 
         Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-        bulletScene = GD.Load<PackedScene>("res://Scenes/Bullet.tscn");
         dashParticles = GetNodeOrNull<CpuParticles2D>("DashParticles");
         sprite = GetNodeOrNull<Line2D>("Sprite/Border");
+        
+        // Obter referência ao inventário de armas
+        weaponInventory = GetNodeOrNull<WeaponInventory>("WeaponInventory");
+        
+        if (weaponInventory != null)
+        {
+            GD.Print("[Player] Sistema de armas inicializado!");
+        }
+        else
+        {
+            GD.PrintErr("[Player] WeaponInventory não encontrado! Adicione como filho do Player.");
+        }
 
         Rpc(nameof(ResetPlayer));
     }
@@ -215,37 +228,14 @@ public partial class Player : CharacterBody2D
 
     public void HandleAttack(float delta)
     {
-        if (!CanShoot)
-        {
-            ShootTimer += delta;
+        if (weaponInventory == null)
+            return;
 
-            if (ShootTimer >= FireRate)
-            {
-                CanShoot = true;
-                ShootTimer = 0;
-            }
-        }
-
-        if (inputAttack && CanShoot && bulletScene != null)
+        if (inputAttack && weaponInventory.CanAttack())
         {
+            // Direção do ataque baseada na posição do mouse
             var direction = (mousePosition - GlobalPosition).Normalized();
-            var bullet = bulletScene.Instantiate<PlayerAttack>();
-            var mainScene = GetTree().Root.GetNodeOrNull("Main");
-
-            bullet.GlobalPosition = GlobalPosition + (direction * 50);
-            bullet.Direction = direction;
-            bullet.Shooter = this;
-
-            if (mainScene != null)
-            {
-                mainScene.AddChild(bullet);
-            }
-            else
-            {
-                bullet.QueueFree();
-            }
-
-            CanShoot = false;
+            weaponInventory.Attack(direction);
         }
     }
 
@@ -337,5 +327,6 @@ public class DashAction : PlayerAction
     public override void Reset()
     {
         throw new NotImplementedException();
+    }
     }
 }

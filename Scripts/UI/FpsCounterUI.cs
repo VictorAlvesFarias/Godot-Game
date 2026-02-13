@@ -1,7 +1,9 @@
 using Godot;
 using System;
 
-public partial class FpsCounter : Label
+namespace Jogo25D.UI
+{
+    public partial class FpsCounterUI : Label
 {
 	private double pingTimer = 0.0;
 	private double pingInterval = 1.0; // Medir ping a cada 1 segundo
@@ -69,4 +71,5 @@ public partial class FpsCounter : Label
 		double now = Time.GetTicksMsec();
 		currentPing = (int)(now - lastPingSentTime);
 	}
+    }
 }

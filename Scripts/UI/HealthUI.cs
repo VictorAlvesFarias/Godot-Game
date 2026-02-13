@@ -1,6 +1,9 @@
 using Godot;
+using Jogo25D.Characters;
 
-public partial class HealthHUD : Label
+namespace Jogo25D.UI
+{
+    public partial class HealthUI : Label
 {
 	private Player localPlayer;
 
@@ -78,4 +81,5 @@ public partial class HealthHUD : Label
 		
 		Text = hearts.Trim();
 	}
+    }
 }

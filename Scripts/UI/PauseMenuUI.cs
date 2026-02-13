@@ -1,6 +1,10 @@
 using Godot;
+using Jogo25D.Characters;
+using Jogo25D.Systems;
 
-public partial class PauseMenu : CanvasLayer
+namespace Jogo25D.UI
+{
+    public partial class PauseMenuUI : CanvasLayer
 {
 	private Button resetButton;
 	private Button exitButton;
@@ -199,4 +203,5 @@ public partial class PauseMenu : CanvasLayer
 			statusLabel.Modulate = Colors.White;
 		}
 	}
+    }
 }
