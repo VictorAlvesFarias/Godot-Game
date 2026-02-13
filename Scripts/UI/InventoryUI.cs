@@ -23,6 +23,13 @@ namespace Jogo25D.UI
 		private int selectedSlotIndex = -1;
 		private Control mainControl;
 		private Panel panel;
+		
+		// Drag and Drop
+		private bool isDragging = false;
+		private int draggedSlotIndex = -1;
+		private Control dragPreview;
+		private Vector2 dragOffset;
+		private const float DragThreshold = 5.0f;
 
 		public override void _UnhandledInput(InputEvent @event)
 		{
@@ -46,6 +53,9 @@ namespace Jogo25D.UI
 			contextMenu = GetNode<Panel>("MainControl/ContextMenu");
 			contextMenuContainer = GetNode<VBoxContainer>("MainControl/ContextMenu/Container");
 			
+			// Criar drag preview
+			CreateDragPreview();
+			
 			// Buscar o Inventory do player local
 			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
@@ -54,6 +64,33 @@ namespace Jogo25D.UI
 
 			// Iniciar oculto
 			Visible = false;
+		}
+		
+		private void CreateDragPreview()
+		{
+			dragPreview = new Panel();
+			dragPreview.CustomMinimumSize = new Vector2(64, 64);
+			dragPreview.Visible = false;
+			dragPreview.ZIndex = 100;
+			dragPreview.MouseFilter = Control.MouseFilterEnum.Ignore;
+			
+			var styleBox = new StyleBoxFlat();
+			styleBox.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+			styleBox.BorderColor = Colors.White;
+			styleBox.BorderWidthLeft = 2;
+			styleBox.BorderWidthRight = 2;
+			styleBox.BorderWidthTop = 2;
+			styleBox.BorderWidthBottom = 2;
+			dragPreview.AddThemeStyleboxOverride("panel", styleBox);
+			
+			var iconRect = new TextureRect();
+			iconRect.Name = "Icon";
+			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			dragPreview.AddChild(iconRect);
+			
+			mainControl.AddChild(dragPreview);
 		}
 
 		/// <summary>
@@ -136,12 +173,52 @@ namespace Jogo25D.UI
 				inventory.InventoryChanged -= OnInventoryChanged;
 			}
 		}
+		
+		public override void _Process(double delta)
+		{
+			if (isDragging && dragPreview != null)
+			{
+				dragPreview.GlobalPosition = GetViewport().GetMousePosition() + dragOffset;
+			}
+		}
 
 		public override void _Input(InputEvent @event)
 		{
+			// Detectar soltar botão do mouse durante drag
+			if (isDragging && @event is InputEventMouseButton mouseEvent && 
+			    mouseEvent.ButtonIndex == MouseButton.Left && !mouseEvent.Pressed)
+			{
+				// Encontrar em qual slot o mouse está
+				int targetSlot = GetSlotAtPosition(mouseEvent.GlobalPosition);
+				
+				if (targetSlot >= 0)
+				{
+					EndDrag(targetSlot);
+				}
+				else
+				{
+					CancelDrag();
+				}
+				
+				GetViewport().SetInputAsHandled();
+				return;
+			}
+			
+			// Cancelar drag com ESC
+			if (@event.IsActionPressed("ui_cancel") && isDragging)
+			{
+				CancelDrag();
+				GetViewport().SetInputAsHandled();
+				return;
+			}
+			
 			// Toggle inventário com I ou TAB
 			if (Input.IsActionJustPressed("toggle_inventory"))
 			{
+				if (isDragging)
+				{
+					CancelDrag();
+				}
 				ToggleInventory();
 				GetViewport().SetInputAsHandled();
 			}
@@ -151,6 +228,18 @@ namespace Jogo25D.UI
 				ToggleInventory();
 				GetViewport().SetInputAsHandled();
 			}
+		}
+		
+		private int GetSlotAtPosition(Vector2 globalPosition)
+		{
+			for (int i = 0; i < 16; i++)
+			{
+				if (slots[i] != null && slots[i].GetGlobalRect().HasPoint(globalPosition))
+				{
+					return i;
+				}
+			}
+			return -1;
 		}
 
 		private void SetupSlot(int index)
@@ -218,21 +307,115 @@ namespace Jogo25D.UI
 
 			var slot = inventory.GetSlot(slotIndex);
 			
-			if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
+			if (@event is InputEventMouseButton mouseEvent)
 			{
-				// Botão esquerdo - selecionar
-				if (mouseEvent.ButtonIndex == MouseButton.Left)
+				// Botão esquerdo pressionado - iniciar drag
+				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty)
 				{
-					SelectSlot(slotIndex);
+					StartDrag(slotIndex, mouseEvent.GlobalPosition);
 					slots[slotIndex].AcceptEvent();
 				}
 				// Botão direito - menu de contexto
-				else if (mouseEvent.ButtonIndex == MouseButton.Right && !slot.IsEmpty)
+				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty)
 				{
 					ShowContextMenuForSlot(slotIndex, mouseEvent.GlobalPosition);
 					slots[slotIndex].AcceptEvent();
 				}
 			}
+		}
+		
+		private void StartDrag(int slotIndex, Vector2 mousePos)
+		{
+			if (inventory == null || !IsInstanceValid(inventory)) return;
+			
+			var slot = inventory.GetSlot(slotIndex);
+			if (slot.IsEmpty) return;
+			
+			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Item?.ItemName})");
+			
+			isDragging = true;
+			draggedSlotIndex = slotIndex;
+			
+			// Configurar preview visual
+			if (dragPreview != null)
+			{
+				var iconRect = dragPreview.GetNode<TextureRect>("Icon");
+				if (slot.Item.Icon != null)
+				{
+					iconRect.Texture = slot.Item.Icon;
+				}
+				else
+				{
+					iconRect.Texture = null;
+				}
+				
+				dragOffset = new Vector2(-32, -32); // Centralizar no mouse
+				dragPreview.GlobalPosition = mousePos + dragOffset;
+				dragPreview.Visible = true;
+				
+				// Tornar o slot original semi-transparente
+				if (iconRects[slotIndex] != null)
+				{
+					iconRects[slotIndex].Modulate = new Color(1, 1, 1, 0.5f);
+				}
+			}
+		}
+		
+		private void EndDrag(int targetSlotIndex)
+		{
+			if (!isDragging || draggedSlotIndex < 0) return;
+			
+			GD.Print($"EndDrag: arrastado slot {draggedSlotIndex} para slot {targetSlotIndex}");
+			
+			// Esconder preview
+			if (dragPreview != null)
+			{
+				dragPreview.Visible = false;
+			}
+			
+			// Restaurar opacidade do slot original
+			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
+			{
+				iconRects[draggedSlotIndex].Modulate = Colors.White;
+			}
+			
+			// Se soltar em um slot diferente, trocar os itens
+			if (targetSlotIndex != draggedSlotIndex && inventory != null)
+			{
+				SwapItems(draggedSlotIndex, targetSlotIndex);
+			}
+			
+			isDragging = false;
+			draggedSlotIndex = -1;
+		}
+		
+		private void CancelDrag()
+		{
+			if (!isDragging) return;
+			
+			// Esconder preview
+			if (dragPreview != null)
+			{
+				dragPreview.Visible = false;
+			}
+			
+			// Restaurar opacidade do slot original
+			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
+			{
+				iconRects[draggedSlotIndex].Modulate = Colors.White;
+			}
+			
+			isDragging = false;
+			draggedSlotIndex = -1;
+		}
+		
+		private void SwapItems(int fromIndex, int toIndex)
+		{
+			if (inventory == null || !IsInstanceValid(inventory)) return;
+			if (fromIndex < 0 || fromIndex >= 16 || toIndex < 0 || toIndex >= 16) return;
+			
+			// Usar o método SwapSlots do Inventory
+			inventory.SwapSlots(fromIndex, toIndex);
 		}
 
 		private void UpdateSlot(int index)

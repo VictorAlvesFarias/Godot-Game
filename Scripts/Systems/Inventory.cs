@@ -138,6 +138,37 @@ namespace Jogo25D.Systems
             
             EmitSignal(SignalName.InventoryChanged);
         }
+        
+        /// <summary>
+        /// Troca dois slots de posição
+        /// </summary>
+        public bool SwapSlots(int fromIndex, int toIndex)
+        {
+            if (fromIndex < 0 || fromIndex >= INVENTORY_SIZE) return false;
+            if (toIndex < 0 || toIndex >= INVENTORY_SIZE) return false;
+            if (fromIndex == toIndex) return false;
+            
+            // Debug: Imprimir antes da troca
+            GD.Print($"Trocando slot {fromIndex} ({slots[fromIndex].Item?.ItemName ?? "vazio"}) com slot {toIndex} ({slots[toIndex].Item?.ItemName ?? "vazio"})");
+            
+            // Salvar valores temporários
+            Item tempItem = slots[fromIndex].Item;
+            int tempQuantity = slots[fromIndex].Quantity;
+            
+            // Copiar de 'to' para 'from'
+            slots[fromIndex].Item = slots[toIndex].Item;
+            slots[fromIndex].Quantity = slots[toIndex].Quantity;
+            
+            // Copiar valores temporários para 'to'
+            slots[toIndex].Item = tempItem;
+            slots[toIndex].Quantity = tempQuantity;
+            
+            // Debug: Imprimir depois da troca
+            GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Item?.ItemName ?? "vazio"}, slot {toIndex}: {slots[toIndex].Item?.ItemName ?? "vazio"}");
+            
+            EmitSignal(SignalName.InventoryChanged);
+            return true;
+        }
 
         #endregion
 
@@ -239,6 +270,14 @@ namespace Jogo25D.Systems
                 if (slots[i].IsEmpty) count++;
             }
             return count;
+        }
+        
+        /// <summary>
+        /// Notifica que o inventário foi alterado (útil para drag and drop)
+        /// </summary>
+        public void NotifyInventoryChanged()
+        {
+            EmitSignal(SignalName.InventoryChanged);
         }
 
         #endregion
