@@ -72,7 +72,6 @@ namespace Jogo25D.Systems
 				if (!hasMultiplayer || player2D.GetMultiplayerAuthority() == localPeerId)
 				{
 					player = player2D;
-					GD.Print($"Câmera seguindo: {player.Name}");
 					return;
 				}
 			}

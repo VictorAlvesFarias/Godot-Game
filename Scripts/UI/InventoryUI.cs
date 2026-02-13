@@ -97,7 +97,7 @@ namespace Jogo25D.UI
 						if (inventorySystem != null)
 						{
 							inventorySystem.InventoryChanged += OnInventoryChanged;
-							GD.Print($"[InventoryUI] InventorySystem encontrado para player local (PeerID: {localPeerId})");
+
 							
 							// Verificar se slots já foram inicializados (slots[0] não é null)
 							if (slots[0] == null)
@@ -111,20 +111,7 @@ namespace Jogo25D.UI
 								OnInventoryChanged();
 							}
 						}
-						else
-						{
-							GD.PrintErr("[InventoryUI] InventorySystem não encontrado no player local!");
-						}
-						break;
-					}
-				}
-			}
 
-			if (inventorySystem == null)
-			{
-				GD.PrintErr("[InventoryUI] Nenhum InventorySystem do player local encontrado!");
-			}
-		}
 
 		private void InitializeSlots()
 		{
@@ -377,18 +364,11 @@ namespace Jogo25D.UI
 			// Verificar se o inventorySystem é válido antes de abrir
 			if (inventorySystem == null || !IsInstanceValid(inventorySystem))
 			{
-				GD.Print("[InventoryUI] InventorySystem inválido, tentando re-buscar...");
-				FindLocalPlayerInventorySystem();
-				
-				// Se ainda não encontrou, não abrir o inventário
-				if (inventorySystem == null || !IsInstanceValid(inventorySystem))
-				{
-					GD.PrintErr("[InventoryUI] Não foi possível encontrar InventorySystem válido!");
-					return;
-				}
-			}
+			FindLocalPlayerInventorySystem();
 			
-			Visible = !Visible;
+			// Se ainda não encontrou, não abrir o inventário
+			if (inventorySystem == null || !IsInstanceValid(inventorySystem))
+			{
 			
 			if (Visible)
 			{

@@ -24,22 +24,15 @@ namespace Jogo25D.UI
 	private void ToggleFullscreen()
 	{
 		var currentMode = DisplayServer.WindowGetMode();
-		GD.Print($"Modo atual: {currentMode}");
 		
 		if (currentMode == DisplayServer.WindowMode.Fullscreen || currentMode == DisplayServer.WindowMode.ExclusiveFullscreen)
 		{
-			GD.Print("Tentando mudar para Windowed");
 			DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
 		}
 		else
 		{
-			GD.Print("Tentando mudar para Fullscreen");
 			DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
 		}
-		
-		// Verificar o novo modo
-		var newMode = DisplayServer.WindowGetMode();
-		GD.Print($"Novo modo: {newMode}");
 	}
     }
 }

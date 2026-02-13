@@ -65,15 +65,6 @@ namespace Jogo25D.Characters
 
             // Obter referência ao inventário de armas
             weaponInventory = GetNodeOrNull<WeaponInventory>("WeaponInventory");
-        
-        if (weaponInventory != null)
-        {
-            GD.Print("[Player] Sistema de armas inicializado!");
-        }
-        else
-        {
-            GD.PrintErr("[Player] WeaponInventory não encontrado! Adicione como filho do Player.");
-        }
 
         Rpc(nameof(ResetPlayer));
     }
@@ -244,13 +235,6 @@ namespace Jogo25D.Characters
     public void HandleLogs()
     {
         Console.Clear();
-
-        Console.WriteLine(CurrentHealth);
-        //Console.WriteLine(inputX);
-        //Console.WriteLine(inputY);
-        //Console.WriteLine(inputJump);
-        //Console.WriteLine(inputDash);
-        //Console.WriteLine(inputAttack);
     }
 
     public void TakeDamage(int damage)

@@ -84,15 +84,12 @@ namespace Jogo25D.Systems
         {
             if (weapons.Count >= MaxWeapons)
             {
-                GD.PrintErr("[Inventory] Inventário cheio!");
                 return false;
             }
 
             weapons.Add(weapon);
             AddChild(weapon);
             weapon.OnUnequip();
-
-            GD.Print($"[Inventory] Arma adicionada: {weapon.WeaponName}");
 
             // Se for a primeira arma, equipar automaticamente
             if (weapons.Count == 1)
@@ -150,8 +147,6 @@ namespace Jogo25D.Systems
             currentWeapon.OnEquip();
 
             EmitSignal(SignalName.WeaponChanged, currentWeapon, index);
-            
-            GD.Print($"[Inventory] Equipou: {currentWeapon.WeaponName} (Index: {index})");
         }
 
         /// <summary>

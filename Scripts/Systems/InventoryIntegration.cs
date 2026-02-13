@@ -18,22 +18,14 @@ namespace Jogo25D.Systems
 
         public override void _Ready()
         {
-            // Conectar ao InventorySystem (irmão neste Player)
             if (InventorySystemPath != null)
             {
                 inventorySystem = GetNode<InventorySystem>(InventorySystemPath);
+
                 if (inventorySystem != null)
                 {
                     inventorySystem.ItemEquipped += OnItemEquipped;
                 }
-                else
-                {
-                    GD.PrintErr("[InventoryIntegration] InventorySystem não encontrado no path!");
-                }
-            }
-            else
-            {
-                GD.PrintErr("[InventoryIntegration] InventorySystemPath é null!");
             }
 
             // Conectar ao WeaponInventory (irmão neste Player)
@@ -42,19 +34,9 @@ namespace Jogo25D.Systems
                 weaponInventory = GetNode<WeaponInventory>(WeaponInventoryPath);
                 if (weaponInventory != null)
                 {
-                    GD.Print("[InventoryIntegration] WeaponInventory conectado!");
-                    
                     // Inicializar armas no inventário
                     CallDeferred(nameof(InitializeWeaponsInInventory));
                 }
-                else
-                {
-                    GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado no path!");
-                }
-            }
-            else
-            {
-                GD.PrintErr("[InventoryIntegration] WeaponInventoryPath é null!");
             }
         }
 
@@ -67,20 +49,15 @@ namespace Jogo25D.Systems
             }
         }
 
-        /// <summary>
-        /// Adiciona as armas iniciais do WeaponInventory ao inventário visual
-        /// </summary>
         private void InitializeWeaponsInInventory()
         {
             if (inventorySystem == null || !IsInstanceValid(inventorySystem))
             {
-                GD.PrintErr("[InventoryIntegration] InventorySystem não encontrado!");
                 return;
             }
             
             if (weaponInventory == null || !IsInstanceValid(weaponInventory))
             {
-                GD.PrintErr("[InventoryIntegration] WeaponInventory não encontrado!");
                 return;
             }
 
@@ -97,14 +74,10 @@ namespace Jogo25D.Systems
             }
         }
 
-        /// <summary>
-        /// Chamado quando um item é equipado no inventário
-        /// </summary>
         private void OnItemEquipped(InventoryItem item, int slotIndex)
         {
             if (weaponInventory == null || !IsInstanceValid(weaponInventory))
             {
-                GD.PrintErr("[InventoryIntegration] WeaponInventory é null ou foi disposed!");
                 return;
             }
 
@@ -128,20 +101,9 @@ namespace Jogo25D.Systems
                 {
                     weaponInventory.EquipWeapon(weaponIndex);
                 }
-                else
-                {
-                    GD.PrintErr($"[InventoryIntegration] Arma não encontrada no WeaponInventory: {weapon.WeaponName}");
-                }
-            }
-            else
-            {
-                GD.PrintErr($"[InventoryIntegration] ItemReference não é uma Weapon! Tipo: {item.ItemReference?.GetType().Name ?? "null"}");
             }
         }
 
-        /// <summary>
-        /// Adiciona um novo item ao inventário (para futuros coletáveis)
-        /// </summary>
         public void AddItem(InventoryItem item, int quantity = 1)
         {
             if (inventorySystem != null)
@@ -150,23 +112,26 @@ namespace Jogo25D.Systems
             }
         }
 
-        /// <summary>
-        /// Adiciona uma nova arma e a integra com o WeaponInventory
-        /// </summary>
         public void AddWeapon(Weapon weapon)
         {
-            if (weaponInventory == null || !IsInstanceValid(weaponInventory) || 
-                inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+            if (
+                weaponInventory == null || 
+                inventorySystem == null || 
+                !IsInstanceValid(weaponInventory) ||
+                !IsInstanceValid(inventorySystem)
+            )
+            { 
+                return;
+            }
 
-            // Adicionar ao WeaponInventory
+            
             weaponInventory.AddChild(weapon);
-            weapon.OnUnequip(); // Começa desequipada
+            
+            weapon.OnUnequip(); 
 
-            // Adicionar ao inventário visual
             var item = InventoryItem.FromWeapon(weapon);
-            inventorySystem.AddItem(item, 1);
 
-            GD.Print($"[InventoryIntegration] Nova arma adicionada: {weapon.WeaponName}");
+            inventorySystem.AddItem(item, 1);
         }
     }
 }

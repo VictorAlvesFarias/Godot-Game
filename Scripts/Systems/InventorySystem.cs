@@ -123,7 +123,6 @@ namespace Jogo25D.Systems
         {
             if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
             {
-                GD.PrintErr($"[InventorySystem] Índice inválido: {slotIndex}");
                 return;
             }
             
@@ -131,13 +130,11 @@ namespace Jogo25D.Systems
             
             if (slot.IsEmpty)
             {
-                GD.PrintErr($"[InventorySystem] Slot {slotIndex} está vazio!");
                 return;
             }
             
             if (!slot.Item.IsEquippable)
             {
-                GD.PrintErr($"[InventorySystem] Item {slot.Item.ItemName} não é equipável!");
                 return;
             }
 

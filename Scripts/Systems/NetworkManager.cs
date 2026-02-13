@@ -42,12 +42,10 @@ namespace Jogo25D.Systems
 		
 		if (error != Error.Ok)
 		{
-			GD.PrintErr($"Erro ao criar servidor: {error}");
 			return;
 		}
 		
 		Multiplayer.MultiplayerPeer = peer;
-		GD.Print($"Servidor criado na porta {port}");
 		
 		// Remover player inicial da cena
 		RemoveInitialPlayer();
@@ -63,12 +61,10 @@ namespace Jogo25D.Systems
 		
 		if (error != Error.Ok)
 		{
-			GD.PrintErr($"Erro ao conectar ao servidor: {error}");
 			return;
 		}
 		
 		Multiplayer.MultiplayerPeer = peer;
-		GD.Print($"Conectando a {address}:{port}...");
 		
 		// Remover player inicial da cena
 		RemoveInitialPlayer();
@@ -80,7 +76,6 @@ namespace Jogo25D.Systems
 		if (initialPlayer != null)
 		{
 			initialPlayer.QueueFree();
-			GD.Print("Player inicial removido");
 		}
 	}
 	
@@ -98,8 +93,6 @@ namespace Jogo25D.Systems
 		{
 			player.QueueFree();
 		}
-		
-		GD.Print("Desconectado");
 	}
 	
 	public bool IsConnected()
@@ -128,7 +121,6 @@ namespace Jogo25D.Systems
 		player.SetMultiplayerAuthority((int)peerId);
 		
 		spawnParent.AddChild(player);
-		GD.Print($"Player {peerId} spawnado");
 	}
 	
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -141,8 +133,6 @@ namespace Jogo25D.Systems
 	// Sinais do multiplayer
 	private void OnPeerConnected(long id)
 	{
-		GD.Print($"Peer {id} conectado");
-		
 		// Se for o servidor, spawnar um player para o novo peer
 		if (Multiplayer.IsServer())
 		{
@@ -175,8 +165,6 @@ namespace Jogo25D.Systems
 	
 	private void OnPeerDisconnected(long id)
 	{
-		GD.Print($"Peer {id} desconectado");
-		
 		// Remover o player do peer desconectado
 		var playerNode = spawnParent.GetNodeOrNull($"Player{id}");
 		if (playerNode != null)
@@ -187,22 +175,16 @@ namespace Jogo25D.Systems
 	
 	private void OnConnectedToServer()
 	{
-		GD.Print("Conectado ao servidor!");
-		
 		// O servidor irá spawnar nosso player
-		long myId = Multiplayer.GetUniqueId();
-		GD.Print($"Meu ID: {myId}");
 	}
 	
 	private void OnConnectionFailed()
 	{
-		GD.PrintErr("Falha ao conectar ao servidor");
 		peer = null;
 	}
 	
 	private void OnServerDisconnected()
 	{
-		GD.Print("Servidor desconectado");
 		Disconnect();
 	}
     }
