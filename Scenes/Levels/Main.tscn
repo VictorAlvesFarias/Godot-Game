@@ -58,9 +58,10 @@ script = ExtResource("4")
 PlayerPath = NodePath("../Player")
 
 [node name="PauseMenu" parent="." unique_id=2106941673 instance=ExtResource("3")]
-visible = false
+layer = 8
 
 [node name="HUD" parent="." unique_id=623492945 instance=ExtResource("7")]
 
 [node name="InventoryMenu" parent="." unique_id=528020502 instance=ExtResource("12")]
+layer = 4
 InventorySystemPath = NodePath("../InventorySystem")
