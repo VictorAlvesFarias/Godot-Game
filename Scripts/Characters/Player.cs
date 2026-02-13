@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
+using Jogo25D.Items;
 using Jogo25D.Weapons;
 using System;
 using System.Globalization;
@@ -34,9 +35,14 @@ namespace Jogo25D.Characters
 
     #endregion
 
-    #region Weapon System
+    #region Inventory System
 
-    private WeaponInventory weaponInventory;
+    public Inventory Inventory { get; private set; }
+    private Weapon currentWeaponSystem;
+    private Node2D weaponHolder;
+    private Vector2 lastAttackDirection = Vector2.Right;
+    
+    [Export] public float WeaponOffset { get; set; } = 25.0f;
 
     #endregion
 
@@ -63,8 +69,25 @@ namespace Jogo25D.Characters
         sprite = GetNodeOrNull<Line2D>("Sprite/Border");
             InitialPosition=GlobalPosition;
 
-            // Obter referência ao inventário de armas
-            weaponInventory = GetNodeOrNull<WeaponInventory>("WeaponInventory");
+            // Inicializar inventário
+            Inventory = GetNodeOrNull<Inventory>("Inventory");
+            if (Inventory == null)
+            {
+                Inventory = new Inventory();
+                AddChild(Inventory);
+                Inventory.Name = "Inventory";
+            }
+            
+            // Criar weapon holder para posicionamento das armas
+            weaponHolder = new Node2D();
+            weaponHolder.Name = "WeaponHolder";
+            AddChild(weaponHolder);
+            
+            // Conectar ao sinal de equipar item
+            Inventory.ItemEquipped += OnItemEquipped;
+            
+            // Adicionar armas iniciais
+            InitializeStartingWeapons();
 
         Rpc(nameof(ResetPlayer));
     }
@@ -76,6 +99,7 @@ namespace Jogo25D.Characters
         HandleInput();
         HandleMovement((float)delta);
         HandleAttack((float)delta);
+        UpdateWeaponPosition();
         //HandleLogs();
         
         if (DamageEffectTimer > 0)
@@ -221,15 +245,137 @@ namespace Jogo25D.Characters
 
     public void HandleAttack(float delta)
     {
-        if (weaponInventory == null)
+        if (currentWeaponSystem == null || !currentWeaponSystem.CanAttack)
             return;
 
-        if (inputAttack && weaponInventory.CanAttack())
+        if (inputAttack)
         {
             // Direção do ataque baseada na posição do mouse
             var direction = (mousePosition - GlobalPosition).Normalized();
-            weaponInventory.Attack(direction);
+            lastAttackDirection = direction;
+            currentWeaponSystem.Attack(direction);
         }
+    }
+    
+    /// <summary>
+    /// Atualiza a posição e rotação da arma baseado na direção do ataque
+    /// </summary>
+    private void UpdateWeaponPosition()
+    {
+        if (weaponHolder == null || lastAttackDirection.LengthSquared() <= 0.01f)
+            return;
+            
+        // Rotacionar para a direção do ataque
+        weaponHolder.Rotation = lastAttackDirection.Angle();
+        
+        // Inverter posição horizontal se estiver mirando para a esquerda
+        if (lastAttackDirection.X < 0)
+        {
+            // Lado esquerdo
+            weaponHolder.Position = new Vector2(-WeaponOffset, 0);
+            weaponHolder.Scale = new Vector2(1, -1); // Flip vertical da arma
+        }
+        else
+        {
+            // Lado direito
+            weaponHolder.Position = new Vector2(WeaponOffset, 0);
+            weaponHolder.Scale = new Vector2(1, 1);
+        }
+    }
+    
+    /// <summary>
+    /// Chamado quando um item é equipado
+    /// </summary>
+    private void OnItemEquipped(Item item, int slotIndex)
+    {
+        // Destruir sistema de arma anterior se existir
+        if (currentWeaponSystem != null)
+        {
+            currentWeaponSystem.QueueFree();
+            currentWeaponSystem = null;
+        }
+        
+        // Se não é uma arma, não fazer nada
+        if (item == null || item.Type != ItemType.Weapon)
+            return;
+        
+        // Carregar arma da cena apropriada
+        PackedScene weaponScene = null;
+        
+        if (item.WeaponType == WeaponType.Melee)
+        {
+            weaponScene = GD.Load<PackedScene>("res://Scenes/Weapons/MeleeWeapon.tscn");
+        }
+        else if (item.WeaponType == WeaponType.Ranged)
+        {
+            weaponScene = GD.Load<PackedScene>("res://Scenes/Weapons/RangedWeapon.tscn");
+        }
+        
+        if (weaponScene != null)
+        {
+            var weaponInstance = weaponScene.Instantiate<Weapon>();
+            
+            // Atribuir propriedades do item para a arma
+            weaponInstance.WeaponName = item.ItemName;
+            weaponInstance.Damage = item.Damage;
+            weaponInstance.AttackCooldown = item.AttackCooldown;
+            weaponInstance.Icon = item.Icon;
+            
+            // Propriedades específicas de cada tipo
+            if (weaponInstance is MeleeWeapon meleeWeapon)
+            {
+                meleeWeapon.Range = item.AttackRange;
+            }
+            else if (weaponInstance is RangedWeapon rangedWeapon)
+            {
+                rangedWeapon.BulletScene = item.ProjectileScene;
+                rangedWeapon.BulletSpeed = item.ProjectileSpeed;
+            }
+            
+            // Adicionar ao weapon holder
+            weaponHolder.AddChild(weaponInstance);
+            currentWeaponSystem = weaponInstance;
+            
+            // Equipar a arma (ativar visualmente)
+            currentWeaponSystem.OnEquip();
+        }
+    }
+
+    /// <summary>
+    /// Inicializa o inventário com armas iniciais
+    /// </summary>
+    private void InitializeStartingWeapons()
+    {
+        // Criar espada melee
+        var meleeWeapon = new Item("Espada", ItemType.Weapon);
+        meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
+        meleeWeapon.IsEquippable = true;
+        meleeWeapon.WeaponType = WeaponType.Melee;
+        meleeWeapon.Damage = 15;
+        meleeWeapon.AttackCooldown = 0.5f;
+        meleeWeapon.AttackRange = 80.0f;
+        meleeWeapon.KnockbackForce = 200f;
+        
+        // Criar arco ranged
+        var rangedWeapon = new Item("Arco", ItemType.Weapon);
+        rangedWeapon.Description = "Um arco para ataques à distância";
+        rangedWeapon.IsEquippable = true;
+        rangedWeapon.WeaponType = WeaponType.Ranged;
+        rangedWeapon.Damage = 10;
+        rangedWeapon.AttackCooldown = 0.8f;
+        rangedWeapon.AttackRange = 10f;
+        rangedWeapon.ProjectileSpeed = 500f;
+        
+        // Carregar a cena de projétil (bullet)
+        var bulletScene = GD.Load<PackedScene>("res://Scenes/Entities/Bullet.tscn");
+        rangedWeapon.ProjectileScene = bulletScene;
+        
+        // Adicionar ao inventário
+        Inventory.AddItem(meleeWeapon, 1);
+        Inventory.AddItem(rangedWeapon, 1);
+        
+        // Equipar a espada melee por padrão (slot 0)
+        Inventory.EquipItem(0);
     }
 
     public void HandleLogs()

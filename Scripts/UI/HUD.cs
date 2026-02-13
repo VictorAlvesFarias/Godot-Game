@@ -2,7 +2,7 @@ using Godot;
 using System;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
-using Jogo25D.Weapons;
+using Jogo25D.Items;
 
 namespace Jogo25D.UI
 {
@@ -16,10 +16,8 @@ namespace Jogo25D.UI
 		private Label fpsLabel;
 		private Label healthLabel;
 		private Label weaponLabel;
-		private WeaponInventory weaponInventory;
+		private Inventory inventory;
 		private Player localPlayer;
-		
-		// FPS Counter
 		private double pingTimer = 0.0;
 		private double pingInterval = 1.0;
 		private double lastPingSentTime = 0.0;
@@ -32,20 +30,19 @@ namespace Jogo25D.UI
 			healthLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthLabel");
 			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 		
-			// Conectar ao WeaponInventory do player local dinamicamente
-			CallDeferred(nameof(FindLocalPlayerWeaponInventory));
-		}
-
-		public override void _ExitTree()
+		// Conectar ao Inventory do player local dinamicamente
+		CallDeferred(nameof(FindLocalPlayerInventory));
+	}
+	public override void _ExitTree()
+	{
+		// Desconectar sinais para evitar erros ao destruir a cena
+		if (inventory != null && IsInstanceValid(inventory))
 		{
-			// Desconectar sinais para evitar erros ao destruir a cena
-			if (weaponInventory != null && IsInstanceValid(weaponInventory))
-			{
-				weaponInventory.WeaponChanged -= OnWeaponChanged;
-			}
+			inventory.ItemEquipped -= OnItemEquipped;
 		}
+	}
 
-		public override void _Process(double delta)
+	public override void _Process(double delta)
 		{
 			UpdateFpsDisplay(delta);
 			UpdateHealthDisplay();
@@ -169,9 +166,9 @@ namespace Jogo25D.UI
 					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 					{
 						localPlayer = player;
-					
+				
 						// Também buscar o WeaponInventory quando encontrar o player
-						FindLocalPlayerWeaponInventory();
+						FindLocalPlayerInventory();
 						break;
 					}
 				}
@@ -180,34 +177,41 @@ namespace Jogo25D.UI
 		#endregion
 
 		#region Weapon Display
-		private void FindLocalPlayerWeaponInventory()
+		private void FindLocalPlayerInventory()
 		{
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
-				weaponInventory = localPlayer.GetNode<WeaponInventory>("WeaponInventory");
-				if (weaponInventory != null && IsInstanceValid(weaponInventory))
+				inventory = localPlayer.Inventory;
+				if (inventory != null && IsInstanceValid(inventory))
 				{
-					weaponInventory.WeaponChanged += OnWeaponChanged;
+					inventory.ItemEquipped += OnItemEquipped;
 					UpdateWeaponDisplay();
 				}
 			}
 		}
 
-		private void OnWeaponChanged(Weapon weapon, int index)
+		private void OnItemEquipped(Item item, int index)
 		{
 			UpdateWeaponDisplay();
 		}
 
 		private void UpdateWeaponDisplay()
 		{
-			if (weaponInventory == null || !IsInstanceValid(weaponInventory) || weaponInventory.CurrentWeapon == null)
+			if (inventory == null || !IsInstanceValid(inventory))
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;
 			}
 
-			var weapon = weaponInventory.CurrentWeapon;
-			weaponLabel.Text = $"🗡 {weapon.WeaponName}";
+			var equippedItem = inventory.GetEquippedItem();
+			
+			if (equippedItem == null || equippedItem.Type != ItemType.Weapon)
+			{
+				weaponLabel.Text = "Arma: Nenhuma";
+				return;
+			}
+
+			weaponLabel.Text = $"🗡 {equippedItem.ItemName}";
 		}
 		#endregion
 	}

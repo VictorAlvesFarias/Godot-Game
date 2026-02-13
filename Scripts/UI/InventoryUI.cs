@@ -11,7 +11,7 @@ namespace Jogo25D.UI
 	/// </summary>
 	public partial class InventoryUI : CanvasLayer
 	{
-		private InventorySystem inventorySystem;
+		private Inventory inventory;
 		private GridContainer gridContainer;
 		private Panel contextMenu;
 		private VBoxContainer contextMenuContainer;
@@ -46,7 +46,7 @@ namespace Jogo25D.UI
 			contextMenu = GetNode<Panel>("MainControl/ContextMenu");
 			contextMenuContainer = GetNode<VBoxContainer>("MainControl/ContextMenu/Container");
 			
-			// Buscar o InventorySystem do player local
+			// Buscar o Inventory do player local
 			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
 			// Ajustar tamanho do painel
@@ -57,17 +57,17 @@ namespace Jogo25D.UI
 		}
 
 		/// <summary>
-		/// Encontra o InventorySystem do player local (com autoridade multiplayer)
+		/// Encontra o Inventory do player local (com autoridade multiplayer)
 		/// </summary>
 		private void FindLocalPlayerInventorySystem()
 		{
-			// Desconectar do inventorySystem anterior se existir
-			if (inventorySystem != null && IsInstanceValid(inventorySystem))
+			// Desconectar do inventory anterior se existir
+			if (inventory != null && IsInstanceValid(inventory))
 			{
-				inventorySystem.InventoryChanged -= OnInventoryChanged;
+				inventory.InventoryChanged -= OnInventoryChanged;
 			}
-			inventorySystem = null;
-			
+			inventory = null;
+
 			var players = GetTree().GetNodesInGroup("players");
 			var localPeerId = 1;
 			var hasMultiplayer = false;
@@ -92,13 +92,12 @@ namespace Jogo25D.UI
 				{
 					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 					{
-						// Encontrou o player local, buscar InventorySystem
-						inventorySystem = player.GetNodeOrNull<InventorySystem>("InventorySystem");
-						if (inventorySystem != null)
+						// Encontrou o player local, obter Inventory
+						inventory = player.Inventory;
+						if (inventory != null)
 						{
-							inventorySystem.InventoryChanged += OnInventoryChanged;
+							inventory.InventoryChanged += OnInventoryChanged;
 
-							
 							// Verificar se slots já foram inicializados (slots[0] não é null)
 							if (slots[0] == null)
 							{
@@ -111,7 +110,11 @@ namespace Jogo25D.UI
 								OnInventoryChanged();
 							}
 						}
-
+						break;
+					}
+				}
+			}
+		}
 
 		private void InitializeSlots()
 		{
@@ -128,29 +131,29 @@ namespace Jogo25D.UI
 		public override void _ExitTree()
 		{
 			// Desconectar sinais para evitar erros ao destruir a cena
-			if (inventorySystem != null && IsInstanceValid(inventorySystem))
+			if (inventory != null && IsInstanceValid(inventory))
 			{
-				inventorySystem.InventoryChanged -= OnInventoryChanged;
+				inventory.InventoryChanged -= OnInventoryChanged;
 			}
 		}
 
-        public override void _Input(InputEvent @event)
-        {
-            // Toggle inventário com I ou TAB
-            if (Input.IsActionJustPressed("toggle_inventory"))
-            {
-                ToggleInventory();
-                GetViewport().SetInputAsHandled();
-            }
-            // ESC fecha o inventário se estiver aberto
-            else if (@event.IsActionPressed("ui_cancel") && Visible)
-            {
-                ToggleInventory();
-                GetViewport().SetInputAsHandled();
-            }
-        }
+		public override void _Input(InputEvent @event)
+		{
+			// Toggle inventário com I ou TAB
+			if (Input.IsActionJustPressed("toggle_inventory"))
+			{
+				ToggleInventory();
+				GetViewport().SetInputAsHandled();
+			}
+			// ESC fecha o inventário se estiver aberto
+			else if (@event.IsActionPressed("ui_cancel") && Visible)
+			{
+				ToggleInventory();
+				GetViewport().SetInputAsHandled();
+			}
+		}
 
-        private void SetupSlot(int index)
+		private void SetupSlot(int index)
 		{
 			slots[index] = GetNode<Panel>($"MainControl/Panel/MarginContainer/VBoxContainer/GridContainer/Slot{index}");
 			
@@ -211,9 +214,9 @@ namespace Jogo25D.UI
 
 		private void OnSlotInput(int slotIndex, InputEvent @event)
 		{
-			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			if (inventory == null || !IsInstanceValid(inventory)) return;
 
-			var slot = inventorySystem.GetSlot(slotIndex);
+			var slot = inventory.GetSlot(slotIndex);
 			
 			if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
 			{
@@ -234,9 +237,9 @@ namespace Jogo25D.UI
 
 		private void UpdateSlot(int index)
 		{
-			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			if (inventory == null || !IsInstanceValid(inventory)) return;
 			
-			var slot = inventorySystem.GetSlot(index);
+			var slot = inventory.GetSlot(index);
 			
 			if (slot.IsEmpty || slot.Item == null)
 			{
@@ -286,9 +289,9 @@ namespace Jogo25D.UI
 
 		private void ShowContextMenuForSlot(int slotIndex, Vector2 position)
 		{
-			if (inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			if (inventory == null || !IsInstanceValid(inventory)) return;
 			
-			var slot = inventorySystem.GetSlot(slotIndex);
+			var slot = inventory.GetSlot(slotIndex);
 			if (slot.IsEmpty) return;
 
 			selectedSlotIndex = slotIndex;
@@ -319,14 +322,14 @@ namespace Jogo25D.UI
 
 		private void OnContextMenuOption(string option)
 		{
-			if (selectedSlotIndex < 0 || inventorySystem == null || !IsInstanceValid(inventorySystem)) return;
+			if (selectedSlotIndex < 0 || inventory == null || !IsInstanceValid(inventory)) return;
 
-			var slot = inventorySystem.GetSlot(selectedSlotIndex);
+			var slot = inventory.GetSlot(selectedSlotIndex);
 			if (slot.IsEmpty) return;
 
 			if (option == "Equipar")
 			{
-				inventorySystem.EquipItem(selectedSlotIndex);
+				inventory.EquipItem(selectedSlotIndex);
 			}
 
 			contextMenu.Visible = false;
@@ -361,15 +364,20 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
-			// Verificar se o inventorySystem é válido antes de abrir
-			if (inventorySystem == null || !IsInstanceValid(inventorySystem))
+			// Verificar se o inventory é válido antes de abrir
+			if (inventory == null || !IsInstanceValid(inventory))
 			{
-			FindLocalPlayerInventorySystem();
-			
-			// Se ainda não encontrou, não abrir o inventário
-			if (inventorySystem == null || !IsInstanceValid(inventorySystem))
-			{
-			
+				FindLocalPlayerInventorySystem();
+
+				// Se ainda não encontrou, não abrir o inventário
+				if (inventory == null || !IsInstanceValid(inventory))
+				{
+					return;
+				}
+			}
+
+			Visible = !Visible;
+
 			if (Visible)
 			{
 				// Atualizar ao abrir
@@ -377,12 +385,13 @@ namespace Jogo25D.UI
 			}
 		}
 
-		public void AddItemToInventory(InventoryItem item, int quantity = 1)
+		public void AddItemToInventory(Item item, int quantity = 1)
 		{
-			if (inventorySystem != null && IsInstanceValid(inventorySystem))
+			if (inventory != null && IsInstanceValid(inventory))
 			{
-				inventorySystem.AddItem(item, quantity);
+				inventory.AddItem(item, quantity);
 			}
 		}
 	}
 }
+
