@@ -10,7 +10,6 @@
 [ext_resource type="PackedScene" uid="uid://ja876543210" path="res://Scenes/UI/InventoryMenu.tscn" id="12"]
 
 [node name="Main" type="Node2D" unique_id=756475699]
-position = Vector2(1977, -42)
 
 [node name="FullscreenToggle" type="Node" parent="." unique_id=1641123968]
 script = ExtResource("5")
@@ -19,30 +18,10 @@ script = ExtResource("5")
 script = ExtResource("6")
 
 [node name="Player" parent="." unique_id=478898229 instance=ExtResource("1")]
-position = Vector2(-2, -190)
-
-[node name="Platforms" type="Node2D" parent="." unique_id=375402143]
-
-[node name="Platform1" parent="Platforms" unique_id=1969216398 instance=ExtResource("2")]
-position = Vector2(-18, 58)
-
-[node name="Platform2" parent="Platforms" unique_id=1466483432 instance=ExtResource("2")]
-position = Vector2(-289, 120)
-
-[node name="Platform3" parent="Platforms" unique_id=1068056954 instance=ExtResource("2")]
-position = Vector2(402, 262)
-
-[node name="Platform4" parent="Platforms" unique_id=1947454684 instance=ExtResource("2")]
-position = Vector2(251, 117)
-
-[node name="Platform5" parent="Platforms" unique_id=788579591 instance=ExtResource("2")]
-position = Vector2(-450, 262)
-
-[node name="Platform6" parent="Platforms" unique_id=1861304221 instance=ExtResource("2")]
-position = Vector2(283, -143)
+position = Vector2(0, 2375)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=950041869]
-position = Vector2(18, 81)
+position = Vector2(15, 2375)
 position_smoothing_enabled = true
 script = ExtResource("4")
 PlayerPath = NodePath("../Player")
@@ -54,4 +33,6 @@ layer = 8
 
 [node name="InventoryMenu" parent="." unique_id=528020502 instance=ExtResource("12")]
 layer = 4
-InventorySystemPath = NodePath("../InventorySystem")
+
+[node name="Platform7" parent="." unique_id=2125528475 instance=ExtResource("2")]
+position = Vector2(-23, 2811)

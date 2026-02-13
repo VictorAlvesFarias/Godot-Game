@@ -1,19 +1,20 @@
-[gd_scene load_steps=2 format=3 uid="uid://p1357924680"]
+[gd_scene format=3 uid="uid://p1358a24680"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
-size = Vector2(200, 20)
+[ext_resource type="Script" uid="uid://3bspl5ctgov1" path="res://Scenes/Entities/Platform.cs" id="1_1pdp2"]
+[ext_resource type="Texture2D" uid="uid://vs6111tn6fax" path="res://Scripts/UI/white.jpg" id="2_cwfpi"]
 
-[node name="Platform" type="StaticBody2D"]
-collision_layer = 1
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1pdp2"]
+size = Vector2(10000, 500)
+
+[node name="Platform" type="StaticBody2D" unique_id=2125528475]
 collision_mask = 0
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_1")
+script = ExtResource("1_1pdp2")
+Size = Vector2(10000, 500)
 
-[node name="Sprite" type="Polygon2D" parent="."]
-color = Color(0, 0, 0, 0)
-polygon = PackedVector2Array(-100, -10, 100, -10, 100, 10, -100, 10)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1773160110]
+shape = SubResource("RectangleShape2D_1pdp2")
 
-[node name="Border" type="Line2D" parent="Sprite"]
-points = PackedVector2Array(-100, -10, 100, -10, 100, 10, -100, 10, -100, -10)
-width = 3.0
-default_color = Color(1, 1, 1, 1)
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=306668681]
+texture = ExtResource("2_cwfpi")
+region_enabled = true
+region_rect = Rect2(0, 0, 10000, 500)

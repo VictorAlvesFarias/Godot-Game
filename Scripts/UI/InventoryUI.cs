@@ -186,7 +186,7 @@ namespace Jogo25D.UI
 		{
 			// Detectar soltar botão do mouse durante drag
 			if (isDragging && @event is InputEventMouseButton mouseEvent && 
-			    mouseEvent.ButtonIndex == MouseButton.Left && !mouseEvent.Pressed)
+				mouseEvent.ButtonIndex == MouseButton.Left && !mouseEvent.Pressed)
 			{
 				// Encontrar em qual slot o mouse está
 				int targetSlot = GetSlotAtPosition(mouseEvent.GlobalPosition);
@@ -577,4 +577,3 @@ namespace Jogo25D.UI
 		}
 	}
 }
-

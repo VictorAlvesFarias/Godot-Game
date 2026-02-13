@@ -294,6 +294,33 @@ namespace Jogo25D.Characters
             }
         }
     
+        public void HandleLogs()
+        {
+            Console.Clear();
+        }
+
+        public void TakeDamage(int damage)
+        {
+            if (CurrentHealth <= 0)
+            {
+                return;
+            }
+
+            CurrentHealth -= damage;
+
+            if (sprite != null)
+            {
+                sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
+            }
+
+            DamageEffectTimer = DamageColorDuration;
+
+            if (CurrentHealth <= 0)
+            {
+                Rpc(nameof(ResetPlayer));
+            }
+        }
+
         private void UpdateWeaponPosition()
         {
             if (weaponHolder == null || lastAttackDirection.LengthSquared() <= 0.01f)
@@ -392,79 +419,52 @@ namespace Jogo25D.Characters
         }
     }
 
-    private void InitializeStartingWeapons()
-    {
-        var meleeWeapon = new Item("Espada", ItemType.Weapon);
-
-        meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
-        meleeWeapon.IsEquippable = true;
-        meleeWeapon.WeaponType = WeaponType.Melee;
-        meleeWeapon.Damage = 15;
-        meleeWeapon.AttackCooldown = 0.5f;
-        meleeWeapon.AttackRange = 80.0f;
-        meleeWeapon.KnockbackForce = 200f;
-    
-        var rangedWeapon = new Item("Arco", ItemType.Weapon);
-
-        rangedWeapon.Description = "Um arco para ataques à distância";
-        rangedWeapon.IsEquippable = true;
-        rangedWeapon.WeaponType = WeaponType.Ranged;
-        rangedWeapon.Damage = 10;
-        rangedWeapon.AttackCooldown = 0.8f;
-        rangedWeapon.AttackRange = 1500f; // Alcance máximo: 1500 unidades
-        rangedWeapon.AttackArea = 50f; // Tamanho do projétil
-        rangedWeapon.ProjectileSpeed = 750f; // Velocidade: 750 u/s → Lifetime = 1500/750 = 2s
-
-        var rangedWeapon2 = new Item("Arco2", ItemType.Weapon);
-
-        rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
-        rangedWeapon2.IsEquippable = true;
-        rangedWeapon2.WeaponType = WeaponType.Ranged;
-        rangedWeapon2.Damage = 15;
-        rangedWeapon2.AttackCooldown = 0.01f;
-        rangedWeapon2.AttackRange = 2000f; // Alcance máximo: 2000 unidades
-        rangedWeapon2.AttackArea = 15f; // Tamanho do projétil maior
-        rangedWeapon2.ProjectileSpeed = 1200f; // Velocidade: 1000 u/s → Lifetime = 2000/1000 = 2s
-
-        var projectileScene = GD.Load<PackedScene>("res://Scenes/Entities/Projectile.tscn");
-    
-        rangedWeapon.ProjectileScene = projectileScene;
-        rangedWeapon2.ProjectileScene = projectileScene;
-    
-        Inventory.AddItem(meleeWeapon, 1);
-        Inventory.AddItem(rangedWeapon, 1);
-        Inventory.AddItem(rangedWeapon2, 1);
-        Inventory.EquipItem(0);
-    }
-
-    public void HandleLogs()
-    {
-        Console.Clear();
-    }
-
-    public void TakeDamage(int damage)
-    {
-        if (CurrentHealth <= 0)
+        private void InitializeStartingWeapons()
         {
-            return;
+            var meleeWeapon = new Item("Espada", ItemType.Weapon);
+
+            meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
+            meleeWeapon.IsEquippable = true;
+            meleeWeapon.WeaponType = WeaponType.Melee;
+            meleeWeapon.Damage = 1;
+            meleeWeapon.AttackCooldown = 0.5f;
+            meleeWeapon.AttackRange = 80.0f;
+            meleeWeapon.KnockbackForce = 200f;
+    
+            var rangedWeapon = new Item("Arco", ItemType.Weapon);
+
+            rangedWeapon.Description = "Um arco para ataques à distância";
+            rangedWeapon.IsEquippable = true;
+            rangedWeapon.WeaponType = WeaponType.Ranged;
+            rangedWeapon.Damage = 1;
+            rangedWeapon.AttackCooldown = 0.8f;
+            rangedWeapon.AttackRange = 1500f; // Alcance máximo: 1500 unidades
+            rangedWeapon.AttackArea = 50f; // Tamanho do projétil
+            rangedWeapon.ProjectileSpeed = 750f; // Velocidade: 750 u/s → Lifetime = 1500/750 = 2s
+
+            var rangedWeapon2 = new Item("Arco2", ItemType.Weapon);
+
+            rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
+            rangedWeapon2.IsEquippable = true;
+            rangedWeapon2.WeaponType = WeaponType.Ranged;
+            rangedWeapon2.Damage = 1;
+            rangedWeapon2.AttackCooldown = 0.01f;
+            rangedWeapon2.AttackRange = 2000f; // Alcance máximo: 2000 unidades
+            rangedWeapon2.AttackArea = 15f; // Tamanho do projétil maior
+            rangedWeapon2.ProjectileSpeed = 1200f; // Velocidade: 1000 u/s → Lifetime = 2000/1000 = 2s
+
+            var projectileScene = GD.Load<PackedScene>("res://Scenes/Entities/Projectile.tscn");
+    
+            rangedWeapon.ProjectileScene = projectileScene;
+            rangedWeapon2.ProjectileScene = projectileScene;
+    
+            Inventory.AddItem(meleeWeapon, 1);
+            Inventory.AddItem(rangedWeapon, 1);
+            Inventory.AddItem(rangedWeapon2, 1);
+            Inventory.EquipItem(0);
         }
 
-        CurrentHealth -= damage;
-
-        if (sprite != null)
-        {
-            sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
-        }
-
-        DamageEffectTimer = DamageColorDuration;
-
-        if (CurrentHealth <= 0)
-        {
-            Rpc(nameof(ResetPlayer));
-        }
-    }
-
-    #endregion
+        #endregion
 }
 
 public abstract class PlayerAction
