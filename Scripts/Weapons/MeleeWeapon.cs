@@ -17,6 +17,7 @@ namespace Jogo25D.Weapons
         private HashSet<Node2D> hitEnemies = new HashSet<Node2D>();
         private Vector2 lastAttackDirection = Vector2.Right;
         private bool isAttacking = false;
+        private bool signalsDisconnected = false;
 
         public override void _Ready()
         {
@@ -157,6 +158,55 @@ namespace Jogo25D.Weapons
             {
                 if (body is Node2D n) OnBodyEntered(n);
             }
+        }
+
+        public override void OnUnequip()
+        {
+            base.OnUnequip();
+            
+            if (!signalsDisconnected)
+            {
+                // Limpar referências e desconectar sinais
+                if (hitArea != null && IsInstanceValid(hitArea))
+                {
+                    hitArea.BodyEntered -= OnBodyEntered;
+                    hitArea.Monitoring = false;
+                }
+                
+                if (attackTimer != null && IsInstanceValid(attackTimer))
+                {
+                    attackTimer.Timeout -= OnAttackEnd;
+                    attackTimer.Stop();
+                }
+                
+                signalsDisconnected = true;
+            }
+            
+            hitEnemies.Clear();
+            isAttacking = false;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && !signalsDisconnected)
+            {
+                // Desconectar sinais antes de liberar
+                if (hitArea != null && IsInstanceValid(hitArea))
+                {
+                    hitArea.BodyEntered -= OnBodyEntered;
+                }
+                
+                if (attackTimer != null && IsInstanceValid(attackTimer))
+                {
+                    attackTimer.Timeout -= OnAttackEnd;
+                }
+                
+                signalsDisconnected = true;
+            }
+            
+            hitEnemies?.Clear();
+            
+            base.Dispose(disposing);
         }
     }
 }

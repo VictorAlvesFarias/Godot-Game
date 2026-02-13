@@ -1,19 +1,19 @@
-﻿using Godot;
+using Godot;
+using Jogo25D.Characters;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Jogo25D.Characters
+namespace Jogo25D.Weapons
 {
-    public partial class PlayerAttack : Area2D
+    /// <summary>
+    /// Projétil disparado por armas ranged
+    /// </summary>
+    public partial class Projectile : Area2D
     {
-        [Export] public float Speed = 0.0f;
-        [Export] public Vector2 Direction = Vector2.Zero;
-        [Export] public int Damage = 1;
-        [Export] public float Lifetime = 0.3f;
-        [Export] public Node2D Shooter;
+        [Export] public float Speed { get; set; } = 0.0f;
+        [Export] public Vector2 Direction { get; set; } = Vector2.Zero;
+        [Export] public int Damage { get; set; } = 1;
+        [Export] public float Lifetime { get; set; } = 0.3f;
+        [Export] public Node2D Shooter { get; set; }
 
         private float timer = 0.0f;
         private bool isDestroyed = false;

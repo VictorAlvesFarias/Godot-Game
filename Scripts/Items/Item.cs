@@ -43,10 +43,11 @@ namespace Jogo25D.Items
         [Export] public WeaponType WeaponType { get; set; } = WeaponType.Melee;
         [Export] public int Damage { get; set; } = 10;
         [Export] public float AttackCooldown { get; set; } = 0.5f;
-        [Export] public float AttackRange { get; set; } = 1.5f;
+        [Export] public float AttackRange { get; set; } = 1.5f; // Para melee: raio do ataque. Para ranged: alcance máximo do projétil
         [Export] public float KnockbackForce { get; set; } = 200f;
         
         // Para armas ranged
+        [Export] public float AttackArea { get; set; } = 25f; // Tamanho/escala do projétil
         [Export] public PackedScene ProjectileScene { get; set; }
         [Export] public float ProjectileSpeed { get; set; } = 500f;
         #endregion

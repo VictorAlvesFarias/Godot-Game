@@ -14,7 +14,8 @@ namespace Jogo25D.UI
 		[Export] public string PlayerGroupName { get; set; } = "players";
 		
 		private Label fpsLabel;
-		private Label healthLabel;
+		private ProgressBar healthBar;
+		private Label healthBarLabel;
 		private Label weaponLabel;
 		private Inventory inventory;
 		private Player localPlayer;
@@ -25,9 +26,10 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			// Obter referências dos labels
+			// Obter referências dos componentes
 			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
-			healthLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthLabel");
+			healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
+			healthBarLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthBar/HealthBarLabel");
 			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 		
 		// Conectar ao Inventory do player local dinamicamente
@@ -117,25 +119,19 @@ namespace Jogo25D.UI
 
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
-				var hearts = "";
-
-				for (int i = 0; i < localPlayer.CurrentHealth; i++)
-				{
-					hearts += "♥ ";
-				}
+				healthBar.MaxValue = localPlayer.MaxHealth;
+				healthBar.Value = localPlayer.CurrentHealth;
+				healthBarLabel.Text = $"{localPlayer.CurrentHealth}/{localPlayer.MaxHealth}";
 				
-				var lostHealth = localPlayer.MaxHealth - localPlayer.CurrentHealth;
-
-				for (int i = 0; i < lostHealth; i++)
-				{
-					hearts += "♡ ";
-				}
-				
-				healthLabel.Text = hearts.Trim();
+				// Ajustar largura da barra baseado na vida máxima (20 pixels por ponto de vida)
+				float barWidth = localPlayer.MaxHealth * 10f;
+				healthBar.CustomMinimumSize = new Vector2(barWidth, 30);
 			}
 			else
 			{
-				healthLabel.Text = "";
+				healthBar.Value = 0;
+				healthBarLabel.Text = "0/0";
+				healthBar.CustomMinimumSize = new Vector2(100, 30);
 			}
 		}
 
@@ -211,7 +207,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			weaponLabel.Text = $"🗡 {equippedItem.ItemName}";
+			weaponLabel.Text = $"{equippedItem.ItemName}";
 		}
 		#endregion
 	}

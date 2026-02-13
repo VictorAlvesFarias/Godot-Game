@@ -7,8 +7,8 @@ namespace Jogo25D.Weapons
     {
         [Export] public PackedScene BulletScene { get; set; }
         [Export] public float BulletSpeed { get; set; } = 800.0f;
-        [Export] public float BulletLifetime { get; set; } = 2.0f;
-        [Export] public float FireRate { get; set; } = 0.3f;
+        [Export] public float Range { get; set; } = 1000.0f; // Alcance máximo do projétil (distância)
+        [Export] public float Area { get; set; } = 25.0f; // Tamanho/escala do projétil
 
         public override void _Ready()
         {
@@ -16,10 +16,8 @@ namespace Jogo25D.Weapons
             
             if (BulletScene == null)
             {
-                BulletScene = GD.Load<PackedScene>("res://Scenes/Entities/Bullet.tscn");
+                BulletScene = GD.Load<PackedScene>("res://Scenes/Entities/Projectile.tscn");
             }
-            
-            AttackCooldown = FireRate;
         }
 
         public override void Attack(Vector2 direction)
@@ -34,13 +32,14 @@ namespace Jogo25D.Weapons
                 return;
             }
 
-            var bullet = BulletScene.Instantiate<Characters.PlayerAttack>();
+            var bullet = BulletScene.Instantiate<Projectile>();
             
             bullet.Speed = BulletSpeed;
             bullet.Direction = direction.Normalized();
             bullet.Damage = Damage;
-            bullet.Lifetime = BulletLifetime;
+            bullet.Lifetime = Range / BulletSpeed; // Calculado automaticamente: distância / velocidade
             bullet.Shooter = owner;
+            bullet.Scale = Vector2.One * (Area / 25.0f); // Tamanho do projétil baseado no AttackArea
             bullet.GlobalPosition = owner.GlobalPosition + (direction.Normalized() * 60.0f);
 
             GetTree().Root.AddChild(bullet);
