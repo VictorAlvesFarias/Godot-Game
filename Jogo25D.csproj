@@ -7,8 +7,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <GodotExePath Condition=" '$(GodotExePath)' == '' ">
-      E:\Programs\Godot\Godot_v4.6-stable_mono_win64_console.exe
-    </GodotExePath>
+		C:\Program Files\Godot\Godot_v4.6-stable_mono_win64_console.exe
+	</GodotExePath>
     <RunCommand>powershell</RunCommand>
     <RunArguments>
       -NoExit -Command "dotnet build '$(MSBuildProjectDirectory)\$(MSBuildProjectFile)' ; Start-Process -FilePath '$(GodotExePath)' -ArgumentList '--path','$(MSBuildProjectDirectory)' -NoNewWindow"
@@ -16,7 +16,10 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="Assets\Textures\white.jpg" />
+    <Content Include="Assets\Textures\LandScapeGround.png" />
+    <Content Include="Assets\Textures\white.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
