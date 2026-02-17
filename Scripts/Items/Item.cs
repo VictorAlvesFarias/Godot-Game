@@ -12,7 +12,6 @@ namespace Jogo25D.Items
         [Export] public bool IsStackable { get; set; } = false;
         [Export] public int MaxStackSize { get; set; } = 1;
         [Export] public bool IsEquippable { get; set; } = false;
-        [Export] public WeaponType WeaponType { get; set; } = WeaponType.Melee;
         [Export] public int Damage { get; set; } = 10;
         [Export] public float AttackCooldown { get; set; } = 0.5f;
         [Export] public float AttackRange { get; set; } = 1.5f;

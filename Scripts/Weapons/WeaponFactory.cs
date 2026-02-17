@@ -14,7 +14,7 @@ namespace Jogo25D.Scripts.Weapons
         {
             var weaponInstance = (Weapon)null;
 
-            if (item.WeaponType == WeaponType.Ranged)
+            if (item.Type == ItemType.WeaponRanged)
             {
                 var rangedWeapon = new RangedWeapon();
 

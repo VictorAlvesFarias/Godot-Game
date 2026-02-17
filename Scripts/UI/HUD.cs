@@ -203,7 +203,7 @@ namespace Jogo25D.UI
 
             var equippedItem = inventory.GetEquippedItem();
 
-            if (equippedItem == null || equippedItem.Type != ItemType.Weapon)
+            if (equippedItem == null || equippedItem.Type != ItemType.WeaponMelee || equippedItem.Type != ItemType.WeaponRanged)
             {
                 weaponLabel.Text = "Arma: Nenhuma";
                 return;

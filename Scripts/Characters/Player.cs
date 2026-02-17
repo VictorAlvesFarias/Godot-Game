@@ -249,49 +249,44 @@ namespace Jogo25D.Characters
             {
                 CurrentWeaponSystem.OnUnequip();
                 CurrentWeaponSystem.QueueFree();
-                CurrentWeaponSystem = null;
-            }
 
-            if (item == null || item.Type != ItemType.Weapon)
-            {
-                return;
+                CurrentWeaponSystem = null;
             }
 
             var weaponInstance = WeaponFactory.Use(item);
 
             AddChild(weaponInstance);
+
             CurrentWeaponSystem = weaponInstance;
+
             CurrentWeaponSystem.OnEquip();
         }
 
         private void InitializeStartingWeapons()
         {
-            var meleeWeapon = new Item("Espada", ItemType.Weapon);
+            var meleeWeapon = new Item("Espada", ItemType.WeaponMelee);
 
             meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
             meleeWeapon.IsEquippable = true;
-            meleeWeapon.WeaponType = WeaponType.Melee;
             meleeWeapon.Damage = 1;
             meleeWeapon.AttackCooldown = 0.5f;
             meleeWeapon.AttackRange = 80.0f;
             meleeWeapon.KnockbackForce = 200f;
 
-            var rangedWeapon = new Item("Arco", ItemType.Weapon);
+            var rangedWeapon = new Item("Arco", ItemType.WeaponRanged);
 
             rangedWeapon.Description = "Um arco para ataques à distância";
             rangedWeapon.IsEquippable = true;
-            rangedWeapon.WeaponType = WeaponType.Ranged;
             rangedWeapon.Damage = 1;
             rangedWeapon.AttackCooldown = 0.8f;
             rangedWeapon.AttackRange = 1500f; // Alcance máximo: 1500 unidades
             rangedWeapon.AttackArea = 50f; // Tamanho do projétil
             rangedWeapon.ProjectileSpeed = 750f; // Velocidade: 750 u/s → Lifetime = 1500/750 = 2s
 
-            var rangedWeapon2 = new Item("Arco2", ItemType.Weapon);
+            var rangedWeapon2 = new Item("Arco2", ItemType.WeaponMelee);
 
             rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
             rangedWeapon2.IsEquippable = true;
-            rangedWeapon2.WeaponType = WeaponType.Ranged;
             rangedWeapon2.Damage = 1;
             rangedWeapon2.AttackCooldown = 0.01f;
             rangedWeapon2.AttackRange = 2000f; // Alcance máximo: 2000 unidades

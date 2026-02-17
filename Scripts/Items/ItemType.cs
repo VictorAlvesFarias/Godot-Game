@@ -2,7 +2,8 @@ namespace Jogo25D.Items
 {
     public enum ItemType
     {
-        Weapon,
+        WeaponMelee,
+        WeaponRanged,
         Consumable,
         Collectible,
         Material,
