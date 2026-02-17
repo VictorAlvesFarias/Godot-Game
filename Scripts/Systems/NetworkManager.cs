@@ -21,17 +21,14 @@ namespace Jogo25D.Systems
 	{
 		Instance = this;
 		
-		// Carregar cena do player
 		PlayerScene = GD.Load<PackedScene>("res://Scenes/Characters/Player.tscn");
 		
-		// Conectar sinais do multiplayer
 		Multiplayer.PeerConnected += OnPeerConnected;
 		Multiplayer.PeerDisconnected += OnPeerDisconnected;
 		Multiplayer.ConnectedToServer += OnConnectedToServer;
 		Multiplayer.ConnectionFailed += OnConnectionFailed;
 		Multiplayer.ServerDisconnected += OnServerDisconnected;
 		
-		// Encontrar ou criar o nó de spawn
 		spawnParent = GetTree().Root.GetNode<Node2D>("Main");
 	}
 	
@@ -47,10 +44,8 @@ namespace Jogo25D.Systems
 		
 		Multiplayer.MultiplayerPeer = peer;
 		
-		// Remover player inicial da cena
 		RemoveInitialPlayer();
 		
-		// Spawnar o player local
 		SpawnPlayer(1, new Vector2(960, 300));
 	}
 	
@@ -66,7 +61,6 @@ namespace Jogo25D.Systems
 		
 		Multiplayer.MultiplayerPeer = peer;
 		
-		// Remover player inicial da cena
 		RemoveInitialPlayer();
 	}
 	
@@ -87,7 +81,6 @@ namespace Jogo25D.Systems
 			peer = null;
 		}
 		
-		// Remover todos os players
 		var players = GetTree().GetNodesInGroup("players");
 		foreach (Node player in players)
 		{
@@ -114,10 +107,8 @@ namespace Jogo25D.Systems
 		player.Name = $"Player{peerId}";
 		player.Position = position;
 		
-		// Adicionar ao grupo de players
 		player.AddToGroup("players");
 		
-		// Configurar autoridade de rede
 		player.SetMultiplayerAuthority((int)peerId);
 		
 		spawnParent.AddChild(player);
@@ -126,37 +117,29 @@ namespace Jogo25D.Systems
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void SpawnPlayerOnClient(long peerId, Vector2 position)
 	{
-		// Este método é chamado nos clientes para spawnar players
 		SpawnPlayer(peerId, position);
 	}
 	
-	// Sinais do multiplayer
 	private void OnPeerConnected(long id)
 	{
-		// Se for o servidor, spawnar um player para o novo peer
 		if (Multiplayer.IsServer())
 		{
-			// Calcular posição aleatória
 			Vector2 spawnPos = new Vector2(
 				GD.RandRange(400, 1520),
 				300
 			);
 			
-			// Spawnar o player do novo peer em todos os clientes (inclusive servidor)
 			SpawnPlayer(id, spawnPos);
 			Rpc(nameof(SpawnPlayerOnClient), id, spawnPos);
 			
-			// Enviar informações sobre os players existentes para o novo cliente
 			var players = GetTree().GetNodesInGroup("players");
 			foreach (Node node in players)
 			{
 				if (node is Player player && player.Name != $"Player{id}")
 				{
-					// Extrair o ID do nome do player
 					string playerName = player.Name;
 					long existingPlayerId = long.Parse(playerName.Replace("Player", ""));
 					
-					// Enviar para o novo cliente
 					RpcId(id, nameof(SpawnPlayerOnClient), existingPlayerId, player.Position);
 				}
 			}
@@ -165,7 +148,6 @@ namespace Jogo25D.Systems
 	
 	private void OnPeerDisconnected(long id)
 	{
-		// Remover o player do peer desconectado
 		var playerNode = spawnParent.GetNodeOrNull($"Player{id}");
 		if (playerNode != null)
 		{
@@ -175,7 +157,6 @@ namespace Jogo25D.Systems
 	
 	private void OnConnectedToServer()
 	{
-		// O servidor irá spawnar nosso player
 	}
 	
 	private void OnConnectionFailed()

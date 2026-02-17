@@ -6,9 +6,6 @@ using Jogo25D.Items;
 
 namespace Jogo25D.UI
 {
-	/// <summary>
-	/// Interface principal do inventário com 16 slots integrados
-	/// </summary>
 	public partial class InventoryUI : CanvasLayer
 	{
 		private Inventory inventory;
@@ -24,7 +21,6 @@ namespace Jogo25D.UI
 		private Control mainControl;
 		private Panel panel;
 		
-		// Drag and Drop
 		private bool isDragging = false;
 		private int draggedSlotIndex = -1;
 		private Control dragPreview;
@@ -33,7 +29,6 @@ namespace Jogo25D.UI
 
 		public override void _UnhandledInput(InputEvent @event)
 		{
-			// Fechar context menu ao clicar fora
 			if (contextMenu.Visible && @event is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
 			{
 				var rect = contextMenu.GetGlobalRect();
@@ -46,23 +41,18 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			// Obter referências dos nós da cena
 			mainControl = GetNode<Control>("MainControl");
 			panel = GetNode<Panel>("MainControl/Panel");
 			gridContainer = GetNode<GridContainer>("MainControl/Panel/MarginContainer/VBoxContainer/GridContainer");
 			contextMenu = GetNode<Panel>("MainControl/ContextMenu");
 			contextMenuContainer = GetNode<VBoxContainer>("MainControl/ContextMenu/Container");
 			
-			// Criar drag preview
 			CreateDragPreview();
 			
-			// Buscar o Inventory do player local
 			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
-			// Ajustar tamanho do painel
 			CallDeferred(nameof(AdjustPanelSize));
 
-			// Iniciar oculto
 			Visible = false;
 		}
 		
@@ -93,12 +83,8 @@ namespace Jogo25D.UI
 			mainControl.AddChild(dragPreview);
 		}
 
-		/// <summary>
-		/// Encontra o Inventory do player local (com autoridade multiplayer)
-		/// </summary>
 		private void FindLocalPlayerInventorySystem()
 		{
-			// Desconectar do inventory anterior se existir
 			if (inventory != null && IsInstanceValid(inventory))
 			{
 				inventory.InventoryChanged -= OnInventoryChanged;
@@ -129,21 +115,17 @@ namespace Jogo25D.UI
 				{
 					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 					{
-						// Encontrou o player local, obter Inventory
 						inventory = player.Inventory;
 						if (inventory != null)
 						{
 							inventory.InventoryChanged += OnInventoryChanged;
 
-							// Verificar se slots já foram inicializados (slots[0] não é null)
 							if (slots[0] == null)
 							{
-								// Inicializar UI com dados do inventário
 								InitializeSlots();
 							}
 							else
 							{
-								// Apenas atualizar dados se os slots já existem
 								OnInventoryChanged();
 							}
 						}
@@ -155,19 +137,16 @@ namespace Jogo25D.UI
 
 		private void InitializeSlots()
 		{
-			// Configurar todos os 16 slots
 			for (int i = 0; i < 16; i++)
 			{
 				SetupSlot(i);
 			}
 
-			// Atualizar dados iniciais do inventário
 			OnInventoryChanged();
 		}
 
 		public override void _ExitTree()
 		{
-			// Desconectar sinais para evitar erros ao destruir a cena
 			if (inventory != null && IsInstanceValid(inventory))
 			{
 				inventory.InventoryChanged -= OnInventoryChanged;
@@ -184,11 +163,9 @@ namespace Jogo25D.UI
 
 		public override void _Input(InputEvent @event)
 		{
-			// Detectar soltar botão do mouse durante drag
 			if (isDragging && @event is InputEventMouseButton mouseEvent && 
 				mouseEvent.ButtonIndex == MouseButton.Left && !mouseEvent.Pressed)
 			{
-				// Encontrar em qual slot o mouse está
 				int targetSlot = GetSlotAtPosition(mouseEvent.GlobalPosition);
 				
 				if (targetSlot >= 0)
@@ -204,7 +181,6 @@ namespace Jogo25D.UI
 				return;
 			}
 			
-			// Cancelar drag com ESC
 			if (@event.IsActionPressed("ui_cancel") && isDragging)
 			{
 				CancelDrag();
@@ -212,7 +188,6 @@ namespace Jogo25D.UI
 				return;
 			}
 			
-			// Toggle inventário com I ou TAB
 			if (Input.IsActionJustPressed("toggle_inventory"))
 			{
 				if (isDragging)
@@ -222,7 +197,6 @@ namespace Jogo25D.UI
 				ToggleInventory();
 				GetViewport().SetInputAsHandled();
 			}
-			// ESC fecha o inventário se estiver aberto
 			else if (@event.IsActionPressed("ui_cancel") && Visible)
 			{
 				ToggleInventory();
@@ -246,7 +220,6 @@ namespace Jogo25D.UI
 		{
 			slots[index] = GetNode<Panel>($"MainControl/Panel/MarginContainer/VBoxContainer/GridContainer/Slot{index}");
 			
-			// Criar elementos internos do slot
 			var marginContainer = new MarginContainer();
 			marginContainer.AddThemeConstantOverride("margin_left", 4);
 			marginContainer.AddThemeConstantOverride("margin_top", 4);
@@ -296,7 +269,6 @@ namespace Jogo25D.UI
 			selectedBorders[index].AddThemeStyleboxOverride("panel", styleBox);
 			slots[index].AddChild(selectedBorders[index]);
 
-			// Conectar evento de input do slot
 			int slotIndex = index;
 			slots[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
 		}
@@ -309,13 +281,11 @@ namespace Jogo25D.UI
 			
 			if (@event is InputEventMouseButton mouseEvent)
 			{
-				// Botão esquerdo pressionado - iniciar drag
 				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty)
 				{
 					StartDrag(slotIndex, mouseEvent.GlobalPosition);
 					slots[slotIndex].AcceptEvent();
 				}
-				// Botão direito - menu de contexto
 				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty)
 				{
 					ShowContextMenuForSlot(slotIndex, mouseEvent.GlobalPosition);
@@ -336,7 +306,6 @@ namespace Jogo25D.UI
 			isDragging = true;
 			draggedSlotIndex = slotIndex;
 			
-			// Configurar preview visual
 			if (dragPreview != null)
 			{
 				var iconRect = dragPreview.GetNode<TextureRect>("Icon");
@@ -353,7 +322,6 @@ namespace Jogo25D.UI
 				dragPreview.GlobalPosition = mousePos + dragOffset;
 				dragPreview.Visible = true;
 				
-				// Tornar o slot original semi-transparente
 				if (iconRects[slotIndex] != null)
 				{
 					iconRects[slotIndex].Modulate = new Color(1, 1, 1, 0.5f);
@@ -367,19 +335,16 @@ namespace Jogo25D.UI
 			
 			GD.Print($"EndDrag: arrastado slot {draggedSlotIndex} para slot {targetSlotIndex}");
 			
-			// Esconder preview
 			if (dragPreview != null)
 			{
 				dragPreview.Visible = false;
 			}
 			
-			// Restaurar opacidade do slot original
 			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
 			{
 				iconRects[draggedSlotIndex].Modulate = Colors.White;
 			}
 			
-			// Se soltar em um slot diferente, trocar os itens
 			if (targetSlotIndex != draggedSlotIndex && inventory != null)
 			{
 				SwapItems(draggedSlotIndex, targetSlotIndex);
@@ -393,13 +358,11 @@ namespace Jogo25D.UI
 		{
 			if (!isDragging) return;
 			
-			// Esconder preview
 			if (dragPreview != null)
 			{
 				dragPreview.Visible = false;
 			}
 			
-			// Restaurar opacidade do slot original
 			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
 			{
 				iconRects[draggedSlotIndex].Modulate = Colors.White;
@@ -414,7 +377,6 @@ namespace Jogo25D.UI
 			if (inventory == null || !IsInstanceValid(inventory)) return;
 			if (fromIndex < 0 || fromIndex >= 16 || toIndex < 0 || toIndex >= 16) return;
 			
-			// Usar o método SwapSlots do Inventory
 			inventory.SwapSlots(fromIndex, toIndex);
 		}
 
@@ -456,7 +418,6 @@ namespace Jogo25D.UI
 
 		private void SelectSlot(int index)
 		{
-			// Desselecionar anterior
 			if (selectedSlotIndex >= 0 && selectedSlotIndex < 16)
 			{
 				selectedBorders[selectedSlotIndex].Visible = false;
@@ -479,14 +440,12 @@ namespace Jogo25D.UI
 
 			selectedSlotIndex = slotIndex;
 
-			// Limpar opções antigas
 			foreach (Node child in contextMenuContainer.GetChildren())
 			{
 				contextMenuContainer.RemoveChild(child);
 				child.QueueFree();
 			}
 
-			// Apenas opção de equipar para itens equipáveis
 			if (slot.Item.IsEquippable)
 			{
 				var button = new Button();
@@ -520,10 +479,8 @@ namespace Jogo25D.UI
 
 		private void AdjustPanelSize()
 		{
-			// Forçar atualização de layout para calcular o tamanho real
 			panel.ResetSize();
 			
-			// Centralizar usando offsets (igual ao PauseMenu)
 			var panelSize = panel.Size;
 			var halfWidth = panelSize.X / 2;
 			var halfHeight = panelSize.Y / 2;
@@ -538,7 +495,6 @@ namespace Jogo25D.UI
 		{
 			if (!IsInstanceValid(this)) return;
 			
-			// Atualizar todos os slots
 			for (int i = 0; i < 16; i++)
 			{
 				UpdateSlot(i);
@@ -547,12 +503,10 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
-			// Verificar se o inventory é válido antes de abrir
 			if (inventory == null || !IsInstanceValid(inventory))
 			{
 				FindLocalPlayerInventorySystem();
 
-				// Se ainda não encontrou, não abrir o inventário
 				if (inventory == null || !IsInstanceValid(inventory))
 				{
 					return;
@@ -563,7 +517,6 @@ namespace Jogo25D.UI
 
 			if (Visible)
 			{
-				// Atualizar ao abrir
 				OnInventoryChanged();
 			}
 		}

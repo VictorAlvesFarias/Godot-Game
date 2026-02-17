@@ -15,7 +15,6 @@ namespace Jogo25D.UI
 				isProcessing = true;
 				ToggleFullscreen();
 				GetViewport().SetInputAsHandled();
-				// Reset flag after a small delay
 				GetTree().CreateTimer(0.2).Timeout += () => isProcessing = false;
 			}
 		}

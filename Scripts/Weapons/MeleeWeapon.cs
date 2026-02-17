@@ -15,7 +15,6 @@ namespace Jogo25D.Weapons
         private Timer attackTimer;
         private Line2D visualEffect;
         private HashSet<Node2D> hitEnemies = new HashSet<Node2D>();
-        private Vector2 lastAttackDirection = Vector2.Right;
         private bool isAttacking = false;
         private bool signalsDisconnected = false;
 
@@ -77,12 +76,13 @@ namespace Jogo25D.Weapons
             {
                 return;
             }
+            
+            base.Attack(direction);
 
             isAttacking = true;
             
             hitEnemies.Clear();
 
-            lastAttackDirection = direction.Normalized();
             hitArea.GlobalPosition = owner.GlobalPosition + (lastAttackDirection * Range);
             visualEffect.GlobalPosition = owner.GlobalPosition;
             hitArea.Monitoring = true;
@@ -166,7 +166,6 @@ namespace Jogo25D.Weapons
             
             if (!signalsDisconnected)
             {
-                // Limpar referências e desconectar sinais
                 if (hitArea != null && IsInstanceValid(hitArea))
                 {
                     hitArea.BodyEntered -= OnBodyEntered;
@@ -190,7 +189,6 @@ namespace Jogo25D.Weapons
         {
             if (disposing && !signalsDisconnected)
             {
-                // Desconectar sinais antes de liberar
                 if (hitArea != null && IsInstanceValid(hitArea))
                 {
                     hitArea.BodyEntered -= OnBodyEntered;

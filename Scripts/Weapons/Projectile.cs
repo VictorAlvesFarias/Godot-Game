@@ -4,9 +4,6 @@ using System;
 
 namespace Jogo25D.Weapons
 {
-    /// <summary>
-    /// Projétil disparado por armas ranged
-    /// </summary>
     public partial class Projectile : Area2D
     {
         [Export] public float Speed { get; set; } = 0.0f;

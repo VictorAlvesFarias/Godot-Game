@@ -5,14 +5,11 @@ using Jogo25D.Items;
 
 namespace Jogo25D.Systems
 {
-    /// <summary>
-    /// Sistema de inventário simplificado com 16 slots
-    /// </summary>
     public partial class Inventory : Node
     {
         [Signal]
         public delegate void InventoryChangedEventHandler();
-        
+
         [Signal]
         public delegate void ItemEquippedEventHandler(Item item, int slotIndex);
 
@@ -23,7 +20,6 @@ namespace Jogo25D.Systems
 
         public override void _Ready()
         {
-            // Inicializar slots vazios
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
                 slots[i] = new ItemSlot();
@@ -32,23 +28,16 @@ namespace Jogo25D.Systems
 
         public override void _Process(double delta)
         {
-            // Atualizar cooldown do item equipado
             if (equippedItem != null)
             {
                 equippedItem.UpdateCooldown((float)delta);
             }
         }
 
-        #region Gerenciamento de Itens
-
-        /// <summary>
-        /// Adiciona um item ao inventário
-        /// </summary>
         public bool AddItem(Item item, int quantity = 1)
         {
             if (item == null) return false;
 
-            // Se o item é empilhável, tenta adicionar em slots existentes
             if (item.IsStackable)
             {
                 for (int i = 0; i < INVENTORY_SIZE; i++)
@@ -61,16 +50,15 @@ namespace Jogo25D.Systems
                             int toAdd = Mathf.Min(quantity, spaceLeft);
                             slots[i].Quantity += toAdd;
                             quantity -= toAdd;
-                            
+
                             EmitSignal(SignalName.InventoryChanged);
-                            
+
                             if (quantity <= 0) return true;
                         }
                     }
                 }
             }
 
-            // Procura por slot vazio
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
                 if (slots[i].IsEmpty)
@@ -85,18 +73,15 @@ namespace Jogo25D.Systems
             return false;
         }
 
-        /// <summary>
-        /// Remove um item do inventário
-        /// </summary>
         public bool RemoveItem(int slotIndex, int quantity = 1)
         {
             if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE) return false;
-            
+
             var slot = slots[slotIndex];
             if (slot.IsEmpty) return false;
 
             slot.Quantity -= quantity;
-            
+
             if (slot.Quantity <= 0)
             {
                 slot.Clear();
@@ -106,135 +91,92 @@ namespace Jogo25D.Systems
             return true;
         }
 
-        /// <summary>
-        /// Obtém um item pelo índice
-        /// </summary>
         public ItemSlot GetSlot(int index)
         {
             if (index < 0 || index >= INVENTORY_SIZE) return null;
             return slots[index];
         }
 
-        /// <summary>
-        /// Obtém todos os slots
-        /// </summary>
         public ItemSlot[] GetAllSlots()
         {
             return slots;
         }
 
-        /// <summary>
-        /// Limpa todo o inventário
-        /// </summary>
         public void Clear()
         {
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
                 slots[i].Clear();
             }
-            
+
             equippedItem = null;
             equippedSlotIndex = -1;
-            
+
             EmitSignal(SignalName.InventoryChanged);
         }
-        
-        /// <summary>
-        /// Troca dois slots de posição
-        /// </summary>
+
         public bool SwapSlots(int fromIndex, int toIndex)
         {
             if (fromIndex < 0 || fromIndex >= INVENTORY_SIZE) return false;
             if (toIndex < 0 || toIndex >= INVENTORY_SIZE) return false;
             if (fromIndex == toIndex) return false;
-            
-            // Debug: Imprimir antes da troca
+
             GD.Print($"Trocando slot {fromIndex} ({slots[fromIndex].Item?.ItemName ?? "vazio"}) com slot {toIndex} ({slots[toIndex].Item?.ItemName ?? "vazio"})");
-            
-            // Salvar valores temporários
+
             Item tempItem = slots[fromIndex].Item;
             int tempQuantity = slots[fromIndex].Quantity;
-            
-            // Copiar de 'to' para 'from'
+
             slots[fromIndex].Item = slots[toIndex].Item;
             slots[fromIndex].Quantity = slots[toIndex].Quantity;
-            
-            // Copiar valores temporários para 'to'
+
             slots[toIndex].Item = tempItem;
             slots[toIndex].Quantity = tempQuantity;
-            
-            // Debug: Imprimir depois da troca
-            GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Item?.ItemName ?? "vazio"}, slot {toIndex}: {slots[toIndex].Item?.ItemName ?? "vazio"}");
-            
+
+            GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Item?.ItemName ?? "vazio"}, slot {toIndex}: {slots[toIndex].Item?.ItemName ?? "vazio"}"); ;
+
             EmitSignal(SignalName.InventoryChanged);
             return true;
         }
 
-        #endregion
-
-        #region Sistema de Equipar
-
-        /// <summary>
-        /// Equipa um item do inventário
-        /// </summary>
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
         public bool EquipItem(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
                 return false;
-            
+
             var slot = slots[slotIndex];
-            
+
             if (slot.IsEmpty || !slot.Item.IsEquippable)
                 return false;
 
             equippedItem = slot.Item;
             equippedSlotIndex = slotIndex;
-            
+
             EmitSignal(SignalName.ItemEquipped, equippedItem, slotIndex);
             return true;
         }
 
-        /// <summary>
-        /// Desequipa o item atual
-        /// </summary>
         public void UnequipItem()
         {
             equippedItem = null;
             equippedSlotIndex = -1;
         }
 
-        /// <summary>
-        /// Obtém o item atualmente equipado
-        /// </summary>
         public Item GetEquippedItem()
         {
             return equippedItem;
         }
 
-        /// <summary>
-        /// Obtém o índice do slot equipado
-        /// </summary>
         public int GetEquippedSlotIndex()
         {
             return equippedSlotIndex;
         }
 
-        /// <summary>
-        /// Verifica se há um item equipado
-        /// </summary>
         public bool HasEquippedItem()
         {
             return equippedItem != null;
         }
 
-        #endregion
-
-        #region Utilitários
-
-        /// <summary>
-        /// Conta quantos itens de um tipo específico existem no inventário
-        /// </summary>
         public int CountItem(string itemName)
         {
             int count = 0;
@@ -248,9 +190,6 @@ namespace Jogo25D.Systems
             return count;
         }
 
-        /// <summary>
-        /// Verifica se o inventário está cheio
-        /// </summary>
         public bool IsFull()
         {
             for (int i = 0; i < INVENTORY_SIZE; i++)
@@ -260,9 +199,6 @@ namespace Jogo25D.Systems
             return true;
         }
 
-        /// <summary>
-        /// Retorna o número de slots vazios
-        /// </summary>
         public int GetEmptySlotCount()
         {
             int count = 0;
@@ -272,15 +208,10 @@ namespace Jogo25D.Systems
             }
             return count;
         }
-        
-        /// <summary>
-        /// Notifica que o inventário foi alterado (útil para drag and drop)
-        /// </summary>
+
         public void NotifyInventoryChanged()
         {
             EmitSignal(SignalName.InventoryChanged);
         }
-
-        #endregion
-    }
+    } 
 }

@@ -9,16 +9,13 @@ namespace Jogo25D.Systems
 
 	public override void _Ready()
 	{
-		// Garantir que a câmera está ativa
 		Enabled = true;
 
-		// Tentar encontrar o player
 		FindLocalPlayer();
 	}
 
 	public override void _Process(double delta)
 	{
-		// Se não temos player, tentar encontrar
 		if (player == null || !IsInstanceValid(player))
 		{
 			FindLocalPlayer();
@@ -26,14 +23,12 @@ namespace Jogo25D.Systems
 
 		if (player != null && IsInstanceValid(player))
 		{
-			// Seguir o player (a suavização está configurada na cena)
 			GlobalPosition = player.GlobalPosition;
 		}
 	}
 
 	private void FindLocalPlayer()
 	{
-		// Primeiro tentar usar o caminho exportado
 		if (PlayerPath != null && !PlayerPath.IsEmpty)
 		{
 			player = GetNodeOrNull<Node2D>(PlayerPath);
@@ -41,11 +36,9 @@ namespace Jogo25D.Systems
 				return;
 		}
 
-		// Verificar se multiplayer está realmente ativo e pronto
 		int localPeerId = 1;
 		bool hasMultiplayer = false;
 		
-		// Verificar múltiplas condições antes de tentar acessar GetUniqueId
 		if (Multiplayer != null && 
 		    Multiplayer.MultiplayerPeer != null && 
 		    Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
@@ -57,7 +50,6 @@ namespace Jogo25D.Systems
 			}
 			catch
 			{
-				// Multiplayer ainda não está pronto
 				hasMultiplayer = false;
 			}
 		}
@@ -67,8 +59,6 @@ namespace Jogo25D.Systems
 		{
 			if (node is Node2D player2D)
 			{
-				// Se não tem multiplayer, pegar o primeiro player
-				// Se tem multiplayer, pegar apenas o player que pertence a este peer
 				if (!hasMultiplayer || player2D.GetMultiplayerAuthority() == localPeerId)
 				{
 					player = player2D;
@@ -76,7 +66,6 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			// Fallback: procurar qualquer player na cena (para modo single player)
 			player = GetTree().Root.FindChild("Player", true, false) as Node2D;
 		}
 	}	

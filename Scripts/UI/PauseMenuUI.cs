@@ -18,10 +18,8 @@ namespace Jogo25D.UI
 
 	public override void _Ready()
 	{
-		// Ocultar o menu inicialmente
 		Visible = false;
 		
-		// Obter referências dos botões
 		resetButton = GetNode<Button>("Panel/VBoxContainer/ResetButton");
 		exitButton = GetNode<Button>("Panel/VBoxContainer/ExitButton");
 		hostButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/HostButton");
@@ -30,19 +28,15 @@ namespace Jogo25D.UI
 		addressInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/AddressInput");
 		statusLabel = GetNode<Label>("Panel/VBoxContainer/NetworkContainer/StatusLabel");
 		
-		// Conectar sinais dos botões
 		resetButton.Pressed += OnResetPressed;
 		exitButton.Pressed += OnExitPressed;
 		hostButton.Pressed += OnHostPressed;
 		connectButton.Pressed += OnConnectPressed;
 		
-		// Encontrar o player na cena
 		player = GetTree().Root.FindChild("Player", true, false) as Player;
 		
-		// Encontrar o NetworkManager
 		networkManager = GetNode<NetworkManager>("/root/Main/NetworkManager");
 		
-		// Configurar texto padrão
 		portInput.PlaceholderText = "Port";
 		addressInput.PlaceholderText = "IP:Port";
 		UpdateNetworkStatus();
@@ -118,7 +112,6 @@ namespace Jogo25D.UI
 		}
 		else
 		{
-			// Obter porta do input
 			string portText = portInput.Text.Trim();
 			int port = 7777;
 			
@@ -152,7 +145,6 @@ namespace Jogo25D.UI
 		}
 		else
 		{
-			// Obter IP:Porta do campo de endereço
 			string address = addressInput.Text.Trim();
 			
 			if (string.IsNullOrEmpty(address))
@@ -160,7 +152,6 @@ namespace Jogo25D.UI
 				address = "127.0.0.1:7777";
 			}
 			
-			// Parsear endereço e porta
 			string[] parts = address.Split(':');
 			string ip = parts[0];
 			int port = parts.Length > 1 && int.TryParse(parts[1], out int parsedPort) ? parsedPort : 7777;
@@ -179,11 +170,9 @@ namespace Jogo25D.UI
 			
 		bool connected = networkManager.IsConnected();
 		
-		// Atualizar textos dos botões
 		hostButton.Text = connected && networkManager.IsServer() ? "STOP SERVER" : "HOST";
 		connectButton.Text = connected && !networkManager.IsServer() ? "DISCONNECT" : "CONNECT";
 		
-		// Atualizar status
 		if (connected)
 		{
 			if (networkManager.IsServer())

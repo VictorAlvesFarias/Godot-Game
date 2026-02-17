@@ -9,20 +9,22 @@ namespace Jogo25D.Weapons
         [Export] public int Damage { get; set; } = 1;
         [Export] public float AttackCooldown { get; set; } = 0.5f;
         [Export] public Texture2D Icon { get; set; }
+        [Export] public float WeaponOffset { get; set; } = 25.0f;
         
         protected float cooldownTimer = 0f;
         protected Node2D owner;
+        protected Node2D weaponHolder;
+        protected Vector2 lastAttackDirection = Vector2.Right;
 
         public bool CanAttack => cooldownTimer <= 0f;
 
         public override void _Ready()
         {
-            var parent = GetParent();
-
-            if (parent != null)
-            {
-                owner = parent.GetParent<Node2D>();
-            }
+            owner = GetParent<Node2D>();
+            
+            weaponHolder = new Node2D();
+            weaponHolder.Name = "WeaponHolder";
+            AddChild(weaponHolder);
         }
 
         public override void _Process(double delta)
@@ -31,10 +33,32 @@ namespace Jogo25D.Weapons
             {
                 cooldownTimer -= (float)delta;
             }
+            
+            UpdateWeaponPosition();
+        }
+        
+        protected virtual void UpdateWeaponPosition()
+        {
+            if (weaponHolder == null || lastAttackDirection.LengthSquared() <= 0.01f)
+                return;
+            
+            weaponHolder.Rotation = lastAttackDirection.Angle();
+        
+            if (lastAttackDirection.X < 0)
+            {
+                weaponHolder.Position = new Vector2(-WeaponOffset, 0);
+                weaponHolder.Scale = new Vector2(1, -1);
+            }
+            else
+            {
+                weaponHolder.Position = new Vector2(WeaponOffset, 0);
+                weaponHolder.Scale = new Vector2(1, 1);
+            }
         }
 
         public virtual void Attack(Vector2 direction)
         {
+            lastAttackDirection = direction.Normalized();
             return;
         }
 
