@@ -21,7 +21,7 @@ namespace Jogo25D.Characters
         [Export] public float Gravity { get; set; }
         [Export] public int MaxHealth { get; set; } = 50;
         [Export] public int CurrentHealth { get; set; }
-        [Export] public bool CanUpdateMovement { get; set; }
+        [Export] public bool CanUpdateMovement { get; set; } = true;
 
         #endregion
 

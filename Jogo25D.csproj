@@ -7,7 +7,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <GodotExePath Condition=" '$(GodotExePath)' == '' ">
-		C:\Program Files\Godot\Godot_v4.6-stable_mono_win64_console.exe
+		E:\Programs\Godot\Godot_v4.6-stable_mono_win64_console.exe
 	</GodotExePath>
     <RunCommand>powershell</RunCommand>
     <RunArguments>
@@ -32,9 +32,11 @@
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
     <None Include="Scenes\Characters\Player.tscn" />
-    <None Include="Scenes\Entities\Bullet.tscn" />
     <None Include="Scenes\Entities\Platform.tscn" />
+    <None Include="Scenes\Entities\Projectile.tscn" />
     <None Include="Scenes\Levels\Main.tscn" />
+    <None Include="Scenes\UI\HUD.tscn" />
+    <None Include="Scenes\UI\InventoryMenu.tscn" />
     <None Include="Scenes\UI\PauseMenu.tscn" />
   </ItemGroup>
 </Project>

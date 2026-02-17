@@ -3,9 +3,9 @@
 [ext_resource type="PackedScene" uid="uid://c1234568aa0" path="res://Scenes/Characters/Player.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://p1358a24680" path="res://Scenes/Entities/Platform.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://d1112223334" path="res://Scenes/UI/PauseMenu.tscn" id="3"]
-[ext_resource type="Script" uid="uid://bf7fw5el217hq" path="res://Scripts/Systems/CameraController.cs" id="4"]
-[ext_resource type="Script" uid="uid://csx5gjyhu1wrl" path="res://Scripts/Systems/FullscreenToggle.cs" id="5"]
-[ext_resource type="Script" uid="uid://rfxn0b444nr" path="res://Scripts/Systems/NetworkManager.cs" id="6"]
+[ext_resource type="Script" uid="uid://cp8pytdo10em3" path="res://Scripts/Systems/CameraController.cs" id="4"]
+[ext_resource type="Script" uid="uid://jnbllrg8hdh2" path="res://Scripts/Systems/FullscreenToggle.cs" id="5"]
+[ext_resource type="Script" uid="uid://cue5v1d74dwib" path="res://Scripts/Systems/NetworkManager.cs" id="6"]
 [ext_resource type="PackedScene" uid="uid://hud1234568aa" path="res://Scenes/UI/HUD.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://ja876543210" path="res://Scenes/UI/InventoryMenu.tscn" id="12"]
 
@@ -28,11 +28,13 @@ PlayerPath = NodePath("../Player")
 
 [node name="PauseMenu" parent="." unique_id=2106941673 instance=ExtResource("3")]
 layer = 8
+visible = false
 
 [node name="HUD" parent="." unique_id=623492945 instance=ExtResource("7")]
 
 [node name="InventoryMenu" parent="." unique_id=528020502 instance=ExtResource("12")]
 layer = 4
+visible = false
 
 [node name="Platform7" parent="." unique_id=2125528475 instance=ExtResource("2")]
 position = Vector2(-23, 2811)
