@@ -7,6 +7,7 @@ namespace Jogo25D.UI
 	public partial class PauseMenuUI : CanvasLayer
 {
 	private Button resetButton;
+	private Button resumeButton;
 	private Button exitButton;
 	private Button hostButton;
 	private Button connectButton;
@@ -23,7 +24,8 @@ namespace Jogo25D.UI
 		
 		// Obter referências dos botões
 		resetButton = GetNode<Button>("Panel/VBoxContainer/ResetButton");
-		exitButton = GetNode<Button>("Panel/VBoxContainer/ExitButton");
+        resumeButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ResumeButton"); ;
+        exitButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ExitButton");
 		hostButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/HostButton");
 		connectButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ConnectButton");
 		portInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/PortInput");
@@ -32,7 +34,8 @@ namespace Jogo25D.UI
 		
 		// Conectar sinais dos botões
 		resetButton.Pressed += OnResetPressed;
-		exitButton.Pressed += OnExitPressed;
+        resumeButton.Pressed += OnResumePressed;
+        exitButton.Pressed += OnExitPressed;
 		hostButton.Pressed += OnHostPressed;
 		connectButton.Pressed += OnConnectPressed;
 		
@@ -102,8 +105,14 @@ namespace Jogo25D.UI
 	{
 		GetTree().Quit();
 	}
-	
-	private void OnHostPressed()
+
+        private void OnResumePressed()
+        {
+            Visible = false;
+            GetTree().Paused = false;
+        }
+
+        private void OnHostPressed()
 	{
 		if (networkManager == null)
 		{
