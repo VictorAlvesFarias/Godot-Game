@@ -1,13 +1,16 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
+using Jogo25D.Scripts.Actions;
+using Jogo25D.Weapons;
 
 namespace Jogo25D.UI
 {
     /// <summary>
-    /// HUD unificado com FPS, Health e Weapon display
+    /// HUD unificado com FPS, Health, Weapon display e habilidades.
     /// </summary>
     public partial class HUD : CanvasLayer
     {
@@ -17,21 +20,31 @@ namespace Jogo25D.UI
         private ProgressBar healthBar;
         private Label healthBarLabel;
         private Label weaponLabel;
+        private HBoxContainer abilitiesContainer;
         private Inventory inventory;
         private Player localPlayer;
+        private readonly List<Panel> abilitySlots = new List<Panel>();
+        private readonly List<ProgressBar> abilityFillBars = new List<ProgressBar>();
+        private readonly List<Label> abilityTimerLabels = new List<Label>();
+        private readonly List<Label> abilityNameLabels = new List<Label>();
         private double pingTimer = 0.0;
         private double pingInterval = 1.0;
         private double lastPingSentTime = 0.0;
         private int currentPing = 0;
 
+        private Minimap minimap;
+
         public override void _Ready()
         {
-            fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
-            healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
-            healthBarLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthBar/HealthBarLabel");
-            weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
+            var vbox = GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
+            fpsLabel = vbox.GetNode<Label>("FpsLabel");
+            healthBar = vbox.GetNode<ProgressBar>("HealthBar");
+            healthBarLabel = healthBar.GetNode<Label>("HealthBarLabel");
+            weaponLabel = vbox.GetNode<Label>("EquippedWeaponLabel");
+            abilitiesContainer = vbox.GetNode<HBoxContainer>("AbilitiesContainer");
+            minimap = GetNode<Minimap>("MarginContainer/MinimapPanel/Minimap");
 
-            CallDeferred(nameof(FindLocalPlayerInventory));
+            CallDeferred(nameof(FindLocalPlayer));
         }
         public override void _ExitTree()
         {
@@ -44,6 +57,12 @@ namespace Jogo25D.UI
         {
             UpdateFpsDisplay(delta);
             UpdateHealthDisplay();
+            UpdateWeaponDisplay();
+
+            if (localPlayer != null && IsInstanceValid(localPlayer) && abilitySlots.Count == 0)
+                BuildAbilitySlots();
+
+            UpdateAbilitySlots();
         }
 
         #region FPS Display
@@ -163,6 +182,11 @@ namespace Jogo25D.UI
                     {
                         localPlayer = player;
 
+                        if (minimap != null && IsInstanceValid(minimap))
+                        {
+                            minimap.SetLocalPlayer(player);
+                        }
+
                         FindLocalPlayerInventory();
 
                         break;
@@ -203,13 +227,283 @@ namespace Jogo25D.UI
 
             var equippedItem = inventory.GetEquippedItem();
 
-            if (equippedItem == null || equippedItem.Type != ItemType.WeaponMelee || equippedItem.Type != ItemType.WeaponRanged)
+            if (equippedItem == null || (equippedItem.Type != ItemType.WeaponMelee && equippedItem.Type != ItemType.WeaponRanged))
             {
                 weaponLabel.Text = "Arma: Nenhuma";
                 return;
             }
 
-            weaponLabel.Text = $"{equippedItem.ItemName}";
+            var weapon = localPlayer?.CurrentWeaponSystem;
+            if (weapon != null && IsInstanceValid(weapon))
+            {
+                var reloadPrefix = weapon.IsReloading() ? $"{weapon.GetRemainingReloadTime():F1}s " : "";
+
+                if (weapon.InfiniteCharges)
+                {
+                    weaponLabel.Text = $"{reloadPrefix}{weapon.WeaponName} ∞";
+                }
+                else
+                {
+                    weaponLabel.Text = $"{reloadPrefix}{weapon.WeaponName} {weapon.CurrentCharges}/{weapon.InventoryCharges}";
+                }
+            }
+            else
+            {
+                weaponLabel.Text = equippedItem.ItemName;
+            }
+        }
+
+        #endregion
+
+        #region Ability slots
+
+        private void BuildAbilitySlots()
+        {
+            if (localPlayer == null || !IsInstanceValid(localPlayer) || abilitiesContainer == null)
+                return;
+
+            var list = localPlayer.UnlockedAbilities;
+            if (list == null || list.Count == 0)
+            {
+                abilitySlots.Clear();
+                abilityFillBars.Clear();
+                abilityTimerLabels.Clear();
+                abilityNameLabels.Clear();
+                for (int i = abilitiesContainer.GetChildCount() - 1; i >= 0; i--)
+                {
+                    if (abilitiesContainer.GetChild(i) is Control c)
+                        c.Visible = false;
+                }
+                return;
+            }
+
+            abilitySlots.Clear();
+            abilityFillBars.Clear();
+            abilityTimerLabels.Clear();
+            abilityNameLabels.Clear();
+
+            int existingChildren = abilitiesContainer.GetChildCount();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Panel slot;
+                ProgressBar fillBar;
+                Label timerLabel;
+                Label nameLabel;
+
+                if (i < existingChildren)
+                {
+                    var child = abilitiesContainer.GetChild(i);
+                    if (child is VBoxContainer vbox)
+                    {
+                        slot = vbox.GetNodeOrNull<Panel>("AbilityPanel");
+                        if (slot == null)
+                            slot = vbox.GetChild<Panel>(0);
+                        fillBar = slot.GetNodeOrNull<ProgressBar>("CooldownFill");
+                        timerLabel = slot.GetNodeOrNull<Label>("TimerLabel");
+                        nameLabel = vbox.GetNodeOrNull<Label>("AbilityNameLabel");
+                        if (nameLabel == null)
+                        {
+                            nameLabel = CreateAbilityNameLabel();
+                            nameLabel.Name = "AbilityNameLabel";
+                            vbox.AddChild(nameLabel);
+                        }
+                    }
+                    else if (child is Panel panel)
+                    {
+                        slot = panel;
+                        slot.Name = "AbilityPanel";
+                        fillBar = panel.GetNodeOrNull<ProgressBar>("CooldownFill");
+                        timerLabel = panel.GetNodeOrNull<Label>("TimerLabel");
+                        var wrapper = new VBoxContainer();
+                        abilitiesContainer.RemoveChild(panel);
+                        wrapper.AddChild(panel);
+                        nameLabel = CreateAbilityNameLabel();
+                        nameLabel.Name = "AbilityNameLabel";
+                        wrapper.AddChild(nameLabel);
+                        abilitiesContainer.AddChild(wrapper);
+                        abilitiesContainer.MoveChild(wrapper, i);
+                    }
+                    else
+                    {
+                        var slotViews = CreateAbilitySlot();
+                        abilitiesContainer.AddChild(slotViews.Wrapper);
+                        slot = slotViews.Panel;
+                        fillBar = slotViews.FillBar;
+                        timerLabel = slotViews.TimerLabel;
+                        nameLabel = slotViews.NameLabel;
+                    }
+                    slot.Visible = true;
+                    fillBar ??= slot.GetNodeOrNull<ProgressBar>("CooldownFill");
+                    timerLabel ??= slot.GetNodeOrNull<Label>("TimerLabel");
+                    if (timerLabel == null)
+                    {
+                        timerLabel = CreateTimerLabel();
+                        slot.AddChild(timerLabel);
+                    }
+                }
+                else
+                {
+                    var slotViews = CreateAbilitySlot();
+                    abilitiesContainer.AddChild(slotViews.Wrapper);
+                    slot = slotViews.Panel;
+                    fillBar = slotViews.FillBar;
+                    timerLabel = slotViews.TimerLabel;
+                    nameLabel = slotViews.NameLabel;
+                }
+
+                fillBar.MinValue = 0;
+                fillBar.MaxValue = 1;
+                fillBar.Value = 1;
+                fillBar.FillMode = (int)ProgressBar.FillModeEnum.BottomToTop;
+
+                abilitySlots.Add(slot);
+                abilityFillBars.Add(fillBar);
+                abilityTimerLabels.Add(timerLabel);
+                abilityNameLabels.Add(nameLabel);
+            }
+
+            // Remove slots extras do editor (se tinha mais que a lista)
+            while (abilitiesContainer.GetChildCount() > list.Count)
+            {
+                var extra = abilitiesContainer.GetChild(abilitiesContainer.GetChildCount() - 1);
+                abilitiesContainer.RemoveChild(extra);
+                extra.QueueFree();
+            }
+        }
+
+        private AbilitySlotViews CreateAbilitySlot()
+        {
+            var panel = new Panel();
+            panel.Name = "AbilityPanel";
+            panel.CustomMinimumSize = new Vector2(48, 48);
+
+            var styleBg = new StyleBoxFlat();
+            styleBg.BgColor = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+            styleBg.BorderWidthLeft = styleBg.BorderWidthTop = styleBg.BorderWidthRight = styleBg.BorderWidthBottom = 2;
+            styleBg.BorderColor = new Color(0.4f, 0.4f, 0.5f);
+            styleBg.SetCornerRadiusAll(4);
+            panel.AddThemeStyleboxOverride("panel", styleBg);
+
+            var fill = new ProgressBar();
+            fill.Name = "CooldownFill";
+            fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            fill.OffsetLeft = 4;
+            fill.OffsetTop = 4;
+            fill.OffsetRight = -4;
+            fill.OffsetBottom = -4;
+            fill.ShowPercentage = false;
+            fill.MinValue = 0;
+            fill.MaxValue = 1;
+            fill.Value = 1;
+            fill.FillMode = (int)ProgressBar.FillModeEnum.BottomToTop;
+
+            var styleFill = new StyleBoxFlat();
+            styleFill.BgColor = new Color(0.25f, 0.6f, 0.9f, 0.9f);
+            styleFill.SetCornerRadiusAll(2);
+            fill.AddThemeStyleboxOverride("fill", styleFill);
+
+            panel.AddChild(fill);
+            var timerLabel = CreateTimerLabel();
+            panel.AddChild(timerLabel);
+
+            var nameLabel = CreateAbilityNameLabel();
+            nameLabel.Name = "AbilityNameLabel";
+
+            var wrapper = new VBoxContainer();
+            wrapper.AddChild(panel);
+            wrapper.AddChild(nameLabel);
+
+            return new AbilitySlotViews(wrapper, panel, fill, timerLabel, nameLabel);
+        }
+
+        private Label CreateAbilityNameLabel()
+        {
+            var label = new Label();
+            label.AddThemeFontSizeOverride("font_size", 12);
+            label.AddThemeColorOverride("font_color", Colors.White);
+            label.AddThemeColorOverride("font_outline_color", Colors.Black);
+            label.AddThemeConstantOverride("outline_size", 1);
+            label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.Text = "";
+            return label;
+        }
+
+        private Label CreateTimerLabel()
+        {
+            var label = new Label();
+            label.Name = "TimerLabel";
+            label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.VerticalAlignment = VerticalAlignment.Center;
+            label.AddThemeFontSizeOverride("font_size", 14);
+            label.AddThemeColorOverride("font_color", Colors.White);
+            label.AddThemeColorOverride("font_outline_color", Colors.Black);
+            label.AddThemeConstantOverride("outline_size", 2);
+            label.Text = "";
+            label.MouseFilter = Control.MouseFilterEnum.Ignore;
+            return label;
+        }
+
+        private void UpdateAbilitySlots()
+        {
+            if (localPlayer == null || !IsInstanceValid(localPlayer))
+                return;
+
+            var list = localPlayer.UnlockedAbilities;
+            if (list == null || abilityFillBars.Count != list.Count || abilityTimerLabels.Count != list.Count || abilityNameLabels.Count != list.Count)
+                return;
+
+            for (int i = 0; i < list.Count && i < abilityFillBars.Count; i++)
+            {
+                var action = list[i];
+                var bar = abilityFillBars[i];
+                var timerLabel = abilityTimerLabels[i];
+                var nameLabel = abilityNameLabels[i];
+                if (action == null || bar == null)
+                    continue;
+
+                float value;
+                string timerText;
+                Color fillColor;
+
+                if (action.IsActive)
+                {
+                    value = 1f - action.GetDurationProgress();
+                    fillColor = Colors.White;
+                    timerText = $"{action.GetRemainingDuration():F1}s";
+                }
+                else if (action.InCooldown)
+                {
+                    value = action.GetCooldownProgress();
+                    fillColor = new Color(0.4f, 0.4f, 0.45f, 0.9f); // cinza no CD
+                    timerText = $"{action.GetRemainingCooldown():F1}s";
+                }
+                else
+                {
+                    value = 1f;
+                    fillColor = new Color(0.25f, 0.5f, 0.9f, 0.95f); // azul quando carregado
+                    timerText = "";
+                }
+
+                bar.Value = value;
+
+                var styleFill = (StyleBoxFlat)bar.GetThemeStylebox("fill").Duplicate();
+                styleFill.BgColor = fillColor;
+                bar.AddThemeStyleboxOverride("fill", styleFill);
+
+                if (timerLabel != null)
+                {
+                    timerLabel.Text = timerText;
+                    timerLabel.Visible = !string.IsNullOrEmpty(timerText);
+                }
+
+                if (nameLabel != null)
+                {
+                    var nameText = action.MaxCharges > 1 ? $"{action.ActionName} {action.CurrentCharges}/{action.MaxCharges}" : action.ActionName;
+                    nameLabel.Text = nameText;
+                }
+            }
         }
 
         #endregion

@@ -19,6 +19,7 @@ public partial class Platform : StaticBody2D
 
 	public override void _Ready()
 	{
+		AddToGroup("platforms");
 		UpdatePlatform();
 	}
 

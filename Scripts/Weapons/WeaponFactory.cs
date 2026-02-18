@@ -1,4 +1,4 @@
-﻿using Jogo25D.Items;
+using Jogo25D.Items;
 using Jogo25D.Weapons;
 using System;
 using System.Collections.Generic;
@@ -37,6 +37,11 @@ namespace Jogo25D.Scripts.Weapons
             weaponInstance.Damage = item.Damage;
             weaponInstance.AttackCooldown = item.AttackCooldown;
             weaponInstance.Icon = item.Icon;
+            weaponInstance.MaxCharges = item.MaxCharges;
+            weaponInstance.CurrentCharges = item.MaxCharges;
+            weaponInstance.ChargeType = item.ChargeType;
+            weaponInstance.InfiniteCharges = item.InfiniteCharges;
+            weaponInstance.ReloadCooldown = item.ReloadCooldown;
 
             return weaponInstance;
         }

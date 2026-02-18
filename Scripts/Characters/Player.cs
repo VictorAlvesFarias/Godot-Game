@@ -5,6 +5,7 @@ using Jogo25D.Items;
 using Jogo25D.Weapons;
 using Jogo25D.Scripts.Actions;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
@@ -28,6 +29,7 @@ namespace Jogo25D.Characters
         #region Systems
 
         public DashAction DashAction { get; private set; }
+        public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
         public Inventory Inventory { get; private set; }
         public Weapon CurrentWeaponSystem { get; private set; }
         public AimIndicator AimIndicator { get; private set; }
@@ -56,6 +58,7 @@ namespace Jogo25D.Characters
             Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
             
             DashAction = new DashAction(this);
+            UnlockedAbilities.Add(DashAction);
 
             Inventory = GetNodeOrNull<Inventory>("Inventory");
             if (Inventory == null)
@@ -102,6 +105,7 @@ namespace Jogo25D.Characters
             HandleInput();
             HandleMovement((float)delta);
             HandleAttack((float)delta);
+            HandleReload((float)delta);
             
             AimIndicator.Update(Controls.MousePosition, GlobalPosition);
 
@@ -121,13 +125,14 @@ namespace Jogo25D.Characters
         #region Public server methods
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-        public void SetServerInput(float x, float y, bool jump, bool dash, bool attack)
+        public void SetServerInput(float x, float y, bool jump, bool dash, bool attack, bool reload)
         {
             Controls.InputX = x;
             Controls.InputY = y;
             Controls.InputJump = jump;
             Controls.InputDash = dash;
             Controls.InputAttack = attack;
+            Controls.InputReload = reload;
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
@@ -186,20 +191,32 @@ namespace Jogo25D.Characters
             Controls.InputJump = Input.IsActionJustPressed("move_up");
             Controls.InputDash = Input.IsActionJustPressed("dash");
             Controls.InputAttack = Input.IsActionPressed("shoot");
+            Controls.InputReload = Input.IsActionJustPressed("reload");
 
-            Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack);
+            Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload);
             Rpc(nameof(SetServerMousePosition), GetGlobalMousePosition());
         }
 
         private void HandleAttack(float delta)
         {
-            if (CurrentWeaponSystem == null || !CurrentWeaponSystem.CanAttack)
+            if (CurrentWeaponSystem == null || !CurrentWeaponSystem.CanAttack())
                 return;
 
             if (Controls.InputAttack)
             {
                 var direction = (Controls.MousePosition - GlobalPosition).Normalized();
                 CurrentWeaponSystem.Attack(direction);
+            }
+        }
+
+        private void HandleReload(float delta)
+        {
+            if (CurrentWeaponSystem == null || !CurrentWeaponSystem.CanReload())
+                return;
+
+            if (Controls.InputReload)
+            {
+                CurrentWeaponSystem.Reload();
             }
         }
 
@@ -278,15 +295,21 @@ namespace Jogo25D.Characters
             rangedWeapon.Description = "Um arco para ataques à distância";
             rangedWeapon.IsEquippable = true;
             rangedWeapon.Damage = 1;
+            rangedWeapon.InfiniteCharges = false;
+            rangedWeapon.MaxCharges = 10;
             rangedWeapon.AttackCooldown = 0.8f;
             rangedWeapon.AttackRange = 1500f; // Alcance máximo: 1500 unidades
             rangedWeapon.AttackArea = 50f; // Tamanho do projétil
             rangedWeapon.ProjectileSpeed = 750f; // Velocidade: 750 u/s → Lifetime = 1500/750 = 2s
 
-            var rangedWeapon2 = new Item("Arco2", ItemType.WeaponMelee);
+            var rangedWeapon2 = new Item("Arco2", ItemType.WeaponRanged);
 
             rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
             rangedWeapon2.IsEquippable = true;
+            rangedWeapon2.InfiniteCharges = false;
+            rangedWeapon2.MaxCharges = 10;
+            rangedWeapon2.ChargeType = "arrow";
+            rangedWeapon2.ReloadCooldown = 1.5f;
             rangedWeapon2.Damage = 1;
             rangedWeapon2.AttackCooldown = 0.01f;
             rangedWeapon2.AttackRange = 2000f; // Alcance máximo: 2000 unidades
@@ -298,9 +321,16 @@ namespace Jogo25D.Characters
             rangedWeapon.ProjectileScene = projectileScene;
             rangedWeapon2.ProjectileScene = projectileScene;
 
+            var arrowAmmo = new Item("Flecha", ItemType.Consumable);
+            arrowAmmo.Description = "Munição para arcos";
+            arrowAmmo.ChargeType = "arrow";
+            arrowAmmo.IsStackable = true;
+            arrowAmmo.MaxStackSize = 9999;
+
             Inventory.AddItem(meleeWeapon, 1);
             Inventory.AddItem(rangedWeapon, 1);
             Inventory.AddItem(rangedWeapon2, 1);
+            Inventory.AddItem(arrowAmmo, 1000);
             Inventory.EquipItem(0);
         }
 

@@ -190,6 +190,55 @@ namespace Jogo25D.Systems
             return count;
         }
 
+        public int CountAmmoByChargeType(string chargeType)
+        {
+            if (string.IsNullOrEmpty(chargeType))
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < INVENTORY_SIZE; i++)
+            {
+                // Não contar o slot equipado (a arma) como munição de si mesma
+                if (i == equippedSlotIndex)
+                    continue;
+
+                if (!slots[i].IsEmpty && slots[i].Item.ChargeType == chargeType)
+                {
+                    count += slots[i].Quantity;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>Remove munição do inventário pelo tipo. Retorna a quantidade removida.</summary>
+        public int RemoveAmmoByChargeType(string chargeType, int quantity)
+        {
+            if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
+                return 0;
+
+            int removed = 0;
+            for (int i = 0; i < INVENTORY_SIZE && removed < quantity; i++)
+            {
+                if (i == equippedSlotIndex)
+                    continue;
+
+                if (slots[i].IsEmpty || slots[i].Item.ChargeType != chargeType)
+                    continue;
+
+                int toRemove = Mathf.Min(quantity - removed, slots[i].Quantity);
+                slots[i].Quantity -= toRemove;
+                removed += toRemove;
+
+                if (slots[i].Quantity <= 0)
+                    slots[i].Clear();
+            }
+
+            if (removed > 0)
+                EmitSignal(SignalName.InventoryChanged);
+
+            return removed;
+        }
+
         public bool IsFull()
         {
             for (int i = 0; i < INVENTORY_SIZE; i++)

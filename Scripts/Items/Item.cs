@@ -20,6 +20,15 @@ namespace Jogo25D.Items
         [Export] public PackedScene ProjectileScene { get; set; }
         [Export] public float ProjectileSpeed { get; set; } = 500f;
 
+        /// <summary>Tamanho do carregador (munição máxima por carga).</summary>
+        [Export] public int MaxCharges { get; set; } = 1;
+        /// <summary>Tipo de munição usado pela arma (para buscar no inventário).</summary>
+        [Export] public string ChargeType { get; set; } = "";
+        /// <summary>Se true, a arma não consome munição.</summary>
+        [Export] public bool InfiniteCharges { get; set; } = true;
+        /// <summary>Duração em segundos para recarregar o carregador.</summary>
+        [Export] public float ReloadCooldown { get; set; } = 1.0f;
+
         public Node2D WeaponNode { get; set; }
         
         public float CooldownTimer { get; set; } = 0f;

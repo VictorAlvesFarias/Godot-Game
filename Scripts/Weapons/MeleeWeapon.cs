@@ -72,7 +72,7 @@ namespace Jogo25D.Weapons
 
         public override void Attack(Vector2 direction)
         {
-            if (!CanAttack || owner == null) 
+            if (!CanAttack() || owner == null) 
             {
                 return;
             }

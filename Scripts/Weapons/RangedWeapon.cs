@@ -22,7 +22,7 @@ namespace Jogo25D.Weapons
 
         public override void Attack(Vector2 direction)
         {
-            if (!CanAttack || BulletScene == null)
+            if (!CanAttack() || BulletScene == null)
             {
                 return;
             }

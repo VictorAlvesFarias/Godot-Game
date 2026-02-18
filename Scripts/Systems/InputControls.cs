@@ -9,6 +9,7 @@ namespace Jogo25D.Systems
         public bool InputJump { get; set; }
         public bool InputDash { get; set; }
         public bool InputAttack { get; set; }
+        public bool InputReload { get; set; }
         public Vector2 MousePosition { get; set; }
         public bool IsOwner { get; set; }
         public Vector2 InitialPosition { get; set; }
@@ -20,6 +21,7 @@ namespace Jogo25D.Systems
             InputJump = false;
             InputDash = false;
             InputAttack = false;
+            InputReload = false;
             MousePosition = Vector2.Zero;
             IsOwner = false;
             InitialPosition = Vector2.Zero;
