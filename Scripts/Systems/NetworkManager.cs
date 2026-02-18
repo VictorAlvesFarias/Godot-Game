@@ -5,7 +5,7 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.Systems
 {
-    public partial class NetworkManager : Node
+	public partial class NetworkManager : Node
 {
 	private const int MaxPlayers = 4;
 	private const int DefaultPort = 9876;
@@ -169,5 +169,5 @@ namespace Jogo25D.Systems
 	{
 		Disconnect();
 	}
-    }
+	}
 }

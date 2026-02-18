@@ -16,10 +16,11 @@
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="Assets\Textures\LandScapeGround.png" />
-    <Content Include="Assets\Textures\white.jpg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Include="Assets\Tiles\TX Chest Animation.png" />
+    <Content Include="Assets\Tiles\TX FX Flame.png" />
+    <Content Include="Assets\Tiles\TX FX Torch Flame.png" />
+    <Content Include="Assets\Tiles\TX Tileset Ground.png" />
+    <Content Include="Assets\Tiles\TX Village Props.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
@@ -28,11 +29,9 @@
     <None Include="Assets\Fonts\.gitkeep" />
     <None Include="Assets\Sprites\.gitkeep" />
     <None Include="Assets\Textures\.gitkeep" />
-    <None Include="Assets\Textures\white.jpg.import" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
     <None Include="Scenes\Characters\Player.tscn" />
-    <None Include="Scenes\Entities\Platform.tscn" />
     <None Include="Scenes\Entities\Projectile.tscn" />
     <None Include="Scenes\Levels\Main.tscn" />
     <None Include="Scenes\UI\HUD.tscn" />

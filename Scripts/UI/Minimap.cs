@@ -4,9 +4,6 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.UI
 {
-    /// <summary>
-    /// Minimapa quadrado que exibe plataformas e jogadores, com o jogador local centralizado.
-    /// </summary>
     public partial class Minimap : Control
     {
         [Export] public string PlayerGroupName { get; set; } = "players";
@@ -55,24 +52,31 @@ namespace Jogo25D.UI
             var innerSize = mapSize - margin * 2;
 
             var scale = innerSize / (ViewRadius * 2f);
+
             if (scale <= 0f)
+            {
                 return;
+            }
 
             var platforms = GetTree().GetNodesInGroup(PlatformGroupName);
-            foreach (Node node in platforms)
+
+            foreach (Node node in GetTree().GetNodesInGroup("minimap_collidable"))
             {
-                if (node is Platform platform && IsInstanceValid(platform))
+                if (node is CollisionObject2D body && IsInstanceValid(body))
                 {
-                    var pos = platform.GlobalPosition;
-                    var size = platform.Size;
-                    var topLeft = pos - size / 2f;
-                    var mapTopLeft = WorldToMap(topLeft, playerPos, center, scale);
-                    var mapSizePlatform = new Vector2(size.X * scale, size.Y * scale);
-                    DrawRect(new Rect2(mapTopLeft, mapSizePlatform), PlatformColor);
+                    foreach (Node child in body.GetChildren())
+                    {
+                        if (child is CollisionShape2D shape && shape.Shape != null)
+                        {
+                            //TODO: 
+                            //DrawCollisionShape(body, shape, playerPos, center, scale);
+                        }
+                    }
                 }
             }
 
             var players = GetTree().GetNodesInGroup(PlayerGroupName);
+
             foreach (Node node in players)
             {
                 if (node is Player player && IsInstanceValid(player))
@@ -97,6 +101,7 @@ namespace Jogo25D.UI
             var rel = worldPos - playerPos;
             return center + rel * scale;
         }
+
 
         public override void _Process(double delta)
         {
