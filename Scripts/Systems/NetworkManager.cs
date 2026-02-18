@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using Jogo25D;
 using Jogo25D.Characters;
 
 namespace Jogo25D.Systems
@@ -29,7 +30,7 @@ namespace Jogo25D.Systems
 		Multiplayer.ConnectionFailed += OnConnectionFailed;
 		Multiplayer.ServerDisconnected += OnServerDisconnected;
 		
-		spawnParent = GetTree().Root.GetNode<Node2D>("Main");
+		spawnParent = GetTree().Root.GetNode<Node2D>(NodePaths.Network.MainRoot);
 	}
 	
 	public void CreateServer(int port = DefaultPort)

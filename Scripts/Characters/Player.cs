@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
@@ -55,12 +56,12 @@ namespace Jogo25D.Characters
             Controls.InitialPosition = GlobalPosition;
 
             Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-            Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
+            Sprite = GetNodeOrNull<Line2D>(NodePaths.Player.SpriteBorder);
             
             DashAction = new DashAction(this);
             UnlockedAbilities.Add(DashAction);
 
-            Inventory = GetNodeOrNull<Inventory>("Inventory");
+            Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
             if (Inventory == null)
             {
                 Inventory = new Inventory();

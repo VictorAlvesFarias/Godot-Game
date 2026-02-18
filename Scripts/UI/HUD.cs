@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using Jogo25D;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
@@ -36,13 +37,12 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
-            var vbox = GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
-            fpsLabel = vbox.GetNode<Label>("FpsLabel");
-            healthBar = vbox.GetNode<ProgressBar>("HealthBar");
-            healthBarLabel = healthBar.GetNode<Label>("HealthBarLabel");
-            weaponLabel = vbox.GetNode<Label>("EquippedWeaponLabel");
-            abilitiesContainer = vbox.GetNode<HBoxContainer>("AbilitiesContainer");
-            minimap = GetNode<Minimap>("MarginContainer/MinimapPanel/Minimap");
+            fpsLabel = GetNode<Label>(NodePaths.Hud.FpsLabel);
+            healthBar = GetNode<ProgressBar>(NodePaths.Hud.HealthBar);
+            healthBarLabel = GetNode<Label>(NodePaths.Hud.HealthBarLabel);
+            weaponLabel = GetNode<Label>(NodePaths.Hud.EquippedWeaponLabel);
+            abilitiesContainer = GetNode<HBoxContainer>(NodePaths.Hud.AbilitiesContainer);
+            minimap = GetNode<Minimap>(NodePaths.Hud.Minimap);
 
             CallDeferred(nameof(FindLocalPlayer));
         }
@@ -296,25 +296,25 @@ namespace Jogo25D.UI
                     var child = abilitiesContainer.GetChild(i);
                     if (child is VBoxContainer vbox)
                     {
-                        slot = vbox.GetNodeOrNull<Panel>("AbilityPanel");
+                        slot = vbox.GetNodeOrNull<Panel>(NodePaths.Hud.AbilityPanelName);
                         if (slot == null)
                             slot = vbox.GetChild<Panel>(0);
-                        fillBar = slot.GetNodeOrNull<ProgressBar>("CooldownFill");
-                        timerLabel = slot.GetNodeOrNull<Label>("TimerLabel");
-                        nameLabel = vbox.GetNodeOrNull<Label>("AbilityNameLabel");
+                        fillBar = slot.GetNodeOrNull<ProgressBar>(NodePaths.Hud.AbilityCooldownFillName);
+                        timerLabel = slot.GetNodeOrNull<Label>(NodePaths.Hud.AbilityTimerLabelName);
+                        nameLabel = vbox.GetNodeOrNull<Label>(NodePaths.Hud.AbilityNameLabelName);
                         if (nameLabel == null)
                         {
                             nameLabel = CreateAbilityNameLabel();
-                            nameLabel.Name = "AbilityNameLabel";
+                            nameLabel.Name = NodePaths.Hud.AbilityNameLabelName;
                             vbox.AddChild(nameLabel);
                         }
                     }
                     else if (child is Panel panel)
                     {
                         slot = panel;
-                        slot.Name = "AbilityPanel";
-                        fillBar = panel.GetNodeOrNull<ProgressBar>("CooldownFill");
-                        timerLabel = panel.GetNodeOrNull<Label>("TimerLabel");
+                        slot.Name = NodePaths.Hud.AbilityPanelName;
+                        fillBar = panel.GetNodeOrNull<ProgressBar>(NodePaths.Hud.AbilityCooldownFillName);
+                        timerLabel = panel.GetNodeOrNull<Label>(NodePaths.Hud.AbilityTimerLabelName);
                         var wrapper = new VBoxContainer();
                         abilitiesContainer.RemoveChild(panel);
                         wrapper.AddChild(panel);
@@ -375,7 +375,7 @@ namespace Jogo25D.UI
         private AbilitySlotViews CreateAbilitySlot()
         {
             var panel = new Panel();
-            panel.Name = "AbilityPanel";
+            panel.Name = NodePaths.Hud.AbilityPanelName;
             panel.CustomMinimumSize = new Vector2(48, 48);
 
             var styleBg = new StyleBoxFlat();
@@ -386,7 +386,7 @@ namespace Jogo25D.UI
             panel.AddThemeStyleboxOverride("panel", styleBg);
 
             var fill = new ProgressBar();
-            fill.Name = "CooldownFill";
+            fill.Name = NodePaths.Hud.AbilityCooldownFillName;
             fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             fill.OffsetLeft = 4;
             fill.OffsetTop = 4;
@@ -408,7 +408,7 @@ namespace Jogo25D.UI
             panel.AddChild(timerLabel);
 
             var nameLabel = CreateAbilityNameLabel();
-            nameLabel.Name = "AbilityNameLabel";
+            nameLabel.Name = NodePaths.Hud.AbilityNameLabelName;
 
             var wrapper = new VBoxContainer();
             wrapper.AddChild(panel);
@@ -432,7 +432,7 @@ namespace Jogo25D.UI
         private Label CreateTimerLabel()
         {
             var label = new Label();
-            label.Name = "TimerLabel";
+            label.Name = NodePaths.Hud.AbilityTimerLabelName;
             label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             label.HorizontalAlignment = HorizontalAlignment.Center;
             label.VerticalAlignment = VerticalAlignment.Center;

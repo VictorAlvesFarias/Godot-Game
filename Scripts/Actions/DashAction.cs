@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D;
 using Jogo25D.Characters;
 
 namespace Jogo25D.Scripts.Actions
@@ -14,7 +15,7 @@ namespace Jogo25D.Scripts.Actions
 
         public DashAction(Player player) : base(player)
         {
-            dashParticles = player.GetNodeOrNull<CpuParticles2D>("DashParticles");
+            dashParticles = player.GetNodeOrNull<CpuParticles2D>(NodePaths.Actions.DashParticles);
             Duration = 0.2f;
             Cooldown = 1f;
             MaxCharges = 2;
