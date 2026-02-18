@@ -2,7 +2,7 @@ using Godot;
 
 namespace Jogo25D.UI
 {
-    public partial class FullscreenToggle : Node
+	public partial class FullscreenToggle : Node
 {
 	private bool isProcessing = false;
 
@@ -33,5 +33,5 @@ namespace Jogo25D.UI
 			DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
 		}
 	}
-    }
+	}
 }
