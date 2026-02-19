@@ -26,14 +26,6 @@ namespace Jogo25D.Systems
             }
         }
 
-        public override void _Process(double delta)
-        {
-            if (equippedItem != null)
-            {
-                equippedItem.UpdateCooldown((float)delta);
-            }
-        }
-
         public bool AddItem(Item item, int quantity = 1)
         {
             if (item == null) return false;
@@ -42,7 +34,7 @@ namespace Jogo25D.Systems
             {
                 for (int i = 0; i < INVENTORY_SIZE; i++)
                 {
-                    if (!slots[i].IsEmpty && slots[i].Item?.ItemName == item.ItemName)
+                    if (!slots[i].IsEmpty() && slots[i].Item?.ItemName == item.ItemName)
                     {
                         if (slots[i].CanAddMore())
                         {
@@ -61,7 +53,7 @@ namespace Jogo25D.Systems
 
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
-                if (slots[i].IsEmpty)
+                if (slots[i].IsEmpty())
                 {
                     slots[i].Item = item;
                     slots[i].Quantity = quantity;
@@ -78,7 +70,7 @@ namespace Jogo25D.Systems
             if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE) return false;
 
             var slot = slots[slotIndex];
-            if (slot.IsEmpty) return false;
+            if (slot.IsEmpty()) return false;
 
             slot.Quantity -= quantity;
 
@@ -146,7 +138,7 @@ namespace Jogo25D.Systems
 
             var slot = slots[slotIndex];
 
-            if (slot.IsEmpty || !slot.Item.IsEquippable)
+            if (slot.IsEmpty() || !slot.Item.IsEquippable)
                 return false;
 
             equippedItem = slot.Item;
@@ -182,7 +174,7 @@ namespace Jogo25D.Systems
             int count = 0;
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
-                if (!slots[i].IsEmpty && slots[i].Item.ItemName == itemName)
+                if (!slots[i].IsEmpty() && slots[i].Item.ItemName == itemName)
                 {
                     count += slots[i].Quantity;
                 }
@@ -202,7 +194,7 @@ namespace Jogo25D.Systems
                 if (i == equippedSlotIndex)
                     continue;
 
-                if (!slots[i].IsEmpty && slots[i].Item.ChargeType == chargeType)
+                if (!slots[i].IsEmpty() && slots[i].Item.ChargeType == chargeType)
                 {
                     count += slots[i].Quantity;
                 }
@@ -222,7 +214,7 @@ namespace Jogo25D.Systems
                 if (i == equippedSlotIndex)
                     continue;
 
-                if (slots[i].IsEmpty || slots[i].Item.ChargeType != chargeType)
+                if (slots[i].IsEmpty() || slots[i].Item.ChargeType != chargeType)
                     continue;
 
                 int toRemove = Mathf.Min(quantity - removed, slots[i].Quantity);
@@ -243,7 +235,7 @@ namespace Jogo25D.Systems
         {
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
-                if (slots[i].IsEmpty) return false;
+                if (slots[i].IsEmpty()) return false;
             }
             return true;
         }
@@ -253,7 +245,7 @@ namespace Jogo25D.Systems
             int count = 0;
             for (int i = 0; i < INVENTORY_SIZE; i++)
             {
-                if (slots[i].IsEmpty) count++;
+                if (slots[i].IsEmpty()) count++;
             }
             return count;
         }

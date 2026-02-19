@@ -1,6 +1,6 @@
 using Godot;
-using Jogo25D;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI

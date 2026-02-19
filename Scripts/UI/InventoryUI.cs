@@ -1,9 +1,9 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using Jogo25D;
 using Jogo25D.Systems;
 using Jogo25D.Items;
+using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
@@ -27,43 +27,43 @@ namespace Jogo25D.UI
 		private Vector2 dragOffset;
 		private const float DragThreshold = 5.0f;
 
-        public override void _UnhandledInput(InputEvent @event)
-        {
-            if (contextMenu == null)
+		public override void _UnhandledInput(InputEvent @event)
+		{
+			if (contextMenu == null)
 			{
-                return;
+				return;
 			}
 
-            if (contextMenu.Visible &&
-                @event is InputEventMouseButton mouseEvent &&
-                mouseEvent.Pressed &&
-                mouseEvent.ButtonIndex == MouseButton.Left)
-            {
-                var rect = contextMenu.GetGlobalRect();
+			if (contextMenu.Visible &&
+				@event is InputEventMouseButton mouseEvent &&
+				mouseEvent.Pressed &&
+				mouseEvent.ButtonIndex == MouseButton.Left)
+			{
+				var rect = contextMenu.GetGlobalRect();
 
-                if (!rect.HasPoint(mouseEvent.GlobalPosition))
-                {
-                    contextMenu.Visible = false;
-                }
-            }
-        }
+				if (!rect.HasPoint(mouseEvent.GlobalPosition))
+				{
+					contextMenu.Visible = false;
+				}
+			}
+		}
 
-        public override void _Ready()
-        {
-            mainControl = GetNode<Control>(NodePaths.InventoryUI.Root);
-            gridContainer = GetNode<GridContainer>(NodePaths.InventoryUI.GridContainer);
+		public override void _Ready()
+		{
+			mainControl = GetNode<Control>(NodePaths.InventoryUI.Root);
+			gridContainer = GetNode<GridContainer>(NodePaths.InventoryUI.GridContainer);
 
-            contextMenu = GetNode<Panel>(NodePaths.InventoryUI.ContextMenuPanel);
-            contextMenuContainer = GetNode<VBoxContainer>(NodePaths.InventoryUI.ContextMenuVBox);
+			contextMenu = GetNode<Panel>(NodePaths.InventoryUI.ContextMenuPanel);
+			contextMenuContainer = GetNode<VBoxContainer>(NodePaths.InventoryUI.ContextMenuVBox);
 
-            CreateDragPreview();
+			CreateDragPreview();
 
-            CallDeferred(nameof(FindLocalPlayerInventorySystem));
+			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
-            Visible = false;
-        }
+			Visible = false;
+		}
 
-        private void CreateDragPreview()
+		private void CreateDragPreview()
 		{
 			dragPreview = new Panel();
 			dragPreview.CustomMinimumSize = new Vector2(64, 64);
@@ -242,45 +242,45 @@ namespace Jogo25D.UI
 			return -1;
 		}
 
-        private void SetupSlot(int index)
-        {
-            slots[index] = new Panel();
-            slots[index].CustomMinimumSize = new Vector2(64, 64);
-            gridContainer.AddChild(slots[index]);
+		private void SetupSlot(int index)
+		{
+			slots[index] = new Panel();
+			slots[index].CustomMinimumSize = new Vector2(64, 64);
+			gridContainer.AddChild(slots[index]);
 
-            var marginContainer = new MarginContainer();
-            marginContainer.AddThemeConstantOverride("margin_left", 4);
-            marginContainer.AddThemeConstantOverride("margin_top", 4);
-            marginContainer.AddThemeConstantOverride("margin_right", 4);
-            marginContainer.AddThemeConstantOverride("margin_bottom", 4);
-            slots[index].AddChild(marginContainer);
+			var marginContainer = new MarginContainer();
+			marginContainer.AddThemeConstantOverride("margin_left", 4);
+			marginContainer.AddThemeConstantOverride("margin_top", 4);
+			marginContainer.AddThemeConstantOverride("margin_right", 4);
+			marginContainer.AddThemeConstantOverride("margin_bottom", 4);
+			slots[index].AddChild(marginContainer);
 
-            var centerContainer = new CenterContainer();
-            marginContainer.AddChild(centerContainer);
+			var centerContainer = new CenterContainer();
+			marginContainer.AddChild(centerContainer);
 
-            iconRects[index] = new TextureRect();
-            iconRects[index].ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-            iconRects[index].StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-            iconRects[index].CustomMinimumSize = new Vector2(56, 56);
-            centerContainer.AddChild(iconRects[index]);
+			iconRects[index] = new TextureRect();
+			iconRects[index].ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+			iconRects[index].StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+			iconRects[index].CustomMinimumSize = new Vector2(56, 56);
+			centerContainer.AddChild(iconRects[index]);
 
-            nameLabels[index] = new Label();
-            nameLabels[index].HorizontalAlignment = HorizontalAlignment.Center;
-            nameLabels[index].VerticalAlignment = VerticalAlignment.Center;
-            nameLabels[index].AutowrapMode = TextServer.AutowrapMode.Word;
-            nameLabels[index].Visible = false;
-            centerContainer.AddChild(nameLabels[index]);
+			nameLabels[index] = new Label();
+			nameLabels[index].HorizontalAlignment = HorizontalAlignment.Center;
+			nameLabels[index].VerticalAlignment = VerticalAlignment.Center;
+			nameLabels[index].AutowrapMode = TextServer.AutowrapMode.Word;
+			nameLabels[index].Visible = false;
+			centerContainer.AddChild(nameLabels[index]);
 
-            quantityLabels[index] = new Label();
-            quantityLabels[index].HorizontalAlignment = HorizontalAlignment.Right;
-            quantityLabels[index].VerticalAlignment = VerticalAlignment.Bottom;
-            slots[index].AddChild(quantityLabels[index]);
+			quantityLabels[index] = new Label();
+			quantityLabels[index].HorizontalAlignment = HorizontalAlignment.Right;
+			quantityLabels[index].VerticalAlignment = VerticalAlignment.Bottom;
+			slots[index].AddChild(quantityLabels[index]);
 
-            int slotIndex = index;
-            slots[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
-        }
+			int slotIndex = index;
+			slots[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
+		}
 
-        private void OnSlotInput(int slotIndex, InputEvent @event)
+		private void OnSlotInput(int slotIndex, InputEvent @event)
 		{
 			if (inventory == null || !IsInstanceValid(inventory)) return;
 
@@ -288,12 +288,12 @@ namespace Jogo25D.UI
 			
 			if (@event is InputEventMouseButton mouseEvent)
 			{
-				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty)
+				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty())
 				{
 					StartDrag(slotIndex, mouseEvent.GlobalPosition);
 					slots[slotIndex].AcceptEvent();
 				}
-				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty)
+				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty())
 				{
 					ShowContextMenuForSlot(slotIndex, mouseEvent.GlobalPosition);
 					slots[slotIndex].AcceptEvent();
@@ -306,7 +306,7 @@ namespace Jogo25D.UI
 			if (inventory == null || !IsInstanceValid(inventory)) return;
 			
 			var slot = inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty) return;
+			if (slot.IsEmpty()) return;
 			
 			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Item?.ItemName})");
 			
@@ -387,51 +387,51 @@ namespace Jogo25D.UI
 			inventory.SwapSlots(fromIndex, toIndex);
 		}
 
-        private void UpdateSlot(int index)
-        {
-            if (inventory == null || !IsInstanceValid(inventory))
-                return;
+		private void UpdateSlot(int index)
+		{
+			if (inventory == null || !IsInstanceValid(inventory))
+				return;
 
-            if (iconRects == null || nameLabels == null || quantityLabels == null)
-                return;
+			if (iconRects == null || nameLabels == null || quantityLabels == null)
+				return;
 
-            if (index < 0
-                || index >= iconRects.Length
-                || index >= nameLabels.Length
-                || index >= quantityLabels.Length)
-                return;
+			if (index < 0
+				|| index >= iconRects.Length
+				|| index >= nameLabels.Length
+				|| index >= quantityLabels.Length)
+				return;
 
-            var slot = inventory.GetSlot(index);
-            if (slot == null)
-                return;
+			var slot = inventory.GetSlot(index);
+			if (slot == null)
+				return;
 
-            if (slot.IsEmpty || slot.Item == null)
-            {
-                iconRects[index].Texture = null;
-                nameLabels[index].Visible = false;
-                quantityLabels[index].Text = "";
-                return;
-            }
+			if (slot.IsEmpty() || slot.Item == null)
+			{
+				iconRects[index].Texture = null;
+				nameLabels[index].Visible = false;
+				quantityLabels[index].Text = "";
+				return;
+			}
 
-            if (slot.Item.Icon != null)
-            {
-                iconRects[index].Texture = slot.Item.Icon;
-                nameLabels[index].Visible = false;
-            }
-            else
-            {
-                iconRects[index].Texture = null;
-                nameLabels[index].Text = slot.Item.ItemName;
-                nameLabels[index].Visible = true;
-            }
+			if (slot.Item.Icon != null)
+			{
+				iconRects[index].Texture = slot.Item.Icon;
+				nameLabels[index].Visible = false;
+			}
+			else
+			{
+				iconRects[index].Texture = null;
+				nameLabels[index].Text = slot.Item.ItemName;
+				nameLabels[index].Visible = true;
+			}
 
-            if (slot.Item.IsStackable && slot.Quantity > 1)
-                quantityLabels[index].Text = slot.Quantity.ToString();
-            else
-                quantityLabels[index].Text = "";
-        }
+			if (slot.Item.IsStackable && slot.Quantity > 1)
+				quantityLabels[index].Text = slot.Quantity.ToString();
+			else
+				quantityLabels[index].Text = "";
+		}
 
-        private void SelectSlot(int index)
+		private void SelectSlot(int index)
 		{
 			if (selectedSlotIndex >= 0 && selectedSlotIndex < 16)
 			{
@@ -451,7 +451,7 @@ namespace Jogo25D.UI
 			if (inventory == null || !IsInstanceValid(inventory)) return;
 			
 			var slot = inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty) return;
+			if (slot.IsEmpty()) return;
 
 			selectedSlotIndex = slotIndex;
 
@@ -487,11 +487,11 @@ namespace Jogo25D.UI
 			if (selectedSlotIndex < 0 || inventory == null || !IsInstanceValid(inventory)) return;
 
 			var slot = inventory.GetSlot(selectedSlotIndex);
-			if (slot.IsEmpty) return;
+			if (slot.IsEmpty()) return;
 
 			if (option == "Equipar")
 			{
-                inventory.Rpc(nameof(Inventory.EquipItem),selectedSlotIndex);
+				inventory.Rpc(nameof(Inventory.EquipItem),selectedSlotIndex);
 			}
 
 			contextMenu.Visible = false;

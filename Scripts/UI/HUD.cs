@@ -1,12 +1,12 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using Jogo25D;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
 using Jogo25D.Scripts.Actions;
 using Jogo25D.Weapons;
+using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {

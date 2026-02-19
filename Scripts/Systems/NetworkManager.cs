@@ -1,7 +1,7 @@
 using Godot;
 using System;
-using Jogo25D;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Systems
 {

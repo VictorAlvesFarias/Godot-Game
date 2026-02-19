@@ -5,8 +5,6 @@ namespace Jogo25D.Items
         public Item Item { get; set; }
         public int Quantity { get; set; } = 0;
         
-        public bool IsEmpty => Item == null || Quantity <= 0;
-        
         public ItemSlot() { }
         
         public ItemSlot(Item item, int quantity = 1)
@@ -23,8 +21,17 @@ namespace Jogo25D.Items
 
         public bool CanAddMore()
         {
-            if (IsEmpty || Item == null) return true;
+            if (IsEmpty() || Item == null)
+            {
+                return true;
+            }
+            
             return Item.IsStackable && Quantity < Item.MaxStackSize;
+        }
+
+        public bool IsEmpty()
+        {
+            return Item == null || Quantity <= 0;
         }
     }
 }

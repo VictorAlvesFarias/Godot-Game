@@ -1,6 +1,6 @@
 using Godot;
 
-namespace Jogo25D
+namespace Jogo25D.Constants
 {
     public static class NodePaths
     {
@@ -42,10 +42,10 @@ namespace Jogo25D
             public const string Root = "CenterContainer";
             public const string GridContainer = "CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer";
             public const string ContextMenuPanel = "ContextMenu";
-            public const string ContextMenuVBox = "ContextMenu/VBoxContainer";
+            public const string ContextMenuVBox = "ContextMenu/MarginContainer/VBoxContainer";
             public const string SlotMarginContainer = "MarginContainer";
             public const string SlotCenterContainer = "CenterContainer";
-            public const string SlotIcon = "Icon";
+            public const string SlotIcon = "IconRect";
             public const string SlotNameLabel = "NameLabel";
             public const string SlotQuantityLabel = "QuantityLabel";
             public const string DragPreviewIcon = "Icon";

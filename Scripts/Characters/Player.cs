@@ -1,5 +1,4 @@
 using Godot;
-using Jogo25D;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
@@ -11,6 +10,7 @@ using System.Globalization;
 using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
 using Jogo25D.Scripts.Weapons;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Characters
 {
@@ -31,7 +31,7 @@ namespace Jogo25D.Characters
 
 		public DashAction DashAction { get; private set; }
 		public FireballAction FireballAction { get; private set; }
-        public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
+		public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
 		public Inventory Inventory { get; private set; }
 		public Weapon CurrentWeaponSystem { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
@@ -58,20 +58,20 @@ namespace Jogo25D.Characters
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			Sprite = GetNodeOrNull<Line2D>(NodePaths.Player.SpriteBorder);
 			DashAction = new DashAction(this);
-            FireballAction = new FireballAction(this);
+			FireballAction = new FireballAction(this);
 
-            UnlockedAbilities.Add(DashAction);
-            UnlockedAbilities.Add(FireballAction);
+			UnlockedAbilities.Add(DashAction);
+			UnlockedAbilities.Add(FireballAction);
 
-            Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
+			Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
 
 			if (Inventory == null)
 			{
 				Inventory = new Inventory();
 
-                AddChild(Inventory);
+				AddChild(Inventory);
 
-                Inventory.Name = "Inventory";
+				Inventory.Name = "Inventory";
 			}
 
 			Inventory.ItemEquipped += OnItemEquipped;
@@ -109,7 +109,7 @@ namespace Jogo25D.Characters
 			DashAction.Update((float)delta);
 			FireballAction.Update((float)delta);
 
-            HandleInput();
+			HandleInput();
 			HandleMovement((float)delta);
 			HandleAttack((float)delta);
 			HandleReload((float)delta);
@@ -202,7 +202,7 @@ namespace Jogo25D.Characters
 			Controls.InputReload = Input.IsActionJustPressed("reload");
 			Controls.InputAbility = Input.IsActionJustPressed("ability");
 
-            Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload, Controls.InputAbility);
+			Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload, Controls.InputAbility);
 			Rpc(nameof(SetServerMousePosition), GetGlobalMousePosition());
 		}
 
@@ -283,14 +283,14 @@ namespace Jogo25D.Characters
 
 			CurrentWeaponSystem = weaponInstance;
 
-            AddChild(weaponInstance);
+			AddChild(weaponInstance);
 
-            CurrentWeaponSystem.OnEquip();
+			CurrentWeaponSystem.OnEquip();
 		}
 
 		private void InitializeStartingWeapons()
 		{
-			var meleeWeapon = new Item("Espada", ItemType.WeaponMelee);
+			var meleeWeapon = new Item("Sword", ItemType.WeaponMelee);
 
 			meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
 			meleeWeapon.IsEquippable = true;

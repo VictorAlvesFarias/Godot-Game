@@ -2,7 +2,7 @@ using Godot;
 
 namespace Jogo25D.UI
 {
-	public partial class FullscreenToggle : Node
+	public partial class ScreenManager : Node
 {
 	private bool isProcessing = false;
 
