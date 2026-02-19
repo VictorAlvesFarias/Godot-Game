@@ -11,11 +11,8 @@ namespace Jogo25D.Scripts.Actions
         [Export] public string ActionName { get; set; } = "Habilidade";
         [Export] public float Cooldown { get; set; } = 0f;
         [Export] public float Duration { get; set; } = 0f;
-        /// <summary>Número máximo de cargas da habilidade. 1 = comportamento tradicional (1 uso por cooldown).</summary>
         [Export] public int MaxCharges { get; set; } = 1;
-
-        /// <summary>Cargas disponíveis para usar (decresce ao usar, aumenta quando cooldown restaura uma carga).</summary>
-        public int CurrentCharges { get; protected set; } = 1;
+        [Export] public int CurrentCharges { get; protected set; } = 1;
 
         protected float CooldownTimer { get; set; } = 0f;
         protected float DurationTimer { get; set; } = 0f;
@@ -80,31 +77,16 @@ namespace Jogo25D.Scripts.Actions
             }
         }
 
-        public virtual void OnStartAction(float delta)
-        {
+        public abstract void OnStartAction(float delta);
 
-        }
+        public abstract void OnUpdateWhileActive(float delta);
 
-        public virtual void OnUpdateWhileActive(float delta)
-        {
+        public abstract void OnFinishedAction(float delta);
 
-        }
+        public abstract void OnEnableAction(float delta);
 
-        public virtual void OnFinishedAction(float delta)
-        {
+        public abstract bool OnStartActionValidation(float delta);
 
-        }
-
-        public virtual void OnEnableAction(float delta)
-        {
-
-        }
-
-        public virtual bool OnStartActionValidation(float delta)
-        {
-            return false;
-        }
-        
         public float GetCooldownProgress()
         {
             if (Cooldown > 0f && InCooldown)

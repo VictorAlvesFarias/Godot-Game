@@ -8,7 +8,6 @@ namespace Jogo25D.Scripts.Actions
     {
         [Export] public float DashSpeed { get; set; } = 800.0f;
         [Export] public Vector2 DashDirection { get; private set; } = Vector2.Zero;
-        /// <summary>Quanto o input de movimento influencia a direção do dash (0 = nenhum, 1 = total).</summary>
         [Export] public float MovementInfluence { get; set; } = 0.4f;
 
         private CpuParticles2D dashParticles;
@@ -73,21 +72,30 @@ namespace Jogo25D.Scripts.Actions
         public override void OnUpdateWhileActive(float delta)
         {
             var inputDirection = new Vector2(NodePlayer.Controls.InputX, NodePlayer.Controls.InputY);
+
             if (inputDirection.LengthSquared() > 0.01f && MovementInfluence > 0f)
             {
                 var blended = DashDirection + inputDirection.Normalized() * MovementInfluence;
+                
                 if (blended.LengthSquared() > 0.01f)
                 {
                     NodePlayer.Velocity = blended.Normalized() * DashSpeed;
+
                     return;
                 }
             }
+
             NodePlayer.Velocity = DashDirection * DashSpeed;
         }
 
         public override bool OnStartActionValidation(float delta)
         {
             return NodePlayer.Controls.InputDash && CanUse;
+        }
+
+        public override void OnEnableAction(float delta)
+        {
+            
         }
     }
 }

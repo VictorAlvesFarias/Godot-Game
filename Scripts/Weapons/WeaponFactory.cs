@@ -1,3 +1,5 @@
+using Godot;
+using Jogo25D.Characters;
 using Jogo25D.Items;
 using Jogo25D.Weapons;
 using System;
@@ -10,24 +12,23 @@ namespace Jogo25D.Scripts.Weapons
 {
     public static class WeaponFactory
     {
-        public static Weapon Use(Item item)
+        public static Weapon Use(Item item, Player player)
         {
             var weaponInstance = (Weapon)null;
 
             if (item.Type == ItemType.WeaponRanged)
             {
-                var rangedWeapon = new RangedWeapon();
+                var rangedWeapon = new RangedWeapon(player, item.ProjectileScene);
 
                 rangedWeapon.Range = item.AttackRange;
                 rangedWeapon.Area = item.AttackArea;
-                rangedWeapon.BulletScene = item.ProjectileScene;
                 rangedWeapon.BulletSpeed = item.ProjectileSpeed;
 
                 weaponInstance = rangedWeapon;
             }
             else
             {
-                var meleeWeapon = new MeleeWeapon();
+                var meleeWeapon = new MeleeWeapon(player);
 
                 meleeWeapon.Range = item.AttackRange;
                 weaponInstance = meleeWeapon;

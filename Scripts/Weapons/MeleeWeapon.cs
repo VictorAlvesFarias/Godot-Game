@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Characters;
 using System;
 using System.Collections.Generic;
 
@@ -6,7 +7,6 @@ namespace Jogo25D.Weapons
 {
     public partial class MeleeWeapon : Weapon
     {
-        [Export] public float Range { get; set; } = 80.0f;
         [Export] public float AttackDuration { get; set; } = 0.2f;
         [Export] public float AttackAngle { get; set; } = 90.0f;
         
@@ -17,6 +17,10 @@ namespace Jogo25D.Weapons
         private HashSet<Node2D> hitEnemies = new HashSet<Node2D>();
         private bool isAttacking = false;
         private bool signalsDisconnected = false;
+
+        public MeleeWeapon(Player player) : base(player)
+        {
+        }
 
         public override void _Ready()
         {

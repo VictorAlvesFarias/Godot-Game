@@ -30,7 +30,8 @@ namespace Jogo25D.Characters
 		#region Systems
 
 		public DashAction DashAction { get; private set; }
-		public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
+		public FireballAction FireballAction { get; private set; }
+        public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
 		public Inventory Inventory { get; private set; }
 		public Weapon CurrentWeaponSystem { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
@@ -54,19 +55,23 @@ namespace Jogo25D.Characters
 
 			Controls = new InputControls();
 			Controls.InitialPosition = GlobalPosition;
-
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			Sprite = GetNodeOrNull<Line2D>(NodePaths.Player.SpriteBorder);
-			
 			DashAction = new DashAction(this);
-			UnlockedAbilities.Add(DashAction);
+            FireballAction = new FireballAction(this);
 
-			Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
+            UnlockedAbilities.Add(DashAction);
+            UnlockedAbilities.Add(FireballAction);
+
+            Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
+
 			if (Inventory == null)
 			{
 				Inventory = new Inventory();
-				AddChild(Inventory);
-				Inventory.Name = "Inventory";
+
+                AddChild(Inventory);
+
+                Inventory.Name = "Inventory";
 			}
 
 			Inventory.ItemEquipped += OnItemEquipped;
@@ -102,8 +107,9 @@ namespace Jogo25D.Characters
 			Controls.IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
 
 			DashAction.Update((float)delta);
+			FireballAction.Update((float)delta);
 
-			HandleInput();
+            HandleInput();
 			HandleMovement((float)delta);
 			HandleAttack((float)delta);
 			HandleReload((float)delta);
@@ -126,7 +132,7 @@ namespace Jogo25D.Characters
 		#region Public server methods
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-		public void SetServerInput(float x, float y, bool jump, bool dash, bool attack, bool reload)
+		public void SetServerInput(float x, float y, bool jump, bool dash, bool attack, bool reload, bool inputAbility)
 		{
 			Controls.InputX = x;
 			Controls.InputY = y;
@@ -134,6 +140,7 @@ namespace Jogo25D.Characters
 			Controls.InputDash = dash;
 			Controls.InputAttack = attack;
 			Controls.InputReload = reload;
+			Controls.InputAbility = inputAbility;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
@@ -193,8 +200,9 @@ namespace Jogo25D.Characters
 			Controls.InputDash = Input.IsActionJustPressed("dash");
 			Controls.InputAttack = Input.IsActionPressed("shoot");
 			Controls.InputReload = Input.IsActionJustPressed("reload");
+			Controls.InputAbility = Input.IsActionJustPressed("ability");
 
-			Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload);
+            Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload, Controls.InputAbility);
 			Rpc(nameof(SetServerMousePosition), GetGlobalMousePosition());
 		}
 
@@ -271,13 +279,13 @@ namespace Jogo25D.Characters
 				CurrentWeaponSystem = null;
 			}
 
-			var weaponInstance = WeaponFactory.Use(item);
-
-			AddChild(weaponInstance);
+			var weaponInstance = WeaponFactory.Use(item, this);
 
 			CurrentWeaponSystem = weaponInstance;
 
-			CurrentWeaponSystem.OnEquip();
+            AddChild(weaponInstance);
+
+            CurrentWeaponSystem.OnEquip();
 		}
 
 		private void InitializeStartingWeapons()
@@ -307,9 +315,9 @@ namespace Jogo25D.Characters
 
 			rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
 			rangedWeapon2.IsEquippable = true;
-			rangedWeapon2.InfiniteCharges = false;
-			rangedWeapon2.MaxCharges = 10;
-			rangedWeapon2.ChargeType = "arrow";
+			rangedWeapon2.InfiniteCharges = true;
+			rangedWeapon2.MaxCharges = 1;
+			rangedWeapon2.ChargeType = "none";
 			rangedWeapon2.ReloadCooldown = 1.5f;
 			rangedWeapon2.Damage = 1;
 			rangedWeapon2.AttackCooldown = 0.01f;
