@@ -1,5 +1,4 @@
 using Godot;
-using System.Collections.Generic;
 using Jogo25D.Characters;
 
 namespace Jogo25D.UI
@@ -7,11 +6,10 @@ namespace Jogo25D.UI
     public partial class Minimap : Control
     {
         [Export] public string PlayerGroupName { get; set; } = "players";
-        [Export] public string PlatformGroupName { get; set; } = "platforms";
         [Export] public float ViewRadius { get; set; } = 600f;
         [Export] public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
         [Export] public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
-        [Export] public Color PlatformColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
+        [Export] public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
         [Export] public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
         [Export] public float PlayerDotRadius { get; set; } = 4f;
 
@@ -20,15 +18,13 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
-            CustomMinimumSize = new Vector2(120, 120);
+            CustomMinimumSize = new Vector2(160, 160);
 
-            if (Multiplayer != null && Multiplayer.MultiplayerPeer != null && Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+            if (Multiplayer != null &&
+                Multiplayer.MultiplayerPeer != null &&
+                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
             {
-                try
-                {
-                    localPeerId = Multiplayer.GetUniqueId();
-                }
-                catch { }
+                localPeerId = Multiplayer.GetUniqueId();
             }
         }
 
@@ -39,69 +35,103 @@ namespace Jogo25D.UI
 
         public override void _Draw()
         {
-            var mapSize = GetSquareSize();
-            var margin = 4f;
-            var drawRect = new Rect2(margin, margin, mapSize - margin * 2, mapSize - margin * 2);
-            DrawRect(drawRect, BackgroundColor);
+            float mapSize = Mathf.Min(Size.X, Size.Y);
+            float margin = 4f;
+
+            Rect2 backgroundRect = new Rect2(
+                margin,
+                margin,
+                mapSize - margin * 2,
+                mapSize - margin * 2
+            );
+
+            DrawRect(backgroundRect, BackgroundColor);
 
             if (localPlayer == null || !IsInstanceValid(localPlayer))
                 return;
 
-            var playerPos = (localPlayer as Node2D)?.GlobalPosition ?? Vector2.Zero;
-            var center = new Vector2(mapSize / 2f, mapSize / 2f);
-            var innerSize = mapSize - margin * 2;
-
-            var scale = innerSize / (ViewRadius * 2f);
+            Vector2 playerPos = (localPlayer as Node2D)?.GlobalPosition ?? Vector2.Zero;
+            Vector2 center = new Vector2(mapSize / 2f, mapSize / 2f);
+            float innerSize = mapSize - margin * 2;
+            float scale = innerSize / (ViewRadius * 2f);
 
             if (scale <= 0f)
-            {
                 return;
-            }
 
-            var platforms = GetTree().GetNodesInGroup(PlatformGroupName);
+            ScanTree(GetTree().Root, playerPos, center, scale);
+            DrawPlayers(playerPos, center, scale);
+        }
 
-            foreach (Node node in GetTree().GetNodesInGroup("minimap_collidable"))
+        private void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
+        {
+            if (node is TileMapLayer layer && IsInstanceValid(layer))
             {
-                if (node is CollisionObject2D body && IsInstanceValid(body))
-                {
-                    foreach (Node child in body.GetChildren())
-                    {
-                        if (child is CollisionShape2D shape && shape.Shape != null)
-                        {
-                            //TODO: 
-                            //DrawCollisionShape(body, shape, playerPos, center, scale);
-                        }
-                    }
-                }
+                DrawTileMapLayer(layer, playerPos, center, scale);
             }
 
+            foreach (Node child in node.GetChildren())
+            {
+                ScanTree(child, playerPos, center, scale);
+            }
+        }
+
+        private void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
+        {
+            var usedCells = layer.GetUsedCells();
+            if (usedCells == null || usedCells.Count == 0)
+                return;
+
+            Vector2 tileSize = layer.TileSet.TileSize;
+
+            foreach (Vector2I cell in usedCells)
+            {
+                Vector2 localPos = layer.MapToLocal(cell);
+                Vector2 worldPos = layer.ToGlobal(localPos);
+
+                Vector2 mapPos = WorldToMap(worldPos, playerPos, center, scale);
+
+                if (mapPos.DistanceTo(center) > (Size.X / 2f))
+                    continue;
+
+                float size = tileSize.X * scale;
+
+                Rect2 rect = new Rect2(
+                    mapPos - new Vector2(size / 2f, size / 2f),
+                    new Vector2(size, size)
+                );
+
+                DrawRect(rect, TileColor);
+            }
+        }
+
+        private void DrawPlayers(Vector2 playerPos, Vector2 center, float scale)
+        {
             var players = GetTree().GetNodesInGroup(PlayerGroupName);
 
             foreach (Node node in players)
             {
                 if (node is Player player && IsInstanceValid(player))
                 {
-                    var worldPos = player.GlobalPosition;
-                    var mapPos = WorldToMap(worldPos, playerPos, center, scale);
-                    var isLocal = localPlayer == player || (Multiplayer != null && player.GetMultiplayerAuthority() == localPeerId);
-                    var color = isLocal ? LocalPlayerColor : OtherPlayerColor;
+                    Vector2 worldPos = player.GlobalPosition;
+                    Vector2 mapPos = WorldToMap(worldPos, playerPos, center, scale);
+
+                    bool isLocal =
+                        localPlayer == player ||
+                        (Multiplayer != null &&
+                         player.GetMultiplayerAuthority() == localPeerId);
+
+                    Color color = isLocal ? LocalPlayerColor : OtherPlayerColor;
+
                     DrawCircle(mapPos, PlayerDotRadius, color);
                 }
             }
         }
 
-        private float GetSquareSize()
-        {
-            var s = Size;
-            return Mathf.Min(s.X, s.Y);
-        }
-
         private Vector2 WorldToMap(Vector2 worldPos, Vector2 playerPos, Vector2 center, float scale)
         {
-            var rel = worldPos - playerPos;
-            return center + rel * scale;
+            Vector2 relative = worldPos - playerPos;
+            return center + relative * scale;
         }
-
 
         public override void _Process(double delta)
         {
