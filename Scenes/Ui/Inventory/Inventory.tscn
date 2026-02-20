@@ -1,0 +1,153 @@
+[gd_scene format=3 uid="uid://dpjl5u30o6jtq"]
+
+[ext_resource type="Script" uid="uid://hlyvh6plemv7" path="res://Features/UI/InventoryUI.cs" id="1"]
+
+
+[sub_resource type="StyleBoxFlat" id="Style_Inventory"]
+bg_color = Color(0.12, 0.12, 0.12, 0.97)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="Style_Slot"]
+bg_color = Color(0.2, 0.2, 0.2, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="Style_Context"]
+bg_color = Color(0.1, 0.1, 0.1, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="InventoryMenu" type="CanvasLayer" unique_id=426197288]
+layer = 10
+script = ExtResource("1")
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=92565785]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainPanel" type="PanelContainer" parent="CenterContainer" unique_id=748066446]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Inventory")
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/MainPanel" unique_id=1433890113]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/MainPanel/MarginContainer" unique_id=1967911335]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Title" type="Label" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer" unique_id=65457050]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "INVENTÁRIO"
+horizontal_alignment = 1
+
+[node name="GridContainer" type="GridContainer" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer" unique_id=704673562]
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 4
+
+[node name="SlotTemplate" type="Panel" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer" unique_id=60206047]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Slot")
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate" unique_id=2006348549]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="CenterContainer" type="CenterContainer" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate/MarginContainer" unique_id=431779820]
+layout_mode = 2
+
+[node name="IconRect" type="TextureRect" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1513140292]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1089574609]
+layout_mode = 2
+text = "Teste"
+
+[node name="QuantityLabel" type="Label" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate" unique_id=289504532]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="ContextMenu" type="Panel" parent="." unique_id=527798442]
+visible = false
+custom_minimum_size = Vector2(140, 0)
+offset_right = 140.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("Style_Context")
+
+[node name="MarginContainer" type="MarginContainer" parent="ContextMenu" unique_id=783810340]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ContextMenu/MarginContainer" unique_id=1429149547]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Label" type="Label" parent="ContextMenu/MarginContainer/VBoxContainer" unique_id=518320539]
+layout_mode = 2
+text = "Teste"

@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://m246801358a"]
+
+[ext_resource type="PackedScene" uid="uid://kseu2j0fsdcb" path="res://Scenes/Managers/Managers.tscn" id="1_kln2b"]
+[ext_resource type="PackedScene" uid="uid://dilxh6c2tmjp" path="res://Scenes/Ui/Ui.tscn" id="2_rgh2o"]
+[ext_resource type="PackedScene" uid="uid://la3ukb015fw8" path="res://Scenes/World/World.tscn" id="3_pbw6q"]
+
+[node name="Main" type="Node2D" unique_id=756475699]
+position = Vector2(599, 2827)
+
+[node name="Managers" parent="." unique_id=940605774 instance=ExtResource("1_kln2b")]
+
+[node name="Ui" parent="." unique_id=1165519216 instance=ExtResource("2_rgh2o")]
+
+[node name="World" parent="." unique_id=336690079 instance=ExtResource("3_pbw6q")]

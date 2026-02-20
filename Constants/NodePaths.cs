@@ -7,12 +7,12 @@ namespace Jogo25D.Constants
         public static class Hud
         {
             public const string MarginContainer = "MarginContainer";
-            public const string VBoxContainer = MarginContainer + "/VBoxContainer";
-            public const string FpsLabel = VBoxContainer + "/FpsLabel";
-            public const string HealthBar = VBoxContainer + "/HealthBar";
-            public const string HealthBarLabel = HealthBar + "/HealthBarLabel";
-            public const string EquippedWeaponLabel = VBoxContainer + "/EquippedWeaponLabel";
-            public const string AbilitiesContainer = VBoxContainer + "/AbilitiesContainer";
+            public const string VBoxContainer = "MarginContainer/VBoxContainer";
+            public const string FpsLabel = "MarginContainer/VBoxContainer/FpsLabel";
+            public const string HealthBar = "MarginContainer/VBoxContainer/HealthBar";
+            public const string HealthBarLabel = "MarginContainer/VBoxContainer/HealthBar/HealthBarLabel";
+            public const string EquippedWeaponLabel = "MarginContainer/VBoxContainer/EquippedWeaponLabel";
+            public const string AbilitiesContainer = "MarginContainer/VBoxContainer/AbilitiesContainer";
             public const string Minimap = "MarginContainer/MinimapPanel/Minimap";
             public const string AbilityPanelName = "AbilityPanel";
             public const string AbilityCooldownFillName = "CooldownFill";
@@ -66,8 +66,7 @@ namespace Jogo25D.Constants
         public static class Network
         {
             public const string MainRoot = "Main";
-            public const string RootNetworkManager = "/root/Main/NetworkManager";
+            public const string RootNetworkManager = "/root/Main/Managers/NetworkManager";
         }
     }
 }
-
