@@ -1,12 +1,9 @@
 [gd_scene format=3 uid="uid://c1234568aa0"]
 
 [ext_resource type="Script" uid="uid://biybktxtwi55d" path="res://Features/Characters/Player.cs" id="1"]
-[ext_resource type="Script" uid="uid://df1psvenxxrdt" path="res://Features/Systems/Inventory.cs" id="2_68bph"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
 size = Vector2(40, 40)
-
-[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_i6vvj"]
 
 [node name="Player" type="CharacterBody2D" unique_id=678460707]
 script = ExtResource("1")
@@ -42,9 +39,3 @@ initial_velocity_min = 100.0
 initial_velocity_max = 200.0
 scale_amount_min = 2.0
 scale_amount_max = 4.0
-
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=2001881291]
-replication_config = SubResource("SceneReplicationConfig_i6vvj")
-
-[node name="Inventory" type="Node" parent="." unique_id=2030044836]
-script = ExtResource("2_68bph")

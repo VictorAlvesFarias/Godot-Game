@@ -24,6 +24,9 @@
     <EmbeddedResource Remove="Scenes\Levels\**" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Textures\Screenshot 2026-02-21 014440.png" />
+    <Content Include="Assets\Textures\Screenshot 2026-02-21 014543.png" />
+    <Content Include="Assets\Textures\Untitled.png" />
     <Content Include="Assets\Tiles\TX Chest Animation.png" />
     <Content Include="Assets\Tiles\TX FX Flame.png" />
     <Content Include="Assets\Tiles\TX FX Torch Flame.png" />
@@ -37,6 +40,8 @@
     <None Include="Assets\Fonts\.gitkeep" />
     <None Include="Assets\Sprites\.gitkeep" />
     <None Include="Assets\Textures\.gitkeep" />
+    <None Include="Assets\Textures\Screenshot 2026-02-21 014440.png.import" />
+    <None Include="Assets\Textures\Screenshot 2026-02-21 014543.png.import" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
     <None Include="Scenes\Main.tscn" />
@@ -46,7 +51,9 @@
     <None Include="Scenes\UI\Pause\Pause.tscn" />
     <None Include="Scenes\UI\Ui.tscn" />
     <None Include="Scenes\World\Characters\Player.tscn" />
+    <None Include="Scenes\World\Projectiles\Fireball.tscn" />
     <None Include="Scenes\World\Projectiles\Projectile.tscn" />
+    <None Include="Scenes\World\Projectiles\Sword.tscn" />
     <None Include="Scenes\World\World.tscn" />
   </ItemGroup>
 </Project>

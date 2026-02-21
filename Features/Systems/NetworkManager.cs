@@ -29,10 +29,10 @@ namespace Jogo25D.Systems
 		Multiplayer.ConnectedToServer += OnConnectedToServer;
 		Multiplayer.ConnectionFailed += OnConnectionFailed;
 		Multiplayer.ServerDisconnected += OnServerDisconnected;
-		
-		spawnParent = GetTree().Root.GetNode<Node2D>(NodePaths.Network.MainRoot);
+
+		spawnParent = GetTree().Root.GetNode<Node2D>("Main/World/Levels/Overword");
 	}
-	
+
 	public void CreateServer(int port = DefaultPort)
 	{
 		peer = new ENetMultiplayerPeer();
@@ -68,6 +68,7 @@ namespace Jogo25D.Systems
 	private void RemoveInitialPlayer()
 	{
 		var initialPlayer = spawnParent?.GetNodeOrNull<Player>("Player");
+
 		if (initialPlayer != null)
 		{
 			initialPlayer.QueueFree();

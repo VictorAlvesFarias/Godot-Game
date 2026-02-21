@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://la3ukb015fw8" path="res://Scenes/World/World.tscn" id="3_pbw6q"]
 
 [node name="Main" type="Node2D" unique_id=756475699]
-position = Vector2(599, 2827)
 
 [node name="Managers" parent="." unique_id=940605774 instance=ExtResource("1_kln2b")]
 

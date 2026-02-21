@@ -78,7 +78,7 @@ namespace Jogo25D.UI
         private void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
         {
             var usedCells = layer.GetUsedCells();
-            if (usedCells == null || usedCells.Count == 0)
+            if (usedCells == null || usedCells.Count == 0 || !layer.Enabled)
                 return;
 
             Vector2 tileSize = layer.TileSet.TileSize;

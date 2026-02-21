@@ -53,14 +53,15 @@ namespace Jogo25D.Weapons
             bullet.Shooter = owner;
             bullet.Scale = Vector2.One * (Area / 25.0f);
             bullet.GlobalPosition = owner.GlobalPosition + (direction.Normalized() * 60.0f);
-
+            bullet.Name = $"{nameof(Projectile)} - {bullet.GetInstanceId()}";
+                
             GD.Print("Bullet configurada");
             GD.Print("Speed: ", bullet.Speed);
             GD.Print("Damage: ", bullet.Damage);
             GD.Print("Lifetime: ", bullet.Lifetime);
             GD.Print("Position: ", bullet.GlobalPosition);
 
-            GetTree().Root.AddChild(bullet);
+            owner.GetParent().AddChild(bullet);
 
             GD.Print("Bullet adicionada na scene");
 

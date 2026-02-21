@@ -16,14 +16,14 @@ namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-		#region Properties
-	 
-		[Export] public float Speed { get; set; } = 300.0f;
+        #region Properties
+
+        [Export] public float Speed { get; set; } = 300.0f;
 		[Export] public float JumpVelocity { get; set; } = -750.0f;
 		[Export] public float Gravity { get; set; }
 		[Export] public int MaxHealth { get; set; } = 50;
-		[Export] public int CurrentHealth { get; set; }
-		[Export] public bool CanUpdateMovement { get; set; } = true;
+		[Export] public int CurrentHealth { get; set; } = 50;
+        [Export] public bool CanUpdateMovement { get; set; } = true;
 
 		#endregion
 
@@ -54,16 +54,17 @@ namespace Jogo25D.Characters
 			AddToGroup("players");
 
 			Controls = new InputControls();
-			Controls.InitialPosition = GlobalPosition;
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			Sprite = GetNodeOrNull<Line2D>(NodePaths.Player.SpriteBorder);
 			DashAction = new DashAction(this);
 			FireballAction = new FireballAction(this);
 
+
 			UnlockedAbilities.Add(DashAction);
 			UnlockedAbilities.Add(FireballAction);
 
-			Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
+            Controls.IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
+            Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
 
 			if (Inventory == null)
 			{
@@ -105,7 +106,10 @@ namespace Jogo25D.Characters
 
 		public override void _PhysicsProcess(double delta)
 		{
-			Controls.IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
+            if (Multiplayer.IsServer())
+            {
+                Rpc(nameof(SyncPosition), GlobalPosition);
+            }
 
 			DashAction.Update((float)delta);
 			FireballAction.Update((float)delta);
@@ -150,10 +154,16 @@ namespace Jogo25D.Characters
 			Controls.MousePosition = pos;
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void SyncPosition(Vector2 pos)
+		{
+			GlobalPosition = pos;
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
 		public void ResetPlayer()
 		{
-			GlobalPosition = Controls.InitialPosition;
+			GlobalPosition = Vector2.Zero;
 			Velocity = Vector2.Zero;
 			CurrentHealth = MaxHealth;
 		}
