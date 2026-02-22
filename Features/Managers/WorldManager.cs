@@ -8,9 +8,10 @@ namespace Jogo25D.Systems
 {
 	public partial class WorldManager : Node
 	{
-		private const int MaxPlayers = 4;
-		private const int DefaultPort = 9876;
-		private const string DefaultAddress = "127.0.0.1";
+		public static int MAX_PLAYER = 4;
+		public static int DEFAULT_PORT = 9876;
+		public static string DEFAULT_ADDRESS = "127.0.0.1";
+		public static string DEFAULT_NODE_PATH = "/root/Main/Managers/WorldManager";
 
 		private ENetMultiplayerPeer Peer { get; set; }
 		private Node2D OverwordParent { get; set; }
@@ -87,17 +88,27 @@ namespace Jogo25D.Systems
 
 		#region Lobby methods
 
-		public void CreateServer(int port = DefaultPort)
+		public string CreateServer(string textPort)
 		{
+			var port = DEFAULT_PORT;
+
+			if (!string.IsNullOrEmpty(textPort))
+			{
+				if (!int.TryParse(textPort, out port))
+				{
+					port = DEFAULT_PORT;
+				}
+			}
+
 			GD.Print($"[WorldManager.CreateServer] CreateServer(port={port})");
 
 			Peer = new ENetMultiplayerPeer();
 
-			if (Peer.CreateServer(port, MaxPlayers) != Error.Ok)
+			if (Peer.CreateServer(port, MAX_PLAYER) != Error.Ok)
 			{
 				GD.Print("[WorldManager.CreateServer] failed to create server");
 
-				return;
+				return "";
 			}
 
 			Multiplayer.MultiplayerPeer = Peer;
@@ -106,9 +117,7 @@ namespace Jogo25D.Systems
 
 			if (player == null)
 			{
-				
-				GD.Print("[WorldManager.CreateServer] local player not found");
-				
+				GD.Print("[WorldManager.CreateServer] local player not found");	
 			}
 			else
 			{
@@ -120,25 +129,44 @@ namespace Jogo25D.Systems
 
 				GD.Print($"[WorldManager.CreateServer] set authority to {player.PeerId} and renamed to {player.Name}");				
 			}
+
+			return port.ToString();
 		}
 
-		public void JoinServer(string address = DefaultAddress, int port = DefaultPort)
+		public string JoinServer(string textAddress)
 		{
-			
-			GD.Print($"[WorldManager.JoinServer] JoinServer(address={address}, port={port})");
+			var ip = textAddress.Split()[0];
+			var textPort = textAddress.Split()[1];
+			var port = 0;
+
+			if (string.IsNullOrEmpty(ip))
+			{
+				ip = DEFAULT_ADDRESS;
+			}
+
+			if (!string.IsNullOrEmpty(textPort))
+			{
+				if (!int.TryParse(textPort, out port))
+				{
+					port = DEFAULT_PORT;
+				}
+			}
+
+			GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
 			
 			Peer = new ENetMultiplayerPeer();
 
-			if (Peer.CreateClient(address, port) != Error.Ok)
+			if (Peer.CreateClient(ip, port) != Error.Ok)
 			{
 				GD.Print("[WorldManager.JoinServer] failed to create client");
 				
-				return;
+				return "";
 			}
 
 			Multiplayer.MultiplayerPeer = Peer;
 
 			var localPlayer = OverwordParent?.GetNodeOrNull<Player>("Player");
+
 			if (localPlayer != null)
 			{
 				localPlayer.QueueFree();
@@ -149,6 +177,8 @@ namespace Jogo25D.Systems
 			{	
 				GD.Print("[WorldManager.JoinServer] no local player to remove");	
 			}
+
+			return $"{ip}:{port}";
 		}
 		
 		public void Disconnect()
@@ -190,7 +220,12 @@ namespace Jogo25D.Systems
 			player.PeerId = peerId;
 
 			player.AddToGroup("players");
-			player.SetMultiplayerAuthority((int)player.PeerId);
+			player.SetMultiplayerAuthority(1); 
+
+			if (peerId != 1)
+			{
+				player.SetMultiplayerAuthority((int)peerId);
+			}
 
 			if (OverwordParent != null)
 			{
@@ -204,7 +239,7 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		private Player GetLocalPlayer()
+		public Player GetLocalPlayer()
 		{
 			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
 			
@@ -231,38 +266,59 @@ namespace Jogo25D.Systems
 
 		#endregion
 
-		#region Dimension Trade System
+		#region  Reset player
 
-		public void RequestLocalPlayerTradeDimension()
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void ResetPlayer(long peerId, Vector2 position)
 		{
-			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
-			
-			RpcId(1, nameof(ServerReceiveTradeRequest));
-		}
+            var player = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(e => e.PeerId == peerId);
+
+			if (player == null)
+			{
+                GD.Print("[WorldManager.ResetPlayer] player is null");
+
+				return;
+            }
+
+            player.GlobalPosition = Vector2.Zero;
+            player.Velocity = Vector2.Zero;
+            player.CurrentHealth = player.MaxHealth;
+        }
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ServerReceiveTradeRequest()
+		public void ResetPlayerServerReceive()
 		{
-			GD.Print("[WorldManager.ServerReceiveTradeRequest] received trade request");
+			GD.Print("[WorldManager.ResetPlayerServerReceive] received trade request");
 
 			if (!Multiplayer.IsServer())
 			{
-				
-				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
-				
+
+				GD.Print("[WorldManager.ResetPlayerServerReceive] not the server, ignoring request");
+
 				return;
 			}
 
 			long senderId = Multiplayer.GetRemoteSenderId();
-			
-			GD.Print($"[WorldManager.ServerReceiveTradeRequest] SenderId={senderId}, sending SyncDimensionTrade RPC");
-			
 
-			Rpc(nameof(SyncDimensionTrade), senderId);
+			GD.Print($"[WorldManager.ResetPlayerServerReceive] SenderId={senderId}, sending SyncDimensionTrade RPC");
+
+
+			Rpc(nameof(ResetPlayer), senderId, Vector2.Zero);
 		}
 
+		public void ResetPlayerClientRequest()
+		{
+			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
+
+			RpcId(1, nameof(ResetPlayerServerReceive));
+		}
+
+		#endregion
+
+		#region Dimension trade system
+
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SyncDimensionTrade(long targetPeerId)
+		public void TradeDimension(long targetPeerId)
 		{	
 			GD.Print($"[WorldManager.SyncDimensionTrade] SyncDimensionTrade(targetPeerId={targetPeerId}) starting");	
 
@@ -277,7 +333,6 @@ namespace Jogo25D.Systems
 				isCurrentlyInOverworld = false;
 				
 				GD.Print($"[WorldManager.SyncDimensionTrade] Found player in Upsidedown? {playerNode != null}");
-				
 			}
 
 			if (playerNode == null)
@@ -307,6 +362,34 @@ namespace Jogo25D.Systems
 			}
 			
 			GD.Print($"[WorldManager.SyncDimensionTrade] finished for Peer {targetPeerId}");
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void TradeDimensionServerReceive()
+		{
+			GD.Print("[WorldManager.ServerReceiveTradeRequest] received trade request");
+
+			if (!Multiplayer.IsServer())
+			{
+				
+				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
+				
+				return;
+			}
+
+			long senderId = Multiplayer.GetRemoteSenderId();
+			
+			GD.Print($"[WorldManager.ServerReceiveTradeRequest] SenderId={senderId}, sending SyncDimensionTrade RPC");
+			
+
+			Rpc(nameof(TradeDimension), senderId);
+		}
+
+		public void TradeDimensionClientRequest()
+		{
+			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
+			
+			RpcId(1, nameof(TradeDimensionServerReceive));
 		}
 
 		#endregion

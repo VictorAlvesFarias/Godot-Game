@@ -32,6 +32,7 @@ namespace Jogo25D.UI
 			portInput = GetNode<LineEdit>(NodePaths.PauseMenu.PortInput);
 			addressInput = GetNode<LineEdit>(NodePaths.PauseMenu.AddressInput);
 			statusLabel = GetNode<Label>(NodePaths.PauseMenu.StatusLabel);
+            networkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 		
 			resetButton.Pressed += OnResetPressed;
 			resumeButton.Pressed += OnResumePressed;
@@ -41,11 +42,11 @@ namespace Jogo25D.UI
 			tradeDimension.Pressed += OnTradeDimension;
 
 			player = GetTree().Root.FindChild("Player", true, false) as Player;
-		
-			networkManager = GetNode<WorldManager>(NodePaths.Network.RootNetworkManager);
-		
-			portInput.PlaceholderText = "Port";
+
+
+            portInput.PlaceholderText = "Port";
 			addressInput.PlaceholderText = "IP:Port";
+
 			UpdateNetworkStatus();
 		}
 
@@ -93,8 +94,8 @@ namespace Jogo25D.UI
 		
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
-				localPlayer.Rpc(nameof(Player.ResetPlayer));
-			}
+				networkManager.ResetPlayerClientRequest();
+            }
 		
 			TogglePause();
 		}
@@ -111,41 +112,34 @@ namespace Jogo25D.UI
 		}
 
 		private void OnHostPressed()
-	{
-		if (networkManager == null)
 		{
-			statusLabel.Text = "NetworkManager não encontrado!";
-			return;
-		}
-		
-		if (networkManager.IsConnected())
-		{
-			networkManager.Disconnect();
-			statusLabel.Text = "Desconectado";
-		}
-		else
-		{
-			string portText = portInput.Text.Trim();
-			int port = 7777;
-			
-			if (!string.IsNullOrEmpty(portText))
+			if (networkManager == null)
 			{
-				if (!int.TryParse(portText, out port))
-				{
-					port = 7777;
-				}
+				statusLabel.Text = "NetworkManager não encontrado!";
+
+				return;
 			}
-			
-			networkManager.CreateServer(port);
-			statusLabel.Text = $"Servidor criado na porta {port}!";
-		}
 		
-		UpdateNetworkStatus();
-	}
+			if (networkManager.IsConnected())
+			{
+				networkManager.Disconnect();
+
+				statusLabel.Text = "Desconectado";
+			}
+			else
+			{
+				var portText = portInput.Text.Trim();
+				var port = networkManager.CreateServer(portText);
+
+				statusLabel.Text = $"Servidor criado na porta {port ?? "Porta não encontrada"}.";
+			}
+		
+			UpdateNetworkStatus();
+		}
 	
 		private void OnTradeDimension()
 		{
-			networkManager.RequestLocalPlayerTradeDimension();
+			networkManager.TradeDimensionClientRequest();
 		}
 
 		private void OnConnectPressed()
@@ -163,28 +157,21 @@ namespace Jogo25D.UI
 			}
 			else
 			{
-				string address = addressInput.Text.Trim();
-			
-				if (string.IsNullOrEmpty(address))
-				{
-					address = "127.0.0.1:7777";
-				}
-			
-				string[] parts = address.Split(':');
-				string ip = parts[0];
-				int port = parts.Length > 1 && int.TryParse(parts[1], out int parsedPort) ? parsedPort : 7777;
-			
-				networkManager.JoinServer(ip, port);
-				statusLabel.Text = $"Conectando a {ip}:{port}...";
+				var textAddress = addressInput.Text.Trim();
+				var address = networkManager.JoinServer(textAddress);
+
+				statusLabel.Text = $"Conectando a {address}.";
 			}
-		
+
 			UpdateNetworkStatus();
 		}
 	
 		private void UpdateNetworkStatus()
 		{
 			if (networkManager == null)
+			{ 
 				return;
+			}
 			
 			bool connected = networkManager.IsConnected();
 		

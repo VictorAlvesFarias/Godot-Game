@@ -36,6 +36,7 @@ namespace Jogo25D.Characters
 		public Combat CurrentWeaponSystem { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
 		public InputControls Controls { get; set; }
+        private WorldManager NetworkManager { get; set; }
         public Vector2 TargetPosition { get; set; }
 		public long PeerId { get; set; } = 1;
 
@@ -58,8 +59,9 @@ namespace Jogo25D.Characters
 			Controls = new InputControls();
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
             Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
+            NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
-			if (Sprite == null)
+            if (Sprite == null)
 			{
                 GD.Print($"[Player._Ready] GetNodeOrNull: Sprite not founded");
             }
@@ -90,7 +92,6 @@ namespace Jogo25D.Characters
 
 			AimIndicator = new AimIndicator(this);
 
-			Rpc(nameof(ResetPlayer));
 		}
 
 		public override void _ExitTree()
@@ -172,14 +173,6 @@ namespace Jogo25D.Characters
             TargetPosition = pos;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-		public void ResetPlayer()
-		{
-			GlobalPosition = Vector2.Zero;
-			Velocity = Vector2.Zero;
-			CurrentHealth = MaxHealth;
-		}
-
 		#endregion
 
 		#region Public local methods
@@ -202,8 +195,9 @@ namespace Jogo25D.Characters
 
 			if (CurrentHealth <= 0)
 			{
-				ResetPlayer();
-			}
+				NetworkManager.ResetPlayerClientRequest();
+
+            }
 		}
 
 		#endregion

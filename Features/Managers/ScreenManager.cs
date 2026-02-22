@@ -3,35 +3,35 @@ using Godot;
 namespace Jogo25D.UI
 {
 	public partial class ScreenManager : Node
-{
-	private bool isProcessing = false;
-
-	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventKey keyEvent && keyEvent.Keycode == Key.F11 && keyEvent.Pressed && !keyEvent.Echo)
+		private bool isProcessing = false;
+
+		public override void _Input(InputEvent @event)
 		{
-			if (!isProcessing)
+			if (@event is InputEventKey keyEvent && keyEvent.Keycode == Key.F11 && keyEvent.Pressed && !keyEvent.Echo)
 			{
-				isProcessing = true;
-				ToggleFullscreen();
-				GetViewport().SetInputAsHandled();
-				GetTree().CreateTimer(0.2).Timeout += () => isProcessing = false;
+				if (!isProcessing)
+				{
+					isProcessing = true;
+					ToggleFullscreen();
+					GetViewport().SetInputAsHandled();
+					GetTree().CreateTimer(0.2).Timeout += () => isProcessing = false;
+				}
 			}
 		}
-	}
 
-	private void ToggleFullscreen()
-	{
-		var currentMode = DisplayServer.WindowGetMode();
+		private void ToggleFullscreen()
+		{
+			var currentMode = DisplayServer.WindowGetMode();
 		
-		if (currentMode == DisplayServer.WindowMode.Fullscreen || currentMode == DisplayServer.WindowMode.ExclusiveFullscreen)
-		{
-			DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
+			if (currentMode == DisplayServer.WindowMode.Fullscreen || currentMode == DisplayServer.WindowMode.ExclusiveFullscreen)
+			{
+				DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
+			}
+			else
+			{
+				DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
+			}
 		}
-		else
-		{
-			DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
-		}
-	}
 	}
 }
