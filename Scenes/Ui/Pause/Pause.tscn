@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://d1112223334"]
 
-[ext_resource type="Script" uid="uid://dcl01i721bqqa" path="res://Features/UI/PauseMenuUI.cs" id="1"]
-
+[ext_resource type="Script" uid="uid://dcl01i721bqqa" path="res://Features/UI/HUD.cs" id="1"]
 
 [node name="PauseMenu" type="CanvasLayer" unique_id=512637494]
 process_mode = 3
@@ -50,6 +49,11 @@ theme_override_font_sizes/font_size = 42
 text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="TradeDimension" type="Button" parent="Panel/VBoxContainer" unique_id=1634071990]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "TRADE DIMENSION"
 
 [node name="ResetButton" type="Button" parent="Panel/VBoxContainer" unique_id=154524269]
 layout_mode = 2

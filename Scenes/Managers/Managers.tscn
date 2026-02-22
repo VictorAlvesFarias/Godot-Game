@@ -1,12 +1,14 @@
 [gd_scene format=3 uid="uid://kseu2j0fsdcb"]
 
-[ext_resource type="Script" uid="uid://b3mqk4n6oy3pf" path="res://Features/Systems/ScreenManager.cs" id="1_7ktwl"]
-[ext_resource type="Script" uid="uid://6ow888bgamkc" path="res://Features/Systems/NetworkManager.cs" id="2_b871k"]
+[ext_resource type="Script" uid="uid://c5g3kirti1ewo" path="res://Features/Managers/ScreenManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" uid="uid://dyuy3myn6hjxc" path="res://Features/Managers/WorldManager.cs" id="3_b871k"]
 
 [node name="Managers" type="Node" unique_id=940605774]
 
 [node name="ScreenManager" type="Node" parent="." unique_id=1758854771]
+unique_name_in_owner = true
 script = ExtResource("1_7ktwl")
 
-[node name="NetworkManager" type="Node" parent="." unique_id=1007702761]
-script = ExtResource("2_b871k")
+[node name="WorldManager" type="Node" parent="." unique_id=1007702761]
+unique_name_in_owner = true
+script = ExtResource("3_b871k")

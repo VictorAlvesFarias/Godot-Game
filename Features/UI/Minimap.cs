@@ -6,7 +6,7 @@ namespace Jogo25D.UI
     public partial class Minimap : Control
     {
         [Export] public string PlayerGroupName { get; set; } = "players";
-        [Export] public float ViewRadius { get; set; } = 600f;
+        [Export] public float ViewRadius { get; set; } = 1200f;
         [Export] public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
         [Export] public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
         [Export] public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
@@ -64,7 +64,7 @@ namespace Jogo25D.UI
 
         private void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
         {
-            if (node is TileMapLayer layer && IsInstanceValid(layer))
+            if (node is TileMapLayer layer && IsInstanceValid(layer) && layer.GetParent().GetParent().GetParent<SubViewportContainer>().Visible)
             {
                 DrawTileMapLayer(layer, playerPos, center, scale);
             }
@@ -78,24 +78,21 @@ namespace Jogo25D.UI
         private void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
         {
             var usedCells = layer.GetUsedCells();
-            if (usedCells == null || usedCells.Count == 0 || !layer.Enabled)
-                return;
 
-            Vector2 tileSize = layer.TileSet.TileSize;
+            if (usedCells == null || usedCells.Count == 0 || !layer.Enabled)
+            { 
+                return;
+            }
+
+            var tileSize = layer.TileSet.TileSize;
 
             foreach (Vector2I cell in usedCells)
             {
-                Vector2 localPos = layer.MapToLocal(cell);
-                Vector2 worldPos = layer.ToGlobal(localPos);
-
-                Vector2 mapPos = WorldToMap(worldPos, playerPos, center, scale);
-
-                if (mapPos.DistanceTo(center) > (Size.X / 2f))
-                    continue;
-
-                float size = tileSize.X * scale;
-
-                Rect2 rect = new Rect2(
+                var localPos = layer.MapToLocal(cell);
+                var worldPos = layer.ToGlobal(localPos);
+                var mapPos = WorldToMap(worldPos, playerPos, center, scale);
+                var size = tileSize.X * scale;
+                var rect = new Rect2(
                     mapPos - new Vector2(size / 2f, size / 2f),
                     new Vector2(size, size)
                 );

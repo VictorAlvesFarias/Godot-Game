@@ -14,12 +14,14 @@ namespace Jogo25D.Scripts.Actions
 
         public DashAction(Player player) : base(player)
         {
-            dashParticles = player.GetNodeOrNull<CpuParticles2D>(NodePaths.Actions.DashParticles);
+            dashParticles = new CpuParticles2D();
             Duration = 0.2f;
             Cooldown = 1f;
             MaxCharges = 2;
             CurrentCharges = MaxCharges;
             ActionName = "Dash";
+
+            player.AddChild(dashParticles);
         }
 
         public override void OnStartAction(float delta)

@@ -6,100 +6,103 @@ using Jogo25D.Systems;
 namespace Jogo25D.UI
 {
 	public partial class PauseMenuUI : CanvasLayer
-{
-	private Button resetButton;
-	private Button resumeButton;
-	private Button exitButton;
-	private Button hostButton;
-	private Button connectButton;
-	private LineEdit addressInput;
-	private LineEdit portInput;
-	private Label statusLabel;
-	private Player player;
-	private NetworkManager networkManager;
+	{
+		private Button resetButton;
+		private Button resumeButton;
+		private Button exitButton;
+		private Button hostButton;
+		private Button connectButton;
+		private Button tradeDimension;
+		private LineEdit addressInput;
+		private LineEdit portInput;
+		private Label statusLabel;
+		private Player player;
+		private WorldManager networkManager;
 
-	public override void _Ready()
-	{
-		Visible = false;
+		public override void _Ready()
+		{
+			Visible = false;
 		
-		resetButton = GetNode<Button>(NodePaths.PauseMenu.ResetButton);
-		resumeButton = GetNode<Button>(NodePaths.PauseMenu.ResumeButton); ;
-		exitButton = GetNode<Button>(NodePaths.PauseMenu.ExitButton);
-		hostButton = GetNode<Button>(NodePaths.PauseMenu.HostButton);
-		connectButton = GetNode<Button>(NodePaths.PauseMenu.ConnectButton);
-		portInput = GetNode<LineEdit>(NodePaths.PauseMenu.PortInput);
-		addressInput = GetNode<LineEdit>(NodePaths.PauseMenu.AddressInput);
-		statusLabel = GetNode<Label>(NodePaths.PauseMenu.StatusLabel);
+			resetButton = GetNode<Button>(NodePaths.PauseMenu.ResetButton);
+			resumeButton = GetNode<Button>(NodePaths.PauseMenu.ResumeButton);
+			tradeDimension = GetNode<Button>("Panel/VBoxContainer/TradeDimension");
+			exitButton = GetNode<Button>(NodePaths.PauseMenu.ExitButton);
+			hostButton = GetNode<Button>(NodePaths.PauseMenu.HostButton);
+			connectButton = GetNode<Button>(NodePaths.PauseMenu.ConnectButton);
+			portInput = GetNode<LineEdit>(NodePaths.PauseMenu.PortInput);
+			addressInput = GetNode<LineEdit>(NodePaths.PauseMenu.AddressInput);
+			statusLabel = GetNode<Label>(NodePaths.PauseMenu.StatusLabel);
 		
-		resetButton.Pressed += OnResetPressed;
-		resumeButton.Pressed += OnResumePressed;
-		exitButton.Pressed += OnExitPressed;
-		hostButton.Pressed += OnHostPressed;
-		connectButton.Pressed += OnConnectPressed;
-		
-		player = GetTree().Root.FindChild("Player", true, false) as Player;
-		
-		networkManager = GetNode<NetworkManager>(NodePaths.Network.RootNetworkManager);
-		
-		portInput.PlaceholderText = "Port";
-		addressInput.PlaceholderText = "IP:Port";
-		UpdateNetworkStatus();
-	}
+			resetButton.Pressed += OnResetPressed;
+			resumeButton.Pressed += OnResumePressed;
+			exitButton.Pressed += OnExitPressed;
+			hostButton.Pressed += OnHostPressed;
+			connectButton.Pressed += OnConnectPressed;
+			tradeDimension.Pressed += OnTradeDimension;
 
-	public override void _Input(InputEvent @event)
-	{
-		if (Input.IsActionJustPressed("pause"))
-		{
-			TogglePause();
-		}
-	}
-	
-	public override void _Process(double delta)
-	{
-		if (Visible)
-		{
+			player = GetTree().Root.FindChild("Player", true, false) as Player;
+		
+			networkManager = GetNode<WorldManager>(NodePaths.Network.RootNetworkManager);
+		
+			portInput.PlaceholderText = "Port";
+			addressInput.PlaceholderText = "IP:Port";
 			UpdateNetworkStatus();
 		}
-	}
 
-	private void TogglePause()
-	{
-		Visible = !Visible;
-		GetTree().Paused = Visible;
-	}
-	
-	private void OnResetPressed()
-	{
-		Player localPlayer = null;
-		bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-		int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
-		var players = GetTree().GetNodesInGroup("players");
-
-		foreach (Node node in players)
+		public override void _Input(InputEvent @event)
 		{
-			if (node is Player p)
+			if (Input.IsActionJustPressed("pause"))
 			{
-				if (!hasMultiplayer || p.GetMultiplayerAuthority() == localPeerId)
-				{
-					localPlayer = p;
-	
-					break;
-				}
+				TogglePause();
 			}
 		}
-		
-		if (localPlayer != null && IsInstanceValid(localPlayer))
+	
+		public override void _Process(double delta)
 		{
-			localPlayer.Rpc(nameof(Player.ResetPlayer));
+			if (Visible)
+			{
+				UpdateNetworkStatus();
+			}
 		}
-		
-		TogglePause();
-	}
 
-	private void OnExitPressed()
-	{
-		GetTree().Quit();
-	}
+		private void TogglePause()
+		{
+			Visible = !Visible;
+			GetTree().Paused = Visible;
+		}
+	
+		private void OnResetPressed()
+		{
+			Player localPlayer = null;
+			bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
+			int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
+			var players = GetTree().GetNodesInGroup("players");
+
+			foreach (Node node in players)
+			{
+				if (node is Player p)
+				{
+					if (!hasMultiplayer || p.GetMultiplayerAuthority() == localPeerId)
+					{
+						localPlayer = p;
+	
+						break;
+					}
+				}
+			}
+		
+			if (localPlayer != null && IsInstanceValid(localPlayer))
+			{
+				localPlayer.Rpc(nameof(Player.ResetPlayer));
+			}
+		
+			TogglePause();
+		}
+
+		private void OnExitPressed()
+		{
+			GetTree().Quit();
+		}
 
 		private void OnResumePressed()
 		{
@@ -140,67 +143,72 @@ namespace Jogo25D.UI
 		UpdateNetworkStatus();
 	}
 	
-	private void OnConnectPressed()
-	{
-		if (networkManager == null)
+		private void OnTradeDimension()
 		{
-			statusLabel.Text = "NetworkManager não encontrado!";
-			return;
+			networkManager.RequestLocalPlayerTradeDimension();
 		}
-		
-		if (networkManager.IsConnected())
+
+		private void OnConnectPressed()
 		{
-			networkManager.Disconnect();
-			statusLabel.Text = "Desconectado";
-		}
-		else
-		{
-			string address = addressInput.Text.Trim();
-			
-			if (string.IsNullOrEmpty(address))
+			if (networkManager == null)
 			{
-				address = "127.0.0.1:7777";
+				statusLabel.Text = "NetworkManager não encontrado!";
+				return;
 			}
-			
-			string[] parts = address.Split(':');
-			string ip = parts[0];
-			int port = parts.Length > 1 && int.TryParse(parts[1], out int parsedPort) ? parsedPort : 7777;
-			
-			networkManager.JoinServer(ip, port);
-			statusLabel.Text = $"Conectando a {ip}:{port}...";
-		}
 		
-		UpdateNetworkStatus();
-	}
-	
-	private void UpdateNetworkStatus()
-	{
-		if (networkManager == null)
-			return;
-			
-		bool connected = networkManager.IsConnected();
-		
-		hostButton.Text = connected && networkManager.IsServer() ? "STOP SERVER" : "HOST";
-		connectButton.Text = connected && !networkManager.IsServer() ? "DISCONNECT" : "CONNECT";
-		
-		if (connected)
-		{
-			if (networkManager.IsServer())
+			if (networkManager.IsConnected())
 			{
-				statusLabel.Text = "Status: SERVIDOR";
-				statusLabel.Modulate = Colors.Green;
+				networkManager.Disconnect();
+				statusLabel.Text = "Desconectado";
 			}
 			else
 			{
-				statusLabel.Text = "Status: CONECTADO";
-				statusLabel.Modulate = Colors.Green;
+				string address = addressInput.Text.Trim();
+			
+				if (string.IsNullOrEmpty(address))
+				{
+					address = "127.0.0.1:7777";
+				}
+			
+				string[] parts = address.Split(':');
+				string ip = parts[0];
+				int port = parts.Length > 1 && int.TryParse(parts[1], out int parsedPort) ? parsedPort : 7777;
+			
+				networkManager.JoinServer(ip, port);
+				statusLabel.Text = $"Conectando a {ip}:{port}...";
+			}
+		
+			UpdateNetworkStatus();
+		}
+	
+		private void UpdateNetworkStatus()
+		{
+			if (networkManager == null)
+				return;
+			
+			bool connected = networkManager.IsConnected();
+		
+			hostButton.Text = connected && Multiplayer.IsServer() ? "STOP SERVER" : "HOST";
+			connectButton.Text = connected && !Multiplayer.IsServer() ? "DISCONNECT" : "CONNECT";
+		
+			if (connected)
+			{
+				if (Multiplayer.IsServer())
+				{
+					statusLabel.Text = "Status: SERVIDOR";
+					statusLabel.Modulate = Colors.Green;
+				}
+				else
+				{
+					statusLabel.Text = "Status: CONECTADO";
+					statusLabel.Modulate = Colors.Green;
+				}
+			}
+			else
+			{
+				statusLabel.Text = "Status: Desconectado";
+				statusLabel.Modulate = Colors.White;
 			}
 		}
-		else
-		{
-			statusLabel.Text = "Status: Desconectado";
-			statusLabel.Modulate = Colors.White;
-		}
-	}
 	}
 }

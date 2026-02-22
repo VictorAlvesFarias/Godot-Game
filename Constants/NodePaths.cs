@@ -20,23 +20,6 @@ namespace Jogo25D.Constants
             public const string AbilityNameLabelName = "AbilityNameLabel";
         }
 
-        public static class Player
-        {
-            public const string SpriteBorder = "Sprite/Border";
-            public const string Inventory = "Inventory";
-        }
-
-        public static class Entities
-        {
-            public const string PlatformSprite = "Sprite2D";
-            public const string PlatformCollisionShape = "CollisionShape2D";
-        }
-
-        public static class Actions
-        {
-            public const string DashParticles = "DashParticles";
-        }
-
         public static class InventoryUI
         {
             public const string Root = "CenterContainer";
@@ -66,7 +49,7 @@ namespace Jogo25D.Constants
         public static class Network
         {
             public const string MainRoot = "Main";
-            public const string RootNetworkManager = "/root/Main/Managers/NetworkManager";
+            public const string RootNetworkManager = "/root/Main/Managers/WorldManager";
         }
     }
 }

@@ -25,23 +25,25 @@ namespace Jogo25D.Characters
 		[Export] public int CurrentHealth { get; set; } = 50;
         [Export] public bool CanUpdateMovement { get; set; } = true;
 
-		#endregion
+        #endregion
 
-		#region Systems
+        #region Systems
 
-		public DashAction DashAction { get; private set; }
+        public DashAction DashAction { get; private set; }
 		public FireballAction FireballAction { get; private set; }
 		public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
 		public Inventory Inventory { get; private set; }
 		public Combat CurrentWeaponSystem { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
 		public InputControls Controls { get; set; }
+        public Vector2 TargetPosition { get; set; }
+		public long PeerId { get; set; } = 1;
 
-		#endregion
+        #endregion
 
-		#region Player effetcs
+        #region Player effetcs
 
-		public Line2D Sprite { get; private set; }
+        public Line2D Sprite { get; private set; }
 		public float DamageEffectTimer { get; set; } = 0f;
 		public float DamageColorDuration { get; set; } = 0.3f;
 
@@ -55,16 +57,15 @@ namespace Jogo25D.Characters
 
 			Controls = new InputControls();
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			Sprite = GetNodeOrNull<Line2D>(NodePaths.Player.SpriteBorder);
+			Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
 			DashAction = new DashAction(this);
 			FireballAction = new FireballAction(this);
-
 
 			UnlockedAbilities.Add(DashAction);
 			UnlockedAbilities.Add(FireballAction);
 
             Controls.IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
-            Inventory = GetNodeOrNull<Inventory>(NodePaths.Player.Inventory);
+			Inventory = GetNodeOrNull<Inventory>("Inventory");;
 
 			if (Inventory == null)
 			{
@@ -103,15 +104,18 @@ namespace Jogo25D.Characters
 			base._ExitTree();
 		}
 
-
 		public override void _PhysicsProcess(double delta)
 		{
             if (Multiplayer.IsServer())
             {
                 Rpc(nameof(SyncPosition), GlobalPosition);
             }
+			else
+			{
+                GlobalPosition = TargetPosition;
+            }
 
-			DashAction.Update((float)delta);
+            DashAction.Update((float)delta);
 			FireballAction.Update((float)delta);
 
 			HandleInput();
@@ -154,13 +158,13 @@ namespace Jogo25D.Characters
 			Controls.MousePosition = pos;
 		}
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
         public void SyncPosition(Vector2 pos)
-		{
-			GlobalPosition = pos;
-		}
+        {
+            TargetPosition = pos;
+        }
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
 		public void ResetPlayer()
 		{
 			GlobalPosition = Vector2.Zero;

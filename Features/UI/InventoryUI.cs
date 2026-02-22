@@ -102,8 +102,11 @@ namespace Jogo25D.UI
 			var localPeerId = 1;
 			var hasMultiplayer = false;
 
-			if (Multiplayer != null && Multiplayer.MultiplayerPeer != null &&
-				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+			if (
+				Multiplayer != null && 
+				Multiplayer.MultiplayerPeer != null &&
+				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
+			)
 			{
 				try
 				{
