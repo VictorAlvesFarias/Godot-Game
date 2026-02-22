@@ -23,16 +23,64 @@ namespace Jogo25D.Systems
 		public override void _Ready()
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
+
 			Multiplayer.PeerConnected += OnPeerConnected;
 			Multiplayer.PeerDisconnected += OnPeerDisconnected;
 			Multiplayer.ConnectedToServer += OnConnectedToServer;
 			Multiplayer.ConnectionFailed += OnConnectionFailed;
 			Multiplayer.ServerDisconnected += OnServerDisconnected;
 
-			OverwordParent = GetTree().Root.GetNode<Node2D>("Main/World/Levels/OverwordViewportContainer/OverwordViewport/Overword");
-			UpsidedownParent = GetTree().Root.GetNode<Node2D>("Main/World/Levels/UpsidedownViewportContainer/UpsidedownViewport/Upsidedown");
-			OverContainer = GetTree().Root.GetNode<SubViewportContainer>("Main/World/Levels/OverwordViewportContainer");
-			UpContainer = GetTree().Root.GetNode<SubViewportContainer>("Main/World/Levels/UpsidedownViewportContainer");
+			var overwordParentPath = "Main/World/Levels/OverwordViewportContainer/OverwordViewport/Overword";
+
+			OverwordParent = GetTree().Root.GetNodeOrNull<Node2D>(overwordParentPath);
+
+			if (OverwordParent == null)
+			{
+				GD.Print($"[WorldManager._Ready] GetNodeOrNull: OverwordParent not found at path {overwordParentPath}");
+			}
+			else
+			{
+				GD.Print($"[WorldManager._Ready] OverwordParent found: {OverwordParent.Name}");
+			}
+
+			var upsidedownParentPath = "Main/World/Levels/UpsidedownViewportContainer/UpsidedownViewport/Upsidedown";
+
+			UpsidedownParent = GetTree().Root.GetNodeOrNull<Node2D>(upsidedownParentPath);
+
+			if (UpsidedownParent == null)
+			{
+				GD.Print($"[WorldManager._Ready] GetNodeOrNull: UpsidedownParent not found at path {upsidedownParentPath}");
+			}
+			else
+			{
+				GD.Print($"[WorldManager._Ready] UpsidedownParent found: {UpsidedownParent.Name}");
+			}
+
+			var overContainerPath = "Main/World/Levels/OverwordViewportContainer";
+
+			OverContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(overContainerPath);
+
+			if (OverContainer == null)
+			{
+				GD.Print($"[WorldManager._Ready] GetNodeOrNull: OverContainer not found at path {overContainerPath}");
+			}
+			else
+			{
+				GD.Print($"[WorldManager._Ready] OverContainer found: {OverContainer.Name}");
+			}
+
+			var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
+
+			UpContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(upContainerPath);
+
+			if (UpContainer == null)
+			{
+				GD.Print($"[WorldManager._Ready] GetNodeOrNull: UpContainer not found at path {upContainerPath}");
+			}
+			else
+			{
+				GD.Print($"[WorldManager._Ready] UpContainer found: {UpContainer.Name}");
+			}
 		}
 
 		#endregion
@@ -42,11 +90,13 @@ namespace Jogo25D.Systems
 		public void CreateServer(int port = DefaultPort)
 		{
 			GD.Print($"[WorldManager.CreateServer] CreateServer(port={port})");
+
 			Peer = new ENetMultiplayerPeer();
 
 			if (Peer.CreateServer(port, MaxPlayers) != Error.Ok)
 			{
 				GD.Print("[WorldManager.CreateServer] failed to create server");
+
 				return;
 			}
 
@@ -56,28 +106,33 @@ namespace Jogo25D.Systems
 
 			if (player == null)
 			{
+				
 				GD.Print("[WorldManager.CreateServer] local player not found");
+				
 			}
 			else
 			{
 				player.PeerId = 1; 
 				player.Name = $"Player{player.PeerId}";
-				player.SetMultiplayerAuthority((int)player.PeerId);
 
+				player.SetMultiplayerAuthority((int)player.PeerId);
 				player.AddToGroup("players");
 
-				GD.Print($"[WorldManager.CreateServer] set authority to {player.PeerId} and renamed to {player.Name}");
+				GD.Print($"[WorldManager.CreateServer] set authority to {player.PeerId} and renamed to {player.Name}");				
 			}
 		}
 
 		public void JoinServer(string address = DefaultAddress, int port = DefaultPort)
 		{
+			
 			GD.Print($"[WorldManager.JoinServer] JoinServer(address={address}, port={port})");
+			
 			Peer = new ENetMultiplayerPeer();
 
 			if (Peer.CreateClient(address, port) != Error.Ok)
 			{
 				GD.Print("[WorldManager.JoinServer] failed to create client");
+				
 				return;
 			}
 
@@ -87,22 +142,25 @@ namespace Jogo25D.Systems
 			if (localPlayer != null)
 			{
 				localPlayer.QueueFree();
+				
 				GD.Print("[WorldManager.JoinServer] local player queued for free");
 			}
 			else
-			{
-				GD.Print("[WorldManager.JoinServer] no local player to remove");
+			{	
+				GD.Print("[WorldManager.JoinServer] no local player to remove");	
 			}
 		}
 		
 		public void Disconnect()
 		{
 			GD.Print("[WorldManager.Disconnect] Disconnect()");
+			
 			if (Peer != null)
 			{
 				Peer.Close();
 
 				Peer = null;
+				
 				GD.Print("[WorldManager.Disconnect] peer closed");
 			}
 
@@ -112,6 +170,7 @@ namespace Jogo25D.Systems
 			{
 				player.QueueFree();
 			}
+			
 			GD.Print($"[WorldManager.Disconnect] freed {players.Count} player nodes");
 		}
 
@@ -121,8 +180,9 @@ namespace Jogo25D.Systems
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
 		public void SpawnPlayer(long peerId, Vector2 position)
-		{
+		{	
 			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={peerId}, position={position})");
+			
 			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
 			player.Name = $"Player{peerId}";
@@ -130,14 +190,24 @@ namespace Jogo25D.Systems
 			player.PeerId = peerId;
 
 			player.AddToGroup("players");
+			player.SetMultiplayerAuthority((int)player.PeerId);
 
-			OverwordParent.AddChild(player);
-			GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");
+			if (OverwordParent != null)
+			{
+				OverwordParent.AddChild(player);
+				
+				GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");	
+			}
+			else
+			{
+				GD.Print($"[WorldManager.SpawnPlayer] WARNING: OverwordParent is null, cannot add {player.Name}");
+			}
 		}
 
 		private Player GetLocalPlayer()
 		{
 			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
+			
 			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
 			var localPeerId = 1;
 
@@ -148,11 +218,14 @@ namespace Jogo25D.Systems
 			)
 			{
 				localPeerId = Multiplayer.GetUniqueId(); 
+				
 				GD.Print($"[WorldManager.GetLocalPlayer] localPeerId={localPeerId}");
 			}
 
 			var found = players.FirstOrDefault(p => p.PeerId == localPeerId);
+			
 			GD.Print($"[WorldManager.GetLocalPlayer] found={(found!=null)}");
+			
 			return found;
 		}
 
@@ -163,6 +236,7 @@ namespace Jogo25D.Systems
 		public void RequestLocalPlayerTradeDimension()
 		{
 			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
+			
 			RpcId(1, nameof(ServerReceiveTradeRequest));
 		}
 
@@ -173,52 +247,65 @@ namespace Jogo25D.Systems
 
 			if (!Multiplayer.IsServer())
 			{
+				
 				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
+				
 				return;
 			}
 
 			long senderId = Multiplayer.GetRemoteSenderId();
+			
 			GD.Print($"[WorldManager.ServerReceiveTradeRequest] SenderId={senderId}, sending SyncDimensionTrade RPC");
+			
 
 			Rpc(nameof(SyncDimensionTrade), senderId);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SyncDimensionTrade(long targetPeerId)
-		{
-			GD.Print($"[WorldManager.SyncDimensionTrade] SyncDimensionTrade(targetPeerId={targetPeerId}) starting");
+		{	
+			GD.Print($"[WorldManager.SyncDimensionTrade] SyncDimensionTrade(targetPeerId={targetPeerId}) starting");	
 
 			var playerNode = OverwordParent.GetChildren().OfType<Player>().FirstOrDefault(e => e.PeerId == targetPeerId);
 			bool isCurrentlyInOverworld = playerNode != null;
+			
 			GD.Print($"[WorldManager.SyncDimensionTrade] Found player in Overworld? {isCurrentlyInOverworld}");
 
 			if (playerNode == null)
 			{
 				playerNode = UpsidedownParent.GetChildren().OfType<Player>().FirstOrDefault(e => e.PeerId == targetPeerId);
 				isCurrentlyInOverworld = false;
+				
 				GD.Print($"[WorldManager.SyncDimensionTrade] Found player in Upsidedown? {playerNode != null}");
+				
 			}
 
 			if (playerNode == null)
 			{
+				
 				GD.Print($"[WorldManager.SyncDimensionTrade] Player {targetPeerId} not found in any world!");
+				
 				return;
 			}
 
 			Node2D newParent = isCurrentlyInOverworld ? UpsidedownParent : OverwordParent;
+			
 			GD.Print($"[WorldManager.SyncDimensionTrade] Moving player {playerNode.Name} to {newParent.Name}");
-
+			
 			playerNode.Reparent(newParent, true);
+			
 			GD.Print($"[WorldManager.SyncDimensionTrade] Player {playerNode.Name} reparented successfully!");
-
+			
 			if (targetPeerId == Multiplayer.GetUniqueId() || (!IsConnected() && targetPeerId == 1))
 			{
 				GD.Print($"[WorldManager.SyncDimensionTrade] updating local UI for target {targetPeerId}");
+				
 				OverContainer.Visible = !isCurrentlyInOverworld;
 				UpContainer.Visible = isCurrentlyInOverworld;
+				
 				GD.Print($"[WorldManager.SyncDimensionTrade] OverContainer.Visible={OverContainer.Visible}, UpContainer.Visible={UpContainer.Visible}");
 			}
-
+			
 			GD.Print($"[WorldManager.SyncDimensionTrade] finished for Peer {targetPeerId}");
 		}
 
@@ -229,6 +316,7 @@ namespace Jogo25D.Systems
 		private void OnPeerConnected(long id)
 		{
 			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
+			
 			if (!Multiplayer.IsServer())
 			{
 				return;
@@ -247,7 +335,9 @@ namespace Jogo25D.Systems
 				if (node is Player player && player.PeerId != id)
 				{
 					var playerName = player.Name;
+					
 					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {playerName}");
+					
 
 					RpcId(id, nameof(SpawnPlayer), player.PeerId, player.Position);
 				}
@@ -255,32 +345,42 @@ namespace Jogo25D.Systems
 		}
 
 		private void OnPeerDisconnected(long id)
-		{
+		{	
 			GD.Print($"[WorldManager.OnPeerDisconnected] OnPeerDisconnected(id={id})");
+			
 			var playerNode = UpsidedownParent.GetNodeOrNull($"Player{id}");
+
+			if (playerNode == null)
+			{
+				GD.Print($"[WorldManager.OnPeerDisconnected] Player{id} not found in UpsidedownParent");
+			}
 
 			if (playerNode != null)
 			{
 				playerNode.QueueFree();
+				
 				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
 			}
 		}
 
 		private void OnConnectedToServer()
 		{
-			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");
+			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");	
 		}
 
 		private void OnConnectionFailed()
-		{
+		{	
 			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
+			
 			Peer = null;
-			GD.Print("[WorldManager.OnConnectionFailed] peer reset");
+			
+			GD.Print("[WorldManager.OnConnectionFailed] peer reset");	
 		}
 
 		private void OnServerDisconnected()
 		{
 			GD.Print("[WorldManager.OnServerDisconnected] OnServerDisconnected()");
+			
 			Disconnect();
 		}
 

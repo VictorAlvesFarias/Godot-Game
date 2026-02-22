@@ -57,8 +57,14 @@ namespace Jogo25D.Characters
 
 			Controls = new InputControls();
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
-			DashAction = new DashAction(this);
+            Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
+
+			if (Sprite == null)
+			{
+                GD.Print($"[Player._Ready] GetNodeOrNull: Sprite not founded");
+            }
+
+            DashAction = new DashAction(this);
 			FireballAction = new FireballAction(this);
 
 			UnlockedAbilities.Add(DashAction);
@@ -69,7 +75,9 @@ namespace Jogo25D.Characters
 
 			if (Inventory == null)
 			{
-				Inventory = new Inventory();
+                GD.Print($"[Player._Ready] GetNodeOrNull: Inventory not founded");
+
+                Inventory = new Inventory();
 
 				AddChild(Inventory);
 
