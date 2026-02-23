@@ -135,8 +135,8 @@ namespace Jogo25D.Systems
 
 		public string JoinServer(string textAddress)
 		{
-			var ip = textAddress.Split()[0];
-			var textPort = textAddress.Split()[1];
+			var ip = textAddress.Split(":")[0];
+			var textPort = textAddress.Split(":")[1];
 			var port = 0;
 
 			if (string.IsNullOrEmpty(ip))
@@ -271,19 +271,19 @@ namespace Jogo25D.Systems
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ResetPlayer(long peerId, Vector2 position)
 		{
-            var player = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(e => e.PeerId == peerId);
+			var player = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(e => e.PeerId == peerId);
 
 			if (player == null)
 			{
-                GD.Print("[WorldManager.ResetPlayer] player is null");
+				GD.Print("[WorldManager.ResetPlayer] player is null");
 
 				return;
-            }
+			}
 
-            player.GlobalPosition = Vector2.Zero;
-            player.Velocity = Vector2.Zero;
-            player.CurrentHealth = player.MaxHealth;
-        }
+			player.GlobalPosition = Vector2.Zero;
+			player.Velocity = Vector2.Zero;
+			player.CurrentHealth = player.MaxHealth;
+		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ResetPlayerServerReceive()

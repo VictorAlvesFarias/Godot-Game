@@ -32,7 +32,7 @@ namespace Jogo25D.UI
 			portInput = GetNode<LineEdit>(NodePaths.PauseMenu.PortInput);
 			addressInput = GetNode<LineEdit>(NodePaths.PauseMenu.AddressInput);
 			statusLabel = GetNode<Label>(NodePaths.PauseMenu.StatusLabel);
-            networkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			networkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 		
 			resetButton.Pressed += OnResetPressed;
 			resumeButton.Pressed += OnResumePressed;
@@ -44,7 +44,7 @@ namespace Jogo25D.UI
 			player = GetTree().Root.FindChild("Player", true, false) as Player;
 
 
-            portInput.PlaceholderText = "Port";
+			portInput.PlaceholderText = "Port";
 			addressInput.PlaceholderText = "IP:Port";
 
 			UpdateNetworkStatus();
@@ -95,7 +95,7 @@ namespace Jogo25D.UI
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
 				networkManager.ResetPlayerClientRequest();
-            }
+			}
 		
 			TogglePause();
 		}
