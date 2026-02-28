@@ -3,8 +3,31 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+//TODO: Adicionar efeitos/buffs on hit.
+//TODO: Adicionar efeitos/buffs on hit ganhos em runtime.
+
+//TODO: Adicionar efeitos/buffs player enquanto equipado.
+//TODO: Adicionar efeitos/buffs player enquanto equipado ganhos em runtime.
+
+//TODO: Adicionar efeitos/buffs para o item.
+//TODO: Adicionar efeitos/buffs para o item ganhos em runtime.
+
 namespace Jogo25D.Core
 {
+    #region Types 
+
+    public enum ItemType
+    {
+        Weapon,
+        Consumable,
+        Material,
+        Misc
+    }
+
+    #endregion
+
+    #region Damage system 
+
     public enum DamageType
     {
         Physical,
@@ -14,14 +37,6 @@ namespace Jogo25D.Core
         Electric,
         True
     }
-    
-    public enum ItemType
-    {
-        Weapon,
-        Consumable,
-        Material,
-        Misc
-    }
 
     public struct DamageInfo
     {
@@ -30,6 +45,8 @@ namespace Jogo25D.Core
         public Player Source;
         public float CritMultiplier;
     }
+
+    #endregion
 
     #region Abstract Definitions
 
@@ -48,44 +65,45 @@ namespace Jogo25D.Core
         public ItemType Type { get; init; }
         public bool Stackable { get; init; }
         public int MaxStack { get; init; }
+        public float Cooldown { get; init; } 
+        public List<BaseProperty> Properties { get; init; } 
+        public List<EffectDefinition> SelfEffects { get; init; } 
+        public List<EffectDefinition> OnHitEffects { get; init; } 
 
-        public float Cooldown = 0.5f;
+        public ItemDefinition()
+        {
+            Cooldown = 0.5f;
+            Properties = new();
+            SelfEffects = new();
+            OnHitEffects = new();
+        }
 
         public abstract void Use(Player player, ItemInstance instance);
     }
 
-    public abstract class WeaponDefinition : ItemDefinition
+    public abstract class BaseProperty
+    {
+    }
+
+    #endregion
+
+    #region Properties 
+
+    public class WeaponDamageProperty : BaseProperty
     {
         public int BaseDamage;
         public DamageType DamageType;
         public float CritChance = 0.1f;
         public float CritMultiplier = 1.5f;
-
-        public List<EffectDefinition> SelfEffects = new();
-        public List<EffectDefinition> OnHitEffects = new();
-
-        protected DamageInfo BuildDamage(Player player)
-        {
-            bool crit = GD.Randf() <= CritChance;
-            float multiplier = crit ? CritMultiplier : 1f;
-
-            return new DamageInfo
-            {
-                Amount = (int)((BaseDamage + player.Attack) * multiplier),
-                Type = DamageType,
-                Source = player,
-                CritMultiplier = multiplier
-            };
-        }
     }
 
     #endregion
 
-    #region Weapons definition
+    #region Weapons definitions
 
-    public class RangedWeaponDefinition : WeaponDefinition
+    public class DefaultWeaponDefinition : ItemDefinition
     {
-        public PackedScene ProjectileHitboxScene;
+        public PackedScene HitboxScene;
 
         public override void Use(Player player, ItemInstance instance)
         {
@@ -94,33 +112,26 @@ namespace Jogo25D.Core
             foreach (var effect in SelfEffects)
                 player.AddEffect(effect);
 
-            var ProjectileHitbox = ProjectileHitboxScene.Instantiate<ProjectileHitbox>();
-            ProjectileHitbox.Damage = BuildDamage(player);
-            ProjectileHitbox.Direction = player.GetAimDirection();
-            ProjectileHitbox.GlobalPosition = player.GlobalPosition;
-            ProjectileHitbox.OnHitEffects = new List<EffectDefinition>(OnHitEffects);
+            var hitbox = HitboxScene.Instantiate<MeleeHitbox>();
 
-            player.GetTree().CurrentScene.AddChild(ProjectileHitbox);
 
-            instance.TriggerCooldown();
-        }
-    }
+            var damageProp = Properties.OfType<WeaponDamageProperty>().FirstOrDefault();
 
-    public class MeleeWeaponDefinition : WeaponDefinition
-    {
-        public PackedScene MeleeScene;
+            if (damageProp == null)
+                hitbox.Damage = default;
 
-        public override void Use(Player player, ItemInstance instance)
-        {
-            if (!instance.CanUse()) return;
+            bool crit = GD.Randf() <= damageProp.CritChance;
+            float multiplier = crit ? damageProp.CritMultiplier : 1f;
 
-            foreach (var effect in SelfEffects)
-                player.AddEffect(effect);
-
-            var hitbox = MeleeScene.Instantiate<MeleeHitbox>();
+            hitbox.Damage = new DamageInfo
+            {
+                Amount = (int)((damageProp.BaseDamage + player.Attack) * multiplier),
+                Type = damageProp.DamageType,
+                Source = player,
+                CritMultiplier = multiplier
+            };
 
             hitbox.Owner = player;
-            hitbox.Damage = BuildDamage(player);
             hitbox.OnHitEffects = new List<EffectDefinition>(OnHitEffects);
 
             hitbox.GlobalPosition = player.GlobalPosition;
@@ -232,7 +243,9 @@ namespace Jogo25D.Core
         }
     }
 
-    #endregion 
+    #endregion
+
+    #region Items definitions
 
     public class SimpleItemDefinition : ItemDefinition
     {
@@ -248,6 +261,10 @@ namespace Jogo25D.Core
             instance.TriggerCooldown();
         }
     }
+
+    #endregion
+
+    #region Instances 
 
     public class EffectInstance
     {
@@ -283,9 +300,9 @@ namespace Jogo25D.Core
 
     public class ItemInstance
     {
-        public ItemDefinition Definition { get; }
+        public ItemDefinition Definition { get; private set; }
         public int Quantity { get; private set; }
-        public float CooldownRemaining;
+        public float CooldownRemaining { get; private set; }
 
         public ItemInstance(ItemDefinition definition, int quantity = 1)
         {
@@ -296,19 +313,23 @@ namespace Jogo25D.Core
         public void Update(float delta)
         {
             if (CooldownRemaining > 0)
+            {
                 CooldownRemaining -= delta;
+            }
         }
-
-        public bool CanUse() => CooldownRemaining <= 0;
-
+        public bool CanUse()
+        {
+            return CooldownRemaining <= 0;
+        }
         public void TriggerCooldown()
         {
             CooldownRemaining = Definition.Cooldown;
         }
-
         public void AddQuantity(int amount) => Quantity += amount;
         public void RemoveQuantity(int amount) => Quantity -= amount;
     }
+
+    #endregion
 
     #region Inventory
 
@@ -420,6 +441,8 @@ namespace Jogo25D.Core
 
     #endregion
 
+    #region Effects definitions
+
     public class PoisonEffect : EffectDefinition
     {
         public int DamagePerSecond = 5;
@@ -458,6 +481,10 @@ namespace Jogo25D.Core
         }
     }
 
+    #endregion
+
+    #region Static declarations 
+
     public static class ItemDB
     {
         private static Dictionary<string, ItemDefinition> _items;
@@ -471,64 +498,52 @@ namespace Jogo25D.Core
 
             var ProjectileHitboxScene = GD.Load<PackedScene>("res://ProjectileHitbox.tscn");
 
-            var sword = new MeleeWeaponDefinition
+            var sword = new DefaultWeaponDefinition
             {
                 Id = "sword_basic",
                 Name = "Espada Básica",
                 Type = ItemType.Weapon,
                 Stackable = false,
-                BaseDamage = 15,
-                DamageType = DamageType.Physical,
-                CritChance = 0.2f,
-                CritMultiplier = 2f,
                 Cooldown = 0.6f,
-                Range = 70f
+                HitboxScene = GD.Load<PackedScene>("res://MeleeHitbox.tscn"),
+                Properties = new List<BaseProperty>
+                {
+                    new WeaponDamageProperty
+                    {
+                        BaseDamage = 15,
+                        DamageType = DamageType.Physical,
+                        CritChance = 0.2f,
+                        CritMultiplier = 2f
+                    }
+                }
             };
-
-            var poisonBow = new RangedWeaponDefinition
+            var poisonBow = new DefaultWeaponDefinition
             {
                 Id = "bow_poison",
                 Name = "Arco Envenenado",
                 Type = ItemType.Weapon,
                 Stackable = false,
-                BaseDamage = 10,
-                DamageType = DamageType.Physical,
-                CritChance = 0.15f,
-                CritMultiplier = 1.8f,
                 Cooldown = 0.5f,
-                ProjectileHitboxScene = ProjectileHitboxScene,
-                OnHitEffects = new List<EffectDefinition>
-            {
-                new PoisonEffect
+                HitboxScene = ProjectileHitboxScene,
+                Properties = new List<BaseProperty>
                 {
-                    Duration = 5f,
-                    DamagePerSecond = 4
-                }
-            }
-            };
-
-            var fireStaff = new RangedWeaponDefinition
-            {
-                Id = "staff_fire",
-                Name = "Cajado Flamejante",
-                Type = ItemType.Weapon,
-                Stackable = false,
-                BaseDamage = 12,
-                DamageType = DamageType.Fire,
-                CritChance = 0.1f,
-                CritMultiplier = 1.6f,
-                Cooldown = 0.7f,
-                ProjectileHitboxScene = ProjectileHitboxScene,
-                SelfEffects = new List<EffectDefinition>
-            {
-                new AttackBuffEffect
+                    new WeaponDamageProperty
+                    {
+                        BaseDamage = 10,
+                        DamageType = DamageType.Physical,
+                        CritChance = 0.15f,
+                        CritMultiplier = 1.8f
+                    }
+                },
+                            OnHitEffects = new List<EffectDefinition>
                 {
-                    Duration = 3f,
-                    Bonus = 5
+                    new PoisonEffect
+                    {
+                        Duration = 5f,
+                        DamagePerSecond = 4
+                    }
                 }
-            }
             };
-
             var potion = new SimpleItemDefinition
             {
                 Id = "potion_strength",
@@ -551,7 +566,6 @@ namespace Jogo25D.Core
 
             Register(sword);
             Register(poisonBow);
-            Register(fireStaff);
             Register(potion);
 
             _initialized = true;
@@ -570,4 +584,22 @@ namespace Jogo25D.Core
             return _items[id];
         }
     }
+
+    #endregion
 }
+
+/// Definições
+///
+/// Efeitos:
+/// - Efeitos podem apenas ser aplicados ao jogador, quando um item é usado ou quando um hitbox acerta um inimigo, 
+/// o efeito é adicionado a lista de efeitos do jogador e ele processa os efeitos a cada frame, removendo quando expiram. Efeitos 
+/// também podem ser aplicados em tempo de uso, como uma arma que aplica dano de veneno a si mesmo enquanto está equipada.
+///
+/// Buffs:
+/// - Buffs também são efeitos, mas não são aplicados por tick, são aplicados uma vez e tem um efeito contínuo enquanto 
+/// estão ativos, como um buff de ataque que aumenta o ataque do jogador enquanto está ativo.
+/// 
+/// Actions nos itens:
+/// - Assim como as actions nos players, os itens também podem ter actions, 
+/// que são funções que são chamadas quando o item é usado, como uma poção de força que aplica um buff de ataque ao jogador quando usada.
+/// 
