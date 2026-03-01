@@ -6,8 +6,8 @@ namespace Jogo25D.Weapons
 {
     public partial class RangedCombat : Combat
     {
-        [Export] public PackedScene BulletScene { get; set; }
-        [Export] public float BulletSpeed { get; set; } = 800.0f;
+        public PackedScene BulletScene { get; set; }
+        public float BulletSpeed { get; set; } = 800.0f;
 
         public RangedCombat(Player player, PackedScene bulletScene) : base(player)
         {

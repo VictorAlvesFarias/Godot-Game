@@ -7,8 +7,8 @@ namespace Jogo25D.Weapons
 {
     public partial class MeleeCombat : Combat
     {
-        [Export] public float AttackDuration { get; set; } = 0.2f;
-        [Export] public float AttackAngle { get; set; } = 90.0f;
+        public float AttackDuration { get; set; } = 0.2f;
+        public float AttackAngle { get; set; } = 90.0f;
         
         private Area2D hitArea;
         private CollisionShape2D hitShape;

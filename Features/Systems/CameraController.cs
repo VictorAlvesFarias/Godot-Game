@@ -4,7 +4,7 @@ namespace Jogo25D.Systems
 {
 	public partial class CameraController : Camera2D
 	{
-		[Export] public NodePath PlayerPath;
+		public NodePath PlayerPath;
 		private Node2D player;
 
 		public override void _Ready()

@@ -7,19 +7,19 @@ namespace Jogo25D.Weapons
 {
     public abstract partial class Combat : Node2D
     {
-        [Export] public string WeaponName { get; set; } = "Weapon";
-        [Export] public int Damage { get; set; } = 1;
-        [Export] public float AttackCooldown { get; set; } = 0.5f;
-        [Export] public Texture2D Icon { get; set; }
-        [Export] public float WeaponOffset { get; set; } = 25.0f;
-        [Export] public int MaxCharges { get; set; } = 1;
-        [Export] public int CurrentCharges { get; set; } = 1;
-        [Export] public int InventoryCharges { get; set; } = 0;
-        [Export] public string ChargeType { get; set; } = "";
-        [Export] public bool InfiniteCharges { get; set; } = true;
-        [Export] public float ReloadCooldown { get; set; } = 1.0f;
-        [Export] public float Range { get; set; } = 1000.0f;
-        [Export] public float Area { get; set; } = 25.0f;
+        public string WeaponName { get; set; } = "Weapon";
+        public int Damage { get; set; } = 1;
+        public float AttackCooldown { get; set; } = 0.5f;
+        public Texture2D Icon { get; set; }
+        public float WeaponOffset { get; set; } = 25.0f;
+        public int MaxCharges { get; set; } = 1;
+        public int CurrentCharges { get; set; } = 1;
+        public int InventoryCharges { get; set; } = 0;
+        public string ChargeType { get; set; } = "";
+        public bool InfiniteCharges { get; set; } = true;
+        public float ReloadCooldown { get; set; } = 1.0f;
+        public float Range { get; set; } = 1000.0f;
+        public float Area { get; set; } = 25.0f;
 
         protected float cooldownTimer = 0f;
         protected float reloadTimer = 0f;

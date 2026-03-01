@@ -12,10 +12,10 @@ namespace Jogo25D.Scripts.Actions
 {
     public class FireballAction : PlayerAction
     {
-        [Export] public float DashSpeed { get; set; } = 800.0f;
-        [Export] public Vector2 DashDirection { get; private set; } = Vector2.Zero;
-        [Export] public float MovementInfluence { get; set; } = 0.4f;
-        [Export] public Item Characteristics { get; set; } = new Item("Fireball", ItemType.WeaponRanged);
+        public float DashSpeed { get; set; } = 800.0f;
+        public Vector2 DashDirection { get; private set; } = Vector2.Zero;
+        public float MovementInfluence { get; set; } = 0.4f;
+        public Item Characteristics { get; set; } = new Item("Fireball", ItemType.WeaponRanged);
 
         private Combat weapon;
 

@@ -15,7 +15,7 @@ namespace Jogo25D.UI
 	/// </summary>
 	public partial class HUD : CanvasLayer
 	{
-		[Export] public string PlayerGroupName { get; set; } = "players";
+		public string PlayerGroupName { get; set; } = "players";
 
 		private Label fpsLabel;
 		private ProgressBar healthBar;

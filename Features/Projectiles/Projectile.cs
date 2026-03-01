@@ -6,11 +6,11 @@ namespace Jogo25D.Weapons
 {
 	public partial class Projectile : Area2D
 	{
-		[Export] public float Speed { get; set; } = 0.0f;
-		[Export] public Vector2 Direction { get; set; } = Vector2.Zero;
-		[Export] public int Damage { get; set; } = 1;
-		[Export] public float Lifetime { get; set; } = 0.3f;
-		[Export] public Node2D Shooter { get; set; }
+		public float Speed { get; set; } = 0.0f;
+		public Vector2 Direction { get; set; } = Vector2.Zero;
+		public int Damage { get; set; } = 1;
+		public float Lifetime { get; set; } = 0.3f;
+		public Node2D Shooter { get; set; }
 
 		private float timer = 0.0f;
 		private bool isDestroyed = false;

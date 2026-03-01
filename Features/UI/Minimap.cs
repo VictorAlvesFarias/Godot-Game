@@ -5,13 +5,13 @@ namespace Jogo25D.UI
 {
     public partial class Minimap : Control
     {
-        [Export] public string PlayerGroupName { get; set; } = "players";
-        [Export] public float ViewRadius { get; set; } = 1200f;
-        [Export] public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
-        [Export] public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
-        [Export] public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
-        [Export] public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
-        [Export] public float PlayerDotRadius { get; set; } = 4f;
+        public string PlayerGroupName { get; set; } = "players";
+        public float ViewRadius { get; set; } = 1200f;
+        public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
+        public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
+        public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
+        public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
+        public float PlayerDotRadius { get; set; } = 4f;
 
         private Node localPlayer;
         private int localPeerId = 1;

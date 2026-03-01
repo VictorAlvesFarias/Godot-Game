@@ -6,9 +6,9 @@ namespace Jogo25D.Scripts.Actions
 {
     public class DashAction : PlayerAction
     {
-        [Export] public float DashSpeed { get; set; } = 800.0f;
-        [Export] public Vector2 DashDirection { get; private set; } = Vector2.Zero;
-        [Export] public float MovementInfluence { get; set; } = 0.4f;
+        public float DashSpeed { get; set; } = 800.0f;
+        public Vector2 DashDirection { get; private set; } = Vector2.Zero;
+        public float MovementInfluence { get; set; } = 0.4f;
 
         private CpuParticles2D dashParticles;
 

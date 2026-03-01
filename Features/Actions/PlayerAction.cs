@@ -5,14 +5,14 @@ namespace Jogo25D.Scripts.Actions
 {
     public abstract class PlayerAction
     {
-        [Export] public bool CanUse { get; set; } = true;
-        [Export] public bool InCooldown { get; set; } = false;
-        [Export] public bool IsActive { get; set; } = false;
-        [Export] public string ActionName { get; set; } = "Habilidade";
-        [Export] public float Cooldown { get; set; } = 0f;
-        [Export] public float Duration { get; set; } = 0f;
-        [Export] public int MaxCharges { get; set; } = 1;
-        [Export] public int CurrentCharges { get; protected set; } = 1;
+        public bool CanUse { get; set; } = true;
+        public bool InCooldown { get; set; } = false;
+        public bool IsActive { get; set; } = false;
+        public string ActionName { get; set; } = "Habilidade";
+        public float Cooldown { get; set; } = 0f;
+        public float Duration { get; set; } = 0f;
+        public int MaxCharges { get; set; } = 1;
+        public int CurrentCharges { get; protected set; } = 1;
 
         protected float CooldownTimer { get; set; } = 0f;
         protected float DurationTimer { get; set; } = 0f;

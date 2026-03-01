@@ -18,12 +18,12 @@ namespace Jogo25D.Characters
 	{
         #region Properties
 
-        [Export] public float Speed { get; set; } = 300.0f;
-		[Export] public float JumpVelocity { get; set; } = -750.0f;
-		[Export] public float Gravity { get; set; }
-		[Export] public int MaxHealth { get; set; } = 50;
-		[Export] public int CurrentHealth { get; set; } = 50;
-        [Export] public bool CanUpdateMovement { get; set; } = true;
+        public float Speed { get; set; } = 300.0f;
+		public float JumpVelocity { get; set; } = -750.0f;
+		public float Gravity { get; set; }
+		public int MaxHealth { get; set; } = 50;
+		public int CurrentHealth { get; set; } = 50;
+        public bool CanUpdateMovement { get; set; } = true;
 
         #endregion
 
