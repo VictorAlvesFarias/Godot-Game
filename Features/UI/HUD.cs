@@ -1,18 +1,16 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
+using Jogo25D.Properties;
 using Jogo25D.Scripts.Actions;
-using Jogo25D.Weapons;
 using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
-	/// <summary>
-	/// HUD unificado com FPS, Health, Weapon display e habilidades.
-	/// </summary>
 	public partial class HUD : CanvasLayer
 	{
 		public string PlayerGroupName { get; set; } = "players";
@@ -212,44 +210,38 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void OnItemEquipped(Item item, int index)
+		private void OnItemEquipped(int slotIndex)
 		{
 			UpdateWeaponDisplay();
 		}
 
 		private void UpdateWeaponDisplay()
 		{
-			if (inventory == null || !IsInstanceValid(inventory))
+			if (localPlayer == null || !IsInstanceValid(localPlayer))
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;
 			}
 
-			var equippedItem = inventory.GetEquippedItem();
-
-			if (equippedItem == null || (equippedItem.Type != ItemType.WeaponMelee && equippedItem.Type != ItemType.WeaponRanged))
+			var instance = localPlayer.EquippedInstance;
+			if (instance == null || instance.IsEmpty() || !instance.Definition.Type.IsWeapon())
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;
 			}
 
-			var weapon = localPlayer?.CurrentWeaponSystem;
-			if (weapon != null && IsInstanceValid(weapon))
-			{
-				var reloadPrefix = weapon.IsReloading() ? $"{weapon.GetRemainingReloadTime():F1}s " : "";
+			var chargesProp  = instance.Properties.OfType<ChargesProperty>().FirstOrDefault();
+			var def          = instance.Definition;
+			var reloadPrefix = instance.IsReloading ? $"{instance.GetRemainingReloadTime():F1}s " : "";
 
-				if (weapon.InfiniteCharges)
-				{
-					weaponLabel.Text = $"{reloadPrefix}{weapon.WeaponName} ∞";
-				}
-				else
-				{
-					weaponLabel.Text = $"{reloadPrefix}{weapon.WeaponName} {weapon.CurrentCharges}/{weapon.InventoryCharges}";
-				}
+			if (chargesProp == null || chargesProp.InfiniteCharges)
+			{
+				weaponLabel.Text = $"{reloadPrefix}{def.Name} ∞";
 			}
 			else
 			{
-				weaponLabel.Text = equippedItem.ItemName;
+				int ammo = inventory?.CountAmmoByChargeType(chargesProp.ChargeType) ?? 0;
+				weaponLabel.Text = $"{reloadPrefix}{def.Name} {instance.CurrentCharges}/{ammo}";
 			}
 		}
 

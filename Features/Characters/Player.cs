@@ -2,14 +2,15 @@ using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
-using Jogo25D.Weapons;
+using Jogo25D.Properties;
+using Jogo25D.Effects;
 using Jogo25D.Scripts.Actions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
-using Jogo25D.Scripts.Weapons;
 using Jogo25D.Constants;
 
 namespace Jogo25D.Characters
@@ -33,18 +34,20 @@ namespace Jogo25D.Characters
 		public FireballAction FireballAction { get; private set; }
 		public List<PlayerAction> UnlockedAbilities { get; private set; } = new List<PlayerAction>();
 		public Inventory Inventory { get; private set; }
-		public Combat CurrentWeaponSystem { get; private set; }
+		public ItemRechargeableInstance EquippedInstance { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
 		public InputControls Controls { get; set; }
         private WorldManager NetworkManager { get; set; }
         public Vector2 TargetPosition { get; set; }
 		public long PeerId { get; set; } = 1;
+        public List<EffectDefinition> Effects { get; private set; } = new();
+        public List<BaseProperty> Buffs { get; private set; } = new();
 
-        #endregion
+		#endregion
 
-        #region Player effetcs
+		#region Player effects
 
-        public Line2D Sprite { get; private set; }
+		public Line2D Sprite { get; private set; }
 		public float DamageEffectTimer { get; set; } = 0f;
 		public float DamageColorDuration { get; set; } = 0.3f;
 
@@ -101,12 +104,7 @@ namespace Jogo25D.Characters
 				Inventory.ItemEquipped -= OnItemEquipped;
 			}
 
-			if (CurrentWeaponSystem != null && IsInstanceValid(CurrentWeaponSystem))
-			{
-				CurrentWeaponSystem.OnUnequip();
-				CurrentWeaponSystem.QueueFree();
-				CurrentWeaponSystem = null;
-			}
+			EquippedInstance = null;
 
 			AimIndicator?.Cleanup();
 
@@ -124,8 +122,20 @@ namespace Jogo25D.Characters
                 GlobalPosition = TargetPosition;
             }
 
+            // Tick active effects (V2)
+            for (int i = Effects.Count - 1; i >= 0; i--)
+            {
+                var effect = Effects[i];
+                effect.Tick(this, (float)delta);
+                if (effect.Expired)
+                {
+                    Effects.RemoveAt(i);
+                }
+            }
+
             DashAction.Update((float)delta);
 			FireballAction.Update((float)delta);
+			EquippedInstance?.Update((float)delta);
 
 			HandleInput();
 			HandleMovement((float)delta);
@@ -200,6 +210,30 @@ namespace Jogo25D.Characters
             }
 		}
 
+		public void ReceiveDamage(DamageInfo damage)
+		{
+			using var enumerator = Buffs.GetEnumerator();
+			float resistanceFactor = 0f;
+			foreach (var buff in Buffs)
+			{
+				if (buff is DamageResistenceProperty r && r.DamageType == damage.Type)
+				{
+					resistanceFactor = System.Math.Max(resistanceFactor, r.ResistanceFactor);
+				}
+			}
+			int finalDamage = (int)(damage.Amount * (1f - resistanceFactor));
+			TakeDamage(finalDamage);
+		}
+
+		public void AddEffect(EffectDefinition definition)
+		{
+			if (definition == null)
+			{
+				return;
+			}
+			Effects.Add(definition.Clone());
+		}
+
 		#endregion
 
 		#region Public local methods
@@ -225,24 +259,50 @@ namespace Jogo25D.Characters
 
 		private void HandleAttack(float delta)
 		{
-			if (CurrentWeaponSystem == null || !CurrentWeaponSystem.CanAttack())
-				return;
-
-			if (Controls.InputAttack)
+			if (EquippedInstance == null || EquippedInstance.IsEmpty())
 			{
-				var direction = (Controls.MousePosition - GlobalPosition).Normalized();
-				CurrentWeaponSystem.Attack(direction);
+				return;
 			}
+
+			if (!Controls.InputAttack)
+			{
+				return;
+			}
+
+			GD.Print($"[HandleAttack] cooldown={EquippedInstance.CooldownRemaining:F2} reloading={EquippedInstance.IsReloading} charges={EquippedInstance.CurrentCharges}");
+
+			var direction = (Controls.MousePosition - GlobalPosition).Normalized();
+
+			EquippedInstance.Definition.Attack(this, EquippedInstance, direction);
 		}
 
 		private void HandleReload(float delta)
 		{
-			if (CurrentWeaponSystem == null || !CurrentWeaponSystem.CanReload())
-				return;
-
-			if (Controls.InputReload)
+			if (EquippedInstance == null || EquippedInstance.IsEmpty())
 			{
-				CurrentWeaponSystem.Reload();
+				return;
+			}
+
+			var chargesProp = EquippedInstance.Properties.OfType<ChargesProperty>().FirstOrDefault();
+			if (chargesProp == null || chargesProp.InfiniteCharges)
+			{
+				return;
+			}
+
+			if (!EquippedInstance.IsReloading &&
+				EquippedInstance.CurrentCharges < chargesProp.MaxCharges &&
+				_reloadPending)
+			{
+				_reloadPending = false;
+				int needed = chargesProp.MaxCharges - EquippedInstance.CurrentCharges;
+				int taken  = Inventory?.RemoveAmmoByChargeType(chargesProp.ChargeType, needed) ?? 0;
+				EquippedInstance.FinishReload(taken);
+			}
+
+			if (Controls.InputReload && EquippedInstance.CanReload())
+			{
+				EquippedInstance.StartReload();
+				_reloadPending = true;
 			}
 		}
 
@@ -281,80 +341,46 @@ namespace Jogo25D.Characters
 			MoveAndSlide();
 		}
 		
-		private void OnItemEquipped(Item item, int slotIndex)
+		private void OnItemEquipped(int slotIndex)
 		{
-			if (CurrentWeaponSystem != null)
+			if (EquippedInstance != null && EquippedInstance.Definition != null)
 			{
-				CurrentWeaponSystem.OnUnequip();
-				CurrentWeaponSystem.QueueFree();
-
-				CurrentWeaponSystem = null;
+				EquippedInstance.Definition.OnUnequip(this, EquippedInstance);
 			}
 
-			var weaponInstance = CombatFactory.Use(item, this);
+			var slot = Inventory?.GetSlot(slotIndex);
+			if (slot == null || slot.IsEmpty())
+			{
+				return;
+			}
 
-			CurrentWeaponSystem = weaponInstance;
+			EquippedInstance = slot as ItemRechargeableInstance;
+			if (EquippedInstance == null)
+			{
+				return;
+			}
 
-			AddChild(weaponInstance);
+			var chargesProp = slot.Properties.OfType<ChargesProperty>().FirstOrDefault();
+			EquippedInstance.CurrentCharges = chargesProp != null ? chargesProp.MaxCharges : 0;
+			_reloadPending = false;
 
-			CurrentWeaponSystem.OnEquip();
+			EquippedInstance.Definition.OnEquip(this, EquippedInstance);
 		}
+
+		private bool _reloadPending;
 
 		private void InitializeStartingWeapons()
 		{
-			var meleeWeapon = new Item("Sword", ItemType.WeaponMelee);
+			ItemDB.Initialize();
 
-			meleeWeapon.Description = "Uma espada básica para combate corpo a corpo";
-			meleeWeapon.IsEquippable = true;
-			meleeWeapon.Damage = 1;
-			meleeWeapon.AttackCooldown = 0.5f;
-			meleeWeapon.AttackRange = 80.0f;
-			meleeWeapon.KnockbackForce = 200f;
-
-			var rangedWeapon = new Item("Arco", ItemType.WeaponRanged);
-
-			rangedWeapon.Description = "Um arco para ataques à distância";
-			rangedWeapon.IsEquippable = true;
-			rangedWeapon.Damage = 1;
-			rangedWeapon.InfiniteCharges = false;
-			rangedWeapon.MaxCharges = 10;
-			rangedWeapon.AttackCooldown = 0.8f;
-			rangedWeapon.AttackRange = 1500f; // Alcance máximo: 1500 unidades
-			rangedWeapon.AttackArea = 50f; // Tamanho do projétil
-			rangedWeapon.ProjectileSpeed = 750f; // Velocidade: 750 u/s → Lifetime = 1500/750 = 2s
-
-			var rangedWeapon2 = new Item("Arco2", ItemType.WeaponRanged);
-
-			rangedWeapon2.Description = "Um arco melhorado para ataques à distância";
-			rangedWeapon2.IsEquippable = true;
-			rangedWeapon2.InfiniteCharges = true;
-			rangedWeapon2.MaxCharges = 1;
-			rangedWeapon2.ChargeType = "none";
-			rangedWeapon2.ReloadCooldown = 1.5f;
-			rangedWeapon2.Damage = 1;
-			rangedWeapon2.AttackCooldown = 0.01f;
-			rangedWeapon2.AttackRange = 2000f; // Alcance máximo: 2000 unidades
-			rangedWeapon2.AttackArea = 15f; // Tamanho do projétil maior
-			rangedWeapon2.ProjectileSpeed = 1200f; // Velocidade: 1000 u/s → Lifetime = 2000/1000 = 2s
-
-			var projectileScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn");
-
-			rangedWeapon.ProjectileScene = projectileScene;
-			rangedWeapon2.ProjectileScene = projectileScene;
-
-			var arrowAmmo = new Item("Flecha", ItemType.Consumable);
-			arrowAmmo.Description = "Munição para arcos";
-			arrowAmmo.ChargeType = "arrow";
-			arrowAmmo.IsStackable = true;
-			arrowAmmo.MaxStackSize = 9999;
-
-			Inventory.AddItem(meleeWeapon, 1);
-			Inventory.AddItem(rangedWeapon, 1);
-			Inventory.AddItem(rangedWeapon2, 1);
-			Inventory.AddItem(arrowAmmo, 1000);
+			Inventory.AddItem(ItemDB.Get("sword_starting"), 1);
+			Inventory.AddItem(ItemDB.Get("bow_starting"), 1);
+			Inventory.AddItem(ItemDB.Get("bow_starting2"), 1);
+			Inventory.AddItem(ItemDB.Get("arrow"), 1000);
 			Inventory.EquipItem(0);
 		}
 
 		#endregion
 	}
 }
+

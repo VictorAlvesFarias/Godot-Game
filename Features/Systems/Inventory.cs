@@ -1,7 +1,9 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jogo25D.Items;
+using Jogo25D.Properties;
 
 namespace Jogo25D.Systems
 {
@@ -11,34 +13,34 @@ namespace Jogo25D.Systems
 		public delegate void InventoryChangedEventHandler();
 
 		[Signal]
-		public delegate void ItemEquippedEventHandler(Item item, int slotIndex);
+		public delegate void ItemEquippedEventHandler(int slotIndex);
 
 		private const int INVENTORY_SIZE = 16;
-		private ItemSlot[] slots = new ItemSlot[INVENTORY_SIZE];
-		private Item equippedItem;
+		private ItemInstance[] slots = new ItemInstance[INVENTORY_SIZE];
+		private ItemDefinition equippedDefinition;
 		private int equippedSlotIndex = -1;
 
 		public override void _Ready()
 		{
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				slots[i] = new ItemSlot();
+				slots[i] = new ItemInstance();
 			}
 		}
 
-		public bool AddItem(Item item, int quantity = 1)
+		public bool AddItem(ItemDefinition definition, int quantity = 1)
 		{
-			if (item == null) return false;
+			if (definition == null) return false;
 
-			if (item.IsStackable)
+			if (definition.Stackable)
 			{
 				for (int i = 0; i < INVENTORY_SIZE; i++)
 				{
-					if (!slots[i].IsEmpty() && slots[i].Item?.ItemName == item.ItemName)
+					if (!slots[i].IsEmpty() && slots[i].Definition?.Name == definition.Name)
 					{
 						if (slots[i].CanAddMore())
 						{
-							int spaceLeft = item.MaxStackSize - slots[i].Quantity;
+							int spaceLeft = definition.MaxStackSize - slots[i].Quantity;
 							int toAdd = Mathf.Min(quantity, spaceLeft);
 							slots[i].Quantity += toAdd;
 							quantity -= toAdd;
@@ -55,8 +57,15 @@ namespace Jogo25D.Systems
 			{
 				if (slots[i].IsEmpty())
 				{
-					slots[i].Item = item;
+					if (definition.IsEquippable)
+					{
+						slots[i] = new ItemRechargeableInstance();
+					}
+					slots[i].Definition = definition;
 					slots[i].Quantity = quantity;
+					// Populate per-instance properties from the definition defaults
+					slots[i].Properties = new List<Jogo25D.Properties.BaseProperty>(definition.Properties);
+					slots[i].OnHitEffects = new List<Jogo25D.Effects.EffectDefinition>(definition.OnHitEffects);
 					EmitSignal(SignalName.InventoryChanged);
 					return true;
 				}
@@ -83,13 +92,13 @@ namespace Jogo25D.Systems
 			return true;
 		}
 
-		public ItemSlot GetSlot(int index)
+		public ItemInstance GetSlot(int index)
 		{
 			if (index < 0 || index >= INVENTORY_SIZE) return null;
 			return slots[index];
 		}
 
-		public ItemSlot[] GetAllSlots()
+		public ItemInstance[] GetAllSlots()
 		{
 			return slots;
 		}
@@ -101,7 +110,7 @@ namespace Jogo25D.Systems
 				slots[i].Clear();
 			}
 
-			equippedItem = null;
+			equippedDefinition = null;
 			equippedSlotIndex = -1;
 
 			EmitSignal(SignalName.InventoryChanged);
@@ -113,18 +122,24 @@ namespace Jogo25D.Systems
 			if (toIndex < 0 || toIndex >= INVENTORY_SIZE) return false;
 			if (fromIndex == toIndex) return false;
 
-			GD.Print($"Trocando slot {fromIndex} ({slots[fromIndex].Item?.ItemName ?? "vazio"}) com slot {toIndex} ({slots[toIndex].Item?.ItemName ?? "vazio"})");
+			GD.Print($"Trocando slot {fromIndex} ({slots[fromIndex].Definition?.Name ?? "vazio"}) com slot {toIndex} ({slots[toIndex].Definition?.Name ?? "vazio"})");
 
-			Item tempItem = slots[fromIndex].Item;
-			int tempQuantity = slots[fromIndex].Quantity;
+			ItemDefinition tempDef      = slots[fromIndex].Definition;
+			int            tempQuantity = slots[fromIndex].Quantity;
+			var tempProps               = slots[fromIndex].Properties;
+			var tempEffects             = slots[fromIndex].OnHitEffects;
 
-			slots[fromIndex].Item = slots[toIndex].Item;
-			slots[fromIndex].Quantity = slots[toIndex].Quantity;
+			slots[fromIndex].Definition   = slots[toIndex].Definition;
+			slots[fromIndex].Quantity     = slots[toIndex].Quantity;
+			slots[fromIndex].Properties   = slots[toIndex].Properties;
+			slots[fromIndex].OnHitEffects = slots[toIndex].OnHitEffects;
 
-			slots[toIndex].Item = tempItem;
-			slots[toIndex].Quantity = tempQuantity;
+			slots[toIndex].Definition   = tempDef;
+			slots[toIndex].Quantity     = tempQuantity;
+			slots[toIndex].Properties   = tempProps;
+			slots[toIndex].OnHitEffects = tempEffects;
 
-			GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Item?.ItemName ?? "vazio"}, slot {toIndex}: {slots[toIndex].Item?.ItemName ?? "vazio"}"); ;
+			GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Definition?.Name ?? "vazio"}, slot {toIndex}: {slots[toIndex].Definition?.Name ?? "vazio"}");
 
 			EmitSignal(SignalName.InventoryChanged);
 			return true;
@@ -138,25 +153,25 @@ namespace Jogo25D.Systems
 
 			var slot = slots[slotIndex];
 
-			if (slot.IsEmpty() || !slot.Item.IsEquippable)
+			if (slot.IsEmpty() || slot.Definition == null || !slot.Definition.IsEquippable)
 				return false;
 
-			equippedItem = slot.Item;
-			equippedSlotIndex = slotIndex;
+			equippedDefinition = slot.Definition;
+			equippedSlotIndex  = slotIndex;
 
-			EmitSignal(SignalName.ItemEquipped, equippedItem, slotIndex);
+			EmitSignal(SignalName.ItemEquipped, slotIndex);
 			return true;
 		}
 
 		public void UnequipItem()
 		{
-			equippedItem = null;
-			equippedSlotIndex = -1;
+			equippedDefinition = null;
+			equippedSlotIndex  = -1;
 		}
 
-		public Item GetEquippedItem()
+		public ItemDefinition GetEquippedItem()
 		{
-			return equippedItem;
+			return equippedDefinition;
 		}
 
 		public int GetEquippedSlotIndex()
@@ -166,7 +181,7 @@ namespace Jogo25D.Systems
 
 		public bool HasEquippedItem()
 		{
-			return equippedItem != null;
+			return equippedDefinition != null;
 		}
 
 		public int CountItem(string itemName)
@@ -174,7 +189,7 @@ namespace Jogo25D.Systems
 			int count = 0;
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				if (!slots[i].IsEmpty() && slots[i].Item.ItemName == itemName)
+				if (!slots[i].IsEmpty() && slots[i].Definition?.Name == itemName)
 				{
 					count += slots[i].Quantity;
 				}
@@ -185,16 +200,25 @@ namespace Jogo25D.Systems
 		public int CountAmmoByChargeType(string chargeType)
 		{
 			if (string.IsNullOrEmpty(chargeType))
+			{
 				return 0;
+			}
 
 			int count = 0;
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				// Não contar o slot equipado (a arma) como munição de si mesma
 				if (i == equippedSlotIndex)
+				{
 					continue;
+				}
 
-				if (!slots[i].IsEmpty() && slots[i].Item.ChargeType == chargeType)
+				if (slots[i].IsEmpty())
+				{
+					continue;
+				}
+
+				var chargesProp = slots[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+				if (chargesProp != null && chargesProp.ChargeType == chargeType)
 				{
 					count += slots[i].Quantity;
 				}
@@ -202,31 +226,46 @@ namespace Jogo25D.Systems
 			return count;
 		}
 
-		/// <summary>Remove munição do inventário pelo tipo. Retorna a quantidade removida.</summary>
 		public int RemoveAmmoByChargeType(string chargeType, int quantity)
 		{
 			if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
+			{
 				return 0;
+			}
 
 			int removed = 0;
 			for (int i = 0; i < INVENTORY_SIZE && removed < quantity; i++)
 			{
 				if (i == equippedSlotIndex)
+				{
 					continue;
+				}
 
-				if (slots[i].IsEmpty() || slots[i].Item.ChargeType != chargeType)
+				if (slots[i].IsEmpty())
+				{
 					continue;
+				}
+
+				var chargesProp = slots[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+				if (chargesProp == null || chargesProp.ChargeType != chargeType)
+				{
+					continue;
+				}
 
 				int toRemove = Mathf.Min(quantity - removed, slots[i].Quantity);
 				slots[i].Quantity -= toRemove;
 				removed += toRemove;
 
 				if (slots[i].Quantity <= 0)
+				{
 					slots[i].Clear();
+				}
 			}
 
 			if (removed > 0)
+			{
 				EmitSignal(SignalName.InventoryChanged);
+			}
 
 			return removed;
 		}

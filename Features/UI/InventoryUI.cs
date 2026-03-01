@@ -311,7 +311,7 @@ namespace Jogo25D.UI
 			var slot = inventory.GetSlot(slotIndex);
 			if (slot.IsEmpty()) return;
 
-			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Item?.ItemName})");
+			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Definition?.Name})");
 
 			isDragging = true;
 			draggedSlotIndex = slotIndex;
@@ -319,16 +319,9 @@ namespace Jogo25D.UI
 			if (dragPreview != null)
 			{
 				var iconRect = dragPreview.GetNode<TextureRect>(NodePaths.InventoryUI.DragPreviewIcon);
-				if (slot.Item.Icon != null)
-				{
-					iconRect.Texture = slot.Item.Icon;
-				}
-				else
-				{
-					iconRect.Texture = null;
-				}
+				iconRect.Texture = slot.Definition?.Icon;
 
-				dragOffset = new Vector2(-32, -32); // Centralizar no mouse
+				dragOffset = new Vector2(-32, -32);
 				dragPreview.GlobalPosition = mousePos + dragOffset;
 				dragPreview.Visible = true;
 
@@ -408,7 +401,7 @@ namespace Jogo25D.UI
 			if (slot == null)
 				return;
 
-			if (slot.IsEmpty() || slot.Item == null)
+			if (slot.IsEmpty() || slot.Definition == null)
 			{
 				iconRects[index].Texture = null;
 				nameLabels[index].Visible = false;
@@ -416,19 +409,19 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (slot.Item.Icon != null)
+			if (slot.Definition.Icon != null)
 			{
-				iconRects[index].Texture = slot.Item.Icon;
+				iconRects[index].Texture = slot.Definition.Icon;
 				nameLabels[index].Visible = false;
 			}
 			else
 			{
 				iconRects[index].Texture = null;
-				nameLabels[index].Text = slot.Item.ItemName;
+				nameLabels[index].Text = slot.Definition.Name;
 				nameLabels[index].Visible = true;
 			}
 
-			if (slot.Item.IsStackable && slot.Quantity > 1)
+			if (slot.Definition.Stackable && slot.Quantity > 1)
 				quantityLabels[index].Text = slot.Quantity.ToString();
 			else
 				quantityLabels[index].Text = "";
@@ -464,7 +457,7 @@ namespace Jogo25D.UI
 				child.QueueFree();
 			}
 
-			if (slot.Item.IsEquippable)
+			if (slot.Definition != null && slot.Definition.IsEquippable)
 			{
 				var button = new Button();
 				button.Text = "Equipar";
@@ -530,11 +523,11 @@ namespace Jogo25D.UI
 			}
 		}
 
-		public void AddItemToInventory(Item item, int quantity = 1)
+		public void AddItemToInventory(ItemDefinition definition, int quantity = 1)
 		{
 			if (inventory != null && IsInstanceValid(inventory))
 			{
-				inventory.AddItem(item, quantity);
+				inventory.AddItem(definition, quantity);
 			}
 		}
 	}

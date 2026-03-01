@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dnn0xcgde4wg2"]
 
-[ext_resource type="Script" uid="uid://cfnyv3vtagy4y" path="res://Features/Projectiles/Projectile.cs" id="1_hp88e"]
+[ext_resource type="Script" uid="uid://c3kv5acb6a46q" path="res://Features/Hitboxes/MeleeHitbox.cs" id="1_hp88e"]
 [ext_resource type="Texture2D" uid="uid://cx6wbcsj211pf" path="res://Assets/Textures/Untitled.png" id="2_xlbq4"]
 
 [node name="Projectile" type="Area2D" unique_id=926702127]
