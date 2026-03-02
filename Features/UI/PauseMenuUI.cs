@@ -52,7 +52,12 @@ namespace Jogo25D.UI
 
 		public override void _Input(InputEvent @event)
 		{
-			if (Input.IsActionJustPressed("pause"))
+			if (InputManager.Instance != null && InputManager.Instance.IsBlocked)
+			{
+				return;
+			}
+
+			if (@event.IsActionPressed("pause") && !@event.IsEcho())
 			{
 				TogglePause();
 			}

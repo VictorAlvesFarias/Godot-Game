@@ -30,11 +30,11 @@ namespace Jogo25D.Scripts.Actions
         {
             if (_hitboxScene == null) return;
 
-            var direction = (NodePlayer.Controls.MousePosition - NodePlayer.GlobalPosition).Normalized();
+            var direction = (NodePlayer.MousePosition - NodePlayer.GlobalPosition).Normalized();
             var hitbox    = _hitboxScene.Instantiate<ProjectileHitbox>();
 
             hitbox.Initialize(
-                new DamageInfo { Amount = FireballDamage, Type = DamageType.Fire, SourcePeerId = (int)NodePlayer.PeerId },
+                new List<DamageInfo> { new DamageInfo { Amount = FireballDamage, Type = DamageType.Fire, SourcePeerId = (int)NodePlayer.PeerId } },
                 new List<EffectDefinition>(),
                 NodePlayer
             );
@@ -53,7 +53,7 @@ namespace Jogo25D.Scripts.Actions
         public override void OnUpdateWhileActive(float delta) { }
 
         public override bool OnStartActionValidation(float delta)
-            => NodePlayer.Controls.InputAbility && CanUse;
+            => NodePlayer.InputAbility && CanUse;
 
         public override void OnEnableAction(float delta) { }
     }

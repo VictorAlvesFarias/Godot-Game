@@ -57,15 +57,13 @@ namespace Jogo25D.Systems
 			{
 				if (slots[i].IsEmpty())
 				{
-					if (definition.IsEquippable)
-					{
-						slots[i] = new ItemRechargeableInstance();
-					}
+					slots[i] = new ItemRechargeableInstance();
 					slots[i].Definition = definition;
 					slots[i].Quantity = quantity;
 					// Populate per-instance properties from the definition defaults
 					slots[i].Properties = new List<Jogo25D.Properties.BaseProperty>(definition.Properties);
 					slots[i].OnHitEffects = new List<Jogo25D.Effects.EffectDefinition>(definition.OnHitEffects);
+					slots[i].OnUseEffects = new List<Jogo25D.Effects.EffectDefinition>(definition.OnUseEffects);
 					EmitSignal(SignalName.InventoryChanged);
 					return true;
 				}

@@ -26,7 +26,7 @@ namespace Jogo25D.Scripts.Actions
 
         public override void OnStartAction(float delta)
         {
-            Vector2 inputDirection = new Vector2(NodePlayer.Controls.InputX, NodePlayer.Controls.InputY);
+            Vector2 inputDirection = new Vector2(NodePlayer.InputX, NodePlayer.InputY);
 
             if (inputDirection.LengthSquared() > 0.01f)
             {
@@ -73,7 +73,7 @@ namespace Jogo25D.Scripts.Actions
 
         public override void OnUpdateWhileActive(float delta)
         {
-            var inputDirection = new Vector2(NodePlayer.Controls.InputX, NodePlayer.Controls.InputY);
+            var inputDirection = new Vector2(NodePlayer.InputX, NodePlayer.InputY);
 
             if (inputDirection.LengthSquared() > 0.01f && MovementInfluence > 0f)
             {
@@ -92,7 +92,7 @@ namespace Jogo25D.Scripts.Actions
 
         public override bool OnStartActionValidation(float delta)
         {
-            return NodePlayer.Controls.InputDash && CanUse;
+            return NodePlayer.InputDash && CanUse;
         }
 
         public override void OnEnableAction(float delta)

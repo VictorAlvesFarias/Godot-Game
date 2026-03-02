@@ -33,6 +33,13 @@ namespace Jogo25D.UI
 
 		private Minimap minimap;
 
+		private const int HotbarSize = 8;
+		private readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
+		private readonly Label[] _hotbarNameLabels = new Label[HotbarSize];
+		private readonly Label[] _hotbarQtyLabels = new Label[HotbarSize];
+		private StyleBoxFlat _hotbarNormalStyle;
+		private StyleBoxFlat _hotbarSelectedStyle;
+
 		public override void _Ready()
 		{
 			fpsLabel = GetNode<Label>(NodePaths.Hud.FpsLabel);
@@ -42,6 +49,36 @@ namespace Jogo25D.UI
 			abilitiesContainer = GetNode<HBoxContainer>(NodePaths.Hud.AbilitiesContainer);
 			minimap = GetNode<Minimap>(NodePaths.Hud.Minimap);
 
+			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
+			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
+
+			_hotbarNormalStyle   = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
+			_hotbarSelectedStyle = new StyleBoxFlat
+			{
+				BgColor = new Color(0.12f, 0.12f, 0.18f, 0.96f),
+				BorderWidthLeft = 3, BorderWidthTop = 3, BorderWidthRight = 3, BorderWidthBottom = 3,
+				BorderColor = new Color(1f, 0.85f, 0.1f, 1f),
+			};
+			_hotbarSelectedStyle.SetCornerRadiusAll(3);
+
+			for (int i = 0; i < HotbarSize; i++)
+			{
+				Panel panel;
+				if (i == 0)
+				{
+					panel = slot0;
+				}
+				else
+				{
+					panel = (Panel)slot0.Duplicate();
+					panel.GetNode<Label>("NumLabel").Text = $"{i + 1}";
+					hotbarContainer.AddChild(panel);
+				}
+
+				_hotbarSlotPanels[i] = panel;
+				_hotbarNameLabels[i] = panel.GetNode<Label>("NameLabel");
+				_hotbarQtyLabels[i]  = panel.GetNode<Label>("QtyLabel");
+			}
 			CallDeferred(nameof(FindLocalPlayer));
 		}
 		public override void _ExitTree()
@@ -49,6 +86,7 @@ namespace Jogo25D.UI
 			if (inventory != null && IsInstanceValid(inventory))
 			{
 				inventory.ItemEquipped -= OnItemEquipped;
+				inventory.InventoryChanged -= UpdateHotbar;
 			}
 		}
 		public override void _Process(double delta)
@@ -61,6 +99,7 @@ namespace Jogo25D.UI
 				BuildAbilitySlots();
 
 			UpdateAbilitySlots();
+			UpdateHotbar();
 		}
 
 		#region FPS Display
@@ -205,7 +244,9 @@ namespace Jogo25D.UI
 				if (inventory != null && IsInstanceValid(inventory))
 				{
 					inventory.ItemEquipped += OnItemEquipped;
+					inventory.InventoryChanged += UpdateHotbar;
 					UpdateWeaponDisplay();
+					UpdateHotbar();
 				}
 			}
 		}
@@ -224,7 +265,7 @@ namespace Jogo25D.UI
 			}
 
 			var instance = localPlayer.EquippedInstance;
-			if (instance == null || instance.IsEmpty() || !instance.Definition.Type.IsWeapon())
+			if (instance == null || instance.IsEmpty() || instance.Definition is not DefaultWeaponDefinition)
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;
@@ -495,6 +536,34 @@ namespace Jogo25D.UI
 					var nameText = action.MaxCharges > 1 ? $"{action.ActionName} {action.CurrentCharges}/{action.MaxCharges}" : action.ActionName;
 					nameLabel.Text = nameText;
 				}
+			}
+		}
+
+		#endregion
+
+		#region Hotbar
+
+		private void UpdateHotbar()
+		{
+			if (_hotbarNormalStyle == null) return;
+
+			int equippedIndex = inventory?.GetEquippedSlotIndex() ?? -1;
+
+			for (int i = 0; i < HotbarSize; i++)
+			{
+				var panel = _hotbarSlotPanels[i];
+				if (panel == null) continue;
+
+				bool isSelected = i == equippedIndex;
+				panel.AddThemeStyleboxOverride("panel",
+					 isSelected ? _hotbarSelectedStyle : _hotbarNormalStyle);
+
+				var slot  = inventory?.GetSlot(i);
+				bool empty = slot == null || slot.IsEmpty();
+
+				_hotbarNameLabels[i].Text = empty ? "" : (slot.Definition?.Name ?? "");
+				_hotbarQtyLabels[i].Text  = (!empty && slot.Definition?.Stackable == true && slot.Quantity > 1)
+					? $"x{slot.Quantity}" : "";
 			}
 		}
 

@@ -15,5 +15,7 @@ namespace Jogo25D.Items
         public int Amount;
         public DamageType Type;
         public int SourcePeerId;
+        public float CritChance;
+        public float CritDamage;
     }
 }

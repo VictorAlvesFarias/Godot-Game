@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://b0f6lamelbped" path="res://Features/UI/PauseMenuUI.cs" id="2_ebkin"]
 [ext_resource type="PackedScene" uid="uid://hud1234568aa" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
 [ext_resource type="PackedScene" uid="uid://dpjl5u30o6jtq" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
@@ -15,3 +16,5 @@ script = ExtResource("2_ebkin")
 
 [node name="InventoryMenu" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
 layer = 4
+
+[node name="Console" parent="." unique_id=1263919536 instance=ExtResource("4_console")]

@@ -7,7 +7,10 @@ namespace Jogo25D.Effects
         public float Duration { get; set; }
         public float Elapsed { get; private set; }
         public bool Expired { get; private set; }
+        public bool RemoveInOnUnequip { get; private set; }
         public bool Infinite { get; set; }
+        public bool ApplyToOwner { get; set; }
+        public bool ApplyToTarget { get; set; }
 
         public void Tick(Player player, float delta)
         {
@@ -39,11 +42,11 @@ namespace Jogo25D.Effects
             return (EffectDefinition)MemberwiseClone();
         }
 
-        public virtual void Apply(Player player, float delta)
+        protected virtual void Apply(Player player, float delta)
         {
         }
 
-        public virtual void OnFinished(Player player, float delta)
+        protected virtual void OnFinished(Player player, float delta)
         {
         }
     }

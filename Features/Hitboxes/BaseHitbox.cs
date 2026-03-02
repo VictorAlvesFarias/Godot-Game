@@ -8,13 +8,13 @@ namespace Jogo25D.Hitboxes
 {
     public partial class BaseHitbox : Area2D
     {
-        public DamageInfo Damage { get; set; }
+        public List<DamageInfo> Damages { get; set; } = new();
         public List<EffectDefinition> Effects { get; set; } = new();
         public new Player Owner { get; set; }
 
-        public virtual void Initialize(DamageInfo damage, List<EffectDefinition> effects, Player owner)
+        public virtual void Initialize(List<DamageInfo> damages, List<EffectDefinition> effects, Player owner)
         {
-            Damage  = damage;
+            Damages = damages ?? new();
             Effects = new List<EffectDefinition>(effects ?? new());
             Owner   = owner;
 
@@ -30,7 +30,10 @@ namespace Jogo25D.Hitboxes
 
             if (body is Player target)
             {
-                target.ReceiveDamage(Damage);
+                foreach (var damage in Damages)
+                {
+                    target.ReceiveDamage(damage);
+                }
 
                 foreach (var effect in Effects)
                 {

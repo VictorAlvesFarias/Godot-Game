@@ -14,6 +14,7 @@ namespace Jogo25D.Items
         public float CooldownRemaining { get; set; }
         public List<BaseProperty> Properties { get; set; } = new();
         public List<EffectDefinition> OnHitEffects { get; set; } = new();
+        public List<EffectDefinition> OnUseEffects { get; set; } = new();
 
         #endregion
 
@@ -49,6 +50,7 @@ namespace Jogo25D.Items
             CooldownRemaining = 0;
             Properties.Clear();
             OnHitEffects.Clear();
+            OnUseEffects.Clear();
         }
 
         #endregion

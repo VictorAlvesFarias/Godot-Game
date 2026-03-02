@@ -9,7 +9,7 @@ namespace Jogo25D.Effects
 
         private float _accumulator;
 
-        public override void Apply(Player player, float delta)
+        protected override void Apply(Player player, float delta)
         {
             _accumulator += delta;
 

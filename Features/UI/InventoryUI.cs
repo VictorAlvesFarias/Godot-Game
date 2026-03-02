@@ -217,7 +217,12 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (Input.IsActionJustPressed("toggle_inventory"))
+			if (InputManager.Instance != null && InputManager.Instance.IsBlocked)
+			{
+				return;
+			}
+
+			if (@event.IsActionPressed("toggle_inventory") && !@event.IsEcho())
 			{
 				if (isDragging)
 				{

@@ -23,7 +23,7 @@ namespace Jogo25D.Items
             var bowStartingScene   = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn");
             var fireballScene      = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn");
 
-            var swordStarting = new ItemDefinition
+            var swordStarting = new DefaultWeaponDefinition
             {
                 Id          = "sword_starting",
                 Name        = "Sword",
@@ -32,14 +32,14 @@ namespace Jogo25D.Items
                 Cooldown    = 0.5f,
                 HitboxScene = swordStartingScene,
                 Properties  = new List<BaseProperty>
-                {
+                {   
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical },
                     new WeaponProperty { AttackRange = 80f, KnockbackForce = 200f },
                     new ChargesProperty { InfiniteCharges = true }
                 }
             };
 
-            var bowStarting = new ItemDefinition
+            var bowStarting = new DefaultWeaponDefinition
             {
                 Id          = "bow_starting",
                 Name        = "Arco",
@@ -55,7 +55,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var fireballStarting = new ItemDefinition
+            var fireballStarting = new DefaultWeaponDefinition
             {
                 Id          = "bow_starting2",
                 Name        = "Arco2",
@@ -71,7 +71,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var arrow = new ItemDefinition
+            var arrow = new PotionDefinition
             {
                 Id           = "arrow",
                 Name         = "Flecha",
@@ -85,7 +85,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var swordBasic = new ItemDefinition
+            var swordBasic = new DefaultWeaponDefinition
             {
                 Id          = "sword_basic",
                 Name        = "Espada Básica",
@@ -101,7 +101,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var bowBasic = new ItemDefinition
+            var bowBasic = new DefaultWeaponDefinition
             {
                 Id          = "bow_basic",
                 Name        = "Arco Básico",
@@ -116,14 +116,14 @@ namespace Jogo25D.Items
                 }
             };
 
-            var poisonFlask = new ItemDefinition
+            var poisonFlask = new PotionDefinition
             {
                 Id           = "poison_flask",
                 Name         = "Frasco de Veneno",
                 Type         = ItemType.Consumable,
                 Stackable    = true,
                 MaxStackSize = 10,
-                OnHitEffects = new List<EffectDefinition>
+                OnUseEffects = new List<EffectDefinition>
                 {
                     new PoisonEffect { DamagePerSecond = 5, Duration = 5f }
                 }
@@ -168,6 +168,16 @@ namespace Jogo25D.Items
             }
 
             return _items.TryGetValue(id, out definition);
+        }
+
+        public static IEnumerable<string> GetAllIds()
+        {
+            if (!_initialized)
+            {
+                Initialize();
+            }
+
+            return _items.Keys;
         }
     }
 }

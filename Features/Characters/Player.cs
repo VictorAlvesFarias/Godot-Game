@@ -25,6 +25,7 @@ namespace Jogo25D.Characters
 		public int MaxHealth { get; set; } = 50;
 		public int CurrentHealth { get; set; } = 50;
         public bool CanUpdateMovement { get; set; } = true;
+        public bool ReloadPending { get; set; } = true;
 
         #endregion
 
@@ -36,12 +37,27 @@ namespace Jogo25D.Characters
 		public Inventory Inventory { get; private set; }
 		public ItemRechargeableInstance EquippedInstance { get; private set; }
 		public AimIndicator AimIndicator { get; private set; }
-		public InputControls Controls { get; set; }
         private WorldManager NetworkManager { get; set; }
         public Vector2 TargetPosition { get; set; }
 		public long PeerId { get; set; } = 1;
         public List<EffectDefinition> Effects { get; private set; } = new();
         public List<BaseProperty> Buffs { get; private set; } = new();
+
+		#endregion
+
+		#region Inputs
+
+		public bool IsOwner { get; private set; }
+		public float InputX { get; private set; }
+		public float InputY { get; private set; }
+		public bool InputJump { get; private set; }
+		public bool InputDash { get; private set; }
+		public bool InputAttack { get; private set; }
+		public bool InputReload { get; private set; }
+		public bool InputAbility { get; private set; }
+		public bool InputScrollNext { get; private set; }
+		public bool InputScrollPrev { get; private set; }
+		public Vector2 MousePosition { get; private set; }
 
 		#endregion
 
@@ -59,7 +75,6 @@ namespace Jogo25D.Characters
 		{
 			AddToGroup("players");
 
-			Controls = new InputControls();
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
             Sprite = GetNodeOrNull<Line2D>("Sprite/Border");
             NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
@@ -75,7 +90,7 @@ namespace Jogo25D.Characters
 			UnlockedAbilities.Add(DashAction);
 			UnlockedAbilities.Add(FireballAction);
 
-            Controls.IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
+            IsOwner = GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
 			Inventory = GetNodeOrNull<Inventory>("Inventory");;
 
 			if (Inventory == null)
@@ -91,10 +106,7 @@ namespace Jogo25D.Characters
 
 			Inventory.ItemEquipped += OnItemEquipped;
 
-			InitializeStartingWeapons();
-
 			AimIndicator = new AimIndicator(this);
-
 		}
 
 		public override void _ExitTree()
@@ -122,27 +134,28 @@ namespace Jogo25D.Characters
                 GlobalPosition = TargetPosition;
             }
 
-            // Tick active effects (V2)
-            for (int i = Effects.Count - 1; i >= 0; i--)
-            {
-                var effect = Effects[i];
+			foreach (var effect in Effects.Where(e => e.ApplyToOwner))
+			{
                 effect.Tick(this, (float)delta);
+
                 if (effect.Expired)
                 {
-                    Effects.RemoveAt(i);
+                    Effects.Remove(effect);
                 }
             }
+
+            HandleInput();
 
             DashAction.Update((float)delta);
 			FireballAction.Update((float)delta);
 			EquippedInstance?.Update((float)delta);
 
-			HandleInput();
+			HandleHotbarScroll();
 			HandleMovement((float)delta);
 			HandleAttack((float)delta);
 			HandleReload((float)delta);
 			
-			AimIndicator.Update(Controls.MousePosition, GlobalPosition);
+			AimIndicator.Update(MousePosition, GlobalPosition);
 
 			if (DamageEffectTimer > 0)
 			{
@@ -162,19 +175,19 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void SetServerInput(float x, float y, bool jump, bool dash, bool attack, bool reload, bool inputAbility)
 		{
-			Controls.InputX = x;
-			Controls.InputY = y;
-			Controls.InputJump = jump;
-			Controls.InputDash = dash;
-			Controls.InputAttack = attack;
-			Controls.InputReload = reload;
-			Controls.InputAbility = inputAbility;
+			InputX       = x;
+			InputY       = y;
+			InputJump    = jump;
+			InputDash    = dash;
+			InputAttack  = attack;
+			InputReload  = reload;
+			InputAbility = inputAbility;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void SetServerMousePosition(Vector2 pos)
 		{
-			Controls.MousePosition = pos;
+			MousePosition = pos;
 		}
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
@@ -212,8 +225,8 @@ namespace Jogo25D.Characters
 
 		public void ReceiveDamage(DamageInfo damage)
 		{
-			using var enumerator = Buffs.GetEnumerator();
-			float resistanceFactor = 0f;
+			var resistanceFactor = 0f;
+
 			foreach (var buff in Buffs)
 			{
 				if (buff is DamageResistenceProperty r && r.DamageType == damage.Type)
@@ -221,7 +234,10 @@ namespace Jogo25D.Characters
 					resistanceFactor = System.Math.Max(resistanceFactor, r.ResistanceFactor);
 				}
 			}
-			int finalDamage = (int)(damage.Amount * (1f - resistanceFactor));
+
+			var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
+			var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor));
+			
 			TakeDamage(finalDamage);
 		}
 
@@ -231,6 +247,7 @@ namespace Jogo25D.Characters
 			{
 				return;
 			}
+
 			Effects.Add(definition.Clone());
 		}
 
@@ -240,21 +257,26 @@ namespace Jogo25D.Characters
 
 		private void HandleInput()
 		{
-			if (!Controls.IsOwner)
+			if (!IsOwner)
 			{
 				return;
 			}
 
-			Controls.InputX = Input.GetAxis("move_left", "move_right");
-			Controls.InputY = Input.GetAxis("move_up", "move_down");
-			Controls.InputJump = Input.IsActionJustPressed("move_up");
-			Controls.InputDash = Input.IsActionJustPressed("dash");
-			Controls.InputAttack = Input.IsActionPressed("shoot");
-			Controls.InputReload = Input.IsActionJustPressed("reload");
-			Controls.InputAbility = Input.IsActionJustPressed("ability");
+			var im = InputManager.Instance;
 
-			Rpc(nameof(SetServerInput), Controls.InputX, Controls.InputY, Controls.InputJump, Controls.InputDash, Controls.InputAttack, Controls.InputReload, Controls.InputAbility);
-			Rpc(nameof(SetServerMousePosition), GetGlobalMousePosition());
+			InputX       = im.MoveX;
+			InputY       = im.MoveY;
+			InputJump    = im.Jump;
+			InputDash    = im.Dash;
+			InputAttack  = im.Attack;
+			InputReload  = im.Reload;
+			InputAbility   = im.Ability;
+			InputScrollNext = im.ScrollNext;
+			InputScrollPrev = im.ScrollPrev;
+			MousePosition  = GetGlobalMousePosition();
+
+			Rpc(nameof(SetServerInput), InputX, InputY, InputJump, InputDash, InputAttack, InputReload, InputAbility);
+			Rpc(nameof(SetServerMousePosition), MousePosition);
 		}
 
 		private void HandleAttack(float delta)
@@ -264,16 +286,39 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			if (!Controls.InputAttack)
+			if (!InputAttack)
 			{
 				return;
 			}
 
 			GD.Print($"[HandleAttack] cooldown={EquippedInstance.CooldownRemaining:F2} reloading={EquippedInstance.IsReloading} charges={EquippedInstance.CurrentCharges}");
 
-			var direction = (Controls.MousePosition - GlobalPosition).Normalized();
+			EquippedInstance.Definition.Use(this, EquippedInstance);
+		}
 
-			EquippedInstance.Definition.Attack(this, EquippedInstance, direction);
+		private void HandleHotbarScroll()
+		{
+			if (!IsOwner || Inventory == null) return;
+
+			int dir = 0;
+			if (InputScrollNext) dir = 1;
+			else if (InputScrollPrev) dir = -1;
+			if (dir == 0) return;
+
+			const int HotbarSize = 8;
+			int current = Inventory.GetEquippedSlotIndex();
+			if (current < 0) current = 0;
+
+			for (int i = 1; i <= HotbarSize; i++)
+			{
+				int next = ((current + dir * i) % HotbarSize + HotbarSize) % HotbarSize;
+				var slot = Inventory.GetSlot(next);
+				if (slot != null && !slot.IsEmpty())
+				{
+					Inventory.EquipItem(next);
+					return;
+				}
+			}
 		}
 
 		private void HandleReload(float delta)
@@ -291,18 +336,18 @@ namespace Jogo25D.Characters
 
 			if (!EquippedInstance.IsReloading &&
 				EquippedInstance.CurrentCharges < chargesProp.MaxCharges &&
-				_reloadPending)
+				ReloadPending)
 			{
-				_reloadPending = false;
+				ReloadPending = false;
 				int needed = chargesProp.MaxCharges - EquippedInstance.CurrentCharges;
 				int taken  = Inventory?.RemoveAmmoByChargeType(chargesProp.ChargeType, needed) ?? 0;
 				EquippedInstance.FinishReload(taken);
 			}
 
-			if (Controls.InputReload && EquippedInstance.CanReload())
+			if (InputReload && EquippedInstance.CanReload())
 			{
 				EquippedInstance.StartReload();
-				_reloadPending = true;
+				ReloadPending = true;
 			}
 		}
 
@@ -322,21 +367,23 @@ namespace Jogo25D.Characters
 				v.Y += Gravity * delta;
 			}
 
-			if (Controls.InputJump && IsOnFloor())
+            if (InputJump && IsOnFloor())
 			{
 				v.Y = JumpVelocity;
-			}
 
-			if (Controls.InputX != 0)
+                GD.Print("[HandleMovement] Pulando");
+            }
+
+            if (InputX != 0)
 			{
-				v.X = Controls.InputX * Speed;
-			}
-			else
+				v.X = InputX * Speed;
+            }
+            else
 			{
 				v.X = Mathf.MoveToward(v.X, 0, Speed);
-			}
+            }
 
-			Velocity = v;
+            Velocity = v;
 
 			MoveAndSlide();
 		}
@@ -349,35 +396,25 @@ namespace Jogo25D.Characters
 			}
 
 			var slot = Inventory?.GetSlot(slotIndex);
+
 			if (slot == null || slot.IsEmpty())
 			{
 				return;
 			}
 
 			EquippedInstance = slot as ItemRechargeableInstance;
+
 			if (EquippedInstance == null)
 			{
 				return;
 			}
 
 			var chargesProp = slot.Properties.OfType<ChargesProperty>().FirstOrDefault();
+
 			EquippedInstance.CurrentCharges = chargesProp != null ? chargesProp.MaxCharges : 0;
-			_reloadPending = false;
+			ReloadPending = false;
 
 			EquippedInstance.Definition.OnEquip(this, EquippedInstance);
-		}
-
-		private bool _reloadPending;
-
-		private void InitializeStartingWeapons()
-		{
-			ItemDB.Initialize();
-
-			Inventory.AddItem(ItemDB.Get("sword_starting"), 1);
-			Inventory.AddItem(ItemDB.Get("bow_starting"), 1);
-			Inventory.AddItem(ItemDB.Get("bow_starting2"), 1);
-			Inventory.AddItem(ItemDB.Get("arrow"), 1000);
-			Inventory.EquipItem(0);
 		}
 
 		#endregion
