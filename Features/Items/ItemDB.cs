@@ -19,18 +19,15 @@ namespace Jogo25D.Items
 
             _items = new Dictionary<string, ItemDefinition>();
 
-            var swordStartingScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn");
-            var bowStartingScene   = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn");
-            var fireballScene      = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn");
-
-            var swordStarting = new DefaultWeaponDefinition
+            var swordStarting = new WeaponDefinition
             {
                 Id          = "sword_starting",
                 Name        = "Sword",
                 Type        = ItemType.WeaponMelee,
                 Description = "Uma espada básica para combate corpo a corpo",
                 Cooldown    = 0.5f,
-                HitboxScene = swordStartingScene,
+                Icon        = ResourceLoader.Exists("res://Assets/Icons/sword.png") ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
                 Properties  = new List<BaseProperty>
                 {   
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -39,14 +36,15 @@ namespace Jogo25D.Items
                 }
             };
 
-            var bowStarting = new DefaultWeaponDefinition
+            var bowStarting = new WeaponDefinition
             {
                 Id          = "bow_starting",
                 Name        = "Arco",
                 Type        = ItemType.WeaponRanged,
                 Description = "Um arco para ataques à distância",
                 Cooldown    = 0.8f,
-                HitboxScene = bowStartingScene,
+                Icon        = ResourceLoader.Exists("res://Assets/Icons/bow.png") ? GD.Load<Texture2D>("res://Assets/Icons/bow.png") : null,
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                 Properties  = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 10, DamageType = DamageType.Physical },
@@ -55,14 +53,15 @@ namespace Jogo25D.Items
                 }
             };
 
-            var fireballStarting = new DefaultWeaponDefinition
+            var fireballStarting = new WeaponDefinition
             {
                 Id          = "bow_starting2",
                 Name        = "Arco2",
                 Type        = ItemType.WeaponRanged,
                 Description = "Um arco melhorado para ataques à distância",
                 Cooldown    = 0.01f,
-                HitboxScene = fireballScene,
+                Icon        = ResourceLoader.Exists("res://Assets/Icons/fireball.png") ? GD.Load<Texture2D>("res://Assets/Icons/fireball.png") : null,
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn"),
                 Properties  = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 5, DamageType = DamageType.Fire },
@@ -71,7 +70,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var arrow = new PotionDefinition
+            var arrow = new ConsumableDefinition
             {
                 Id           = "arrow",
                 Name         = "Flecha",
@@ -79,19 +78,21 @@ namespace Jogo25D.Items
                 Description  = "Munição para arcos",
                 Stackable    = true,
                 MaxStackSize = 9999,
+                Icon         = ResourceLoader.Exists("res://Assets/Icons/arrow.png") ? GD.Load<Texture2D>("res://Assets/Icons/arrow.png") : null,
                 Properties   = new List<BaseProperty>
                 {
                     new ChargesProperty { ChargeType = "arrow" }
                 }
             };
 
-            var swordBasic = new DefaultWeaponDefinition
+            var swordBasic = new WeaponDefinition
             {
                 Id          = "sword_basic",
                 Name        = "Espada Básica",
                 Type        = ItemType.WeaponMelee,
                 Cooldown    = 0.6f,
-                HitboxScene = swordStartingScene,
+                Icon        = ResourceLoader.Exists("res://Assets/Icons/sword.png") ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
                 Properties  = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -101,13 +102,14 @@ namespace Jogo25D.Items
                 }
             };
 
-            var bowBasic = new DefaultWeaponDefinition
+            var bowBasic = new WeaponDefinition
             {
                 Id          = "bow_basic",
                 Name        = "Arco Básico",
                 Type        = ItemType.WeaponRanged,
                 Cooldown    = 0.8f,
-                HitboxScene = bowStartingScene,
+                Icon        = ResourceLoader.Exists("res://Assets/Icons/bow.png") ? GD.Load<Texture2D>("res://Assets/Icons/bow.png") : null,
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                 Properties  = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 10, DamageType = DamageType.Physical },
@@ -116,7 +118,7 @@ namespace Jogo25D.Items
                 }
             };
 
-            var poisonFlask = new PotionDefinition
+            var poisonFlask = new ConsumableDefinition
             {
                 Id           = "poison_flask",
                 Name         = "Frasco de Veneno",
@@ -125,7 +127,20 @@ namespace Jogo25D.Items
                 MaxStackSize = 10,
                 OnUseEffects = new List<EffectDefinition>
                 {
-                    new PoisonEffect { DamagePerSecond = 5, Duration = 5f }
+                    new DamageEffect
+                    {
+                        Damages = new List<DamageInfo>() 
+                        { 
+                            new DamageInfo()
+                            { 
+                                Type = DamageType.Physical,
+                                Amount = 5,
+                                SourcePeerId = -1,
+                                CritChance = 0.2f,
+                                CritDamage = 0.5f
+                            }
+                        }
+                    }
                 }
             };
 

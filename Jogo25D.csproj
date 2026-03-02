@@ -24,6 +24,11 @@
     <EmbeddedResource Remove="Scenes\Levels\**" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Icons\arrow.png" />
+    <Content Include="Assets\Icons\dash.png" />
+    <Content Include="Assets\Icons\fireball.png" />
+    <Content Include="Assets\Icons\bow.png" />
+    <Content Include="Assets\Icons\sword.png" />
     <Content Include="Assets\Textures\Screenshot 2026-02-21 014440.png" />
     <Content Include="Assets\Textures\Screenshot 2026-02-21 014543.png" />
     <Content Include="Assets\Textures\Untitled.png" />

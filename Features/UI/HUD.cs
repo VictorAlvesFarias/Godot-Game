@@ -265,7 +265,7 @@ namespace Jogo25D.UI
 			}
 
 			var instance = localPlayer.EquippedInstance;
-			if (instance == null || instance.IsEmpty() || instance.Definition is not DefaultWeaponDefinition)
+			if (instance == null || instance.IsEmpty() || instance.Definition is not WeaponDefinition)
 			{
 				weaponLabel.Text = "Arma: Nenhuma";
 				return;

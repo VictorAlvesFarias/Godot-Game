@@ -7,7 +7,7 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.Items
 {
-    public class DefaultWeaponDefinition : ItemDefinition
+    public class WeaponDefinition : ItemDefinition
     {
         public override void Use(Player player, ItemInstance instance)
         {

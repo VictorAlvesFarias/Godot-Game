@@ -3,7 +3,7 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.Items
 {
-    public class PotionDefinition : ItemDefinition
+    public class ConsumableDefinition : ItemDefinition
     {
         public override void Use(Player player, ItemInstance instance)
         {
