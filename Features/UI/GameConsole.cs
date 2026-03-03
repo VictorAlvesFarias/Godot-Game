@@ -21,6 +21,8 @@ namespace Jogo25D.UI
         private int _historyIndex = -1;
         private string _savedInput = "";
 
+        private int _suggestionIndex = 0;
+
         private class ConsoleCommand
         {
             public string Name;
@@ -70,7 +72,21 @@ namespace Jogo25D.UI
 
             if (key.Keycode == Key.Tab)
             {
-                ApplyFirstSuggestion();
+                ApplySelectedSuggestion();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+
+            if (key.Keycode == Key.Right && _suggestionsPanel.Visible)
+            {
+                NavigateSuggestions(1);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+
+            if (key.Keycode == Key.Left && _suggestionsPanel.Visible)
+            {
+                NavigateSuggestions(-1);
                 GetViewport().SetInputAsHandled();
                 return;
             }
@@ -184,8 +200,10 @@ namespace Jogo25D.UI
                 return;
             }
 
+            _suggestionIndex = 0;
             _suggestionsPanel.Visible = true;
 
+            var newButtons = new List<Button>();
             foreach (string s in suggestions.Take(8))
             {
                 var btn    = new Button();
@@ -197,7 +215,41 @@ namespace Jogo25D.UI
                 string captured = s;
                 btn.Pressed += () => ApplySuggestion(captured, _input.Text);
                 _suggestionsBar.AddChild(btn);
+                newButtons.Add(btn);
             }
+
+            UpdateSuggestionHighlight(newButtons);
+        }
+
+        private void NavigateSuggestions(int dir)
+        {
+            var buttons = _suggestionsBar.GetChildren().OfType<Button>().ToList();
+            if (buttons.Count == 0) return;
+
+            // Cycle through -1 (none selected) and 0..Count-1
+            _suggestionIndex = ((_suggestionIndex + dir + buttons.Count + 2) % (buttons.Count + 1)) - 1;
+            UpdateSuggestionHighlight(buttons);
+        }
+
+        private void UpdateSuggestionHighlight(List<Button> buttons = null)
+        {
+            buttons ??= _suggestionsBar.GetChildren().OfType<Button>().ToList();
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                bool selected = i == _suggestionIndex;
+                buttons[i].AddThemeColorOverride("font_color",
+                    selected ? new Color(1f, 1f, 0.5f) : new Color(0.6f, 0.85f, 1f));
+                buttons[i].AddThemeStyleboxOverride("normal",
+                    selected ? MakeHighlightStylebox() : new StyleBoxEmpty());
+            }
+        }
+
+        private static StyleBoxFlat MakeHighlightStylebox()
+        {
+            var sb = new StyleBoxFlat();
+            sb.BgColor = new Color(0.2f, 0.4f, 0.6f, 0.6f);
+            sb.SetCornerRadiusAll(3);
+            return sb;
         }
 
         private List<string> ComputeSuggestions(string text)
@@ -223,15 +275,14 @@ namespace Jogo25D.UI
             return cmd.GetCompletions(partial);
         }
 
-        private void ApplyFirstSuggestion()
+        private void ApplySelectedSuggestion()
         {
-            var first = _suggestionsBar.GetChildren().OfType<Button>().FirstOrDefault();
-            if (first == null)
-            {
-                return;
-            }
+            var buttons = _suggestionsBar.GetChildren().OfType<Button>().ToList();
+            if (buttons.Count == 0) return;
 
-            ApplySuggestion(first.Text, _input.Text);
+            int idx = _suggestionIndex >= 0 ? _suggestionIndex : 0;
+            if (idx < buttons.Count)
+                ApplySuggestion(buttons[idx].Text, _input.Text);
         }
 
         private void ApplySuggestion(string suggestion, string currentText)
@@ -244,8 +295,12 @@ namespace Jogo25D.UI
             }
             else
             {
-                string prefix = string.Join(" ", parts.SkipLast(1)) + " ";
-                _input.Text   = prefix + suggestion + " ";
+                // If text ends with space we are completing a new token — keep all existing words.
+                // If not, the last word is a partial token being replaced.
+                string prefix = currentText.EndsWith(' ')
+                    ? string.Join(" ", parts) + " "
+                    : string.Join(" ", parts.SkipLast(1)) + " ";
+                _input.Text = prefix + suggestion + " ";
             }
 
             _input.CaretColumn = _input.Text.Length;

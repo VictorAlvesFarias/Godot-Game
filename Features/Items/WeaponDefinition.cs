@@ -37,7 +37,6 @@ namespace Jogo25D.Items
             var weapon  = instance.Properties.OfType<WeaponProperty>().DefaultIfEmpty(new WeaponProperty()).First();
             var charges = instance.Properties.OfType<ChargesProperty>().DefaultIfEmpty(new ChargesProperty()).First();
             var crit    = instance.Properties.OfType<CritProperty>().DefaultIfEmpty(new CritProperty()).First();
-
             var damages = damageProps.ConvertAll(d => new DamageInfo
             {
                 Amount       = d.DamageAmount,
