@@ -1,6 +1,5 @@
 using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
@@ -23,15 +22,15 @@ namespace Jogo25D.UI
 		{
 			Visible = false;
 		
-			resetButton = GetNode<Button>(NodePaths.PauseMenu.ResetButton);
-			resumeButton = GetNode<Button>(NodePaths.PauseMenu.ResumeButton);
+			resetButton = GetNode<Button>("Panel/VBoxContainer/ResetButton");
+			resumeButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ResumeButton");
 			tradeDimension = GetNode<Button>("Panel/VBoxContainer/TradeDimension");
-			exitButton = GetNode<Button>(NodePaths.PauseMenu.ExitButton);
-			hostButton = GetNode<Button>(NodePaths.PauseMenu.HostButton);
-			connectButton = GetNode<Button>(NodePaths.PauseMenu.ConnectButton);
-			portInput = GetNode<LineEdit>(NodePaths.PauseMenu.PortInput);
-			addressInput = GetNode<LineEdit>(NodePaths.PauseMenu.AddressInput);
-			statusLabel = GetNode<Label>(NodePaths.PauseMenu.StatusLabel);
+			exitButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ExitButton");
+			hostButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/HostButton");
+			connectButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ConnectButton");
+			portInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/PortInput");
+			addressInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/AddressInput");
+			statusLabel = GetNode<Label>("Panel/VBoxContainer/NetworkContainer/StatusLabel");
 			networkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 		
 			resetButton.Pressed += OnResetPressed;

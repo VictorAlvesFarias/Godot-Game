@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using Jogo25D.Systems;
 using Jogo25D.Items;
-using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
@@ -50,11 +49,11 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			mainControl = GetNode<Control>(NodePaths.InventoryUI.Root);
-			gridContainer = GetNode<GridContainer>(NodePaths.InventoryUI.GridContainer);
+			mainControl = GetNode<Control>("CenterContainer");
+			gridContainer = GetNode<GridContainer>("CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer");
 
-			contextMenu = GetNode<Panel>(NodePaths.InventoryUI.ContextMenuPanel);
-			contextMenuContainer = GetNode<VBoxContainer>(NodePaths.InventoryUI.ContextMenuVBox);
+			contextMenu = GetNode<Panel>("ContextMenu");
+			contextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
 
 			CreateDragPreview();
 
@@ -81,7 +80,7 @@ namespace Jogo25D.UI
 			dragPreview.AddThemeStyleboxOverride("panel", styleBox);
 
 			var iconRect = new TextureRect();
-			iconRect.Name = NodePaths.InventoryUI.DragPreviewIcon;
+			iconRect.Name = "Icon";
 			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
 			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -153,11 +152,11 @@ namespace Jogo25D.UI
 				var existingSlot = gridContainer.GetChild<Panel>(0);
 				slots[0] = existingSlot;
 
-				var margin = existingSlot.GetNode<MarginContainer>(NodePaths.InventoryUI.SlotMarginContainer);
-				var center = margin.GetNode<CenterContainer>(NodePaths.InventoryUI.SlotCenterContainer);
-				iconRects[0] = center.GetNode<TextureRect>(NodePaths.InventoryUI.SlotIcon);
-				nameLabels[0] = center.GetNode<Label>(NodePaths.InventoryUI.SlotNameLabel);
-				quantityLabels[0] = existingSlot.GetNode<Label>(NodePaths.InventoryUI.SlotQuantityLabel);
+				var margin = existingSlot.GetNode<MarginContainer>("MarginContainer");
+				var center = margin.GetNode<CenterContainer>("CenterContainer");
+				iconRects[0] = center.GetNode<TextureRect>("IconRect");
+				nameLabels[0] = center.GetNode<Label>("NameLabel");
+				quantityLabels[0] = existingSlot.GetNode<Label>("QuantityLabel");
 
 				int slotIndex = 0;
 				existingSlot.GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
@@ -323,7 +322,7 @@ namespace Jogo25D.UI
 
 			if (dragPreview != null)
 			{
-				var iconRect = dragPreview.GetNode<TextureRect>(NodePaths.InventoryUI.DragPreviewIcon);
+				var iconRect = dragPreview.GetNode<TextureRect>("Icon");
 				iconRect.Texture = slot.Definition?.Icon;
 
 				dragOffset = new Vector2(-32, -32);

@@ -7,7 +7,6 @@ using Jogo25D.Systems;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.Scripts.Actions;
-using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
@@ -42,12 +41,12 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			fpsLabel = GetNode<Label>(NodePaths.Hud.FpsLabel);
-			healthBar = GetNode<ProgressBar>(NodePaths.Hud.HealthBar);
-			healthBarLabel = GetNode<Label>(NodePaths.Hud.HealthBarLabel);
-			weaponLabel = GetNode<Label>(NodePaths.Hud.EquippedWeaponLabel);
-			abilitiesContainer = GetNode<HBoxContainer>(NodePaths.Hud.AbilitiesContainer);
-			minimap = GetNode<Minimap>(NodePaths.Hud.Minimap);
+			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
+			healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
+			healthBarLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthBar/HealthBarLabel");
+			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
+			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
+			minimap = GetNode<Minimap>("MarginContainer/MinimapPanel/Minimap");
 
 			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
 			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
@@ -329,25 +328,25 @@ namespace Jogo25D.UI
 					var child = abilitiesContainer.GetChild(i);
 					if (child is VBoxContainer vbox)
 					{
-						slot = vbox.GetNodeOrNull<Panel>(NodePaths.Hud.AbilityPanelName);
+						slot = vbox.GetNodeOrNull<Panel>("AbilityPanel");
 						if (slot == null)
 							slot = vbox.GetChild<Panel>(0);
-						fillBar = slot.GetNodeOrNull<ProgressBar>(NodePaths.Hud.AbilityCooldownFillName);
-						timerLabel = slot.GetNodeOrNull<Label>(NodePaths.Hud.AbilityTimerLabelName);
-						nameLabel = vbox.GetNodeOrNull<Label>(NodePaths.Hud.AbilityNameLabelName);
+						fillBar = slot.GetNodeOrNull<ProgressBar>("CooldownFill");
+						timerLabel = slot.GetNodeOrNull<Label>("TimerLabel");
+						nameLabel = vbox.GetNodeOrNull<Label>("AbilityNameLabel");
 						if (nameLabel == null)
 						{
 							nameLabel = CreateAbilityNameLabel();
-							nameLabel.Name = NodePaths.Hud.AbilityNameLabelName;
+							nameLabel.Name = "AbilityNameLabel";
 							vbox.AddChild(nameLabel);
 						}
 					}
 					else if (child is Panel panel)
 					{
 						slot = panel;
-						slot.Name = NodePaths.Hud.AbilityPanelName;
-						fillBar = panel.GetNodeOrNull<ProgressBar>(NodePaths.Hud.AbilityCooldownFillName);
-						timerLabel = panel.GetNodeOrNull<Label>(NodePaths.Hud.AbilityTimerLabelName);
+						slot.Name = "AbilityPanel";
+						fillBar = panel.GetNodeOrNull<ProgressBar>("CooldownFill");
+						timerLabel = panel.GetNodeOrNull<Label>("TimerLabel");
 						var wrapper = new VBoxContainer();
 						abilitiesContainer.RemoveChild(panel);
 						wrapper.AddChild(panel);
@@ -408,7 +407,7 @@ namespace Jogo25D.UI
 		private AbilitySlotViews CreateAbilitySlot()
 		{
 			var panel = new Panel();
-			panel.Name = NodePaths.Hud.AbilityPanelName;
+			panel.Name = "AbilityPanel";
 			panel.CustomMinimumSize = new Vector2(48, 48);
 
 			var styleBg = new StyleBoxFlat();
@@ -419,7 +418,7 @@ namespace Jogo25D.UI
 			panel.AddThemeStyleboxOverride("panel", styleBg);
 
 			var fill = new ProgressBar();
-			fill.Name = NodePaths.Hud.AbilityCooldownFillName;
+			fill.Name = "CooldownFill";
 			fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 			fill.OffsetLeft = 4;
 			fill.OffsetTop = 4;
@@ -441,7 +440,7 @@ namespace Jogo25D.UI
 			panel.AddChild(timerLabel);
 
 			var nameLabel = CreateAbilityNameLabel();
-			nameLabel.Name = NodePaths.Hud.AbilityNameLabelName;
+			nameLabel.Name = "AbilityNameLabel";
 
 			var wrapper = new VBoxContainer();
 			wrapper.AddChild(panel);
@@ -465,7 +464,7 @@ namespace Jogo25D.UI
 		private Label CreateTimerLabel()
 		{
 			var label = new Label();
-			label.Name = NodePaths.Hud.AbilityTimerLabelName;
+			label.Name = "TimerLabel";
 			label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 			label.HorizontalAlignment = HorizontalAlignment.Center;
 			label.VerticalAlignment = VerticalAlignment.Center;
