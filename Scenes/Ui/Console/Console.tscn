@@ -1,11 +1,11 @@
-[gd_scene format=3 uid="uid://console_scene_v1"]
+[gd_scene format=3 uid="uid://b1sl0ecwfts7n"]
 
-[ext_resource type="Script" path="res://Features/UI/GameConsole.cs" id="1_console"]
+[ext_resource type="Script" uid="uid://cib8rr573d3jq" path="res://Features/UI/GameConsole.cs" id="1_console"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Background"]
 bg_color = Color(0.06, 0.06, 0.1, 0.93)
 border_width_top = 2
-border_color = Color(0.35, 0.55, 1.0, 0.7)
+border_color = Color(0.35, 0.55, 1, 0.7)
 
 [sub_resource type="StyleBoxFlat" id="Style_Suggestions"]
 bg_color = Color(0.1, 0.12, 0.2, 0.97)
@@ -13,24 +13,27 @@ border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.35, 0.55, 1.0, 0.45)
+border_color = Color(0.35, 0.55, 1, 0.45)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 
 [sub_resource type="StyleBoxFlat" id="Style_Input"]
-bg_color = Color(0.04, 0.04, 0.08, 1.0)
+bg_color = Color(0.04, 0.04, 0.08, 1)
+border_width_left = 1
 border_width_top = 1
-border_color = Color(0.35, 0.55, 1.0, 0.5)
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.55, 1, 0.5)
 
-[sub_resource type="StyleBoxEmpty" id="Style_InputFocus"]
+[sub_resource type="StyleBoxEmpty" id="Style_InputEmpty"]
 
-[node name="GameConsole" type="CanvasLayer"]
+[node name="GameConsole" type="CanvasLayer" unique_id=1342680249]
 layer = 15
 visible = false
 script = ExtResource("1_console")
 
-[node name="Background" type="Panel" parent="."]
-anchor_left = 0.0
+[node name="Background" type="Panel" parent="." unique_id=1858621020]
+anchors_preset = -1
 anchor_top = 0.45
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -38,7 +41,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_Background")
 
-[node name="Margin" type="MarginContainer" parent="Background"]
+[node name="Margin" type="MarginContainer" parent="Background" unique_id=1444312033]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -50,59 +53,129 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 6
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Background/Margin"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Background/Margin" unique_id=505028889]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 2
 
-[node name="History" type="RichTextLabel" parent="Background/Margin/VBoxContainer"]
+[node name="HistoryScroll" type="ScrollContainer" parent="Background/Margin/VBoxContainer" unique_id=1388833015]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-bbcode_enabled = true
-scroll_following = true
-selection_enabled = true
-theme_override_colors/default_color = Color(0.9, 0.9, 0.9, 1.0)
-theme_override_font_sizes/normal_font_size = 14
+horizontal_scroll_mode = 0
 
-[node name="SuggestionsPanel" type="Panel" parent="Background/Margin/VBoxContainer"]
+[node name="HistoryContainer" type="VBoxContainer" parent="Background/Margin/VBoxContainer/HistoryScroll" unique_id=2077533654]
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="Normal" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=138813300]
 visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Normal message."
+autowrap_mode = 3
+
+[node name="Echo" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=128928779]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.53, 0.53, 0.53, 1)
+theme_override_font_sizes/font_size = 14
+text = "Echo message."
+autowrap_mode = 3
+
+[node name="Info" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=164318808]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.53, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Info message."
+autowrap_mode = 3
+
+[node name="Error" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=1759670823]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "Error message."
+autowrap_mode = 3
+
+[node name="Success" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=747526947]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.53, 1, 0.53, 1)
+theme_override_font_sizes/font_size = 14
+text = "Success message."
+autowrap_mode = 3
+
+[node name="InputContainer" type="VBoxContainer" parent="Background/Margin/VBoxContainer" unique_id=1863997825]
+custom_minimum_size = Vector2(50, 10)
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="SuggestionsPanel" type="Panel" parent="Background/Margin/VBoxContainer/InputContainer" unique_id=2109626525]
 custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_vertical = 0
 theme_override_styles/panel = SubResource("Style_Suggestions")
 
-[node name="SuggestionsBar" type="HBoxContainer" parent="Background/Margin/VBoxContainer/SuggestionsPanel"]
+[node name="Margin" type="MarginContainer" parent="Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel" unique_id=2035632949]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_right = 4
+
+[node name="SuggestionsBar" type="HBoxContainer" parent="Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel/Margin" unique_id=1400316267]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 2
-offset_left = 4
-offset_right = -4
 
-[node name="InputRow" type="HBoxContainer" parent="Background/Margin/VBoxContainer"]
+[node name="InputPanel" type="Panel" parent="Background/Margin/VBoxContainer/InputContainer" unique_id=484220949]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_Input")
+
+[node name="Margin" type="MarginContainer" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel" unique_id=1345130076]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="InputRow" type="HBoxContainer" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel/Margin" unique_id=603376717]
 custom_minimum_size = Vector2(0, 30)
-theme_override_constants/separation = 6
-
-[node name="Prompt" type="Label" parent="Background/Margin/VBoxContainer/InputRow"]
-layout_mode = 2
-size_flags_vertical = 4
-text = ">"
-theme_override_colors/font_color = Color(0.4, 0.9, 0.4, 1.0)
-theme_override_font_sizes/font_size = 16
-
-[node name="Input" type="LineEdit" parent="Background/Margin/VBoxContainer/InputRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-placeholder_text = "Digite um comando... (Tab=autocomplete, Seta=historico)"
-theme_override_styles/normal = SubResource("Style_Input")
-theme_override_styles/focus = SubResource("Style_InputFocus")
-theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1.0)
-theme_override_colors/font_placeholder_color = Color(0.45, 0.45, 0.5, 1.0)
+theme_override_constants/separation = 6
+
+[node name="Prompt" type="Label" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel/Margin/InputRow" unique_id=848322140]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 16
+text = ">"
+
+[node name="Input" type="LineEdit" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel/Margin/InputRow" unique_id=260174765]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_placeholder_color = Color(0.45, 0.45, 0.5, 1)
 theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("Style_InputEmpty")
+theme_override_styles/focus = SubResource("Style_InputEmpty")
+placeholder_text = "Digite um comando... (Tab=autocomplete, Seta=historico)"
 caret_blink = true

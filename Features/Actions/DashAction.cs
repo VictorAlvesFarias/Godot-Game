@@ -1,6 +1,5 @@
 using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
 
 namespace Jogo25D.Scripts.Actions
 {

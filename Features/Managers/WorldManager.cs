@@ -1,7 +1,6 @@
 using Godot;
 using System;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
 using System.Linq;
 
 namespace Jogo25D.Systems
