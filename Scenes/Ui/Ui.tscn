@@ -1,20 +1,20 @@
-[gd_scene format=3 uid="uid://dilxh6c2tmjp"]
+[gd_scene format=3]
 
-[ext_resource type="PackedScene" uid="uid://d1112223334" path="res://Scenes/Ui/Pause/Pause.tscn" id="1_0nsdw"]
-[ext_resource type="Script" uid="uid://b0f6lamelbped" path="res://Features/UI/PauseMenuUI.cs" id="2_ebkin"]
-[ext_resource type="PackedScene" uid="uid://hud1234568aa" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
-[ext_resource type="PackedScene" uid="uid://dpjl5u30o6jtq" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Pause/Pause.tscn" id="1_0nsdw"]
+[ext_resource type="Script" path="res://Features/UI/Pause/View/PauseUI.cs" id="2_ebkin"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
-[node name="PauseMenu" parent="." unique_id=512637494 instance=ExtResource("1_0nsdw")]
+[node name="PauseUI" parent="." unique_id=512637494 instance=ExtResource("1_0nsdw")]
 layer = 8
 script = ExtResource("2_ebkin")
 
-[node name="HUD" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
+[node name="HudUI" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
 
-[node name="InventoryMenu" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
+[node name="InventoryUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
 layer = 4
 
-[node name="Console" parent="." unique_id=1263919536 instance=ExtResource("4_console")]
+[node name="ConsoleUI" parent="." unique_id=1263919536 instance=ExtResource("4_console")]

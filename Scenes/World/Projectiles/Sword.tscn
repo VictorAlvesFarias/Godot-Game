@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://dnn0xcgde4wg2"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://c3kv5acb6a46q" path="res://Features/Hitboxes/MeleeHitbox.cs" id="1_hp88e"]
-[ext_resource type="Texture2D" uid="uid://cx6wbcsj211pf" path="res://Assets/Textures/Untitled.png" id="2_xlbq4"]
+[ext_resource type="Script" path="res://Features/Word/Hitboxes/Definitions/MeleeHitbox.cs" id="1_hp88e"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Untitled.png" id="2_xlbq4"]
 
 [node name="Projectile" type="Area2D" unique_id=926702127]
 collision_layer = 2

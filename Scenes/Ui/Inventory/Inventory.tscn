@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://dpjl5u30o6jtq"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://hlyvh6plemv7" path="res://Features/UI/InventoryUI.cs" id="1"]
+[ext_resource type="Script" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
 
 
 [sub_resource type="StyleBoxFlat" id="Style_Inventory"]

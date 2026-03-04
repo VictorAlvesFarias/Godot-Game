@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://d1112223334"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://dcl01i721bqqa" path="res://Features/UI/HUD.cs" id="1"]
+[ext_resource type="Script" path="res://Features/UI/Hud/View/HudUI.cs" id="1"]
 
 [node name="PauseMenu" type="CanvasLayer" unique_id=512637494]
 process_mode = 3

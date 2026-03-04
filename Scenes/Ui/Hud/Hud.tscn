@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://hud1234568aa"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://dcl01i721bqqa" path="res://Features/UI/HUD.cs" id="1"]
-[ext_resource type="Script" uid="uid://dqadj6sgaq2jk" path="res://Features/UI/Minimap.cs" id="2"]
+[ext_resource type="Script" path="res://Features/UI/Hud/View/HudUI.cs" id="1"]
+[ext_resource type="Script" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Minimap"]
 bg_color = Color(0.1, 0.12, 0.15, 0.9)

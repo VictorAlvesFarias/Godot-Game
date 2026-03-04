@@ -3,7 +3,7 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.UI
 {
-    public partial class Minimap : Control
+    public partial class MinimapUI : Control
     {
         public string PlayerGroupName { get; set; } = "players";
         public float ViewRadius { get; set; } = 1200f;

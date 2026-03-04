@@ -8,7 +8,7 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class GameConsole : CanvasLayer
+	public partial class ConsoleUI : CanvasLayer
 	{
 		private bool _isOpen;
 
@@ -30,27 +30,7 @@ namespace Jogo25D.UI
 
 		private int _suggestionIndex = 0;
 
-		private enum MsgType { Normal, Echo, Info, Error, Success }
-
-		private readonly record struct ConsoleMessage(string Text, MsgType Type)
-		{
-			public static ConsoleMessage Normal(string text)  => new(text, MsgType.Normal);
-			public static ConsoleMessage Echo(string text)    => new(text, MsgType.Echo);
-			public static ConsoleMessage Info(string text)    => new(text, MsgType.Info);
-			public static ConsoleMessage Error(string text)   => new(text, MsgType.Error);
-			public static ConsoleMessage Success(string text) => new(text, MsgType.Success);
-		}
-
-		private class ConsoleCommand
-		{
-			public string Name;
-			public string Usage;
-			public string Description;
-			public Func<string[], IEnumerable<ConsoleMessage>> Execute;
-			public Func<string, List<string>> GetCompletions;
-		}
-
-		private readonly Dictionary<string, ConsoleCommand> _commands = new();
+		private readonly Dictionary<string, ConsoleCommands> _commands = new();
 
 		#region Lifecycle
 
@@ -73,7 +53,7 @@ namespace Jogo25D.UI
 
 			RegisterCommands();
 
-			PrintLine(ConsoleMessage.Info("Console carregado. Digite 'help' para listar os comandos."));
+			PrintInfo("Console carregado. Digite 'help' para listar os comandos.");
 		}
 
 		public override void _Input(InputEvent @event)
@@ -164,7 +144,7 @@ namespace Jogo25D.UI
 			_historyIndex = -1;
 			_savedInput   = "";
 
-			PrintLine(ConsoleMessage.Echo($"> {text}"));
+			PrintEcho($"> {text}");
 
 			ExecuteRaw(text.Trim());
 
@@ -188,12 +168,11 @@ namespace Jogo25D.UI
 
 			if (!_commands.TryGetValue(name, out var cmd))
 			{
-				PrintLine(ConsoleMessage.Error($"Comando desconhecido: '{name}'. Digite 'help' para listar os comandos."));
+				PrintError($"Comando desconhecido: '{name}'. Digite 'help' para listar os comandos.");
 				return;
 			}
 
-			foreach (var msg in cmd.Execute(args))
-				PrintLine(msg);
+			cmd.Execute(args, this);
 		}
 
 		#endregion
@@ -342,26 +321,23 @@ namespace Jogo25D.UI
 
 		#region Helpers
 
-		private void PrintLine(ConsoleMessage msg)
+		private void PrintWith(Label template, string text)
 		{
-			if (string.IsNullOrEmpty(msg.Text)) return;
-
-			var template = msg.Type switch
-			{
-				MsgType.Echo    => _templateEcho,
-				MsgType.Info    => _templateInfo,
-				MsgType.Error   => _templateError,
-				MsgType.Success => _templateSuccess,
-				_               => _templateNormal,
-			};
+			if (string.IsNullOrEmpty(text)) return;
 
 			var label = template.Duplicate() as Label;
-			label.Text    = msg.Text;
+			label.Text    = text;
 			label.Visible = true;
 			_historyContainer.AddChild(label);
 
 			Callable.From(() => { _historyScroll.ScrollVertical = int.MaxValue; }).CallDeferred();
 		}
+
+		internal void PrintNormal(string text)  => PrintWith(_templateNormal,  text);
+		internal void PrintEcho(string text)    => PrintWith(_templateEcho,    text);
+		internal void PrintInfo(string text)    => PrintWith(_templateInfo,    text);
+		internal void PrintError(string text)   => PrintWith(_templateError,   text);
+		internal void PrintSuccess(string text) => PrintWith(_templateSuccess, text);
 
 		private Player GetLocalPlayer()
 		{
@@ -385,12 +361,11 @@ namespace Jogo25D.UI
 				name: "help",
 				usage: "help",
 				description: "Lista todos os comandos disponíveis",
-				execute: _ =>
+				execute: (_, console) =>
 				{
-					var msgs = new List<ConsoleMessage> { ConsoleMessage.Info("Comandos disponíveis:") };
+					console.PrintInfo("Comandos disponíveis:");
 					foreach (var c in _commands.Values.OrderBy(c => c.Name))
-						msgs.Add(ConsoleMessage.Normal($"  {c.Usage,-35} {c.Description}"));
-					return msgs;
+						console.PrintNormal($"  {c.Usage,-35} {c.Description}");
 				},
 				getCompletions: _ => new List<string>()
 			);
@@ -399,11 +374,10 @@ namespace Jogo25D.UI
 				name: "clear",
 				usage: "clear",
 				description: "Limpa o histórico do console",
-				execute: _ =>
+				execute: (_, _) =>
 				{
 					foreach (Node child in _historyContainer.GetChildren())
 						if (child is CanvasItem ci && ci.Visible) child.QueueFree();
-					return Enumerable.Empty<ConsoleMessage>();
 				},
 				getCompletions: _ => new List<string>()
 			);
@@ -412,29 +386,44 @@ namespace Jogo25D.UI
 				name: "add_item",
 				usage: "add_item <id> [quantidade]",
 				description: "Adiciona um item ao inventário do jogador",
-				execute: args =>
+				execute: (args, console) =>
 				{
 					if (args.Length < 1)
-						return [ConsoleMessage.Error("Uso: add_item <id> [quantidade]")];
+					{
+						console.PrintError("Uso: add_item <id> [quantidade]");
+						return;
+					}
 
 					ItemDB.Initialize();
 					var def = ItemDB.Get(args[0]);
 					if (def == null)
-						return [ConsoleMessage.Error($"Item '{args[0]}' não encontrado. Use 'list_items' para ver os IDs disponíveis.")];
+					{
+						console.PrintError($"Item '{args[0]}' não encontrado. Use 'list_items' para ver os IDs disponíveis.");
+						return;
+					}
 
 					int qty = 1;
 					if (args.Length >= 2 && !int.TryParse(args[1], out qty))
-						return [ConsoleMessage.Error("Quantidade inválida.")];
+					{
+						console.PrintError("Quantidade inválida.");
+						return;
+					}
 
 					var player = GetLocalPlayer();
 					if (player == null)
-						return [ConsoleMessage.Error("Nenhum jogador encontrado na cena.")];
+					{
+						console.PrintError("Nenhum jogador encontrado na cena.");
+						return;
+					}
 
 					bool ok = player.Inventory?.AddItem(def, qty) ?? false;
 					if (!ok)
-						return [ConsoleMessage.Error("Inventário cheio ou item não pôde ser adicionado.")];
+					{
+						console.PrintError("Inventário cheio ou item não pôde ser adicionado.");
+						return;
+					}
 
-					return [ConsoleMessage.Success($"+{qty}x {def.Name} adicionado ao inventário.")];
+					console.PrintSuccess($"+{qty}x {def.Name} adicionado ao inventário.");
 				},
 				getCompletions: partial =>
 				{
@@ -450,25 +439,24 @@ namespace Jogo25D.UI
 				name: "list_items",
 				usage: "list_items",
 				description: "Lista todos os IDs de itens disponíveis no banco de itens",
-				execute: _ =>
+				execute: (_, console) =>
 				{
 					ItemDB.Initialize();
 					var ids = ItemDB.GetAllIds().OrderBy(id => id).ToList();
-					var msgs = new List<ConsoleMessage> { ConsoleMessage.Info($"{ids.Count} item(s) registrado(s):") };
+					console.PrintInfo($"{ids.Count} item(s) registrado(s):");
 					foreach (string id in ids)
 					{
 						var def = ItemDB.Get(id);
-						msgs.Add(ConsoleMessage.Normal($"  {id,-25} {def?.Name}"));
+						console.PrintNormal($"  {id,-25} {def?.Name}");
 					}
-					return msgs;
 				},
 				getCompletions: _ => new List<string>()
 			);
 		}
 
-		private void Register(string name, string usage, string description, Func<string[], IEnumerable<ConsoleMessage>> execute, Func<string, List<string>> getCompletions)
+		private void Register(string name, string usage, string description, Action<string[], ConsoleUI> execute, Func<string, List<string>> getCompletions)
 		{
-			_commands[name] = new ConsoleCommand
+			_commands[name] = new ConsoleCommands
 			{
 				Name           = name,
 				Usage          = usage,

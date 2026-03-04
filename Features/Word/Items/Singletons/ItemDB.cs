@@ -127,7 +127,7 @@ namespace Jogo25D.Items
                 MaxStackSize = 10,
                 OnUseEffects = new List<EffectDefinition>
                 {
-                    new DamageEffect
+                    new DamageEffectDefinition
                     {
                         Damages = new List<DamageInfo>() 
                         { 

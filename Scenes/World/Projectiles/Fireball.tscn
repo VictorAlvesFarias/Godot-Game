@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://blq1sa7sp8wuj"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://cei71mlmdytrd" path="res://Features/Hitboxes/ProjectileHitbox.cs" id="1_e8o5y"]
-[ext_resource type="Texture2D" uid="uid://odpthq6vqlnc" path="res://Assets/Textures/Screenshot 2026-02-21 014440.png" id="2_mlmde"]
+[ext_resource type="Script" path="res://Features/Word/Hitboxes/Definitions/ProjectileHitbox.cs" id="1_e8o5y"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Screenshot 2026-02-21 014440.png" id="2_mlmde"]
 
 [node name="Projectile" type="Area2D" unique_id=926702127]
 collision_layer = 2

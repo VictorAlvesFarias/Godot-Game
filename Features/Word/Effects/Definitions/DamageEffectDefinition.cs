@@ -5,7 +5,7 @@ using System.Dynamic;
 
 namespace Jogo25D.Effects
 {
-    public class DamageEffect : EffectDefinition
+    public class DamageEffectDefinition : EffectDefinition
     {
         public List<DamageInfo> Damages { get; set; }
         public float Timer { get; set; }

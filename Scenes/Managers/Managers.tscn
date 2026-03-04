@@ -1,17 +1,15 @@
-[gd_scene format=3 uid="uid://kseu2j0fsdcb"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://c5g3kirti1ewo" path="res://Features/Managers/ScreenManager.cs" id="1_7ktwl"]
-[ext_resource type="Script" uid="uid://dyuy3myn6hjxc" path="res://Features/Managers/WorldManager.cs" id="3_b871k"]
-[ext_resource type="Script" path="res://Features/Managers/InputManager.cs" id="4_inputmgr"]
+[ext_resource type="Script" path="res://Features/Managers/Screen/Manager/ScreenManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" path="res://Features/Managers/World/Manager/WorldManager.cs" id="3_b871k"]
+[ext_resource type="Script" path="res://Features/Managers/Input/Manager/InputManager.cs" id="4_inputmgr"]
 
 [node name="Managers" type="Node" unique_id=940605774]
 
 [node name="ScreenManager" type="Node" parent="." unique_id=1758854771]
-unique_name_in_owner = true
 script = ExtResource("1_7ktwl")
 
 [node name="WorldManager" type="Node" parent="." unique_id=1007702761]
-unique_name_in_owner = true
 script = ExtResource("3_b871k")
 
 [node name="InputManager" type="Node" parent="." unique_id=1007702762]

@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://la3ukb015fw8"]
+[gd_scene format=3]
 
-[ext_resource type="PackedScene" uid="uid://c8ao1eeyd6xdm" path="res://Scenes/World/Levels/Upsidedown.tscn" id="1_xf6vi"]
-[ext_resource type="PackedScene" uid="uid://b0xcdahysq0nt" path="res://Scenes/World/Levels/Overword.tscn" id="2_ouhkt"]
+[ext_resource type="PackedScene" path="res://Scenes/World/Levels/Upsidedown.tscn" id="1_xf6vi"]
+[ext_resource type="PackedScene" path="res://Scenes/World/Levels/Overword.tscn" id="2_ouhkt"]
 
 [node name="World" type="Node2D" unique_id=336690079]
 

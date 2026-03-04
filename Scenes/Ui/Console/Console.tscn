@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://b1sl0ecwfts7n"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://cib8rr573d3jq" path="res://Features/UI/GameConsole.cs" id="1_console"]
+[ext_resource type="Script" path="res://Features/UI/Console/View/ConsoleUI.cs" id="1_console"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Background"]
 bg_color = Color(0.06, 0.06, 0.1, 0.93)

@@ -4,7 +4,7 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class PauseMenuUI : CanvasLayer
+	public partial class PauseUI : CanvasLayer
 	{
 		private Button resetButton;
 		private Button resumeButton;

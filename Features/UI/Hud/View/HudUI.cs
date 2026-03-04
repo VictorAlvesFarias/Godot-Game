@@ -10,7 +10,7 @@ using Jogo25D.Scripts.Actions;
 
 namespace Jogo25D.UI
 {
-	public partial class HUD : CanvasLayer
+	public partial class HudUI : CanvasLayer
 	{
 		public string PlayerGroupName { get; set; } = "players";
 
@@ -30,7 +30,7 @@ namespace Jogo25D.UI
 		private double lastPingSentTime = 0.0;
 		private int currentPing = 0;
 
-		private Minimap minimap;
+		private MinimapUI minimap;
 
 		private const int HotbarSize = 8;
 		private readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
@@ -46,7 +46,7 @@ namespace Jogo25D.UI
 			healthBarLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthBar/HealthBarLabel");
 			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
-			minimap = GetNode<Minimap>("MarginContainer/MinimapPanel/Minimap");
+			minimap = GetNode<MinimapUI>("MarginContainer/MinimapPanel/Minimap");
 
 			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
 			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
