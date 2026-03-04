@@ -2,6 +2,7 @@ using Godot;
 using System.Collections.Generic;
 using Jogo25D.Properties;
 using Jogo25D.Effects;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Items
 {
@@ -43,7 +44,7 @@ namespace Jogo25D.Items
                 Type        = ItemType.WeaponRanged,
                 Description = "Um arco para ataques à distância",
                 Cooldown    = 0.8f,
-                Icon        = ResourceLoader.Exists("res://Assets/Icons/bow.png") ? GD.Load<Texture2D>("res://Assets/Icons/bow.png") : null,
+                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_10) ,
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                 Properties  = new List<BaseProperty>
                 {
@@ -60,7 +61,7 @@ namespace Jogo25D.Items
                 Type        = ItemType.WeaponRanged,
                 Description = "Um arco melhorado para ataques à distância",
                 Cooldown    = 0.01f,
-                Icon        = ResourceLoader.Exists("res://Assets/Icons/fireball.png") ? GD.Load<Texture2D>("res://Assets/Icons/fireball.png") : null,
+                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_11),
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn"),
                 Properties  = new List<BaseProperty>
                 {
@@ -78,7 +79,7 @@ namespace Jogo25D.Items
                 Description  = "Munição para arcos",
                 Stackable    = true,
                 MaxStackSize = 9999,
-                Icon         = ResourceLoader.Exists("res://Assets/Icons/arrow.png") ? GD.Load<Texture2D>("res://Assets/Icons/arrow.png") : null,
+                Icon         = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_40),
                 Properties   = new List<BaseProperty>
                 {
                     new ChargesProperty { ChargeType = "arrow" }
@@ -91,7 +92,7 @@ namespace Jogo25D.Items
                 Name        = "Espada Básica",
                 Type        = ItemType.WeaponMelee,
                 Cooldown    = 0.6f,
-                Icon        = ResourceLoader.Exists("res://Assets/Icons/sword.png") ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
+                Icon        = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
                 Properties  = new List<BaseProperty>
                 {
@@ -108,7 +109,7 @@ namespace Jogo25D.Items
                 Name        = "Arco Básico",
                 Type        = ItemType.WeaponRanged,
                 Cooldown    = 0.8f,
-                Icon        = ResourceLoader.Exists("res://Assets/Icons/bow.png") ? GD.Load<Texture2D>("res://Assets/Icons/bow.png") : null,
+                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_1),
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                 Properties  = new List<BaseProperty>
                 {
@@ -125,6 +126,7 @@ namespace Jogo25D.Items
                 Type         = ItemType.Consumable,
                 Stackable    = true,
                 MaxStackSize = 10,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_1),
                 OnUseEffects = new List<EffectDefinition>
                 {
                     new DamageEffectDefinition

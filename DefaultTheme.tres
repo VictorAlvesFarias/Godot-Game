@@ -1,0 +1,6 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://Assets/Fonts/Planes_ValMore.ttf" id="1"]
+
+[resource]
+default_font = ExtResource("1")
