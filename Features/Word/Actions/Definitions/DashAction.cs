@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Scripts.Actions
 {
@@ -21,6 +22,8 @@ namespace Jogo25D.Scripts.Actions
             ActionName = "Dash";
 
             player.AddChild(dashParticles);
+
+            Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_10);
         }
 
         public override void OnStartAction(float delta)

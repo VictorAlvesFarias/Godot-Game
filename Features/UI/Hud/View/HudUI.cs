@@ -23,8 +23,10 @@ namespace Jogo25D.UI
 		private Player localPlayer;
 		private readonly List<Panel> abilitySlots = new List<Panel>();
 		private readonly List<ProgressBar> abilityFillBars = new List<ProgressBar>();
+		private readonly List<TextureRect> abilityIconRects = new List<TextureRect>();
+		private readonly List<Label> abilityInnerNameLabels = new List<Label>();
 		private readonly List<Label> abilityTimerLabels = new List<Label>();
-		private readonly List<Label> abilityNameLabels = new List<Label>();
+		private readonly List<Label> abilityChargesLabels = new List<Label>();
 		private double pingTimer = 0.0;
 		private double pingInterval = 1.0;
 		private double lastPingSentTime = 0.0;
@@ -34,6 +36,7 @@ namespace Jogo25D.UI
 
 		private const int HotbarSize = 8;
 		private readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
+		private readonly TextureRect[] _hotbarIconRects = new TextureRect[HotbarSize];
 		private readonly Label[] _hotbarNameLabels = new Label[HotbarSize];
 		private readonly Label[] _hotbarQtyLabels = new Label[HotbarSize];
 		private StyleBoxFlat _hotbarNormalStyle;
@@ -75,7 +78,8 @@ namespace Jogo25D.UI
 				}
 
 				_hotbarSlotPanels[i] = panel;
-				_hotbarNameLabels[i] = panel.GetNode<Label>("NameLabel");
+				_hotbarIconRects[i]  = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
+				_hotbarNameLabels[i] = panel.GetNode<Label>("MarginContainer/CenterContainer/NameLabel");
 				_hotbarQtyLabels[i]  = panel.GetNode<Label>("QtyLabel");
 			}
 			CallDeferred(nameof(FindLocalPlayer));
@@ -299,8 +303,10 @@ namespace Jogo25D.UI
 			{
 				abilitySlots.Clear();
 				abilityFillBars.Clear();
+				abilityIconRects.Clear();
+				abilityInnerNameLabels.Clear();
 				abilityTimerLabels.Clear();
-				abilityNameLabels.Clear();
+				abilityChargesLabels.Clear();
 				for (int i = abilitiesContainer.GetChildCount() - 1; i >= 0; i--)
 				{
 					if (abilitiesContainer.GetChild(i) is Control c)
@@ -311,96 +317,36 @@ namespace Jogo25D.UI
 
 			abilitySlots.Clear();
 			abilityFillBars.Clear();
+			abilityIconRects.Clear();
+			abilityInnerNameLabels.Clear();
 			abilityTimerLabels.Clear();
-			abilityNameLabels.Clear();
+			abilityChargesLabels.Clear();
 
-			int existingChildren = abilitiesContainer.GetChildCount();
+			// Remove filhos extras antes de recriar
+			while (abilitiesContainer.GetChildCount() > 0)
+			{
+				var old = abilitiesContainer.GetChild(0);
+				abilitiesContainer.RemoveChild(old);
+				old.QueueFree();
+			}
 
 			for (int i = 0; i < list.Count; i++)
 			{
-				Panel slot;
-				ProgressBar fillBar;
-				Label timerLabel;
-				Label nameLabel;
+				var slotViews = CreateAbilitySlot();
+				abilitiesContainer.AddChild(slotViews.Panel);
 
-				if (i < existingChildren)
-				{
-					var child = abilitiesContainer.GetChild(i);
-					if (child is VBoxContainer vbox)
-					{
-						slot = vbox.GetNodeOrNull<Panel>("AbilityPanel");
-						if (slot == null)
-							slot = vbox.GetChild<Panel>(0);
-						fillBar = slot.GetNodeOrNull<ProgressBar>("CooldownFill");
-						timerLabel = slot.GetNodeOrNull<Label>("TimerLabel");
-						nameLabel = vbox.GetNodeOrNull<Label>("AbilityNameLabel");
-						if (nameLabel == null)
-						{
-							nameLabel = CreateAbilityNameLabel();
-							nameLabel.Name = "AbilityNameLabel";
-							vbox.AddChild(nameLabel);
-						}
-					}
-					else if (child is Panel panel)
-					{
-						slot = panel;
-						slot.Name = "AbilityPanel";
-						fillBar = panel.GetNodeOrNull<ProgressBar>("CooldownFill");
-						timerLabel = panel.GetNodeOrNull<Label>("TimerLabel");
-						var wrapper = new VBoxContainer();
-						abilitiesContainer.RemoveChild(panel);
-						wrapper.AddChild(panel);
-						nameLabel = CreateAbilityNameLabel();
-						nameLabel.Name = "AbilityNameLabel";
-						wrapper.AddChild(nameLabel);
-						abilitiesContainer.AddChild(wrapper);
-						abilitiesContainer.MoveChild(wrapper, i);
-					}
-					else
-					{
-						var slotViews = CreateAbilitySlot();
-						abilitiesContainer.AddChild(slotViews.Wrapper);
-						slot = slotViews.Panel;
-						fillBar = slotViews.FillBar;
-						timerLabel = slotViews.TimerLabel;
-						nameLabel = slotViews.NameLabel;
-					}
-					slot.Visible = true;
-					fillBar ??= slot.GetNodeOrNull<ProgressBar>("CooldownFill");
-					timerLabel ??= slot.GetNodeOrNull<Label>("TimerLabel");
-					if (timerLabel == null)
-					{
-						timerLabel = CreateTimerLabel();
-						slot.AddChild(timerLabel);
-					}
-				}
-				else
-				{
-					var slotViews = CreateAbilitySlot();
-					abilitiesContainer.AddChild(slotViews.Wrapper);
-					slot = slotViews.Panel;
-					fillBar = slotViews.FillBar;
-					timerLabel = slotViews.TimerLabel;
-					nameLabel = slotViews.NameLabel;
-				}
-
+				var fillBar = slotViews.FillBar;
 				fillBar.MinValue = 0;
 				fillBar.MaxValue = 1;
-				fillBar.Value = 1;
-				fillBar.FillMode = (int)ProgressBar.FillModeEnum.BottomToTop;
+				fillBar.Value = 0;
+				fillBar.FillMode = (int)ProgressBar.FillModeEnum.TopToBottom;
 
-				abilitySlots.Add(slot);
+				abilitySlots.Add(slotViews.Panel);
 				abilityFillBars.Add(fillBar);
-				abilityTimerLabels.Add(timerLabel);
-				abilityNameLabels.Add(nameLabel);
-			}
-
-			// Remove slots extras do editor (se tinha mais que a lista)
-			while (abilitiesContainer.GetChildCount() > list.Count)
-			{
-				var extra = abilitiesContainer.GetChild(abilitiesContainer.GetChildCount() - 1);
-				abilitiesContainer.RemoveChild(extra);
-				extra.QueueFree();
+				abilityIconRects.Add(slotViews.IconRect);
+				abilityInnerNameLabels.Add(slotViews.InnerNameLabel);
+				abilityTimerLabels.Add(slotViews.TimerLabel);
+				abilityChargesLabels.Add(slotViews.ChargesLabel);
 			}
 		}
 
@@ -417,48 +363,89 @@ namespace Jogo25D.UI
 			styleBg.SetCornerRadiusAll(4);
 			panel.AddThemeStyleboxOverride("panel", styleBg);
 
+			// MarginContainer > CenterContainer > IconRect + InnerNameLabel
+			var margin = new MarginContainer();
+			margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			margin.AddThemeConstantOverride("margin_left", 4);
+			margin.AddThemeConstantOverride("margin_top", 4);
+			margin.AddThemeConstantOverride("margin_right", 4);
+			margin.AddThemeConstantOverride("margin_bottom", 4);
+			margin.MouseFilter = Control.MouseFilterEnum.Ignore;
+			panel.AddChild(margin);
+
+			var center = new CenterContainer();
+			center.MouseFilter = Control.MouseFilterEnum.Ignore;
+			margin.AddChild(center);
+
+			var iconRect = new TextureRect();
+			iconRect.Name = "IconRect";
+			iconRect.CustomMinimumSize = new Vector2(40, 40);
+			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+			iconRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+			center.AddChild(iconRect);
+
+			var innerNameLabel = new Label();
+			innerNameLabel.Name = "NameLabel";
+			innerNameLabel.AddThemeFontSizeOverride("font_size", 8);
+			innerNameLabel.AddThemeColorOverride("font_color", Colors.White);
+			innerNameLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+			innerNameLabel.AddThemeConstantOverride("outline_size", 1);
+			innerNameLabel.HorizontalAlignment = HorizontalAlignment.Center;
+			innerNameLabel.VerticalAlignment = VerticalAlignment.Center;
+			innerNameLabel.AutowrapMode = TextServer.AutowrapMode.Word;
+			innerNameLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+			innerNameLabel.Visible = false;
+			center.AddChild(innerNameLabel);
+
+			// Overlay preto de cooldown — fica ACIMA do ícone, abaixo do timer
 			var fill = new ProgressBar();
 			fill.Name = "CooldownFill";
 			fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-			fill.OffsetLeft = 4;
-			fill.OffsetTop = 4;
-			fill.OffsetRight = -4;
-			fill.OffsetBottom = -4;
 			fill.ShowPercentage = false;
 			fill.MinValue = 0;
 			fill.MaxValue = 1;
-			fill.Value = 1;
-			fill.FillMode = (int)ProgressBar.FillModeEnum.BottomToTop;
+			fill.Value = 0;
+			fill.FillMode = (int)ProgressBar.FillModeEnum.TopToBottom;
+			fill.Visible = false;
+			fill.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-			var styleFill = new StyleBoxFlat();
-			styleFill.BgColor = new Color(0.25f, 0.6f, 0.9f, 0.9f);
-			styleFill.SetCornerRadiusAll(2);
-			fill.AddThemeStyleboxOverride("fill", styleFill);
+			var styleBgTransparent = new StyleBoxFlat();
+			styleBgTransparent.BgColor = new Color(0, 0, 0, 0);
+			fill.AddThemeStyleboxOverride("background", styleBgTransparent);
+
+			var styleFillBlack = new StyleBoxFlat();
+			styleFillBlack.BgColor = new Color(0, 0, 0, 0.65f);
+			fill.AddThemeStyleboxOverride("fill", styleFillBlack);
 
 			panel.AddChild(fill);
+
 			var timerLabel = CreateTimerLabel();
 			panel.AddChild(timerLabel);
 
-			var nameLabel = CreateAbilityNameLabel();
-			nameLabel.Name = "AbilityNameLabel";
+			// Cargas (QtyLabel) — canto inferior direito, igual ao hotbar
+			var chargesLabel = new Label();
+			chargesLabel.Name = "QtyLabel";
+			chargesLabel.LayoutMode = 1;
+			chargesLabel.AnchorLeft = 1;
+			chargesLabel.AnchorTop = 1;
+			chargesLabel.AnchorRight = 1;
+			chargesLabel.AnchorBottom = 1;
+			chargesLabel.OffsetLeft = -33;
+			chargesLabel.OffsetTop = -16;
+			chargesLabel.OffsetRight = -3;
+			chargesLabel.OffsetBottom = -3;
+			chargesLabel.GrowHorizontal = Control.GrowDirection.Begin;
+			chargesLabel.GrowVertical = Control.GrowDirection.Begin;
+			chargesLabel.HorizontalAlignment = HorizontalAlignment.Right;
+			chargesLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.3f, 1f));
+			chargesLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+			chargesLabel.AddThemeConstantOverride("outline_size", 2);
+			chargesLabel.AddThemeFontSizeOverride("font_size", 10);
+			chargesLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+			panel.AddChild(chargesLabel);
 
-			var wrapper = new VBoxContainer();
-			wrapper.AddChild(panel);
-			wrapper.AddChild(nameLabel);
-
-			return new AbilitySlotViews(wrapper, panel, fill, timerLabel, nameLabel);
-		}
-
-		private Label CreateAbilityNameLabel()
-		{
-			var label = new Label();
-			label.AddThemeFontSizeOverride("font_size", 12);
-			label.AddThemeColorOverride("font_color", Colors.White);
-			label.AddThemeColorOverride("font_outline_color", Colors.Black);
-			label.AddThemeConstantOverride("outline_size", 1);
-			label.HorizontalAlignment = HorizontalAlignment.Center;
-			label.Text = "";
-			return label;
+			return new AbilitySlotViews(panel, fill, iconRect, innerNameLabel, timerLabel, chargesLabel);
 		}
 
 		private Label CreateTimerLabel()
@@ -483,57 +470,69 @@ namespace Jogo25D.UI
 				return;
 
 			var list = localPlayer.UnlockedAbilities;
-			if (list == null || abilityFillBars.Count != list.Count || abilityTimerLabels.Count != list.Count || abilityNameLabels.Count != list.Count)
+			if (list == null || abilityFillBars.Count != list.Count)
 				return;
 
 			for (int i = 0; i < list.Count && i < abilityFillBars.Count; i++)
 			{
 				var action = list[i];
 				var bar = abilityFillBars[i];
-				var timerLabel = abilityTimerLabels[i];
-				var nameLabel = abilityNameLabels[i];
+				var iconRect = i < abilityIconRects.Count ? abilityIconRects[i] : null;
+				var innerNameLabel = i < abilityInnerNameLabels.Count ? abilityInnerNameLabels[i] : null;
+				var timerLabel = i < abilityTimerLabels.Count ? abilityTimerLabels[i] : null;
+				var chargesLabel = i < abilityChargesLabels.Count ? abilityChargesLabels[i] : null;
 				if (action == null || bar == null)
 					continue;
 
-				float value;
-				string timerText;
-				Color fillColor;
-
-				if (action.IsActive)
+				// Ícone ou nome inline
+				if (iconRect != null)
 				{
-					value = 1f - action.GetDurationProgress();
-					fillColor = Colors.White;
-					timerText = $"{action.GetRemainingDuration():F1}s";
+					if (action.Icon != null)
+					{
+						iconRect.Texture = action.Icon;
+						iconRect.Visible = true;
+						if (innerNameLabel != null) innerNameLabel.Visible = false;
+					}
+					else
+					{
+						iconRect.Texture = null;
+						iconRect.Visible = false;
+						if (innerNameLabel != null)
+						{
+							innerNameLabel.Text = action.ActionName;
+							innerNameLabel.Visible = true;
+						}
+					}
 				}
-				else if (action.InCooldown)
+
+				// Cargas — canto inferior direito
+				if (chargesLabel != null)
+					chargesLabel.Text = action.MaxCharges > 1 ? $"x{action.CurrentCharges}" : "";
+
+				// Overlay de cooldown — prioriza InCooldown para evitar salto visual ao reusar
+				if (action.InCooldown)
 				{
-					value = action.GetCooldownProgress();
-					fillColor = new Color(0.4f, 0.4f, 0.45f, 0.9f); // cinza no CD
-					timerText = $"{action.GetRemainingCooldown():F1}s";
+					bar.Value = 1f - action.GetCooldownProgress();
+					bar.Visible = true;
+					if (timerLabel != null)
+					{
+						timerLabel.Text = action.IsActive
+							? $"{action.GetRemainingDuration():F1}s"
+							: $"{action.GetRemainingCooldown():F1}s";
+						timerLabel.Visible = true;
+					}
+				}
+				else if (action.IsActive)
+				{
+					bar.Value = 1f;
+					bar.Visible = true;
+					if (timerLabel != null) { timerLabel.Text = $"{action.GetRemainingDuration():F1}s"; timerLabel.Visible = true; }
 				}
 				else
 				{
-					value = 1f;
-					fillColor = new Color(0.25f, 0.5f, 0.9f, 0.95f); // azul quando carregado
-					timerText = "";
-				}
-
-				bar.Value = value;
-
-				var styleFill = (StyleBoxFlat)bar.GetThemeStylebox("fill").Duplicate();
-				styleFill.BgColor = fillColor;
-				bar.AddThemeStyleboxOverride("fill", styleFill);
-
-				if (timerLabel != null)
-				{
-					timerLabel.Text = timerText;
-					timerLabel.Visible = !string.IsNullOrEmpty(timerText);
-				}
-
-				if (nameLabel != null)
-				{
-					var nameText = action.MaxCharges > 1 ? $"{action.ActionName} {action.CurrentCharges}/{action.MaxCharges}" : action.ActionName;
-					nameLabel.Text = nameText;
+					bar.Value = 0;
+					bar.Visible = false;
+					if (timerLabel != null) { timerLabel.Text = ""; timerLabel.Visible = false; }
 				}
 			}
 		}
@@ -560,8 +559,18 @@ namespace Jogo25D.UI
 				var slot  = inventory?.GetSlot(i);
 				bool empty = slot == null || slot.IsEmpty();
 
-				_hotbarNameLabels[i].Text = empty ? "" : (slot.Definition?.Name ?? "");
-				_hotbarQtyLabels[i].Text  = (!empty && slot.Definition?.Stackable == true && slot.Quantity > 1)
+				if (!empty && slot.Definition?.Icon != null)
+				{
+					_hotbarIconRects[i].Texture  = slot.Definition.Icon;
+					_hotbarNameLabels[i].Text    = "";
+				}
+				else
+				{
+					_hotbarIconRects[i].Texture  = null;
+					_hotbarNameLabels[i].Text    = empty ? "" : (slot.Definition?.Name ?? "");
+				}
+
+				_hotbarQtyLabels[i].Text = (!empty && slot.Definition?.Stackable == true && slot.Quantity > 1)
 					? $"x{slot.Quantity}" : "";
 			}
 		}

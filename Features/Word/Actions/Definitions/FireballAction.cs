@@ -1,5 +1,6 @@
 ﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
@@ -14,8 +15,8 @@ namespace Jogo25D.Scripts.Actions
         private const float FireballArea     = 50f;
         private const int   FireballDamage   = 10;
 
-        private readonly PackedScene _hitboxScene =
-            GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn");
+        private readonly PackedScene _hitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn");
+        
 
         public FireballAction(Player player) : base(player)
         {
@@ -24,6 +25,7 @@ namespace Jogo25D.Scripts.Actions
             MaxCharges     = 2;
             CurrentCharges = MaxCharges;
             ActionName     = "Fireball";
+            Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_4);
         }
 
         public override void OnStartAction(float delta)

@@ -17,6 +17,7 @@ namespace Jogo25D.UI
 		private TextureRect[] iconRects = new TextureRect[16];
 		private Label[] quantityLabels = new Label[16];
 		private Label[] nameLabels = new Label[16];
+		private Label[] numLabels = new Label[16];
 		private int selectedSlotIndex = -1;
 		private Control mainControl;
 
@@ -157,6 +158,8 @@ namespace Jogo25D.UI
 				iconRects[0] = center.GetNode<TextureRect>("IconRect");
 				nameLabels[0] = center.GetNode<Label>("NameLabel");
 				quantityLabels[0] = existingSlot.GetNode<Label>("QuantityLabel");
+				numLabels[0] = existingSlot.GetNode<Label>("NumLabel");
+				numLabels[0].Text = "1";
 
 				int slotIndex = 0;
 				existingSlot.GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
@@ -279,9 +282,35 @@ namespace Jogo25D.UI
 			centerContainer.AddChild(nameLabels[index]);
 
 			quantityLabels[index] = new Label();
+			quantityLabels[index].LayoutMode = 1;
+			quantityLabels[index].AnchorLeft = 1;
+			quantityLabels[index].AnchorTop = 1;
+			quantityLabels[index].AnchorRight = 1;
+			quantityLabels[index].AnchorBottom = 1;
+			quantityLabels[index].OffsetLeft = -33;
+			quantityLabels[index].OffsetTop = -16;
+			quantityLabels[index].OffsetRight = -3;
+			quantityLabels[index].OffsetBottom = -3;
+			quantityLabels[index].GrowHorizontal = Control.GrowDirection.Begin;
+			quantityLabels[index].GrowVertical = Control.GrowDirection.Begin;
 			quantityLabels[index].HorizontalAlignment = HorizontalAlignment.Right;
 			quantityLabels[index].VerticalAlignment = VerticalAlignment.Bottom;
+			quantityLabels[index].AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.3f, 1f));
+			quantityLabels[index].AddThemeColorOverride("font_outline_color", Colors.Black);
+			quantityLabels[index].AddThemeConstantOverride("outline_size", 2);
+			quantityLabels[index].AddThemeFontSizeOverride("font_size", 10);
 			slots[index].AddChild(quantityLabels[index]);
+
+			numLabels[index] = new Label();
+			numLabels[index].Text = $"{index + 1}";
+			numLabels[index].LayoutMode = 1;
+			numLabels[index].OffsetLeft = 3;
+			numLabels[index].OffsetTop = 2;
+			numLabels[index].OffsetRight = 23;
+			numLabels[index].OffsetBottom = 16;
+			numLabels[index].AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.65f, 1f));
+			numLabels[index].AddThemeFontSizeOverride("font_size", 9);
+			slots[index].AddChild(numLabels[index]);
 
 			int slotIndex = index;
 			slots[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
@@ -426,7 +455,7 @@ namespace Jogo25D.UI
 			}
 
 			if (slot.Definition.Stackable && slot.Quantity > 1)
-				quantityLabels[index].Text = slot.Quantity.ToString();
+				quantityLabels[index].Text = $"x{slot.Quantity}";
 			else
 				quantityLabels[index].Text = "";
 		}

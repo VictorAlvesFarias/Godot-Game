@@ -9,6 +9,7 @@ namespace Jogo25D.Scripts.Actions
         public bool InCooldown { get; set; } = false;
         public bool IsActive { get; set; } = false;
         public string ActionName { get; set; } = "Habilidade";
+        public Godot.Texture2D Icon { get; set; } = null;
         public float Cooldown { get; set; } = 0f;
         public float Duration { get; set; } = 0f;
         public int MaxCharges { get; set; } = 1;
@@ -31,11 +32,12 @@ namespace Jogo25D.Scripts.Actions
             if (this.OnStartActionValidation(delta))
             {
                 IsActive = true;
+                if (!InCooldown)
+                    CooldownTimer = 0f;
                 CurrentCharges--;
                 CanUse = CurrentCharges > 0;
                 InCooldown = CurrentCharges < MaxCharges;
                 DurationTimer = 0f;
-                CooldownTimer = 0f;
 
                 this.OnStartAction(delta);
             }

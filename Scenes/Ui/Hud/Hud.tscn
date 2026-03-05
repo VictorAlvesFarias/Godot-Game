@@ -46,6 +46,12 @@ corner_radius_bottom_left = 4
 [sub_resource type="StyleBoxFlat" id="Style_AbilityFill"]
 bg_color = Color(0.25, 0.6, 0.9, 0.9)
 
+[sub_resource type="StyleBoxFlat" id="Style_CooldownOverlay"]
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="Style_CooldownFill"]
+bg_color = Color(0, 0, 0, 0.65)
+
 [sub_resource type="StyleBoxFlat" id="Style_HotbarNormal"]
 bg_color = Color(0.08, 0.08, 0.12, 0.92)
 border_width_left = 2
@@ -138,25 +144,58 @@ custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_AbilitySlot")
 
-[node name="CooldownFill" type="ProgressBar" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000003]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000005]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/background = SubResource("Style_AbilitySlot")
-theme_override_styles/fill = SubResource("Style_AbilityFill")
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+mouse_filter = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer" unique_id=800000006]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer/CenterContainer" unique_id=800000007]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer/CenterContainer" unique_id=800000008]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="CooldownFill" type="ProgressBar" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000003]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/background = SubResource("Style_CooldownOverlay")
+theme_override_styles/fill = SubResource("Style_CooldownFill")
 max_value = 1.0
-value = 1.0
-fill_mode = 3
+value = 0.0
+fill_mode = 2
 show_percentage = false
+mouse_filter = 2
 
 [node name="TimerLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000004]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -169,6 +208,27 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 vertical_alignment = 1
+mouse_filter = 2
+
+[node name="QtyLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000009]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -33.0
+offset_top = -16.0
+offset_right = -3.0
+offset_bottom = -3.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0.9, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 10
+horizontal_alignment = 2
+mouse_filter = 2
 
 [node name="FpsLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=477343146]
 layout_mode = 2
@@ -195,6 +255,40 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("Style_HotbarNormal")
 
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/HotbarContainer/Slot0" unique_id=901000005]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+mouse_filter = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/HotbarContainer/Slot0/MarginContainer" unique_id=901000006]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="MarginContainer/HotbarContainer/Slot0/MarginContainer/CenterContainer" unique_id=901000004]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="MarginContainer/HotbarContainer/Slot0/MarginContainer/CenterContainer" unique_id=901000002]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 1
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
 [node name="NumLabel" type="Label" parent="MarginContainer/HotbarContainer/Slot0" unique_id=901000001]
 layout_mode = 1
 offset_left = 3.0
@@ -204,25 +298,6 @@ offset_bottom = 16.0
 theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
 theme_override_font_sizes/font_size = 9
 text = "1"
-
-[node name="NameLabel" type="Label" parent="MarginContainer/HotbarContainer/Slot0" unique_id=901000002]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 2.0
-offset_top = 14.0
-offset_right = -2.0
-offset_bottom = -14.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 1
-theme_override_font_sizes/font_size = 9
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 2
 
 [node name="QtyLabel" type="Label" parent="MarginContainer/HotbarContainer/Slot0" unique_id=901000003]
 layout_mode = 1
