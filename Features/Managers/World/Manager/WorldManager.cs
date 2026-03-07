@@ -17,8 +17,10 @@ namespace Jogo25D.Systems
 		public Node2D UpsidedownParent { get; set; }
 		public SubViewportContainer OverContainer { get; set; }
 		public SubViewportContainer UpContainer { get; set; }
+		private Node2D ProceduralParent { get; set; }
+        private SubViewportContainer ProceduralContainer { get; set; }
 
-		public override void _Ready()
+        public override void _Ready()
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
 
@@ -54,7 +56,20 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager._Ready] UpsidedownParent found: {UpsidedownParent.Name}");
 			}
 
-			var overContainerPath = "Main/World/Levels/OverwordViewportContainer";
+            var proceduralParentPath = "Main/World/Levels/ProceduralViewportContainer/ProceduralViewport/Procedural";
+
+            ProceduralParent = GetTree().Root.GetNodeOrNull<Node2D>(proceduralParentPath);
+
+            if (ProceduralParent == null)
+            {
+                GD.Print($"[WorldManager._Ready] GetNodeOrNull: ProceduralParent not found at path {proceduralParentPath}");
+            }
+            else
+            {
+                GD.Print($"[WorldManager._Ready] ProceduralParent found: {ProceduralParent.Name}");
+            }
+
+            var overContainerPath = "Main/World/Levels/OverwordViewportContainer";
 
 			OverContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(overContainerPath);
 
@@ -67,7 +82,7 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager._Ready] OverContainer found: {OverContainer.Name}");
 			}
 
-			var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
+            var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
 
 			UpContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(upContainerPath);
 
@@ -79,7 +94,21 @@ namespace Jogo25D.Systems
 			{
 				GD.Print($"[WorldManager._Ready] UpContainer found: {UpContainer.Name}");
 			}
-		}
+
+            var proceduralContainerPath = "Main/World/Levels/ProceduralViewportContainer";
+
+			ProceduralContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(proceduralContainerPath);
+
+            if (ProceduralContainer == null)
+            {
+                GD.Print($"[WorldManager._Ready] GetNodeOrNull: ProceduralContainer not found at path {proceduralContainerPath}");
+            }
+            else
+            {
+                GD.Print($"[WorldManager._Ready] UpContainer found: {ProceduralContainer.Name}");
+            }
+
+        }
 
 		public string CreateServer(string textPort)
 		{
@@ -298,53 +327,49 @@ namespace Jogo25D.Systems
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void TradeDimension(long targetPeerId)
-		{	
-			GD.Print($"[WorldManager.SyncDimensionTrade] SyncDimensionTrade(targetPeerId={targetPeerId}) starting");	
+        public void TradeDimension(long targetPeerId)
+        {
+            GD.Print($"[WorldManager.TradeDimension] targetPeerId={targetPeerId}");
 
-			var playerNode = OverwordParent.GetChildren().OfType<Player>().FirstOrDefault(e => e.PeerId == targetPeerId);
-			bool isCurrentlyInOverworld = playerNode != null;
-			
-			GD.Print($"[WorldManager.SyncDimensionTrade] Found player in Overworld? {isCurrentlyInOverworld}");
+            // 1. Localizar o jogador em qualquer um dos três mundos
+            var playerNode = GetTree().GetNodesInGroup("players")
+                .OfType<Player>()
+                .FirstOrDefault(p => p.PeerId == targetPeerId);
 
-			if (playerNode == null)
-			{
-				playerNode = UpsidedownParent.GetChildren().OfType<Player>().FirstOrDefault(e => e.PeerId == targetPeerId);
-				isCurrentlyInOverworld = false;
-				
-				GD.Print($"[WorldManager.SyncDimensionTrade] Found player in Upsidedown? {playerNode != null}");
-			}
+            if (playerNode == null) return;
 
-			if (playerNode == null)
-			{
-				
-				GD.Print($"[WorldManager.SyncDimensionTrade] Player {targetPeerId} not found in any world!");
-				
-				return;
-			}
+            Node2D currentParent = playerNode.GetParent<Node2D>();
+            Node2D nextParent;
 
-			Node2D newParent = isCurrentlyInOverworld ? UpsidedownParent : OverwordParent;
-			
-			GD.Print($"[WorldManager.SyncDimensionTrade] Moving player {playerNode.Name} to {newParent.Name}");
-			
-			playerNode.Reparent(newParent, true);
-			
-			GD.Print($"[WorldManager.SyncDimensionTrade] Player {playerNode.Name} reparented successfully!");
-			
-			if (targetPeerId == Multiplayer.GetUniqueId() || (!IsConnected() && targetPeerId == 1))
-			{
-				GD.Print($"[WorldManager.SyncDimensionTrade] updating local UI for target {targetPeerId}");
-				
-				OverContainer.Visible = !isCurrentlyInOverworld;
-				UpContainer.Visible = isCurrentlyInOverworld;
-				
-				GD.Print($"[WorldManager.SyncDimensionTrade] OverContainer.Visible={OverContainer.Visible}, UpContainer.Visible={UpContainer.Visible}");
-			}
-			
-			GD.Print($"[WorldManager.SyncDimensionTrade] finished for Peer {targetPeerId}");
-		}
+            // 2. Lógica de Ciclo: Overworld -> Upsidedown -> Procedural -> Overworld
+            if (currentParent == OverwordParent)
+            {
+                nextParent = UpsidedownParent;
+            }
+            else if (currentParent == UpsidedownParent)
+            {
+                nextParent = ProceduralParent;
+            }
+            else
+            {
+                nextParent = OverwordParent;
+            }
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+            GD.Print($"[WorldManager] Moving player from {currentParent.Name} to {nextParent.Name}");
+
+            // 3. Reparentar
+            playerNode.Reparent(nextParent, true);
+
+            // 4. Atualizar UI local (Apenas para o dono do boneco)
+            if (targetPeerId == Multiplayer.GetUniqueId())
+            {
+                OverContainer.Visible = (nextParent == OverwordParent);
+                UpContainer.Visible = (nextParent == UpsidedownParent);
+                ProceduralContainer.Visible = (nextParent == ProceduralParent);
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void TradeDimensionServerReceive()
 		{
 			GD.Print("[WorldManager.ServerReceiveTradeRequest] received trade request");
