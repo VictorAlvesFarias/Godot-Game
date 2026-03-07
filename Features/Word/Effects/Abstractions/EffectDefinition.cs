@@ -5,9 +5,9 @@ namespace Jogo25D.Effects
     public abstract class EffectDefinition
     {
         public float Duration { get; set; }
-        public float Elapsed { get; private set; }
-        public bool Expired { get; private set; }
-        public bool RemoveInOnUnequip { get; private set; }
+        public float Elapsed { get; set; }
+        public bool Expired { get; set; }
+        public bool RemoveInOnUnequip { get; set; }
         public bool Infinite { get; set; }
         public bool ApplyToOwner { get; set; }
         public bool ApplyToTarget { get; set; }
@@ -42,11 +42,11 @@ namespace Jogo25D.Effects
             return (EffectDefinition)MemberwiseClone();
         }
 
-        protected virtual void Apply(Player player, float delta)
+        public virtual void Apply(Player player, float delta)
         {
         }
 
-        protected virtual void OnFinished(Player player, float delta)
+        public virtual void OnFinished(Player player, float delta)
         {
         }
     }

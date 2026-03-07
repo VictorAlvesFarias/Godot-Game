@@ -1,105 +1,95 @@
 using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
 
-namespace Jogo25D.Scripts.Actions
+namespace Jogo25D.Actions
 {
-    public class DashAction : PlayerAction
+    public class DashDefinition : ActionDefinition
     {
-        public float DashSpeed { get; set; } = 800.0f;
-        public Vector2 DashDirection { get; private set; } = Vector2.Zero;
-        public float MovementInfluence { get; set; } = 0.4f;
+        public float DashSpeed { get; init; } = 800f;
+        public float MovementInfluence { get; init; } = 0.4f;
 
-        private CpuParticles2D dashParticles;
-
-        public DashAction(Player player) : base(player)
+        public override void OnCreate(Player player, ActionInstance instance)
         {
-            dashParticles = new CpuParticles2D();
-            Duration = 0.2f;
-            Cooldown = 1f;
-            MaxCharges = 2;
-            CurrentCharges = MaxCharges;
-            ActionName = "Dash";
-
-            player.AddChild(dashParticles);
-
-            Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_10);
+            var particles = new CpuParticles2D();
+            player.AddChild(particles);
+            instance.DashParticles = particles;
         }
 
-        public override void OnStartAction(float delta)
+        public override void OnStartAction(Player player, ActionInstance instance, float delta)
         {
-            Vector2 inputDirection = new Vector2(NodePlayer.InputX, NodePlayer.InputY);
+            var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
+            Vector2 dir;
 
-            if (inputDirection.LengthSquared() > 0.01f)
+            if (input.LengthSquared() > 0.01f)
             {
-                DashDirection = inputDirection.Normalized();
+                dir = input.Normalized();
             }
-            else if (NodePlayer.Velocity.LengthSquared() > 100f)
+            else if (player.Velocity.LengthSquared() > 100f)
             {
-                DashDirection = NodePlayer.Velocity.Normalized();
+                dir = player.Velocity.Normalized();
             }
             else
             {
-                DashDirection = Vector2.Up;
+                dir = Vector2.Up;
             }
 
-            if (dashParticles != null)
+            instance.DashDirection = dir;
+
+            if (instance.DashParticles != null)
             {
-                dashParticles.Emitting = true;
+                instance.DashParticles.Emitting = true;
             }
 
-            if (NodePlayer.Sprite != null)
+            if (player.Sprite != null)
             {
-                NodePlayer.Sprite.DefaultColor = new Color(0.5f, 1f, 1f);
+                player.Sprite.DefaultColor = new Color(0.5f, 1f, 1f);
             }
 
-            NodePlayer.Velocity = DashDirection * DashSpeed;
-            NodePlayer.CanUpdateMovement = false;
+            player.Velocity = dir * DashSpeed;
+            player.CanUpdateMovement = false;
         }
 
-        public override void OnFinishedAction(float delta)
+        public override void OnFinishedAction(Player player, ActionInstance instance, float delta)
         {
-            NodePlayer.CanUpdateMovement = true;
-            DashDirection = Vector2.Zero;
+            player.CanUpdateMovement = true;
+            instance.DashDirection = Vector2.Zero;
 
-            if (dashParticles != null)
+            if (instance.DashParticles != null)
             {
-                dashParticles.Emitting = false;
+                instance.DashParticles.Emitting = false;
             }
 
-            if (NodePlayer.Sprite != null && NodePlayer.DamageEffectTimer <= 0)
+            if (player.Sprite != null && player.DamageEffectTimer <= 0)
             {
-                NodePlayer.Sprite.DefaultColor = Colors.White;
+                player.Sprite.DefaultColor = Colors.White;
             }
         }
 
-        public override void OnUpdateWhileActive(float delta)
+        public override void OnUpdateWhileActive(Player player, ActionInstance instance, float delta)
         {
-            var inputDirection = new Vector2(NodePlayer.InputX, NodePlayer.InputY);
+            var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
+            var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
 
-            if (inputDirection.LengthSquared() > 0.01f && MovementInfluence > 0f)
+            if (input.LengthSquared() > 0.01f && MovementInfluence > 0f)
             {
-                var blended = DashDirection + inputDirection.Normalized() * MovementInfluence;
-                
+                var blended = dir + input.Normalized() * MovementInfluence;
                 if (blended.LengthSquared() > 0.01f)
                 {
-                    NodePlayer.Velocity = blended.Normalized() * DashSpeed;
-
+                    player.Velocity = blended.Normalized() * DashSpeed;
                     return;
                 }
             }
 
-            NodePlayer.Velocity = DashDirection * DashSpeed;
+            player.Velocity = dir * DashSpeed;
         }
 
-        public override bool OnStartActionValidation(float delta)
+        public override bool OnStartActionValidation(Player player, ActionInstance instance, float delta)
         {
-            return NodePlayer.InputDash && CanUse;
+            return player.Input.Dash && instance.CanUse;
         }
 
-        public override void OnEnableAction(float delta)
+        public override void OnEnableAction(Player player, ActionInstance instance, float delta)
         {
-            
         }
     }
 }

@@ -5,64 +5,35 @@ namespace Jogo25D.Systems
 {
     public partial class InputManager : Node
     {
-        public static InputManager Instance { get; private set; }
+        public static string DEFAULT_NODE_PATH = "/root/Main/Managers/InputManager";
 
-        #region Blockers
-
-        private readonly HashSet<string> _blockers = new();
+        public HashSet<string> Blockers { get; set; } = new();
 
         public bool IsBlocked
         {
             get
             {
-                return _blockers.Count > 0;
+                return Blockers.Count > 0;
             }
         }
 
         public void AddBlocker(string id)
         {
-            _blockers.Add(id);
+            Blockers.Add(id);
         }
 
         public void RemoveBlocker(string id)
         {
-            _blockers.Remove(id);
+            Blockers.Remove(id);
         }
 
-        #endregion
+        public ControlledInputs Current { get; set; } = new();
 
-        #region Game inputs — zeroed when any blocker is active
-
-        public float MoveX { get; private set; }
-        public float MoveY { get; private set; }
-        public bool Jump { get; private set; }
-        public bool Dash { get; private set; }
-        public bool Attack { get; private set; }
-        public bool Reload { get; private set; }
-        public bool Ability { get; private set; }
-        public bool ScrollNext { get; private set; }
-        public bool ScrollPrev { get; private set; }
-
-        #endregion
-
-        #region UI inputs — also zeroed when any blocker is active
-
-        public bool Pause { get; private set; }
-        public bool ToggleInventory { get; private set; }
-
-        #endregion
-
-        #region Mouse — always available
-
-        public Vector2 MouseScreenPosition { get; private set; }
-
-        #endregion
-
-        #region Lifecycle
+        public bool Pause { get; set; }
+        public bool ToggleInventory { get; set; }
 
         public override void _Ready()
         {
-            Instance = this;
         }
 
         public override void _PhysicsProcess(double delta)
@@ -70,38 +41,28 @@ namespace Jogo25D.Systems
             Poll();
         }
 
-        #endregion
+        public float PrevMoveX { get; set; }
+        public float PrevMoveY { get; set; }
+        public bool PrevAttack { get; set; }
+        public bool PrevAbility2 { get; set; }
 
-        #region Polling
-
-        private float _prevMoveX;
-        private float _prevMoveY;
-        private bool  _prevAttack;
-
-        private void Poll()
+        public void Poll()
         {
-            MouseScreenPosition = GetViewport().GetMousePosition();
+            var screenMousePos = GetViewport().GetMousePosition();
 
             if (IsBlocked)
             {
-                LogReleased("attack",  Attack);
-                LogReleased("move",    MoveX != 0f || MoveY != 0f);
+                LogReleased("attack",  Current.Attack);
+                LogReleased("move",    Current.MoveX != 0f || Current.MoveY != 0f);
 
-                MoveX = 0f;
-                MoveY = 0f;
-                Jump = false;
-                Dash = false;
-                Attack = false;
-                Reload = false;
-                Ability = false;
-                ScrollNext = false;
-                ScrollPrev = false;
+                Current = new ControlledInputs { MousePosition = screenMousePos };
                 Pause = false;
                 ToggleInventory = false;
 
-                _prevMoveX  = 0f;
-                _prevMoveY  = 0f;
-                _prevAttack = false;
+                PrevMoveX = 0f;
+                PrevMoveY = 0f;
+                PrevAttack = false;
+                PrevAbility2 = false;
                 
                 return;
             }
@@ -117,7 +78,9 @@ namespace Jogo25D.Systems
             var newScrollPrev = Input.IsActionJustPressed("weapon_prev");
             var newPause = Input.IsActionJustPressed("pause");
             var newInv = Input.IsActionJustPressed("toggle_inventory");
-            var wasMoving = _prevMoveX != 0f || _prevMoveY != 0f;
+            var newAbility2Held = Input.IsActionPressed("ability_2");
+            var newAbility2Released = PrevAbility2 && !newAbility2Held;
+            var wasMoving = PrevMoveX != 0f || PrevMoveY != 0f;
             var isMoving = newMoveX   != 0f || newMoveY   != 0f;
 
             if (!wasMoving && isMoving)
@@ -129,11 +92,11 @@ namespace Jogo25D.Systems
                 GD.Print("[Input] move SOLTO");
             }
 
-            if (!_prevAttack && newAttack)
+            if (!PrevAttack && newAttack)
             {
                 GD.Print("[Input] attack PRESSIONADO");
             }
-            else if (_prevAttack && !newAttack)
+            else if (PrevAttack && !newAttack)
             {
                 GD.Print("[Input] attack SOLTO");
             }
@@ -157,6 +120,15 @@ namespace Jogo25D.Systems
             { 
                 GD.Print("[Input] ability PRESSIONADO"); 
             }
+
+            if (newAbility2Held && !PrevAbility2)
+            {
+                GD.Print("[Input] ability_2 PRESSIONADO");
+            }
+            else if (newAbility2Released)
+            {
+                GD.Print("[Input] ability_2 SOLTO");
+            }
             
             if (newPause)   
             { 
@@ -168,24 +140,32 @@ namespace Jogo25D.Systems
                 GD.Print("[Input] toggle_inventory PRESSIONADO"); 
             }
 
-            _prevMoveX  = newMoveX;
-            _prevMoveY  = newMoveY;
-            _prevAttack = newAttack;
+            PrevMoveX = newMoveX;
+            PrevMoveY = newMoveY;
+            PrevAttack = newAttack;
+            PrevAbility2 = newAbility2Held;
 
-            MoveX           = newMoveX;
-            MoveY           = newMoveY;
-            Jump            = newJump;
-            Dash            = newDash;
-            Attack          = newAttack;
-            Reload          = newReload;
-            Ability         = newAbility;
-            ScrollNext      = newScrollNext;
-            ScrollPrev      = newScrollPrev;
-            Pause           = newPause;
+            Current = new ControlledInputs
+            {
+                MoveX = newMoveX,
+                MoveY = newMoveY,
+                Jump = newJump,
+                Dash = newDash,
+                Attack = newAttack,
+                Reload = newReload,
+                Ability = newAbility,
+                Ability2Held = newAbility2Held,
+                Ability2JustReleased = newAbility2Released,
+                ScrollNext = newScrollNext,
+                ScrollPrev = newScrollPrev,
+                MousePosition = screenMousePos,
+            };
+
+            Pause = newPause;
             ToggleInventory = newInv;
         }
 
-        private void LogReleased(string name, bool wasActive)
+        public void LogReleased(string name, bool wasActive)
         {
             if (wasActive)
             {
@@ -193,6 +173,5 @@ namespace Jogo25D.Systems
             }
         }
 
-        #endregion
     }
 }

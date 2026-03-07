@@ -1,4 +1,4 @@
-﻿namespace Jogo25D.Constants
+namespace Jogo25D.Constants
 {
     public static class Assets
     {

@@ -8,123 +8,116 @@ namespace Jogo25D.Items
 {
     public static class ItemDB
     {
-        private static Dictionary<string, ItemDefinition> _items;
-        private static bool _initialized;
+        public static Dictionary<string, ItemDefinition> Items { get; set; }
+        public static bool Initialized { get; set; }
 
         public static void Initialize()
         {
-            if (_initialized)
+            if (Initialized)
             {
                 return;
             }
 
-            _items = new Dictionary<string, ItemDefinition>();
+            Items = new Dictionary<string, ItemDefinition>();
 
-            var swordStarting = new WeaponDefinition
-            {
-                Id          = "sword_starting",
-                Name        = "Sword",
-                Type        = ItemType.WeaponMelee,
-                Description = "Uma espada básica para combate corpo a corpo",
-                Cooldown    = 0.5f,
-                Icon        = ResourceLoader.Exists("res://Assets/Icons/sword.png") ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
+            var swordStarting = new WeaponDefinition {
+                Id = "sword_starting",
+                Name = "Sword",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada bÃ¡sica para combate corpo a corpo",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_17),
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
-                Properties  = new List<BaseProperty>
+                Properties = new List<BaseProperty>
                 {   
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical },
-                    new WeaponProperty { AttackRange = 80f, KnockbackForce = 200f },
+                    new AttackProperty { AttackRange = 80f, KnockbackForce = 200f },
                     new ChargesProperty { InfiniteCharges = true }
                 }
             };
 
-            var bowStarting = new WeaponDefinition
-            {
-                Id          = "bow_starting",
-                Name        = "Arco",
-                Type        = ItemType.WeaponRanged,
-                Description = "Um arco para ataques à distância",
-                Cooldown    = 0.8f,
-                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_10) ,
+            var bowStarting = new WeaponDefinition {
+                Id = "bow_starting",
+                Name = "Arco",
+                Type = ItemType.WeaponRanged,
+                Description = "Um arco para ataques Ã  distÃ¢ncia",
+                Cooldown = 0.8f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_10) ,
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
-                Properties  = new List<BaseProperty>
+                Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 10, DamageType = DamageType.Physical },
-                    new WeaponProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 750f },
-                    new ChargesProperty { InfiniteCharges = false, MaxCharges = 10, ChargeType = "arrow", ReloadCooldown = 1.0f }
+                    new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 750f },
+                    new ChargesProperty { InfiniteCharges = false, MaxCharges = 10, ChargeItemId = "arrow", ReloadCooldown = 1.0f }
                 }
             };
 
-            var fireballStarting = new WeaponDefinition
-            {
-                Id          = "bow_starting2",
-                Name        = "Arco2",
-                Type        = ItemType.WeaponRanged,
-                Description = "Um arco melhorado para ataques à distância",
-                Cooldown    = 0.01f,
-                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_11),
+            var fireballStarting = new WeaponDefinition {
+                Id = "bow_starting2",
+                Name = "Arco2",
+                Type = ItemType.WeaponRanged,
+                Description = "Um arco melhorado para ataques Ã  distÃ¢ncia",
+                Cooldown = 0.01f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_11),
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn"),
-                Properties  = new List<BaseProperty>
+                Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 5, DamageType = DamageType.Fire },
-                    new WeaponProperty { AttackRange = 2000f, AttackArea = 15f, ProjectileSpeed = 1200f },
+                    new AttackProperty { AttackRange = 2000f, AttackArea = 15f, ProjectileSpeed = 1200f },
                     new ChargesProperty { InfiniteCharges = true, MaxCharges = 1, ReloadCooldown = 1.5f }
                 }
             };
 
-            var arrow = new ConsumableDefinition
-            {
-                Id           = "arrow",
-                Name         = "Flecha",
-                Type         = ItemType.Consumable,
-                Description  = "Munição para arcos",
-                Stackable    = true,
+            var arrow = new ConsumableDefinition {
+                Id = "arrow",
+                Name = "Flecha",
+                Type = ItemType.Consumable,
+                Description = "MuniÃ§Ã£o para arcos",
+                Stackable = true,
                 MaxStackSize = 9999,
-                Icon         = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_40),
-                Properties   = new List<BaseProperty>
+                Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_40),
+                Properties = new List<BaseProperty>
                 {
-                    new ChargesProperty { ChargeType = "arrow" }
+                    new ChargesProperty { ChargeItemId = "arrow" }
                 }
             };
 
-            var swordBasic = new WeaponDefinition
-            {
-                Id          = "sword_basic",
-                Name        = "Espada Básica",
-                Type        = ItemType.WeaponMelee,
-                Cooldown    = 0.6f,
-                Icon        = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>("res://Assets/Icons/sword.png") : null,
+            var swordBasic = new WeaponDefinition {
+                Id = "sword_basic",
+                Name = "Espada BÃ¡sica",
+                Type = ItemType.WeaponMelee,
+                Cooldown = 0.6f,
+                Icon = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_1) : null,
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
-                Properties  = new List<BaseProperty>
+                Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical },
-                    new WeaponProperty { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 250f },
+                    new AttackProperty { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 250f },
                     new CritProperty { CritChance = 0.1f, CritDamage = 0.5f },
                     new ChargesProperty { InfiniteCharges = true }
                 }
             };
 
-            var bowBasic = new WeaponDefinition
-            {
-                Id          = "bow_basic",
-                Name        = "Arco Básico",
-                Type        = ItemType.WeaponRanged,
-                Cooldown    = 0.8f,
-                Icon        = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_1),
+            var bowBasic = new WeaponDefinition {
+                Id = "bow_basic",
+                Name = "Arco BÃ¡sico",
+                Type = ItemType.WeaponRanged,
+                Cooldown = 0.8f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_1),
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
-                Properties  = new List<BaseProperty>
+                Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 10, DamageType = DamageType.Physical },
-                    new WeaponProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 750f },
-                    new ChargesProperty { InfiniteCharges = false, MaxCharges = 10, ChargeType = "arrow", ReloadCooldown = 1.0f }
+                    new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 750f },
+                    new ChargesProperty { InfiniteCharges = false, MaxCharges = 10, ChargeItemId = "arrow", ReloadCooldown = 1.0f }
                 }
             };
 
-            var poisonFlask = new ConsumableDefinition
-            {
-                Id           = "poison_flask",
-                Name         = "Frasco de Veneno",
-                Type         = ItemType.Consumable,
-                Stackable    = true,
+            var poisonFlask = new ConsumableDefinition {
+                Id = "poison_flask",
+                Name = "Frasco de Veneno",
+                Type = ItemType.Consumable,
+                Stackable = true,
                 MaxStackSize = 10,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_1),
                 OnUseEffects = new List<EffectDefinition>
@@ -154,47 +147,47 @@ namespace Jogo25D.Items
             Register(bowBasic);
             Register(poisonFlask);
 
-            _initialized = true;
+            Initialized = true;
         }
 
         public static void Register(ItemDefinition definition)
         {
-            if (_items == null)
+            if (Items == null)
             {
-                _items = new Dictionary<string, ItemDefinition>();
+                Items = new Dictionary<string, ItemDefinition>();
             }
-            _items[definition.Id] = definition;
+            Items[definition.Id] = definition;
         }
 
         public static ItemDefinition Get(string id)
         {
-            if (!_initialized)
+            if (!Initialized)
             {
                 Initialize();
             }
 
-            _items.TryGetValue(id, out var def);
+            Items.TryGetValue(id, out var def);
             return def;
         }
 
         public static bool TryGet(string id, out ItemDefinition definition)
         {
-            if (!_initialized)
+            if (!Initialized)
             {
                 Initialize();
             }
 
-            return _items.TryGetValue(id, out definition);
+            return Items.TryGetValue(id, out definition);
         }
 
         public static IEnumerable<string> GetAllIds()
         {
-            if (!_initialized)
+            if (!Initialized)
             {
                 Initialize();
             }
 
-            return _items.Keys;
+            return Items.Keys;
         }
     }
 }

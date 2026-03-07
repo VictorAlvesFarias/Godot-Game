@@ -1,6 +1,9 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://db2c5m47jt7cb"]
 
-[ext_resource type="Script" path="res://Features/Word/Characters/Entities/Player.cs" id="1"]
+[ext_resource type="Script" uid="uid://cmmbtq0bi3lp0" path="res://Features/Word/Characters/Entities/Player.cs" id="1"]
+[ext_resource type="Script" uid="uid://eosmfmgs6tc5" path="res://Features/Word/Items/Systems/Inventory.cs" id="3"]
+[ext_resource type="Script" uid="uid://c7jf4n2qkm8p3" path="res://Features/Word/Characters/Systems/AimIndicator.cs" id="4"]
+[ext_resource type="Script" uid="uid://b3rcindthhu0a" path="res://Features/Word/Characters/Systems/GroundIndicator.cs" id="5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
 size = Vector2(40, 40)
@@ -8,13 +11,26 @@ size = Vector2(40, 40)
 [node name="Player" type="CharacterBody2D" unique_id=678460707]
 script = ExtResource("1")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=857000654]
-shape = SubResource("RectangleShape2D_1")
+[node name="Systems" type="Node2D" parent="." unique_id=312828525]
 
-[node name="Sprite" type="Polygon2D" parent="." unique_id=745143060]
+[node name="Inventory" type="Node" parent="Systems" unique_id=534626789]
+script = ExtResource("3")
+
+[node name="AimIndicator" type="Node2D" parent="Systems" unique_id=111111111]
+script = ExtResource("4")
+
+[node name="GroundMarker" type="Node2D" parent="Systems" unique_id=222222222]
+script = ExtResource("5")
+
+[node name="Visual" type="Node2D" parent="." unique_id=90535363]
+
+[node name="Sprite" type="Polygon2D" parent="Visual" unique_id=745143060]
 color = Color(0, 0, 0, 0)
 polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
 
-[node name="Border" type="Line2D" parent="Sprite" unique_id=1106728310]
+[node name="Border" type="Line2D" parent="Visual/Sprite" unique_id=1106728310]
 points = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20, -20, -20)
 width = 3.0
+
+[node name="Shape" type="CollisionShape2D" parent="." unique_id=857000654]
+shape = SubResource("RectangleShape2D_1")

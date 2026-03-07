@@ -4,16 +4,16 @@ namespace Jogo25D.UI
 {
 	public partial class ScreenManager : Node
 	{
-		private static readonly Vector2I DESIGN_RESOLUTION = new Vector2I(1920, 1080);
-		private static bool AUTOSCALE { get; set; } = true;
+		public static Vector2I DesignResolution { get; set; } = new Vector2I(1920, 1080);
+		public static bool AutoScale { get; set; } = true;
 
-		private static float CURRENT_SCALE = 0.5f;
+		public static float CurrentScale { get; set; } = 0.5f;
 
 		public override void _Ready()
 		{
 			var root = GetTree().Root;
 
-			root.ContentScaleSize = DESIGN_RESOLUTION;
+			root.ContentScaleSize = DesignResolution;
 			root.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
 			root.ContentScaleAspect = Window.ContentScaleAspectEnum.Keep;
 
@@ -37,17 +37,17 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void SetWindowed()
+		public void SetWindowed()
 		{
 			ApplyScale();
 		}
 
-		private void SetFullscreen()
+		public void SetFullscreen()
 		{
 			DisplayServer.WindowSetMode(DisplayServer.WindowMode.ExclusiveFullscreen);
 		}
 
-		private void ToggleFullscreen()
+		public void ToggleFullscreen()
 		{
 			var currentMode = DisplayServer.WindowGetMode();
 
@@ -61,11 +61,11 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void ApplyScale()
+		public void ApplyScale()
 		{
-			if (!AUTOSCALE)
+			if (!AutoScale)
 			{
-				ApplyWindowSize(CURRENT_SCALE);
+				ApplyWindowSize(CurrentScale);
 			}
 			else
 			{
@@ -73,14 +73,14 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void ApplyWindowSize(float scale)
+		public void ApplyWindowSize(float scale)
 		{
-			CURRENT_SCALE = scale;
+			CurrentScale = scale;
 
 			var screenSize = DisplayServer.ScreenGetSize();
 			var desired = new Vector2I(
-				(int)(DESIGN_RESOLUTION.X * scale),
-				(int)(DESIGN_RESOLUTION.Y * scale)
+				(int)(DesignResolution.X * scale),
+				(int)(DesignResolution.Y * scale)
 			);
 			var windowSize = new Vector2I(
 				Mathf.Min(desired.X, screenSize.X),
@@ -92,7 +92,7 @@ namespace Jogo25D.UI
 			DisplayServer.WindowSetPosition(DisplayServer.ScreenGetPosition() + (screenSize - windowSize) / 2);
 		}
 
-		private float ResolveScaleFromScreen()
+		public float ResolveScaleFromScreen()
 		{
 			int screenWidth = DisplayServer.ScreenGetSize().X;
 

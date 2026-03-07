@@ -6,56 +6,50 @@ namespace Jogo25D.UI
 {
 	public partial class PauseUI : CanvasLayer
 	{
-		private Button resetButton;
-		private Button resumeButton;
-		private Button exitButton;
-		private Button hostButton;
-		private Button connectButton;
-		private Button tradeDimension;
-		private LineEdit addressInput;
-		private LineEdit portInput;
-		private Label statusLabel;
-		private Player player;
-		private WorldManager networkManager;
+		public Button ResetButton { get; set; }
+		public Button ResumeButton { get; set; }
+		public Button ExitButton { get; set; }
+		public Button HostButton { get; set; }
+		public Button ConnectButton { get; set; }
+		public Button TradeDimension { get; set; }
+		public LineEdit AddressInput { get; set; }
+		public LineEdit PortInput { get; set; }
+		public Label StatusLabel { get; set; }
+		public Player PlayerNode { get; set; }
+		public WorldManager NetworkManager { get; set; }
+		public InputManager InputManagerNode { get; set; }
 
-		public override void _Ready()
+        public override void _Ready()
 		{
 			Visible = false;
 		
-			resetButton = GetNode<Button>("Panel/VBoxContainer/ResetButton");
-			resumeButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ResumeButton");
-			tradeDimension = GetNode<Button>("Panel/VBoxContainer/TradeDimension");
-			exitButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ExitButton");
-			hostButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/HostButton");
-			connectButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ConnectButton");
-			portInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/PortInput");
-			addressInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/AddressInput");
-			statusLabel = GetNode<Label>("Panel/VBoxContainer/NetworkContainer/StatusLabel");
-			networkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-		
-			resetButton.Pressed += OnResetPressed;
-			resumeButton.Pressed += OnResumePressed;
-			exitButton.Pressed += OnExitPressed;
-			hostButton.Pressed += OnHostPressed;
-			connectButton.Pressed += OnConnectPressed;
-			tradeDimension.Pressed += OnTradeDimension;
+			ResetButton = GetNode<Button>("Panel/VBoxContainer/ResetButton");
+			ResumeButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ResumeButton");
+			TradeDimension = GetNode<Button>("Panel/VBoxContainer/TradeDimension");
+			ExitButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ExitButton");
+			HostButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/HostButton");
+			ConnectButton = GetNode<Button>("Panel/VBoxContainer/NetworkContainer/ConnectButton");
+			PortInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/PortInput");
+			AddressInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/AddressInput");
+			StatusLabel = GetNode<Label>("Panel/VBoxContainer/NetworkContainer/StatusLabel");
+			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+            InputManagerNode = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
-			player = GetTree().Root.FindChild("Player", true, false) as Player;
+            ResetButton.Pressed += OnResetPressed;
+			ResumeButton.Pressed += OnResumePressed;
+			ExitButton.Pressed += OnExitPressed;
+			HostButton.Pressed += OnHostPressed;
+			ConnectButton.Pressed += OnConnectPressed;
+			TradeDimension.Pressed += OnTradeDimension;
 
+			PlayerNode = GetTree().Root.FindChild("Player", true, false) as Player;
 
-			portInput.PlaceholderText = "Port";
-			addressInput.PlaceholderText = "IP:Port";
-
-			UpdateNetworkStatus();
+			PortInput.PlaceholderText = "Port";
+			AddressInput.PlaceholderText = "IP:Port";
 		}
 
 		public override void _Input(InputEvent @event)
 		{
-			if (InputManager.Instance != null && InputManager.Instance.IsBlocked)
-			{
-				return;
-			}
-
 			if (@event.IsActionPressed("pause") && !@event.IsEcho())
 			{
 				TogglePause();
@@ -70,13 +64,13 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void TogglePause()
+		public void TogglePause()
 		{
 			Visible = !Visible;
 			GetTree().Paused = Visible;
 		}
 	
-		private void OnResetPressed()
+		public void OnResetPressed()
 		{
 			Player localPlayer = null;
 			bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
@@ -98,107 +92,107 @@ namespace Jogo25D.UI
 		
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
-				networkManager.ResetPlayerClientRequest();
+				NetworkManager.ResetPlayerClientRequest();
 			}
 		
 			TogglePause();
 		}
 
-		private void OnExitPressed()
+		public void OnExitPressed()
 		{
 			GetTree().Quit();
 		}
 
-		private void OnResumePressed()
+		public void OnResumePressed()
 		{
 			Visible = false;
 			GetTree().Paused = false;
 		}
 
-		private void OnHostPressed()
+		public void OnHostPressed()
 		{
-			if (networkManager == null)
+			if (NetworkManager == null)
 			{
-				statusLabel.Text = "NetworkManager não encontrado!";
+				StatusLabel.Text = "NetworkManager nÃ£o encontrado!";
 
 				return;
 			}
 		
-			if (networkManager.IsConnected())
+			if (NetworkManager.IsConnected())
 			{
-				networkManager.Disconnect();
+				NetworkManager.Disconnect();
 
-				statusLabel.Text = "Desconectado";
+				StatusLabel.Text = "Desconectado";
 			}
 			else
 			{
-				var portText = portInput.Text.Trim();
-				var port = networkManager.CreateServer(portText);
+				var portText = PortInput.Text.Trim();
+				var port = NetworkManager.CreateServer(portText);
 
-				statusLabel.Text = $"Servidor criado na porta {port ?? "Porta não encontrada"}.";
+				StatusLabel.Text = $"Servidor criado na porta {port ?? "Porta nÃ£o encontrada"}.";
 			}
 		
 			UpdateNetworkStatus();
 		}
 	
-		private void OnTradeDimension()
+		public void OnTradeDimension()
 		{
-			networkManager.TradeDimensionClientRequest();
+			NetworkManager.TradeDimensionClientRequest();
 		}
 
-		private void OnConnectPressed()
+		public void OnConnectPressed()
 		{
-			if (networkManager == null)
+			if (NetworkManager == null)
 			{
-				statusLabel.Text = "NetworkManager não encontrado!";
+				StatusLabel.Text = "NetworkManager nÃ£o encontrado!";
 				return;
 			}
 		
-			if (networkManager.IsConnected())
+			if (NetworkManager.IsConnected())
 			{
-				networkManager.Disconnect();
-				statusLabel.Text = "Desconectado";
+				NetworkManager.Disconnect();
+				StatusLabel.Text = "Desconectado";
 			}
 			else
 			{
-				var textAddress = addressInput.Text.Trim();
-				var address = networkManager.JoinServer(textAddress);
+				var textAddress = AddressInput.Text.Trim();
+				var address = NetworkManager.JoinServer(textAddress);
 
-				statusLabel.Text = $"Conectando a {address}.";
+				StatusLabel.Text = $"Conectando a {address}.";
 			}
 
 			UpdateNetworkStatus();
 		}
 	
-		private void UpdateNetworkStatus()
+		public void UpdateNetworkStatus()
 		{
-			if (networkManager == null)
+			if (NetworkManager == null)
 			{ 
 				return;
 			}
 			
-			bool connected = networkManager.IsConnected();
+			bool connected = NetworkManager.IsConnected();
 		
-			hostButton.Text = connected && Multiplayer.IsServer() ? "STOP SERVER" : "HOST";
-			connectButton.Text = connected && !Multiplayer.IsServer() ? "DISCONNECT" : "CONNECT";
+			HostButton.Text = connected && Multiplayer.IsServer() ? "STOP SERVER" : "HOST";
+			ConnectButton.Text = connected && !Multiplayer.IsServer() ? "DISCONNECT" : "CONNECT";
 		
 			if (connected)
 			{
 				if (Multiplayer.IsServer())
 				{
-					statusLabel.Text = "Status: SERVIDOR";
-					statusLabel.Modulate = Colors.Green;
+					StatusLabel.Text = "Status: SERVIDOR";
+					StatusLabel.Modulate = Colors.Green;
 				}
 				else
 				{
-					statusLabel.Text = "Status: CONECTADO";
-					statusLabel.Modulate = Colors.Green;
+					StatusLabel.Text = "Status: CONECTADO";
+					StatusLabel.Modulate = Colors.Green;
 				}
 			}
 			else
 			{
-				statusLabel.Text = "Status: Desconectado";
-				statusLabel.Modulate = Colors.White;
+				StatusLabel.Text = "Status: Desconectado";
+				StatusLabel.Modulate = Colors.White;
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
 
@@ -8,68 +9,72 @@ namespace Jogo25D.UI
 {
 	public partial class InventoryUI : CanvasLayer
 	{
-		private Inventory inventory;
-		private GridContainer gridContainer;
-		private Panel contextMenu;
-		private VBoxContainer contextMenuContainer;
-		private Panel[] slots = new Panel[16];
-		private Panel[] selectedBorders = new Panel[16];
-		private TextureRect[] iconRects = new TextureRect[16];
-		private Label[] quantityLabels = new Label[16];
-		private Label[] nameLabels = new Label[16];
-		private Label[] numLabels = new Label[16];
-		private int selectedSlotIndex = -1;
-		private Control mainControl;
+		public Player LocalPlayer { get; set; }
+		public Inventory Inventory => LocalPlayer?.Inventory;
+		public InputManager InputManagerNode { get; set; }
+		public GridContainer GridContainer { get; set; }
+		public Panel ContextMenu { get; set; }
+		public VBoxContainer ContextMenuContainer { get; set; }
+		public Panel[] SlotPanels { get; set; } = new Panel[16];
+		public Panel[] SelectedBorders { get; set; } = new Panel[16];
+		public TextureRect[] IconRects { get; set; } = new TextureRect[16];
+		public Label[] QuantityLabels { get; set; } = new Label[16];
+		public Label[] NameLabels { get; set; } = new Label[16];
+		public Label[] NumLabels { get; set; } = new Label[16];
+		public int SelectedSlotIndex { get; set; } = -1;
+		public Control MainControl { get; set; }
 
-		private bool isDragging = false;
-		private int draggedSlotIndex = -1;
-		private Control dragPreview;
-		private Vector2 dragOffset;
-		private const float DragThreshold = 5.0f;
+		public bool IsDragging { get; set; } = false;
+		public int DraggedSlotIndex { get; set; } = -1;
+		public Control DragPreview { get; set; }
+		public Vector2 DragOffset { get; set; }
+		public const float DragThreshold = 5.0f;
 
 		public override void _UnhandledInput(InputEvent @event)
 		{
-			if (contextMenu == null)
+			if (ContextMenu == null)
 			{
 				return;
 			}
 
-			if (contextMenu.Visible &&
+			if (ContextMenu.Visible &&
 				@event is InputEventMouseButton mouseEvent &&
 				mouseEvent.Pressed &&
 				mouseEvent.ButtonIndex == MouseButton.Left)
 			{
-				var rect = contextMenu.GetGlobalRect();
+				var rect = ContextMenu.GetGlobalRect();
 
 				if (!rect.HasPoint(mouseEvent.GlobalPosition))
 				{
-					contextMenu.Visible = false;
+					ContextMenu.Visible = false;
 				}
 			}
 		}
 
 		public override void _Ready()
 		{
-			mainControl = GetNode<Control>("CenterContainer");
-			gridContainer = GetNode<GridContainer>("CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer");
+			MainControl = GetNode<Control>("CenterContainer");
+			GridContainer = GetNode<GridContainer>("CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer");
 
-			contextMenu = GetNode<Panel>("ContextMenu");
-			contextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
+			ContextMenu = GetNode<Panel>("ContextMenu");
+			ContextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
 
 			CreateDragPreview();
+
+			InputManagerNode = GetTree().Root.GetNodeOrNull<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
 			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
 			Visible = false;
 		}
 
-		private void CreateDragPreview()
+		public void CreateDragPreview()
 		{
-			dragPreview = new Panel();
-			dragPreview.CustomMinimumSize = new Vector2(64, 64);
-			dragPreview.Visible = false;
-			dragPreview.ZIndex = 100;
-			dragPreview.MouseFilter = Control.MouseFilterEnum.Ignore;
+			DragPreview = new Panel();
+			DragPreview.CustomMinimumSize = new Vector2(64, 64);
+			DragPreview.Visible = false;
+			DragPreview.ZIndex = 100;
+			DragPreview.MouseFilter = Control.MouseFilterEnum.Ignore;
 
 			var styleBox = new StyleBoxFlat();
 			styleBox.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
@@ -78,25 +83,25 @@ namespace Jogo25D.UI
 			styleBox.BorderWidthRight = 2;
 			styleBox.BorderWidthTop = 2;
 			styleBox.BorderWidthBottom = 2;
-			dragPreview.AddThemeStyleboxOverride("panel", styleBox);
+			DragPreview.AddThemeStyleboxOverride("panel", styleBox);
 
 			var iconRect = new TextureRect();
 			iconRect.Name = "Icon";
 			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
 			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-			dragPreview.AddChild(iconRect);
+			DragPreview.AddChild(iconRect);
 
-			mainControl.AddChild(dragPreview);
+			MainControl.AddChild(DragPreview);
 		}
 
-		private void FindLocalPlayerInventorySystem()
+		public void FindLocalPlayerInventorySystem()
 		{
-			if (inventory != null && IsInstanceValid(inventory))
+			if (Inventory != null && IsInstanceValid(Inventory))
 			{
-				inventory.InventoryChanged -= OnInventoryChanged;
+				Inventory.InventoryChanged -= OnInventoryChanged;
 			}
-			inventory = null;
+			LocalPlayer = null;
 
 			var players = GetTree().GetNodesInGroup("players");
 			var localPeerId = 1;
@@ -125,12 +130,12 @@ namespace Jogo25D.UI
 				{
 					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
 					{
-						inventory = player.Inventory;
-						if (inventory != null)
+						LocalPlayer = player;
+						if (Inventory != null)
 						{
-							inventory.InventoryChanged += OnInventoryChanged;
+							Inventory.InventoryChanged += OnInventoryChanged;
 
-							if (slots[0] == null)
+							if (SlotPanels[0] == null)
 							{
 								InitializeSlots();
 							}
@@ -145,32 +150,35 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void InitializeSlots()
+		public void InitializeSlots()
 		{
-			// Se já existe um slot na cena (para visualização no editor), usá-lo como slot 0
-			if (gridContainer.GetChildCount() > 0)
+			if (GridContainer.GetChildCount() > 0)
 			{
-				var existingSlot = gridContainer.GetChild<Panel>(0);
-				slots[0] = existingSlot;
+				var existingSlot = GridContainer.GetChild<Panel>(0);
+				SlotPanels[0] = existingSlot;
 
 				var margin = existingSlot.GetNode<MarginContainer>("MarginContainer");
 				var center = margin.GetNode<CenterContainer>("CenterContainer");
-				iconRects[0] = center.GetNode<TextureRect>("IconRect");
-				nameLabels[0] = center.GetNode<Label>("NameLabel");
-				quantityLabels[0] = existingSlot.GetNode<Label>("QuantityLabel");
-				numLabels[0] = existingSlot.GetNode<Label>("NumLabel");
-				numLabels[0].Text = "1";
+				IconRects[0] = center.GetNode<TextureRect>("IconRect");
+				NameLabels[0] = center.GetNode<Label>("NameLabel");
+				QuantityLabels[0] = existingSlot.GetNode<Label>("QuantityLabel");
+				NumLabels[0] = existingSlot.GetNode<Label>("NumLabel");
+				NumLabels[0].Text = "1";
 
 				int slotIndex = 0;
 				existingSlot.GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
 
 				for (int i = 1; i < 16; i++)
+				{
 					SetupSlot(i);
+				}
 			}
 			else
 			{
 				for (int i = 0; i < 16; i++)
+				{
 					SetupSlot(i);
+				}
 			}
 
 			OnInventoryChanged();
@@ -178,23 +186,23 @@ namespace Jogo25D.UI
 
 		public override void _ExitTree()
 		{
-			if (inventory != null && IsInstanceValid(inventory))
+			if (Inventory != null && IsInstanceValid(Inventory))
 			{
-				inventory.InventoryChanged -= OnInventoryChanged;
+				Inventory.InventoryChanged -= OnInventoryChanged;
 			}
 		}
 
 		public override void _Process(double delta)
 		{
-			if (isDragging && dragPreview != null)
+			if (IsDragging && DragPreview != null)
 			{
-				dragPreview.GlobalPosition = GetViewport().GetMousePosition() + dragOffset;
+				DragPreview.GlobalPosition = GetViewport().GetMousePosition() + DragOffset;
 			}
 		}
 
 		public override void _Input(InputEvent @event)
 		{
-			if (isDragging && @event is InputEventMouseButton mouseEvent &&
+			if (IsDragging && @event is InputEventMouseButton mouseEvent &&
 				mouseEvent.ButtonIndex == MouseButton.Left && !mouseEvent.Pressed)
 			{
 				int targetSlot = GetSlotAtPosition(mouseEvent.GlobalPosition);
@@ -212,21 +220,21 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (@event.IsActionPressed("ui_cancel") && isDragging)
+			if (@event.IsActionPressed("ui_cancel") && IsDragging)
 			{
 				CancelDrag();
 				GetViewport().SetInputAsHandled();
 				return;
 			}
 
-			if (InputManager.Instance != null && InputManager.Instance.IsBlocked)
+			if (InputManagerNode != null && InputManagerNode.IsBlocked)
 			{
 				return;
 			}
 
 			if (@event.IsActionPressed("toggle_inventory") && !@event.IsEcho())
 			{
-				if (isDragging)
+				if (IsDragging)
 				{
 					CancelDrag();
 				}
@@ -240,11 +248,11 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private int GetSlotAtPosition(Vector2 globalPosition)
+		public int GetSlotAtPosition(Vector2 globalPosition)
 		{
 			for (int i = 0; i < 16; i++)
 			{
-				if (slots[i] != null && slots[i].GetGlobalRect().HasPoint(globalPosition))
+				if (SlotPanels[i] != null && SlotPanels[i].GetGlobalRect().HasPoint(globalPosition))
 				{
 					return i;
 				}
@@ -252,241 +260,278 @@ namespace Jogo25D.UI
 			return -1;
 		}
 
-		private void SetupSlot(int index)
+		public void SetupSlot(int index)
 		{
-			slots[index] = new Panel();
-			slots[index].CustomMinimumSize = new Vector2(64, 64);
-			gridContainer.AddChild(slots[index]);
+			SlotPanels[index] = new Panel();
+			SlotPanels[index].CustomMinimumSize = new Vector2(64, 64);
+			GridContainer.AddChild(SlotPanels[index]);
 
 			var marginContainer = new MarginContainer();
 			marginContainer.AddThemeConstantOverride("margin_left", 4);
 			marginContainer.AddThemeConstantOverride("margin_top", 4);
 			marginContainer.AddThemeConstantOverride("margin_right", 4);
 			marginContainer.AddThemeConstantOverride("margin_bottom", 4);
-			slots[index].AddChild(marginContainer);
+			SlotPanels[index].AddChild(marginContainer);
 
 			var centerContainer = new CenterContainer();
 			marginContainer.AddChild(centerContainer);
 
-			iconRects[index] = new TextureRect();
-			iconRects[index].ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-			iconRects[index].StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-			iconRects[index].CustomMinimumSize = new Vector2(56, 56);
-			centerContainer.AddChild(iconRects[index]);
+			IconRects[index] = new TextureRect();
+			IconRects[index].ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+			IconRects[index].StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+			IconRects[index].CustomMinimumSize = new Vector2(56, 56);
+			centerContainer.AddChild(IconRects[index]);
 
-			nameLabels[index] = new Label();
-			nameLabels[index].HorizontalAlignment = HorizontalAlignment.Center;
-			nameLabels[index].VerticalAlignment = VerticalAlignment.Center;
-			nameLabels[index].AutowrapMode = TextServer.AutowrapMode.Word;
-			nameLabels[index].Visible = false;
-			centerContainer.AddChild(nameLabels[index]);
+			NameLabels[index] = new Label();
+			NameLabels[index].HorizontalAlignment = HorizontalAlignment.Center;
+			NameLabels[index].VerticalAlignment = VerticalAlignment.Center;
+			NameLabels[index].AutowrapMode = TextServer.AutowrapMode.Word;
+			NameLabels[index].Visible = false;
+			centerContainer.AddChild(NameLabels[index]);
 
-			quantityLabels[index] = new Label();
-			quantityLabels[index].LayoutMode = 1;
-			quantityLabels[index].AnchorLeft = 1;
-			quantityLabels[index].AnchorTop = 1;
-			quantityLabels[index].AnchorRight = 1;
-			quantityLabels[index].AnchorBottom = 1;
-			quantityLabels[index].OffsetLeft = -33;
-			quantityLabels[index].OffsetTop = -16;
-			quantityLabels[index].OffsetRight = -3;
-			quantityLabels[index].OffsetBottom = -3;
-			quantityLabels[index].GrowHorizontal = Control.GrowDirection.Begin;
-			quantityLabels[index].GrowVertical = Control.GrowDirection.Begin;
-			quantityLabels[index].HorizontalAlignment = HorizontalAlignment.Right;
-			quantityLabels[index].VerticalAlignment = VerticalAlignment.Bottom;
-			quantityLabels[index].AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.3f, 1f));
-			quantityLabels[index].AddThemeColorOverride("font_outline_color", Colors.Black);
-			quantityLabels[index].AddThemeConstantOverride("outline_size", 2);
-			quantityLabels[index].AddThemeFontSizeOverride("font_size", 10);
-			slots[index].AddChild(quantityLabels[index]);
+			QuantityLabels[index] = new Label();
+			QuantityLabels[index].LayoutMode = 1;
+			QuantityLabels[index].AnchorLeft = 1;
+			QuantityLabels[index].AnchorTop = 1;
+			QuantityLabels[index].AnchorRight = 1;
+			QuantityLabels[index].AnchorBottom = 1;
+			QuantityLabels[index].OffsetLeft = -33;
+			QuantityLabels[index].OffsetTop = -16;
+			QuantityLabels[index].OffsetRight = -3;
+			QuantityLabels[index].OffsetBottom = -3;
+			QuantityLabels[index].GrowHorizontal = Control.GrowDirection.Begin;
+			QuantityLabels[index].GrowVertical = Control.GrowDirection.Begin;
+			QuantityLabels[index].HorizontalAlignment = HorizontalAlignment.Right;
+			QuantityLabels[index].VerticalAlignment = VerticalAlignment.Bottom;
+			QuantityLabels[index].AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.3f, 1f));
+			QuantityLabels[index].AddThemeColorOverride("font_outline_color", Colors.Black);
+			QuantityLabels[index].AddThemeConstantOverride("outline_size", 2);
+			QuantityLabels[index].AddThemeFontSizeOverride("font_size", 10);
+			SlotPanels[index].AddChild(QuantityLabels[index]);
 
-			numLabels[index] = new Label();
-			numLabels[index].Text = $"{index + 1}";
-			numLabels[index].LayoutMode = 1;
-			numLabels[index].OffsetLeft = 3;
-			numLabels[index].OffsetTop = 2;
-			numLabels[index].OffsetRight = 23;
-			numLabels[index].OffsetBottom = 16;
-			numLabels[index].AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.65f, 1f));
-			numLabels[index].AddThemeFontSizeOverride("font_size", 9);
-			slots[index].AddChild(numLabels[index]);
+			NumLabels[index] = new Label();
+			NumLabels[index].Text = $"{index + 1}";
+			NumLabels[index].LayoutMode = 1;
+			NumLabels[index].OffsetLeft = 3;
+			NumLabels[index].OffsetTop = 2;
+			NumLabels[index].OffsetRight = 23;
+			NumLabels[index].OffsetBottom = 16;
+			NumLabels[index].AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.65f, 1f));
+			NumLabels[index].AddThemeFontSizeOverride("font_size", 9);
+			SlotPanels[index].AddChild(NumLabels[index]);
 
 			int slotIndex = index;
-			slots[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
+			SlotPanels[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
 		}
 
-		private void OnSlotInput(int slotIndex, InputEvent @event)
+		public void OnSlotInput(int slotIndex, InputEvent @event)
 		{
-			if (inventory == null || !IsInstanceValid(inventory)) return;
+			if (Inventory == null || !IsInstanceValid(Inventory))
+			{
+			    return;
+			}
 
-			var slot = inventory.GetSlot(slotIndex);
+			var slot = Inventory.GetSlot(slotIndex);
 
 			if (@event is InputEventMouseButton mouseEvent)
 			{
 				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty())
 				{
 					StartDrag(slotIndex, mouseEvent.GlobalPosition);
-					slots[slotIndex].AcceptEvent();
+					SlotPanels[slotIndex].AcceptEvent();
 				}
 				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty())
 				{
 					ShowContextMenuForSlot(slotIndex, mouseEvent.GlobalPosition);
-					slots[slotIndex].AcceptEvent();
+					SlotPanels[slotIndex].AcceptEvent();
 				}
 			}
 		}
 
-		private void StartDrag(int slotIndex, Vector2 mousePos)
+		public void StartDrag(int slotIndex, Vector2 mousePos)
 		{
-			if (inventory == null || !IsInstanceValid(inventory)) return;
+			if (Inventory == null || !IsInstanceValid(Inventory))
+			{
+			    return;
+			}
 
-			var slot = inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty()) return;
+			var slot = Inventory.GetSlot(slotIndex);
+			if (slot.IsEmpty())
+			{
+			    return;
+			}
 
 			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Definition?.Name})");
 
-			isDragging = true;
-			draggedSlotIndex = slotIndex;
+			IsDragging = true;
+			DraggedSlotIndex = slotIndex;
 
-			if (dragPreview != null)
+			if (DragPreview != null)
 			{
-				var iconRect = dragPreview.GetNode<TextureRect>("Icon");
+				var iconRect = DragPreview.GetNode<TextureRect>("Icon");
 				iconRect.Texture = slot.Definition?.Icon;
 
-				dragOffset = new Vector2(-32, -32);
-				dragPreview.GlobalPosition = mousePos + dragOffset;
-				dragPreview.Visible = true;
+				DragOffset = new Vector2(-32, -32);
+				DragPreview.GlobalPosition = mousePos + DragOffset;
+				DragPreview.Visible = true;
 
-				if (iconRects[slotIndex] != null)
+				if (IconRects[slotIndex] != null)
 				{
-					iconRects[slotIndex].Modulate = new Color(1, 1, 1, 0.5f);
+					IconRects[slotIndex].Modulate = new Color(1, 1, 1, 0.5f);
 				}
 			}
 		}
 
-		private void EndDrag(int targetSlotIndex)
+		public void EndDrag(int targetSlotIndex)
 		{
-			if (!isDragging || draggedSlotIndex < 0) return;
-
-			GD.Print($"EndDrag: arrastado slot {draggedSlotIndex} para slot {targetSlotIndex}");
-
-			if (dragPreview != null)
+			if (!IsDragging || DraggedSlotIndex < 0)
 			{
-				dragPreview.Visible = false;
+			    return;
 			}
 
-			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
+			GD.Print($"EndDrag: arrastado slot {DraggedSlotIndex} para slot {targetSlotIndex}");
+
+			if (DragPreview != null)
 			{
-				iconRects[draggedSlotIndex].Modulate = Colors.White;
+				DragPreview.Visible = false;
 			}
 
-			if (targetSlotIndex != draggedSlotIndex && inventory != null)
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < 16 && IconRects[DraggedSlotIndex] != null)
 			{
-				SwapItems(draggedSlotIndex, targetSlotIndex);
+				IconRects[DraggedSlotIndex].Modulate = Colors.White;
 			}
 
-			isDragging = false;
-			draggedSlotIndex = -1;
+			if (targetSlotIndex != DraggedSlotIndex && Inventory != null)
+			{
+				SwapItems(DraggedSlotIndex, targetSlotIndex);
+			}
+
+			IsDragging = false;
+			DraggedSlotIndex = -1;
 		}
 
-		private void CancelDrag()
+		public void CancelDrag()
 		{
-			if (!isDragging) return;
-
-			if (dragPreview != null)
+			if (!IsDragging)
 			{
-				dragPreview.Visible = false;
+			    return;
 			}
 
-			if (draggedSlotIndex >= 0 && draggedSlotIndex < 16 && iconRects[draggedSlotIndex] != null)
+			if (DragPreview != null)
 			{
-				iconRects[draggedSlotIndex].Modulate = Colors.White;
+				DragPreview.Visible = false;
 			}
 
-			isDragging = false;
-			draggedSlotIndex = -1;
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < 16 && IconRects[DraggedSlotIndex] != null)
+			{
+				IconRects[DraggedSlotIndex].Modulate = Colors.White;
+			}
+
+			IsDragging = false;
+			DraggedSlotIndex = -1;
 		}
 
-		private void SwapItems(int fromIndex, int toIndex)
+		public void SwapItems(int fromIndex, int toIndex)
 		{
-			if (inventory == null || !IsInstanceValid(inventory)) return;
-			if (fromIndex < 0 || fromIndex >= 16 || toIndex < 0 || toIndex >= 16) return;
+			if (Inventory == null || !IsInstanceValid(Inventory))
+			{
+			    return;
+			}
+			if (fromIndex < 0 || fromIndex >= 16 || toIndex < 0 || toIndex >= 16)
+			{
+			    return;
+			}
 
-			inventory.SwapSlots(fromIndex, toIndex);
+			Inventory.SwapSlots(fromIndex, toIndex);
 		}
 
-		private void UpdateSlot(int index)
+		public void UpdateSlot(int index)
 		{
-			if (inventory == null || !IsInstanceValid(inventory))
+			if (Inventory == null || !IsInstanceValid(Inventory))
+			{
 				return;
+			}
 
-			if (iconRects == null || nameLabels == null || quantityLabels == null)
+			if (IconRects == null || NameLabels == null || QuantityLabels == null)
+			{
 				return;
+			}
 
 			if (index < 0
-				|| index >= iconRects.Length
-				|| index >= nameLabels.Length
-				|| index >= quantityLabels.Length)
+				|| index >= IconRects.Length
+				|| index >= NameLabels.Length
+				|| index >= QuantityLabels.Length)
 				return;
 
-			var slot = inventory.GetSlot(index);
+			var slot = Inventory.GetSlot(index);
 			if (slot == null)
+			{
 				return;
+			}
 
 			if (slot.IsEmpty() || slot.Definition == null)
 			{
-				iconRects[index].Texture = null;
-				nameLabels[index].Visible = false;
-				quantityLabels[index].Text = "";
+				IconRects[index].Texture = null;
+				NameLabels[index].Visible = false;
+				QuantityLabels[index].Text = "";
 				return;
 			}
 
 			if (slot.Definition.Icon != null)
 			{
-				iconRects[index].Texture = slot.Definition.Icon;
-				nameLabels[index].Visible = false;
+				IconRects[index].Texture = slot.Definition.Icon;
+				NameLabels[index].Visible = false;
 			}
 			else
 			{
-				iconRects[index].Texture = null;
-				nameLabels[index].Text = slot.Definition.Name;
-				nameLabels[index].Visible = true;
+				IconRects[index].Texture = null;
+				NameLabels[index].Text = slot.Definition.Name;
+				NameLabels[index].Visible = true;
 			}
 
 			if (slot.Definition.Stackable && slot.Quantity > 1)
-				quantityLabels[index].Text = $"x{slot.Quantity}";
+			{
+				QuantityLabels[index].Text = $"x{slot.Quantity}";
+			}
 			else
-				quantityLabels[index].Text = "";
-		}
-
-		private void SelectSlot(int index)
-		{
-			if (selectedSlotIndex >= 0 && selectedSlotIndex < 16)
 			{
-				selectedBorders[selectedSlotIndex].Visible = false;
-			}
-
-			selectedSlotIndex = index;
-
-			if (selectedSlotIndex >= 0 && selectedSlotIndex < 16)
-			{
-				selectedBorders[selectedSlotIndex].Visible = true;
+				QuantityLabels[index].Text = "";
 			}
 		}
 
-		private void ShowContextMenuForSlot(int slotIndex, Vector2 position)
+		public void SelectSlot(int index)
 		{
-			if (inventory == null || !IsInstanceValid(inventory)) return;
-
-			var slot = inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty()) return;
-
-			selectedSlotIndex = slotIndex;
-
-			foreach (Node child in contextMenuContainer.GetChildren())
+			if (SelectedSlotIndex >= 0 && SelectedSlotIndex < 16)
 			{
-				contextMenuContainer.RemoveChild(child);
+				SelectedBorders[SelectedSlotIndex].Visible = false;
+			}
+
+			SelectedSlotIndex = index;
+
+			if (SelectedSlotIndex >= 0 && SelectedSlotIndex < 16)
+			{
+				SelectedBorders[SelectedSlotIndex].Visible = true;
+			}
+		}
+
+		public void ShowContextMenuForSlot(int slotIndex, Vector2 position)
+		{
+			if (Inventory == null || !IsInstanceValid(Inventory))
+			{
+			    return;
+			}
+
+			var slot = Inventory.GetSlot(slotIndex);
+			if (slot.IsEmpty())
+			{
+			    return;
+			}
+
+			SelectedSlotIndex = slotIndex;
+
+			foreach (Node child in ContextMenuContainer.GetChildren())
+			{
+				ContextMenuContainer.RemoveChild(child);
 				child.QueueFree();
 			}
 
@@ -498,37 +543,45 @@ namespace Jogo25D.UI
 				button.Alignment = HorizontalAlignment.Center;
 				button.MouseFilter = Control.MouseFilterEnum.Stop;
 				button.Pressed += () => OnContextMenuOption("Equipar");
-				contextMenuContainer.AddChild(button);
+				ContextMenuContainer.AddChild(button);
 			}
 
-			// Redimensiona o painel ao conteúdo (não ao tamanho do inventário)
-			var minSize = contextMenuContainer.GetCombinedMinimumSize();
-			contextMenu.CustomMinimumSize = new Vector2(Mathf.Max(120, (float)minSize.X), (float)minSize.Y);
-			contextMenu.Size = contextMenu.CustomMinimumSize;
+			var minSize = ContextMenuContainer.GetCombinedMinimumSize();
+			ContextMenu.CustomMinimumSize = new Vector2(Mathf.Max(120, (float)minSize.X), (float)minSize.Y);
+			ContextMenu.Size = ContextMenu.CustomMinimumSize;
 
-			contextMenu.GlobalPosition = position;
-			contextMenu.Visible = true;
-			contextMenu.MoveToFront();
+			ContextMenu.GlobalPosition = position;
+			ContextMenu.Visible = true;
+			ContextMenu.MoveToFront();
 		}
 
-		private void OnContextMenuOption(string option)
+		public void OnContextMenuOption(string option)
 		{
-			if (selectedSlotIndex < 0 || inventory == null || !IsInstanceValid(inventory)) return;
+			if (SelectedSlotIndex < 0 || Inventory == null || !IsInstanceValid(Inventory))
+			{
+			    return;
+			}
 
-			var slot = inventory.GetSlot(selectedSlotIndex);
-			if (slot.IsEmpty()) return;
+			var slot = Inventory.GetSlot(SelectedSlotIndex);
+			if (slot.IsEmpty())
+			{
+			    return;
+			}
 
 			if (option == "Equipar")
 			{
-				inventory.Rpc(nameof(Inventory.EquipItem), selectedSlotIndex);
+				Inventory.Rpc(nameof(Inventory.EquipItem), SelectedSlotIndex);
 			}
 
-			contextMenu.Visible = false;
+			ContextMenu.Visible = false;
 		}
 
-		private void OnInventoryChanged()
+		public void OnInventoryChanged()
 		{
-			if (!IsInstanceValid(this)) return;
+			if (!IsInstanceValid(this))
+			{
+			    return;
+			}
 
 			for (int i = 0; i < 16; i++)
 			{
@@ -538,11 +591,11 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
-			if (inventory == null || !IsInstanceValid(inventory))
+			if (Inventory == null || !IsInstanceValid(Inventory))
 			{
 				FindLocalPlayerInventorySystem();
 
-				if (inventory == null || !IsInstanceValid(inventory))
+				if (Inventory == null || !IsInstanceValid(Inventory))
 				{
 					return;
 				}
@@ -558,9 +611,9 @@ namespace Jogo25D.UI
 
 		public void AddItemToInventory(ItemDefinition definition, int quantity = 1)
 		{
-			if (inventory != null && IsInstanceValid(inventory))
+			if (Inventory != null && IsInstanceValid(Inventory))
 			{
-				inventory.AddItem(definition, quantity);
+				Inventory.AddItem(definition, quantity);
 			}
 		}
 	}

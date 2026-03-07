@@ -1,62 +1,60 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
+using Jogo25D.Properties;
 using System.Collections.Generic;
+using System.Linq;
 
-namespace Jogo25D.Scripts.Actions
+namespace Jogo25D.Actions
 {
-    public class FireballAction : PlayerAction
+    public class FireballDefinition : ActionDefinition
     {
-        private const float FireballSpeed    = 750f;
-        private const float FireballRange    = 1500f;
-        private const float FireballArea     = 50f;
-        private const int   FireballDamage   = 10;
-
-        private readonly PackedScene _hitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn");
-        
-
-        public FireballAction(Player player) : base(player)
+        public override bool OnStartActionValidation(Player player, ActionInstance instance, float delta)
         {
-            Duration       = 0.2f;
-            Cooldown       = 1f;
-            MaxCharges     = 2;
-            CurrentCharges = MaxCharges;
-            ActionName     = "Fireball";
-            Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_4);
+            return player.Input.Ability && instance.CanUse;
         }
 
-        public override void OnStartAction(float delta)
+        public override void OnStartAction(Player player, ActionInstance instance, float delta)
         {
-            if (_hitboxScene == null) return;
+            if (HitboxScene == null)
+            {
+                return;
+            }
 
-            var direction = (NodePlayer.MousePosition - NodePlayer.GlobalPosition).Normalized();
-            var hitbox    = _hitboxScene.Instantiate<ProjectileHitbox>();
+            var damageProps = Properties.OfType<DamageProperty>().ToList();
 
-            hitbox.Initialize(
-                new List<DamageInfo> { new DamageInfo { Amount = FireballDamage, Type = DamageType.Fire, SourcePeerId = (int)NodePlayer.PeerId } },
-                new List<EffectDefinition>(),
-                NodePlayer
-            );
+            if (damageProps.Count == 0 || HitboxScene == null)
+            {
+                GD.Print($"[Attack] Bloqueado - damageProps={damageProps.Count} HitboxScene={HitboxScene != null}");
 
-            hitbox.Direction       = direction;
-            hitbox.Speed           = FireballSpeed;
-            hitbox.Lifetime        = FireballRange / FireballSpeed;
-            hitbox.GlobalPosition  = NodePlayer.GlobalPosition + direction * 60f;
-            hitbox.Scale           = Vector2.One * (FireballArea / 25f);
+                return;
+            }
 
-            NodePlayer.GetParent().AddChild(hitbox);
+            var direction = (player.Input.MousePosition - player.GlobalPosition).Normalized();
+            var hitbox = HitboxScene.Instantiate<ProjectileHitbox>();
+            var weapon = Properties.OfType<AttackProperty>().DefaultIfEmpty(new AttackProperty()).First();
+            var charges = Properties.OfType<ChargesProperty>().DefaultIfEmpty(new ChargesProperty()).First();
+            var crit = Properties.OfType<CritProperty>().DefaultIfEmpty(new CritProperty()).First();
+            var damages = damageProps.ConvertAll(d => new DamageInfo
+            {
+                Amount = d.DamageAmount,
+                Type = d.DamageType,
+                SourcePeerId = (int)player.PeerId,
+                CritChance = crit.CritChance,
+                CritDamage = crit.CritDamage
+            });
+
+            hitbox.Initialize(damages, OnHitEffects, player);
+
+            hitbox.Direction = direction;
+            hitbox.Speed = weapon.ProjectileSpeed;
+            hitbox.Lifetime = weapon.AttackRange / weapon.ProjectileSpeed;
+            hitbox.GlobalPosition = player.GlobalPosition + direction * 60f;
+            hitbox.Scale = Vector2.One * (weapon.AttackArea / 25f);
+
+            player.GetParent().AddChild(hitbox);
         }
-
-        public override void OnFinishedAction(float delta) { }
-
-        public override void OnUpdateWhileActive(float delta) { }
-
-        public override bool OnStartActionValidation(float delta)
-            => NodePlayer.InputAbility && CanUse;
-
-        public override void OnEnableAction(float delta) { }
     }
 }

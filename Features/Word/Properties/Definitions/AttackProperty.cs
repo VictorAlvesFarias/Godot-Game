@@ -1,6 +1,6 @@
 namespace Jogo25D.Properties
 {
-    public class WeaponProperty : BaseProperty
+    public class AttackProperty : BaseProperty
     {
         public float AttackRange { get; set; } = 80f;
         public float AttackArea { get; set; } = 25f;

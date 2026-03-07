@@ -6,7 +6,7 @@ using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
 using Jogo25D.Properties;
-using Jogo25D.Scripts.Actions;
+using Jogo25D.Actions;
 
 namespace Jogo25D.UI
 {
@@ -14,33 +14,32 @@ namespace Jogo25D.UI
 	{
 		public string PlayerGroupName { get; set; } = "players";
 
-		private Label fpsLabel;
-		private ProgressBar healthBar;
-		private Label healthBarLabel;
-		private Label weaponLabel;
-		private HBoxContainer abilitiesContainer;
-		private Inventory inventory;
-		private Player localPlayer;
-		private readonly List<Panel> abilitySlots = new List<Panel>();
-		private readonly List<ProgressBar> abilityFillBars = new List<ProgressBar>();
-		private readonly List<TextureRect> abilityIconRects = new List<TextureRect>();
-		private readonly List<Label> abilityInnerNameLabels = new List<Label>();
-		private readonly List<Label> abilityTimerLabels = new List<Label>();
-		private readonly List<Label> abilityChargesLabels = new List<Label>();
-		private double pingTimer = 0.0;
-		private double pingInterval = 1.0;
-		private double lastPingSentTime = 0.0;
-		private int currentPing = 0;
+		public Label fpsLabel;
+		public ProgressBar healthBar;
+		public Label healthBarLabel;
+		public Label weaponLabel;
+		public HBoxContainer abilitiesContainer;
+		public Player localPlayer;
+		public readonly List<Panel> abilitySlots = new List<Panel>();
+		public readonly List<ProgressBar> abilityFillBars = new List<ProgressBar>();
+		public readonly List<TextureRect> abilityIconRects = new List<TextureRect>();
+		public readonly List<Label> abilityInnerNameLabels = new List<Label>();
+		public readonly List<Label> abilityTimerLabels = new List<Label>();
+		public readonly List<Label> abilityChargesLabels = new List<Label>();
+		public double pingTimer = 0.0;
+		public double pingInterval = 1.0;
+		public double lastPingSentTime = 0.0;
+		public int currentPing = 0;
 
-		private MinimapUI minimap;
+		public MinimapUI minimap;
 
-		private const int HotbarSize = 8;
-		private readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
-		private readonly TextureRect[] _hotbarIconRects = new TextureRect[HotbarSize];
-		private readonly Label[] _hotbarNameLabels = new Label[HotbarSize];
-		private readonly Label[] _hotbarQtyLabels = new Label[HotbarSize];
-		private StyleBoxFlat _hotbarNormalStyle;
-		private StyleBoxFlat _hotbarSelectedStyle;
+		public const int HotbarSize = 8;
+		public readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
+		public readonly TextureRect[] _hotbarIconRects = new TextureRect[HotbarSize];
+		public readonly Label[] _hotbarNameLabels = new Label[HotbarSize];
+		public readonly Label[] _hotbarQtyLabels = new Label[HotbarSize];
+		public StyleBoxFlat _hotbarNormalStyle;
+		public StyleBoxFlat _hotbarSelectedStyle;
 
 		public override void _Ready()
 		{
@@ -54,7 +53,7 @@ namespace Jogo25D.UI
 			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
 			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
 
-			_hotbarNormalStyle   = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
+			_hotbarNormalStyle = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
 			_hotbarSelectedStyle = new StyleBoxFlat
 			{
 				BgColor = new Color(0.12f, 0.12f, 0.18f, 0.96f),
@@ -78,18 +77,19 @@ namespace Jogo25D.UI
 				}
 
 				_hotbarSlotPanels[i] = panel;
-				_hotbarIconRects[i]  = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
+				_hotbarIconRects[i] = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
 				_hotbarNameLabels[i] = panel.GetNode<Label>("MarginContainer/CenterContainer/NameLabel");
-				_hotbarQtyLabels[i]  = panel.GetNode<Label>("QtyLabel");
+				_hotbarQtyLabels[i] = panel.GetNode<Label>("QtyLabel");
 			}
 			CallDeferred(nameof(FindLocalPlayer));
 		}
 		public override void _ExitTree()
 		{
-			if (inventory != null && IsInstanceValid(inventory))
+			var inv = localPlayer?.Inventory;
+			if (inv != null && IsInstanceValid(inv))
 			{
-				inventory.ItemEquipped -= OnItemEquipped;
-				inventory.InventoryChanged -= UpdateHotbar;
+				inv.ItemEquipped -= OnItemEquipped;
+				inv.InventoryChanged -= UpdateHotbar;
 			}
 		}
 		public override void _Process(double delta)
@@ -99,15 +99,15 @@ namespace Jogo25D.UI
 			UpdateWeaponDisplay();
 
 			if (localPlayer != null && IsInstanceValid(localPlayer) && abilitySlots.Count == 0)
+			{
 				BuildAbilitySlots();
+			}
 
 			UpdateAbilitySlots();
 			UpdateHotbar();
 		}
 
-		#region FPS Display
-
-		private void UpdateFpsDisplay(double delta)
+		public void UpdateFpsDisplay(double delta)
 		{
 			var fps = Engine.GetFramesPerSecond();
 			var fpsText = $"FPS: {fps}";
@@ -148,7 +148,7 @@ namespace Jogo25D.UI
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-		private void PingPong()
+		public void PingPong()
 		{
 			if (Multiplayer.IsServer())
 			{
@@ -159,18 +159,14 @@ namespace Jogo25D.UI
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-		private void ReceivePong()
+		public void ReceivePong()
 		{
 			double now = Time.GetTicksMsec();
 
 			currentPing = (int)(now - lastPingSentTime);
 		}
 
-		#endregion
-
-		#region Health Display
-
-		private void UpdateHealthDisplay()
+		public void UpdateHealthDisplay()
 		{
 			if (localPlayer == null || !IsInstanceValid(localPlayer))
 			{
@@ -195,7 +191,7 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private void FindLocalPlayer()
+		public void FindLocalPlayer()
 		{
 			var players = GetTree().GetNodesInGroup("players");
 			var localPeerId = 1;
@@ -227,7 +223,14 @@ namespace Jogo25D.UI
 							minimap.SetLocalPlayer(player);
 						}
 
-						FindLocalPlayerInventory();
+						var inv = localPlayer.Inventory;
+						if (inv != null && IsInstanceValid(inv))
+						{
+							inv.ItemEquipped += OnItemEquipped;
+							inv.InventoryChanged += UpdateHotbar;
+							UpdateWeaponDisplay();
+							UpdateHotbar();
+						}
 
 						break;
 					}
@@ -235,31 +238,12 @@ namespace Jogo25D.UI
 			}
 		}
 
-		#endregion
-
-		#region Weapon Display
-
-		private void FindLocalPlayerInventory()
-		{
-			if (localPlayer != null && IsInstanceValid(localPlayer))
-			{
-				inventory = localPlayer.Inventory;
-				if (inventory != null && IsInstanceValid(inventory))
-				{
-					inventory.ItemEquipped += OnItemEquipped;
-					inventory.InventoryChanged += UpdateHotbar;
-					UpdateWeaponDisplay();
-					UpdateHotbar();
-				}
-			}
-		}
-
-		private void OnItemEquipped(int slotIndex)
+		public void OnItemEquipped(int slotIndex)
 		{
 			UpdateWeaponDisplay();
 		}
 
-		private void UpdateWeaponDisplay()
+		public void UpdateWeaponDisplay()
 		{
 			if (localPlayer == null || !IsInstanceValid(localPlayer))
 			{
@@ -274,29 +258,27 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var chargesProp  = instance.Properties.OfType<ChargesProperty>().FirstOrDefault();
-			var def          = instance.Definition;
+			var chargesProp = instance.Properties.OfType<ChargesProperty>().FirstOrDefault();
+			var def = instance.Definition;
 			var reloadPrefix = instance.IsReloading ? $"{instance.GetRemainingReloadTime():F1}s " : "";
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
 			{
-				weaponLabel.Text = $"{reloadPrefix}{def.Name} ∞";
+				weaponLabel.Text = $"{reloadPrefix}{def.Name} âˆž";
 			}
 			else
 			{
-				int ammo = inventory?.CountAmmoByChargeType(chargesProp.ChargeType) ?? 0;
+				int ammo = localPlayer?.Inventory?.CountAmmoByChargeType(chargesProp.ChargeItemId) ?? 0;
 				weaponLabel.Text = $"{reloadPrefix}{def.Name} {instance.CurrentCharges}/{ammo}";
 			}
 		}
 
-		#endregion
-
-		#region Ability slots
-
-		private void BuildAbilitySlots()
+		public void BuildAbilitySlots()
 		{
 			if (localPlayer == null || !IsInstanceValid(localPlayer) || abilitiesContainer == null)
+			{
 				return;
+			}
 
 			var list = localPlayer.UnlockedAbilities;
 			if (list == null || list.Count == 0)
@@ -310,7 +292,9 @@ namespace Jogo25D.UI
 				for (int i = abilitiesContainer.GetChildCount() - 1; i >= 0; i--)
 				{
 					if (abilitiesContainer.GetChild(i) is Control c)
+					{
 						c.Visible = false;
+					}
 				}
 				return;
 			}
@@ -322,7 +306,6 @@ namespace Jogo25D.UI
 			abilityTimerLabels.Clear();
 			abilityChargesLabels.Clear();
 
-			// Remove filhos extras antes de recriar
 			while (abilitiesContainer.GetChildCount() > 0)
 			{
 				var old = abilitiesContainer.GetChild(0);
@@ -350,7 +333,7 @@ namespace Jogo25D.UI
 			}
 		}
 
-		private AbilitySlotViews CreateAbilitySlot()
+		public AbilitySlotViews CreateAbilitySlot()
 		{
 			var panel = new Panel();
 			panel.Name = "AbilityPanel";
@@ -363,7 +346,6 @@ namespace Jogo25D.UI
 			styleBg.SetCornerRadiusAll(4);
 			panel.AddThemeStyleboxOverride("panel", styleBg);
 
-			// MarginContainer > CenterContainer > IconRect + InnerNameLabel
 			var margin = new MarginContainer();
 			margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 			margin.AddThemeConstantOverride("margin_left", 4);
@@ -398,7 +380,6 @@ namespace Jogo25D.UI
 			innerNameLabel.Visible = false;
 			center.AddChild(innerNameLabel);
 
-			// Overlay preto de cooldown — fica ACIMA do ícone, abaixo do timer
 			var fill = new ProgressBar();
 			fill.Name = "CooldownFill";
 			fill.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -423,7 +404,6 @@ namespace Jogo25D.UI
 			var timerLabel = CreateTimerLabel();
 			panel.AddChild(timerLabel);
 
-			// Cargas (QtyLabel) — canto inferior direito, igual ao hotbar
 			var chargesLabel = new Label();
 			chargesLabel.Name = "QtyLabel";
 			chargesLabel.LayoutMode = 1;
@@ -448,7 +428,7 @@ namespace Jogo25D.UI
 			return new AbilitySlotViews(panel, fill, iconRect, innerNameLabel, timerLabel, chargesLabel);
 		}
 
-		private Label CreateTimerLabel()
+		public Label CreateTimerLabel()
 		{
 			var label = new Label();
 			label.Name = "TimerLabel";
@@ -464,14 +444,18 @@ namespace Jogo25D.UI
 			return label;
 		}
 
-		private void UpdateAbilitySlots()
+		public void UpdateAbilitySlots()
 		{
 			if (localPlayer == null || !IsInstanceValid(localPlayer))
+			{
 				return;
+			}
 
 			var list = localPlayer.UnlockedAbilities;
 			if (list == null || abilityFillBars.Count != list.Count)
+			{
 				return;
+			}
 
 			for (int i = 0; i < list.Count && i < abilityFillBars.Count; i++)
 			{
@@ -482,16 +466,20 @@ namespace Jogo25D.UI
 				var timerLabel = i < abilityTimerLabels.Count ? abilityTimerLabels[i] : null;
 				var chargesLabel = i < abilityChargesLabels.Count ? abilityChargesLabels[i] : null;
 				if (action == null || bar == null)
+				{
 					continue;
+				}
 
-				// Ícone ou nome inline
 				if (iconRect != null)
 				{
 					if (action.Icon != null)
 					{
 						iconRect.Texture = action.Icon;
 						iconRect.Visible = true;
-						if (innerNameLabel != null) innerNameLabel.Visible = false;
+						if (innerNameLabel != null)
+						{
+						    innerNameLabel.Visible = false;
+						}
 					}
 					else
 					{
@@ -505,11 +493,11 @@ namespace Jogo25D.UI
 					}
 				}
 
-				// Cargas — canto inferior direito
 				if (chargesLabel != null)
+				{
 					chargesLabel.Text = action.MaxCharges > 1 ? $"x{action.CurrentCharges}" : "";
+				}
 
-				// Overlay de cooldown — prioriza InCooldown para evitar salto visual ao reusar
 				if (action.InCooldown)
 				{
 					bar.Value = 1f - action.GetCooldownProgress();
@@ -526,48 +514,59 @@ namespace Jogo25D.UI
 				{
 					bar.Value = 1f;
 					bar.Visible = true;
-					if (timerLabel != null) { timerLabel.Text = $"{action.GetRemainingDuration():F1}s"; timerLabel.Visible = true; }
+					if (timerLabel != null)
+					{
+						timerLabel.Text = $"{action.GetRemainingDuration():F1}s";
+						timerLabel.Visible = true;
+					}
 				}
 				else
 				{
 					bar.Value = 0;
 					bar.Visible = false;
-					if (timerLabel != null) { timerLabel.Text = ""; timerLabel.Visible = false; }
+					if (timerLabel != null)
+					{
+						timerLabel.Text = "";
+						timerLabel.Visible = false;
+					}
 				}
 			}
 		}
 
-		#endregion
-
-		#region Hotbar
-
-		private void UpdateHotbar()
+		public void UpdateHotbar()
 		{
-			if (_hotbarNormalStyle == null) return;
+			if (_hotbarNormalStyle == null)
+			{
+			    return;
+			}
 
-			int equippedIndex = inventory?.GetEquippedSlotIndex() ?? -1;
+			var inv = localPlayer?.Inventory;
+			int equippedIndex = inv?.GetEquippedSlotIndex() ?? -1;
 
 			for (int i = 0; i < HotbarSize; i++)
 			{
 				var panel = _hotbarSlotPanels[i];
-				if (panel == null) continue;
+				if (panel == null)
+				{
+				    continue;
+				}
 
 				bool isSelected = i == equippedIndex;
 				panel.AddThemeStyleboxOverride("panel",
 					 isSelected ? _hotbarSelectedStyle : _hotbarNormalStyle);
 
-				var slot  = inventory?.GetSlot(i);
+				var slot = inv?.GetSlot(i);
 				bool empty = slot == null || slot.IsEmpty();
 
 				if (!empty && slot.Definition?.Icon != null)
 				{
-					_hotbarIconRects[i].Texture  = slot.Definition.Icon;
-					_hotbarNameLabels[i].Text    = "";
+					_hotbarIconRects[i].Texture = slot.Definition.Icon;
+					_hotbarNameLabels[i].Text = "";
 				}
 				else
 				{
-					_hotbarIconRects[i].Texture  = null;
-					_hotbarNameLabels[i].Text    = empty ? "" : (slot.Definition?.Name ?? "");
+					_hotbarIconRects[i].Texture = null;
+					_hotbarNameLabels[i].Text = empty ? "" : (slot.Definition?.Name ?? "");
 				}
 
 				_hotbarQtyLabels[i].Text = (!empty && slot.Definition?.Stackable == true && slot.Quantity > 1)
@@ -575,6 +574,5 @@ namespace Jogo25D.UI
 			}
 		}
 
-		#endregion
 	}
 }

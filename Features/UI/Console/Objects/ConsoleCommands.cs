@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-	internal class ConsoleCommands
+	public class ConsoleCommands
 	{
 		public string Name;
 		public string Usage;

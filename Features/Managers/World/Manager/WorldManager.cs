@@ -12,13 +12,11 @@ namespace Jogo25D.Systems
 		public static string DEFAULT_ADDRESS = "127.0.0.1";
 		public static string DEFAULT_NODE_PATH = "/root/Main/Managers/WorldManager";
 
-		private ENetMultiplayerPeer Peer { get; set; }
-		private Node2D OverwordParent { get; set; }
-		private Node2D UpsidedownParent { get; set; }
-		private SubViewportContainer OverContainer { get; set; }
-		private SubViewportContainer UpContainer { get; set; }
-
-		#region Node methods
+		public ENetMultiplayerPeer Peer { get; set; }
+		public Node2D OverwordParent { get; set; }
+		public Node2D UpsidedownParent { get; set; }
+		public SubViewportContainer OverContainer { get; set; }
+		public SubViewportContainer UpContainer { get; set; }
 
 		public override void _Ready()
 		{
@@ -82,10 +80,6 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager._Ready] UpContainer found: {UpContainer.Name}");
 			}
 		}
-
-		#endregion
-
-		#region Lobby methods
 
 		public string CreateServer(string textPort)
 		{
@@ -203,10 +197,6 @@ namespace Jogo25D.Systems
 			GD.Print($"[WorldManager.Disconnect] freed {players.Count} player nodes");
 		}
 
-		#endregion
-
-		#region Private player mananger 
-
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
 		public void SpawnPlayer(long peerId, Vector2 position)
 		{	
@@ -263,10 +253,6 @@ namespace Jogo25D.Systems
 			return found;
 		}
 
-		#endregion
-
-		#region  Reset player
-
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ResetPlayer(long peerId, Vector2 position)
 		{
@@ -301,7 +287,6 @@ namespace Jogo25D.Systems
 
 			GD.Print($"[WorldManager.ResetPlayerServerReceive] SenderId={senderId}, sending SyncDimensionTrade RPC");
 
-
 			Rpc(nameof(ResetPlayer), senderId, Vector2.Zero);
 		}
 
@@ -311,10 +296,6 @@ namespace Jogo25D.Systems
 
 			RpcId(1, nameof(ResetPlayerServerReceive));
 		}
-
-		#endregion
-
-		#region Dimension trade system
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void TradeDimension(long targetPeerId)
@@ -380,7 +361,6 @@ namespace Jogo25D.Systems
 			
 			GD.Print($"[WorldManager.ServerReceiveTradeRequest] SenderId={senderId}, sending SyncDimensionTrade RPC");
 			
-
 			Rpc(nameof(TradeDimension), senderId);
 		}
 
@@ -391,11 +371,7 @@ namespace Jogo25D.Systems
 			RpcId(1, nameof(TradeDimensionServerReceive));
 		}
 
-		#endregion
-
-		#region Multplayer manager events
-
-		private void OnPeerConnected(long id)
+		public void OnPeerConnected(long id)
 		{
 			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
 			
@@ -420,13 +396,12 @@ namespace Jogo25D.Systems
 					
 					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {playerName}");
 					
-
 					RpcId(id, nameof(SpawnPlayer), player.PeerId, player.Position);
 				}
 			}
 		}
 
-		private void OnPeerDisconnected(long id)
+		public void OnPeerDisconnected(long id)
 		{	
 			GD.Print($"[WorldManager.OnPeerDisconnected] OnPeerDisconnected(id={id})");
 			
@@ -445,12 +420,12 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		private void OnConnectedToServer()
+		public void OnConnectedToServer()
 		{
 			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");	
 		}
 
-		private void OnConnectionFailed()
+		public void OnConnectionFailed()
 		{	
 			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
 			
@@ -459,16 +434,12 @@ namespace Jogo25D.Systems
 			GD.Print("[WorldManager.OnConnectionFailed] peer reset");	
 		}
 
-		private void OnServerDisconnected()
+		public void OnServerDisconnected()
 		{
 			GD.Print("[WorldManager.OnServerDisconnected] OnServerDisconnected()");
 			
 			Disconnect();
 		}
-
-		#endregion
-
-		#region Helpers 
 
 		public bool IsConnected()
 		{
@@ -484,6 +455,5 @@ namespace Jogo25D.Systems
 			return isServer;
 		}
 
-		#endregion
 	}
 }

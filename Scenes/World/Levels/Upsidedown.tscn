@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" path="res://Assets/Tiles/TX Tileset Ground.png" id="1_664l2"]
 [ext_resource type="Texture2D" path="res://Assets/Tiles/TX Village Props.png" id="2_e8e4v"]
-[ext_resource type="Script" path="res://Features/Word/Characters/Systems/CameraController.cs" id="4_jbnhx"]
+[ext_resource type="Script" path="res://Features/Word/Camera/Entities/CameraController.cs" id="4_jbnhx"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_664l2"]
 texture = ExtResource("1_664l2")

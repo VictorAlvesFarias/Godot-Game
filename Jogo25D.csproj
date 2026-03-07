@@ -357,6 +357,7 @@
     <None Include="Assets\Textures\.gitkeep" />
     <None Include="Assets\Textures\Screenshot 2026-02-21 014440.png.import" />
     <None Include="Assets\Textures\Screenshot 2026-02-21 014543.png.import" />
+    <None Include="DefaultTheme.tres" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
     <None Include="Scenes\Main.tscn" />

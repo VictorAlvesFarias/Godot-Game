@@ -13,8 +13,8 @@ namespace Jogo25D.UI
         public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
         public float PlayerDotRadius { get; set; } = 4f;
 
-        private Node localPlayer;
-        private int localPeerId = 1;
+        public Node LocalPlayer { get; set; }
+        public int LocalPeerId { get; set; } = 1;
 
         public override void _Ready()
         {
@@ -24,13 +24,13 @@ namespace Jogo25D.UI
                 Multiplayer.MultiplayerPeer != null &&
                 Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
             {
-                localPeerId = Multiplayer.GetUniqueId();
+                LocalPeerId = Multiplayer.GetUniqueId();
             }
         }
 
         public void SetLocalPlayer(Node player)
         {
-            localPlayer = player;
+            LocalPlayer = player;
         }
 
         public override void _Draw()
@@ -47,22 +47,26 @@ namespace Jogo25D.UI
 
             DrawRect(backgroundRect, BackgroundColor);
 
-            if (localPlayer == null || !IsInstanceValid(localPlayer))
+            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+            {
                 return;
+            }
 
-            Vector2 playerPos = (localPlayer as Node2D)?.GlobalPosition ?? Vector2.Zero;
+            Vector2 playerPos = (LocalPlayer as Node2D)?.GlobalPosition ?? Vector2.Zero;
             Vector2 center = new Vector2(mapSize / 2f, mapSize / 2f);
             float innerSize = mapSize - margin * 2;
             float scale = innerSize / (ViewRadius * 2f);
 
             if (scale <= 0f)
+            {
                 return;
+            }
 
             ScanTree(GetTree().Root, playerPos, center, scale);
             DrawPlayers(playerPos, center, scale);
         }
 
-        private void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
+        public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
         {
             if (node is TileMapLayer layer && IsInstanceValid(layer) && layer.GetParent().GetParent().GetParent<SubViewportContainer>().Visible)
             {
@@ -75,7 +79,7 @@ namespace Jogo25D.UI
             }
         }
 
-        private void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
+        public void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
         {
             var usedCells = layer.GetUsedCells();
 
@@ -101,7 +105,7 @@ namespace Jogo25D.UI
             }
         }
 
-        private void DrawPlayers(Vector2 playerPos, Vector2 center, float scale)
+        public void DrawPlayers(Vector2 playerPos, Vector2 center, float scale)
         {
             var players = GetTree().GetNodesInGroup(PlayerGroupName);
 
@@ -113,9 +117,9 @@ namespace Jogo25D.UI
                     Vector2 mapPos = WorldToMap(worldPos, playerPos, center, scale);
 
                     bool isLocal =
-                        localPlayer == player ||
+                        LocalPlayer == player ||
                         (Multiplayer != null &&
-                         player.GetMultiplayerAuthority() == localPeerId);
+                         player.GetMultiplayerAuthority() == LocalPeerId);
 
                     Color color = isLocal ? LocalPlayerColor : OtherPlayerColor;
 
@@ -124,7 +128,7 @@ namespace Jogo25D.UI
             }
         }
 
-        private Vector2 WorldToMap(Vector2 worldPos, Vector2 playerPos, Vector2 center, float scale)
+        public Vector2 WorldToMap(Vector2 worldPos, Vector2 playerPos, Vector2 center, float scale)
         {
             Vector2 relative = worldPos - playerPos;
             return center + relative * scale;

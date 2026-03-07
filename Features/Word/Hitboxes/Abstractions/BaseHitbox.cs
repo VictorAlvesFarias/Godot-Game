@@ -16,12 +16,12 @@ namespace Jogo25D.Hitboxes
         {
             Damages = damages ?? new();
             Effects = new List<EffectDefinition>(effects ?? new());
-            Owner   = owner;
+            Owner = owner;
 
             BodyEntered += OnBodyEntered;
         }
 
-        protected virtual void OnBodyEntered(Node body)
+        public virtual void OnBodyEntered(Node body)
         {
             if (body == Owner)
             {

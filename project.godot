@@ -25,11 +25,14 @@ window/size/viewport_height=1080
 window/size/window_width_override=960
 window/size/window_height_override=540
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [dotnet]
 
 project/assembly_name="Jogo25D"
+
+[gui]
+
+theme/custom="res://DefaultTheme.tres"
 
 [input]
 
@@ -105,6 +108,11 @@ ability={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":70,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
+ability_2={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":50,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
 toggle_inventory={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":73,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
@@ -115,10 +123,6 @@ toggle_inventory={
 [physics]
 
 2d/default_gravity=1500
-
-[gui]
-
-theme/custom="res://DefaultTheme.tres"
 
 [rendering]
 

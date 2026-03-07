@@ -10,7 +10,7 @@ namespace Jogo25D.Effects
         public List<DamageInfo> Damages { get; set; }
         public float Timer { get; set; }
 
-        protected override void Apply(Player player, float delta)
+        public override void Apply(Player player, float delta)
         {
             Timer += delta;
 

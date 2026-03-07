@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://cxmj2yfkrgecv"]
+
+[ext_resource type="Script" uid="uid://drokc4jgyw8u1" path="res://Features/Word/Hitboxes/Definitions/GroundHitbox.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://ml8aodomsxdj" path="res://Assets/Textures/Screenshot 2026-02-21 014543.png" id="2_btw6q"]
+
+[node name="GroundStrike" type="Area2D" unique_id=1233012274]
+collision_layer = 2
+script = ExtResource("1")
+
+[node name="Texture" type="Sprite2D" parent="." unique_id=958857471]
+texture = ExtResource("2_btw6q")
+
+[node name="Collision" type="CollisionPolygon2D" parent="." unique_id=1667015133]
+polygon = PackedVector2Array(-22, -9.5, -22, 9.5, 22, 9.5, 22, -9.5)

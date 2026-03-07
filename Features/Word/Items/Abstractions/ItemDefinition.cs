@@ -8,7 +8,6 @@ namespace Jogo25D.Items
 {
     public abstract class ItemDefinition
     {
-        #region Identity
 
         public string Id { get; init; } = "";
         public string Name { get; init; } = "";
@@ -16,16 +15,10 @@ namespace Jogo25D.Items
         public Texture2D Icon { get; set; }
         public ItemType Type { get; init; }
 
-        #endregion
-
-        #region Stacking
-
         public bool Stackable { get; init; } = false;
         public int MaxStackSize { get; init; } = 99;
 
-        #endregion
-
-        #region Combate V2
+        public bool Rechargeable { get; set; }
 
         public float Cooldown { get; init; } = 0.5f;
         public List<BaseProperty> Properties { get; set; } = new();
@@ -33,15 +26,7 @@ namespace Jogo25D.Items
         public List<EffectDefinition> OnUseEffects { get; set; } = new();
         public PackedScene HitboxScene { get; set; }
 
-        #endregion
-
-        #region Helpers
-
         public bool IsEquippable => true;
-
-        #endregion
-
-        #region Métodos do item
 
         public abstract void Use(Player player, ItemInstance instance);
 
@@ -54,6 +39,5 @@ namespace Jogo25D.Items
 
         }
 
-        #endregion
     }
 }

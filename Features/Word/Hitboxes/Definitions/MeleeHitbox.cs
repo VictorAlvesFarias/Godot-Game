@@ -7,7 +7,7 @@ namespace Jogo25D.Hitboxes
     {
         public float Lifetime { get; set; } = 0.2f;
         public Vector2 Offset { get; set; } = Vector2.Zero;
-        private float _timer;
+        public float Timer { get; set; }
 
         public override void _PhysicsProcess(double delta)
         {
@@ -19,9 +19,9 @@ namespace Jogo25D.Hitboxes
 
             GlobalPosition = Owner.GlobalPosition + Offset;
 
-            _timer += (float)delta;
+            Timer += (float)delta;
 
-            if (_timer >= Lifetime)
+            if (Timer >= Lifetime)
             {
                 QueueFree();
             }

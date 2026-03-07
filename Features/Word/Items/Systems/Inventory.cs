@@ -2,8 +2,10 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jogo25D.Characters;
 using Jogo25D.Items;
 using Jogo25D.Properties;
+using Jogo25D.Effects;
 
 namespace Jogo25D.Systems
 {
@@ -15,39 +17,52 @@ namespace Jogo25D.Systems
 		[Signal]
 		public delegate void ItemEquippedEventHandler(int slotIndex);
 
-		private const int INVENTORY_SIZE = 16;
-		private ItemInstance[] slots = new ItemInstance[INVENTORY_SIZE];
-		private ItemDefinition equippedDefinition;
-		private int equippedSlotIndex = -1;
+		public const int INVENTORY_SIZE = 16;
+		public Player LocalPlayer { get; set; }
 
 		public override void _Ready()
 		{
-			for (int i = 0; i < INVENTORY_SIZE; i++)
-			{
-				slots[i] = new ItemInstance();
+			LocalPlayer = GetOwner<Player>();
+		}
+
+		public ItemInstance GetSlot(int index)
+		{
+			if (index < 0 || index >= INVENTORY_SIZE)
+			{ 
+				return null;
 			}
+
+			return LocalPlayer.Items[index];
 		}
 
 		public bool AddItem(ItemDefinition definition, int quantity = 1)
 		{
-			if (definition == null) return false;
+			if (definition == null)
+			{
+				return false;
+			}
 
 			if (definition.Stackable)
 			{
 				for (int i = 0; i < INVENTORY_SIZE; i++)
 				{
-					if (!slots[i].IsEmpty() && slots[i].Definition?.Name == definition.Name)
+					if (!LocalPlayer.Items[i].IsEmpty() && LocalPlayer.Items[i].Definition?.Name == definition.Name)
 					{
-						if (slots[i].CanAddMore())
+						if (LocalPlayer.Items[i].CanAddMore())
 						{
-							int spaceLeft = definition.MaxStackSize - slots[i].Quantity;
-							int toAdd = Mathf.Min(quantity, spaceLeft);
-							slots[i].Quantity += toAdd;
+							var spaceLeft = definition.MaxStackSize - LocalPlayer.Items[i].Quantity;
+							var toAdd = Mathf.Min(quantity, spaceLeft);
+
+							LocalPlayer.Items[i].Quantity += toAdd;
+							
 							quantity -= toAdd;
 
 							EmitSignal(SignalName.InventoryChanged);
 
-							if (quantity <= 0) return true;
+							if (quantity <= 0)
+							{
+								return true;
+							}
 						}
 					}
 				}
@@ -55,16 +70,17 @@ namespace Jogo25D.Systems
 
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				if (slots[i].IsEmpty())
+				if (LocalPlayer.Items[i].IsEmpty())
 				{
-					slots[i] = new ItemRechargeableInstance();
-					slots[i].Definition = definition;
-					slots[i].Quantity = quantity;
-					// Populate per-instance properties from the definition defaults
-					slots[i].Properties = new List<Jogo25D.Properties.BaseProperty>(definition.Properties);
-					slots[i].OnHitEffects = new List<Jogo25D.Effects.EffectDefinition>(definition.OnHitEffects);
-					slots[i].OnUseEffects = new List<Jogo25D.Effects.EffectDefinition>(definition.OnUseEffects);
+					LocalPlayer.Items[i] = new ItemInstance();
+					LocalPlayer.Items[i].Definition = definition;
+					LocalPlayer.Items[i].Quantity = quantity;
+					LocalPlayer.Items[i].Properties = new List<BaseProperty>(definition.Properties);
+					LocalPlayer.Items[i].OnHitEffects = new List<EffectDefinition>(definition.OnHitEffects);
+					LocalPlayer.Items[i].OnUseEffects = new List<EffectDefinition>(definition.OnUseEffects);
+					
 					EmitSignal(SignalName.InventoryChanged);
+					
 					return true;
 				}
 			}
@@ -74,10 +90,17 @@ namespace Jogo25D.Systems
 
 		public bool RemoveItem(int slotIndex, int quantity = 1)
 		{
-			if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE) return false;
+			if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
+			{ 
+				return false;
+			}
 
-			var slot = slots[slotIndex];
-			if (slot.IsEmpty()) return false;
+			var slot = LocalPlayer.Items[slotIndex];
+
+			if (slot.IsEmpty())
+			{ 
+				return false;
+			}
 
 			slot.Quantity -= quantity;
 
@@ -87,57 +110,44 @@ namespace Jogo25D.Systems
 			}
 
 			EmitSignal(SignalName.InventoryChanged);
+
 			return true;
-		}
-
-		public ItemInstance GetSlot(int index)
-		{
-			if (index < 0 || index >= INVENTORY_SIZE) return null;
-			return slots[index];
-		}
-
-		public ItemInstance[] GetAllSlots()
-		{
-			return slots;
-		}
-
-		public void Clear()
-		{
-			for (int i = 0; i < INVENTORY_SIZE; i++)
-			{
-				slots[i].Clear();
-			}
-
-			equippedDefinition = null;
-			equippedSlotIndex = -1;
-
-			EmitSignal(SignalName.InventoryChanged);
 		}
 
 		public bool SwapSlots(int fromIndex, int toIndex)
 		{
-			if (fromIndex < 0 || fromIndex >= INVENTORY_SIZE) return false;
-			if (toIndex < 0 || toIndex >= INVENTORY_SIZE) return false;
-			if (fromIndex == toIndex) return false;
+			if (fromIndex < 0 || fromIndex >= INVENTORY_SIZE)
+			{
+				return false;
+			}
 
-			GD.Print($"Trocando slot {fromIndex} ({slots[fromIndex].Definition?.Name ?? "vazio"}) com slot {toIndex} ({slots[toIndex].Definition?.Name ?? "vazio"})");
+			if (toIndex < 0 || toIndex >= INVENTORY_SIZE)
+			{ 
+				return false;
+			}
 
-			ItemDefinition tempDef      = slots[fromIndex].Definition;
-			int            tempQuantity = slots[fromIndex].Quantity;
-			var tempProps               = slots[fromIndex].Properties;
-			var tempEffects             = slots[fromIndex].OnHitEffects;
+			if (fromIndex == toIndex)
+			{ 
+				return false;
+			}
 
-			slots[fromIndex].Definition   = slots[toIndex].Definition;
-			slots[fromIndex].Quantity     = slots[toIndex].Quantity;
-			slots[fromIndex].Properties   = slots[toIndex].Properties;
-			slots[fromIndex].OnHitEffects = slots[toIndex].OnHitEffects;
+			GD.Print($"Trocando slot {fromIndex} ({LocalPlayer.Items[fromIndex].Definition?.Name ?? "vazio"}) com slot {toIndex} ({LocalPlayer.Items[toIndex].Definition?.Name ?? "vazio"})");
 
-			slots[toIndex].Definition   = tempDef;
-			slots[toIndex].Quantity     = tempQuantity;
-			slots[toIndex].Properties   = tempProps;
-			slots[toIndex].OnHitEffects = tempEffects;
+			var tempDef = LocalPlayer.Items[fromIndex].Definition;
+			var tempQuantity = LocalPlayer.Items[fromIndex].Quantity;
+			var tempProps = LocalPlayer.Items[fromIndex].Properties;
+			var tempEffects = LocalPlayer.Items[fromIndex].OnHitEffects;
 
-			GD.Print($"Após troca - slot {fromIndex}: {slots[fromIndex].Definition?.Name ?? "vazio"}, slot {toIndex}: {slots[toIndex].Definition?.Name ?? "vazio"}");
+			LocalPlayer.Items[fromIndex].Definition = LocalPlayer.Items[toIndex].Definition;
+			LocalPlayer.Items[fromIndex].Quantity = LocalPlayer.Items[toIndex].Quantity;
+			LocalPlayer.Items[fromIndex].Properties = LocalPlayer.Items[toIndex].Properties;
+			LocalPlayer.Items[fromIndex].OnHitEffects = LocalPlayer.Items[toIndex].OnHitEffects;
+			LocalPlayer.Items[toIndex].Definition = tempDef;
+			LocalPlayer.Items[toIndex].Quantity = tempQuantity;
+			LocalPlayer.Items[toIndex].Properties = tempProps;
+			LocalPlayer.Items[toIndex].OnHitEffects = tempEffects;
+
+			GD.Print($"ApÃ³s troca - slot {fromIndex}: {LocalPlayer.Items[fromIndex].Definition?.Name ?? "vazio"}, slot {toIndex}: {LocalPlayer.Items[toIndex].Definition?.Name ?? "vazio"}");
 
 			EmitSignal(SignalName.InventoryChanged);
 			return true;
@@ -147,39 +157,28 @@ namespace Jogo25D.Systems
 		public bool EquipItem(int slotIndex)
 		{
 			if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
+			{
 				return false;
+			}
 
-			var slot = slots[slotIndex];
+			var slot = LocalPlayer.Items[slotIndex];
 
 			if (slot.IsEmpty() || slot.Definition == null || !slot.Definition.IsEquippable)
+			{
 				return false;
+			}
 
-			equippedDefinition = slot.Definition;
-			equippedSlotIndex  = slotIndex;
+			LocalPlayer.EquippedDefinition = slot.Definition;
+			LocalPlayer.EquippedSlotIndex = slotIndex;
 
 			EmitSignal(SignalName.ItemEquipped, slotIndex);
+
 			return true;
-		}
-
-		public void UnequipItem()
-		{
-			equippedDefinition = null;
-			equippedSlotIndex  = -1;
-		}
-
-		public ItemDefinition GetEquippedItem()
-		{
-			return equippedDefinition;
 		}
 
 		public int GetEquippedSlotIndex()
 		{
-			return equippedSlotIndex;
-		}
-
-		public bool HasEquippedItem()
-		{
-			return equippedDefinition != null;
+			return LocalPlayer.EquippedSlotIndex;
 		}
 
 		public int CountItem(string itemName)
@@ -187,9 +186,9 @@ namespace Jogo25D.Systems
 			int count = 0;
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				if (!slots[i].IsEmpty() && slots[i].Definition?.Name == itemName)
+				if (!LocalPlayer.Items[i].IsEmpty() && LocalPlayer.Items[i].Definition?.Name == itemName)
 				{
-					count += slots[i].Quantity;
+					count += LocalPlayer.Items[i].Quantity;
 				}
 			}
 			return count;
@@ -205,20 +204,20 @@ namespace Jogo25D.Systems
 			int count = 0;
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
-				if (i == equippedSlotIndex)
+				if (i == LocalPlayer.EquippedSlotIndex)
 				{
 					continue;
 				}
 
-				if (slots[i].IsEmpty())
+				if (LocalPlayer.Items[i].IsEmpty())
 				{
 					continue;
 				}
 
-				var chargesProp = slots[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
-				if (chargesProp != null && chargesProp.ChargeType == chargeType)
+				var chargesProp = LocalPlayer.Items[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
 				{
-					count += slots[i].Quantity;
+					count += LocalPlayer.Items[i].Quantity;
 				}
 			}
 			return count;
@@ -234,29 +233,29 @@ namespace Jogo25D.Systems
 			int removed = 0;
 			for (int i = 0; i < INVENTORY_SIZE && removed < quantity; i++)
 			{
-				if (i == equippedSlotIndex)
+				if (i == LocalPlayer.EquippedSlotIndex)
 				{
 					continue;
 				}
 
-				if (slots[i].IsEmpty())
+				if (LocalPlayer.Items[i].IsEmpty())
 				{
 					continue;
 				}
 
-				var chargesProp = slots[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
-				if (chargesProp == null || chargesProp.ChargeType != chargeType)
+				var chargesProp = LocalPlayer.Items[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
 				{
 					continue;
 				}
 
-				int toRemove = Mathf.Min(quantity - removed, slots[i].Quantity);
-				slots[i].Quantity -= toRemove;
+				int toRemove = Mathf.Min(quantity - removed, LocalPlayer.Items[i].Quantity);
+				LocalPlayer.Items[i].Quantity -= toRemove;
 				removed += toRemove;
 
-				if (slots[i].Quantity <= 0)
+				if (LocalPlayer.Items[i].Quantity <= 0)
 				{
-					slots[i].Clear();
+					LocalPlayer.Items[i].Clear();
 				}
 			}
 
@@ -266,30 +265,6 @@ namespace Jogo25D.Systems
 			}
 
 			return removed;
-		}
-
-		public bool IsFull()
-		{
-			for (int i = 0; i < INVENTORY_SIZE; i++)
-			{
-				if (slots[i].IsEmpty()) return false;
-			}
-			return true;
-		}
-
-		public int GetEmptySlotCount()
-		{
-			int count = 0;
-			for (int i = 0; i < INVENTORY_SIZE; i++)
-			{
-				if (slots[i].IsEmpty()) count++;
-			}
-			return count;
-		}
-
-		public void NotifyInventoryChanged()
-		{
-			EmitSignal(SignalName.InventoryChanged);
 		}
 	} 
 }

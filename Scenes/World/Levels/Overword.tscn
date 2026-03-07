@@ -1,7 +1,7 @@
 [gd_scene format=4]
 
 [ext_resource type="PackedScene" path="res://Scenes/World/Characters/Player.tscn" id="1_gk6ay"]
-[ext_resource type="Script" path="res://Features/Word/Characters/Systems/CameraController.cs" id="2_vlsnn"]
+[ext_resource type="Script" path="res://Features/Word/Camera/Entities/CameraController.cs" id="2_vlsnn"]
 [ext_resource type="Texture2D" path="res://Assets/Tiles/TX Tileset Ground.png" id="3_wcluf"]
 [ext_resource type="Texture2D" path="res://Assets/Tiles/TX Village Props.png" id="4_y8qed"]
 

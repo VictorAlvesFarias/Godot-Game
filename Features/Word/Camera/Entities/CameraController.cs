@@ -5,7 +5,7 @@ namespace Jogo25D.Systems
 	public partial class CameraController : Camera2D
 	{
 		public NodePath PlayerPath;
-		private Node2D player;
+		public Node2D Player { get; set; }
 
 		public override void _Ready()
 		{
@@ -16,24 +16,26 @@ namespace Jogo25D.Systems
 
 		public override void _Process(double delta)
 		{
-			if (player == null || !IsInstanceValid(player))
+			if (Player == null || !IsInstanceValid(Player))
 			{
 				FindLocalPlayer();
 			}
 
-			if (player != null && IsInstanceValid(player))
+			if (Player != null && IsInstanceValid(Player))
 			{
-				GlobalPosition = player.GlobalPosition;
+				GlobalPosition = Player.GlobalPosition;
 			}
 		}
 
-		private void FindLocalPlayer()
+		public void FindLocalPlayer()
 		{
 			if (PlayerPath != null && !PlayerPath.IsEmpty)
 			{
-				player = GetNodeOrNull<Node2D>(PlayerPath);
-				if (player != null)
+				Player = GetNodeOrNull<Node2D>(PlayerPath);
+				if (Player != null)
+				{
 					return;
+				}
 			}
 
 			int localPeerId = 1;
@@ -61,12 +63,12 @@ namespace Jogo25D.Systems
 				{
 					if (!hasMultiplayer || player2D.GetMultiplayerAuthority() == localPeerId)
 					{
-						player = player2D;
+						Player = player2D;
 						return;
 					}
 				}
 
-				player = GetTree().Root.FindChild("Player", true, false) as Node2D;
+				Player = GetTree().Root.FindChild("Player", true, false) as Node2D;
 			}
 		}	
 	}
