@@ -16,47 +16,44 @@ namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-
 		public long PeerId { get; set; } = 1;
-        public float Speed { get; set; } = 300.0f;
+		public float Speed { get; set; } = 300.0f;
 		public float JumpVelocity { get; set; } = -750.0f;
 		public float Gravity { get; set; }
 		public int MaxHealth { get; set; } = 50;
 		public int CurrentHealth { get; set; } = 50;
-        public bool CanUpdateMovement { get; set; } = true;
-        public bool ReloadPending { get; set; } = true;
+		public bool CanUpdateMovement { get; set; } = true;
+		public bool ReloadPending { get; set; } = true;
 		public int EquippedSlotIndex { get; set; } = -1;
-        public List<EffectDefinition> Effects { get; set; } = new();
-        public List<BaseProperty> Buffs { get; set; } = new();
+		public List<EffectDefinition> Effects { get; set; } = new();
+		public List<BaseProperty> Buffs { get; set; } = new();
 		public List<ActionInstance> UnlockedAbilities { get; set; } = new List<ActionInstance>();
 		public ItemInstance EquippedInstance { get; set; }
 		public ItemInstance[] Items { get; set; } = Array.Empty<ItemInstance>();
 		public ItemDefinition EquippedDefinition { get; set; }
 		public ControlledInputs Input { get; set; } = new();
 
-        public WorldManager NetworkManager { get; set; }
-        public InputManager InputManager { get; set; }
+		public WorldManager NetworkManager { get; set; }
+		public InputManager InputManager { get; set; }
 
-        public Inventory Inventory { get; set; }
-        public AimIndicator AimIndicator { get; set; }
-        public GroundIndicator GroundMarker { get; set; }
+		public Inventory Inventory { get; set; }
+		public AimIndicator AimIndicator { get; set; }
+		public GroundIndicator GroundMarker { get; set; }
 
-		public Line2D Sprite { get; set; }
-		public float DamageEffectTimer { get; set; } = 0f;
-		public float DamageColorDuration { get; set; } = 0.3f;
+		public AnimatedSprite2D Sprite { get; set; }
 
 		public override void _Ready()
 		{
 			AddToGroup("players");
 
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-            
+			
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-            InputManager = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
+			InputManager = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
-            Sprite = GetNodeOrNull<Line2D>("Visual/Sprite/Border");
-            AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
-            GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
+			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visual/Sprite");
+			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
+			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
 			Inventory = GetNodeOrNull<Inventory>("Systems/Inventory");
 
 			Items = new ItemInstance[Inventory.INVENTORY_SIZE];
@@ -66,13 +63,25 @@ namespace Jogo25D.Characters
 				Items[i] = new ItemInstance();
 			}
 
-            ActionDB.Initialize();
+			ActionDB.Initialize();
 			
 			UnlockedAbilities.Add(ActionDB.CreateInstance("dash", this));
 			UnlockedAbilities.Add(ActionDB.CreateInstance("fireball", this));
-            UnlockedAbilities.Add(ActionDB.CreateInstance("ground_strike", this));
+			UnlockedAbilities.Add(ActionDB.CreateInstance("ground_strike", this));
 
 			Inventory.ItemEquipped += OnItemEquipped;
+
+			Sprite.Play("idle");
+
+			Sprite.AnimationFinished += () =>
+			{
+				if (Sprite.Animation == "dead")
+				{
+					Sprite.Stop();
+
+					NetworkManager.ResetPlayerClientRequest();
+				}
+			};
 		}
 
 		public override void _ExitTree()
@@ -89,44 +98,35 @@ namespace Jogo25D.Characters
 
 		public override void _PhysicsProcess(double delta)
 		{
-            if (Multiplayer.IsServer())
-            {
-                Rpc(nameof(SyncPosition), GlobalPosition);
-            }
+			if (Multiplayer.IsServer())
+			{
+				Rpc(nameof(SyncPosition), GlobalPosition);
+			}
 
 			foreach (var effect in Effects.Where(e => e.ApplyToOwner))
 			{
-                effect.Tick(this, (float)delta);
+				effect.Tick(this, (float)delta);
 
-                if (effect.Expired)
-                {
-                    Effects.Remove(effect);
-                }
-            }
-
-            HandleInput();
+				if (effect.Expired)
+				{
+					Effects.Remove(effect);
+				}
+			}
 
 			foreach (var action in UnlockedAbilities)
 			{
 				action.Update((float)delta);
 			}
 
-            EquippedInstance?.Update((float)delta);
+			EquippedInstance?.Update((float)delta);
 
+			UpdateAnimation();
+
+			HandleInput();
 			HandleHotbarScroll();
 			HandleMovement((float)delta);
 			HandleAttack((float)delta);
 			HandleReload((float)delta);
-
-			if (DamageEffectTimer > 0)
-			{
-				DamageEffectTimer -= (float)delta;
-
-				if (DamageEffectTimer <= 0 && Sprite != null)
-				{
-					Sprite.DefaultColor = Colors.White;
-				}
-			}
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
@@ -135,11 +135,11 @@ namespace Jogo25D.Characters
 			Input = input;
 		}
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-        public void SyncPosition(Vector2 pos)
-        {
-            GlobalPosition = pos;
-        }
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
+		public void SyncPosition(Vector2 pos)
+		{
+			GlobalPosition = pos;
+		}
 
 		public void TakeDamage(int damage)
 		{
@@ -148,20 +148,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			CurrentHealth -= damage;
-
-			if (Sprite != null)
-			{
-				Sprite.DefaultColor = new Color(1f, 0.3f, 0.3f);
-			}
-
-			DamageEffectTimer = DamageColorDuration;
-
-			if (CurrentHealth <= 0)
-			{
-				NetworkManager.ResetPlayerClientRequest();
-
-            }
+			Sprite.Play("dead");
 		}
 
 		public void ReceiveDamage(DamageInfo damage)
@@ -190,6 +177,39 @@ namespace Jogo25D.Characters
 			}
 
 			Effects.Add(definition.Clone());
+		}
+
+		public void UpdateAnimation()
+		{
+			if (!IsOnFloor())
+			{
+				if (Velocity.Y < 0)
+				{
+					if (Sprite.Animation != "jump")
+						Sprite.Play("jump");
+				}
+				else
+				{
+					if (Sprite.Animation != "falling")
+						Sprite.Play("falling");
+				}
+
+				return;
+			}
+
+			if (Velocity.X != 0)
+			{
+				if (Sprite.Animation != "run")
+					Sprite.Play("run");
+			}
+			else
+			{
+				if (Sprite.Animation != "idle")
+					Sprite.Play("idle");
+			}
+
+			if (Velocity.X != 0)
+				Sprite.FlipH = Velocity.X < 0;
 		}
 
 		public void HandleInput()
@@ -226,28 +246,28 @@ namespace Jogo25D.Characters
 		{
 			if (!IsOwner() || Inventory == null)
 			{
-			    return;
+				return;
 			}
 
 			int dir = 0;
 			if (Input.ScrollNext)
 			{
-			    dir = 1;
+				dir = 1;
 			}
 			else if (Input.ScrollPrev)
 			{
-			    dir = -1;
+				dir = -1;
 			}
 			if (dir == 0)
 			{
-			    return;
+				return;
 			}
 
 			const int HotbarSize = 8;
 			int current = Inventory.GetEquippedSlotIndex();
 			if (current < 0)
 			{
-			    current = 0;
+				current = 0;
 			}
 
 			for (int i = 1; i <= HotbarSize; i++)
@@ -308,23 +328,23 @@ namespace Jogo25D.Characters
 				v.Y += Gravity * delta;
 			}
 
-            if (Input.Jump && IsOnFloor())
+			if (Input.Jump && IsOnFloor())
 			{
 				v.Y = JumpVelocity;
 
-                GD.Print("[HandleMovement] Pulando");
-            }
+				GD.Print("[HandleMovement] Pulando");
+			}
 
-            if (Input.MoveX != 0)
+			if (Input.MoveX != 0)
 			{
 				v.X = Input.MoveX * Speed;
-            }
-            else
+			}
+			else
 			{
 				v.X = Mathf.MoveToward(v.X, 0, Speed);
-            }
+			}
 
-            Velocity = v;
+			Velocity = v;
 
 			MoveAndSlide();
 		}
@@ -354,8 +374,7 @@ namespace Jogo25D.Characters
 
 		public bool IsOwner()
 		{
-            return GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
-        }
-
-    }
+			return GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
+		}
+	}
 }

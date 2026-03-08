@@ -1,8 +1,8 @@
-[gd_scene format=4]
+[gd_scene format=4 uid="uid://eaamifcetyfn"]
 
-[ext_resource type="Texture2D" path="res://Assets/Tiles/TX Tileset Ground.png" id="1_664l2"]
-[ext_resource type="Texture2D" path="res://Assets/Tiles/TX Village Props.png" id="2_e8e4v"]
-[ext_resource type="Script" path="res://Features/Word/Camera/Entities/CameraController.cs" id="4_jbnhx"]
+[ext_resource type="Texture2D" uid="uid://civ5j30ibc0oi" path="res://Assets/Tiles/TX Tileset Ground.png" id="1_664l2"]
+[ext_resource type="Texture2D" uid="uid://beivbfj6e8rtt" path="res://Assets/Tiles/TX Village Props.png" id="2_e8e4v"]
+[ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/Word/Camera/Entities/CameraController.cs" id="4_jbnhx"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_664l2"]
 texture = ExtResource("1_664l2")
@@ -858,9 +858,9 @@ sources/8 = SubResource("TileSetAtlasSource_e8e4v")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]
 position = Vector2(15, 0)
+zoom = Vector2(2, 2)
 position_smoothing_enabled = true
 script = ExtResource("4_jbnhx")
-PlayerPath = NodePath("../Player")
 
 [node name="Upsidedown-Tiles" type="TileMapLayer" parent="." unique_id=64611662]
 use_parent_material = true

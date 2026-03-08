@@ -365,7 +365,8 @@ namespace Jogo25D.UI
 			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
 			iconRect.MouseFilter = Control.MouseFilterEnum.Ignore;
-			center.AddChild(iconRect);
+			iconRect.TextureFilter = Control.TextureFilterEnum.Nearest;
+            center.AddChild(iconRect);
 
 			var innerNameLabel = new Label();
 			innerNameLabel.Name = "NameLabel";

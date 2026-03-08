@@ -5,7 +5,6 @@
 *.suo
 *.userosscache
 *.sln.docstates
-*.import
 
 # Build results
 bin/

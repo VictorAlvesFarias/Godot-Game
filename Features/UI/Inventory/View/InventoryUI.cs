@@ -89,7 +89,8 @@ namespace Jogo25D.UI
 			iconRect.Name = "Icon";
 			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            iconRect.TextureFilter = Control.TextureFilterEnum.Nearest;
+            iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 			DragPreview.AddChild(iconRect);
 
 			MainControl.AddChild(DragPreview);

@@ -1,7 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://du2rl5uua1bga"]
 
-[ext_resource type="Script" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
-
+[ext_resource type="Script" uid="uid://7byy5rkrlr3y" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Inventory"]
 bg_color = Color(0.12, 0.12, 0.12, 0.97)
@@ -98,12 +97,14 @@ theme_override_constants/margin_bottom = 4
 layout_mode = 2
 
 [node name="IconRect" type="TextureRect" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1513140292]
+texture_filter = 1
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="CenterContainer/MainPanel/MarginContainer/VBoxContainer/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1089574609]
+visible = false
 layout_mode = 2
 text = "Teste"
 
