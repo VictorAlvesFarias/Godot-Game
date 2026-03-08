@@ -8,7 +8,7 @@ public partial class WorldGeneration : TileMapLayer
 	[Export] public int Height = 200;
 	[Export] public int SeaLevel = 100;
 	[Export] public int SkyLimit = 70;
-	[Export] public int PropsSourceId = 8;
+	[Export] public int PropsSourceId = 1;
 	
 	[Export] public int TerrainSetId = 0; 
 	[Export] public int TerrainId = 0;    
@@ -29,7 +29,16 @@ public partial class WorldGeneration : TileMapLayer
 	private FastNoiseLite _islandNoise = new FastNoiseLite();
 	private FastNoiseLite _caveNoise = new FastNoiseLite();
 
-	public override void _Ready()
+    // Defina aqui as coordenadas X, Y de cada baú no seu Atlas
+    private Vector2I _chestCommon = new Vector2I(1, 16);
+    private Vector2I _chestRare = new Vector2I(1, 18);
+    private Vector2I _chestLegendary = new Vector2I(3, 18);
+
+    private bool[,] _occupiedTiles;
+
+    [Export] public PackedScene ChestScene;
+
+    public override void _Ready()
 	{
 		SetupNoise();
 		GenerateWorld();
@@ -60,15 +69,21 @@ public partial class WorldGeneration : TileMapLayer
 
 	public void GenerateWorld()
 	{
-		Clear();
+        Clear();
 		bool[,] map = new bool[Width, Height];
+        _occupiedTiles = new bool[Width, Height];
 
-		for (int x = 0; x < Width; x++)
+        for (int x = 0; x < Width; x++)
 		{
 			int groundLevel = SeaLevel + (int)(_heightNoise.GetNoise2D(x, 0) * 20);
 			for (int y = 0; y < Height; y++)
 			{
-				bool isSolid = false;
+                if (y > groundLevel + 10 && !map[x, y - 1] && map[x, y])
+                {
+                    if (GD.Randf() < 0.05f) SpawnChestNode(x, y - 1);
+                }
+				
+                bool isSolid = false;
 				if (y >= groundLevel) isSolid = true;
 
 				int safetyMargin = 30;
@@ -83,7 +98,7 @@ public partial class WorldGeneration : TileMapLayer
 				}
 				map[x, y] = isSolid;
 			}
-		}
+        }
 
 		// Suavização
 		int smoothingPasses = 2;
@@ -92,32 +107,32 @@ public partial class WorldGeneration : TileMapLayer
 			map = SmoothMap(map);
 		}
 
-		Godot.Collections.Array<Vector2I> terrainCells = new Godot.Collections.Array<Vector2I>();
-		List<Vector2I> surfaceCells = new List<Vector2I>();
+        List<Vector2I> surfaceCells = new List<Vector2I>();
+        Godot.Collections.Array<Vector2I> terrainCells = new Godot.Collections.Array<Vector2I>();
 
-		for (int x = 0; x < Width; x++)
-		{
-			for (int y = 0; y < Height; y++)
-			{
-				if (map[x, y])
-				{
-					terrainCells.Add(new Vector2I(x, y));
-					if (y > 0 && !map[x, y - 1])
-					{
-						if (y > 5) surfaceCells.Add(new Vector2I(x, y - 1));
-					}
-				}
-			}
-		}
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                if (map[x, y])
+                {
+                    terrainCells.Add(new Vector2I(x, y));
+                    // Se a célula acima for vazia, é uma superfície
+                    if (y > 0 && !map[x, y - 1])
+                    {
+                        surfaceCells.Add(new Vector2I(x, y - 1));
+                    }
+                }
+            }
+        }
 
-		SetCellsTerrainConnect(terrainCells, TerrainSetId, TerrainId);
+        SetCellsTerrainConnect(terrainCells, TerrainSetId, TerrainId);
 
-		foreach (Vector2I surfacePos in surfaceCells)
+        foreach (Vector2I surfacePos in surfaceCells)
 		{
 			TrySpawnProp(surfacePos.X, surfacePos.Y, map);
 		}
 	}
-
 
     private bool[,] SmoothMap(bool[,] oldMap)
 	{
@@ -153,14 +168,60 @@ public partial class WorldGeneration : TileMapLayer
 		return wallCount;
 	}
 
+    private void SpawnChestNode(int x, int y)
+    {
+        if (ChestScene == null) return;
+
+        Node2D chest = ChestScene.Instantiate<Node2D>();
+        AddChild(chest);
+
+        // Centraliza o baú no tile
+        // MapToLocal retorna o centro do tile em coordenadas locais
+        chest.Position = MapToLocal(new Vector2I(x, y));
+
+        // Exemplo: Se o seu script de Baú tiver uma variável 'Rarity'
+        // você pode definir aqui usando a mesma lógica de chance
+        float chance = (float)GD.RandRange(0, 100);
+        if (chest.HasMethod("SetRarity"))
+        {
+            if (chance > 95) chest.Call("SetRarity", "Legendary");
+            else if (chance > 75) chest.Call("SetRarity", "Rare");
+            else chest.Call("SetRarity", "Common");
+        }
+    }
+
+    private void SpawnRandomChest(int x, int y)
+    {
+        float chance = (float)GD.RandRange(0, 100);
+        Vector2I selectedChestAtlasPos;
+
+        if (chance > 95) // 5% de chance
+        {
+            selectedChestAtlasPos = _chestLegendary;
+        }
+        else if (chance > 75) // 20% de chance
+        {
+            selectedChestAtlasPos = _chestRare;
+        }
+        else // 75% de chance
+        {
+            selectedChestAtlasPos = _chestCommon;
+        }
+
+        // Coloca o tile no TileMapLayer
+        SetCell(new Vector2I(x, y), PropsSourceId, selectedChestAtlasPos);
+    }
+
     private bool IsAreaClear(int x, int y, int width, int height, bool[,] map)
     {
-        for (int i = x - 1; i <= x + 1; i++) // Verifica largura
+        int halfWidth = width / 2;
+        for (int i = x - halfWidth; i <= x + halfWidth; i++)
         {
-            for (int j = y; j >= y - height; j--) // Verifica altura para cima
+            for (int j = y; j > y - height; j--)
             {
                 if (i < 0 || i >= Width || j < 0 || j >= Height) return false;
-                if (map[i, j]) return false; // Se houver terra no mapa booleano, não cabe o prop
+                // Se houver terra OU se já houver outro objeto ali
+                if (map[i, j] || _occupiedTiles[i, j]) return false;
             }
         }
         return true;
@@ -168,18 +229,49 @@ public partial class WorldGeneration : TileMapLayer
 
     private void TrySpawnProp(int x, int y, bool[,] map)
     {
+        // Se este tile já foi ocupado por outro objeto, cancela
+        if (_occupiedTiles[x, y]) return;
+
         if (GD.Randf() > 0.15f) return;
         float itemRand = GD.Randf();
 
-        // Verifique se o prop cabe antes de spawnar
-        if (itemRand < 0.05f && IsAreaClear(x, y, 1, 3, map))
+        // 1. Verificação de Baú (Usando Tile direto para garantir que apareça)
+        if (itemRand < 0.10f)
+        {
+            SpawnRandomChest(x, y); // Usando sua função original de Tiles!
+            _occupiedTiles[x, y] = true;
+        }
+        // 2. Verificação de Estátua (Largura 1, Altura 3)
+        else if (itemRand < 0.20f && IsAreaClear(x, y, 1, 3, map))
+        {
             SpawnStatue(x, y);
-        else if (itemRand < 0.15f)
-            SetCell(new Vector2I(x, y), PropsSourceId, _chestTile);
-        else if (itemRand < 0.45f && IsAreaClear(x, y, 3, 5, map))
+            MarkAreaOccupied(x, y, 1, 3);
+        }
+        // 3. Verificação de Árvore (Largura 5, Altura 5 - CORRIGIDO!)
+        else if (itemRand < 0.50f && IsAreaClear(x, y, 5, 5, map))
+        {
             SpawnTree1(x, y);
-        else
+            MarkAreaOccupied(x, y, 5, 5);
+        }
+        // 4. Verificação de Arbusto (Largura 2, Altura 1)
+        else if (IsAreaClear(x, y, 2, 1, map))
+        {
             SpawnBush(x, y);
+            MarkAreaOccupied(x, y, 2, 1);
+        }
+    }
+
+    private void MarkAreaOccupied(int x, int y, int width, int height)
+    {
+        int halfWidth = width / 2;
+        for (int i = x - halfWidth; i <= x + halfWidth; i++)
+        {
+            for (int j = y; j > y - height; j--)
+            {
+                if (i >= 0 && i < Width && j >= 0 && j < Height)
+                    _occupiedTiles[i, j] = true;
+            }
+        }
     }
 
     private void SpawnStatue(int x, int y)
@@ -210,4 +302,5 @@ public partial class WorldGeneration : TileMapLayer
 		SetCell(new Vector2I(x, y), PropsSourceId, _bushLeft);
 		SetCell(new Vector2I(x + 1, y), PropsSourceId, _bushRight);
 	}
+
 }
