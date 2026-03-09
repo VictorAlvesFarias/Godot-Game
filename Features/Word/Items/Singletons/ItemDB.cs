@@ -57,13 +57,13 @@ namespace Jogo25D.Items
                 Name = "Arco2",
                 Type = ItemType.WeaponRanged,
                 Description = "Um arco melhorado para ataques Ã  distÃ¢ncia",
-                Cooldown = 0.01f,
+                Cooldown = 1f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_11),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                 Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 5, DamageType = DamageType.Fire },
-                    new AttackProperty { AttackRange = 2000f, AttackArea = 15f, ProjectileSpeed = 1200f },
+                    new AttackProperty { AttackRange = 1000f, AttackArea = 15f, ProjectileSpeed = 100f },
                     new ChargesProperty { InfiniteCharges = true, MaxCharges = 1, ReloadCooldown = 1.5f }
                 }
             };
@@ -108,7 +108,7 @@ namespace Jogo25D.Items
                 Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 10, DamageType = DamageType.Physical },
-                    new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 750f },
+                    new AttackProperty { AttackRange = 1500f, AttackArea = 150f, ProjectileSpeed = 70f },
                     new ChargesProperty { InfiniteCharges = false, MaxCharges = 10, ChargeItemId = "arrow", ReloadCooldown = 1.0f }
                 }
             };

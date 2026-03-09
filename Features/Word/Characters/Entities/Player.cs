@@ -51,7 +51,7 @@ namespace Jogo25D.Characters
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 			InputManager = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
-			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visual/Sprite");
+			Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
 			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
 			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
 			Inventory = GetNodeOrNull<Inventory>("Systems/Inventory");
@@ -181,6 +181,11 @@ namespace Jogo25D.Characters
 
 		public void UpdateAnimation()
 		{
+			if (Velocity.X != 0)
+			{
+				Sprite.FlipH = Velocity.X < 0;
+			}
+			
 			if (!IsOnFloor())
 			{
 				if (Velocity.Y < 0)
@@ -207,9 +212,6 @@ namespace Jogo25D.Characters
 				if (Sprite.Animation != "idle")
 					Sprite.Play("idle");
 			}
-
-			if (Velocity.X != 0)
-				Sprite.FlipH = Velocity.X < 0;
 		}
 
 		public void HandleInput()

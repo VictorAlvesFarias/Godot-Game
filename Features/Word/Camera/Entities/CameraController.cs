@@ -14,7 +14,7 @@ namespace Jogo25D.Systems
 			FindLocalPlayer();
 		}
 
-		public override void _Process(double delta)
+		public override void _PhysicsProcess(double delta)
 		{
 			if (Player == null || !IsInstanceValid(Player))
 			{

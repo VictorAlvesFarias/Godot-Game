@@ -42,7 +42,9 @@ namespace Jogo25D.Actions
                 Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_4),
                 Properties = new List<BaseProperty>
                 {
-                    new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical } 
+                    new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical } ,
+                    new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 75f },
+
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn")
             });

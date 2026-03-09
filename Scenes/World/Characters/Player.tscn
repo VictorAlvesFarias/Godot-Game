@@ -379,10 +379,17 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
-size = Vector2(36.75, 48.5)
+size = Vector2(38.206055, 43.851135)
 
 [node name="Player" type="CharacterBody2D" unique_id=678460707]
 script = ExtResource("1")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=496822046]
+texture_filter = 1
+texture_repeat = 1
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_dslm6")
+animation = &"idle"
 
 [node name="Systems" type="Node2D" parent="." unique_id=312828525]
 
@@ -395,15 +402,6 @@ script = ExtResource("4")
 [node name="GroundMarker" type="Node2D" parent="Systems" unique_id=222222222]
 script = ExtResource("5")
 
-[node name="Visual" type="Node2D" parent="." unique_id=90535363]
-
-[node name="Sprite" type="AnimatedSprite2D" parent="Visual" unique_id=496822046]
-texture_filter = 1
-texture_repeat = 1
-scale = Vector2(2, 2)
-sprite_frames = SubResource("SpriteFrames_dslm6")
-animation = &"jump"
-
 [node name="Shape" type="CollisionShape2D" parent="." unique_id=857000654]
-visible = false
+position = Vector2(-3.8969727, 0)
 shape = SubResource("RectangleShape2D_1")

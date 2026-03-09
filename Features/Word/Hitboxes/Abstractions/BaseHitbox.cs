@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Jogo25D.Items;
 using Jogo25D.Effects;
 using Jogo25D.Characters;
+using System;
 
 namespace Jogo25D.Hitboxes
 {
@@ -10,7 +11,22 @@ namespace Jogo25D.Hitboxes
     {
         public List<DamageInfo> Damages { get; set; } = new();
         public List<EffectDefinition> Effects { get; set; } = new();
-        public new Player Owner { get; set; }
+        public Player Owner { get; set; }
+        public AnimatedSprite2D Sprite { get; set; }
+
+        public override void _Ready()
+        {
+            base._Ready();
+
+            Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
+        
+            if (Sprite is not null)
+            {
+                Sprite.Play("idle");
+            }
+
+            Console.WriteLine(GetPath());
+        }
 
         public virtual void Initialize(List<DamageInfo> damages, List<EffectDefinition> effects, Player owner)
         {

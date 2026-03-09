@@ -1,14 +1,56 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://ca876543210"]
 
-[ext_resource type="Script" path="res://Features/Word/Hitboxes/Definitions/ProjectileHitbox.cs" id="1"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Screenshot 2026-02-21 014543.png" id="2_jqjcv"]
+[ext_resource type="Script" uid="uid://biq18d45wk5ii" path="res://Features/Word/Hitboxes/Definitions/ProjectileHitbox.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://nvavictoj4t8" path="res://Assets/Sprites/Speels/4.png" id="2_jqjcv"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1nt3c"]
+atlas = ExtResource("2_jqjcv")
+region = Rect2(0, 0, 71, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bmirb"]
+atlas = ExtResource("2_jqjcv")
+region = Rect2(72, 0, 71, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kix22"]
+atlas = ExtResource("2_jqjcv")
+region = Rect2(144, 0, 71, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lfx0x"]
+atlas = ExtResource("2_jqjcv")
+region = Rect2(216, 0, 71, 72)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_cxnoh"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1nt3c")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bmirb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kix22")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lfx0x")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 4.0
+}]
 
 [node name="Projectile" type="Area2D" unique_id=757632897]
 collision_layer = 2
 script = ExtResource("1")
 
-[node name="Texture" type="Sprite2D" parent="." unique_id=354740250]
-texture = ExtResource("2_jqjcv")
-
 [node name="Collision" type="CollisionPolygon2D" parent="." unique_id=1311075453]
+position = Vector2(-11.499997, -0.9999993)
+scale = Vector2(1.065341, 0.78947365)
 polygon = PackedVector2Array(-22, -9.5, -22, 9.5, 22, 9.5, 22, -9.5)
+
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1585955029]
+texture_filter = 1
+position = Vector2(-1.9073486e-06, -1.0000019)
+scale = Vector2(3.871479, 3.8714783)
+sprite_frames = SubResource("SpriteFrames_cxnoh")
+animation = &"idle"
