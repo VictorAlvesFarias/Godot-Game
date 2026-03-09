@@ -859,7 +859,6 @@ sources/8 = SubResource("TileSetAtlasSource_e8e4v")
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]
 position = Vector2(15, 0)
 zoom = Vector2(2, 2)
-position_smoothing_enabled = true
 script = ExtResource("4_jbnhx")
 
 [node name="Upsidedown-Tiles" type="TileMapLayer" parent="." unique_id=64611662]

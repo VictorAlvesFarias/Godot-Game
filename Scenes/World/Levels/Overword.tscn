@@ -985,6 +985,9 @@ sources/8 = SubResource("TileSetAtlasSource_p7pgw")
 
 [node name="Overword" type="Node2D" unique_id=1584147225]
 
+[node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=805003444]
+color = Color(1, 0.77254903, 0.5294118, 1)
+
 [node name="Background" type="Node2D" parent="." unique_id=920441478]
 script = ExtResource("8_bgscr")
 metadata/SwapDistance = 1000.0
@@ -1067,7 +1070,6 @@ texture = ExtResource("7_bg6tx")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
-position_smoothing_enabled = true
 script = ExtResource("2_vlsnn")
 
 [node name="Player" parent="." unique_id=678460707 instance=ExtResource("1_gk6ay")]
