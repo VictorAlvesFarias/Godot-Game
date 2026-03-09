@@ -157,24 +157,33 @@ namespace Jogo25D.Systems
 
 		public string JoinServer(string textAddress)
 		{
-			var ip = textAddress.Split(":")[0];
-			var textPort = textAddress.Split(":")[1];
-			var port = 0;
+            var ip = DEFAULT_ADDRESS;
+            var port = DEFAULT_PORT;
 
-			if (string.IsNullOrEmpty(ip))
-			{
-				ip = DEFAULT_ADDRESS;
-			}
+            if (!string.IsNullOrWhiteSpace(textAddress))
+            {
+                var parts = textAddress.Split(':');
 
-			if (!string.IsNullOrEmpty(textPort))
-			{
-				if (!int.TryParse(textPort, out port))
+                if (!string.IsNullOrWhiteSpace(parts[0]))
+                {
+                    ip = parts[0];
+                }
+				else
 				{
-					port = DEFAULT_PORT;
+					return "";
 				}
-			}
 
-			GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
+				if (parts.Length > 1 && int.TryParse(parts[1], out var parsedPort))
+				{
+					port = parsedPort;
+				}
+				else
+				{
+					return "";
+				}
+            }
+
+            GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
 			
 			Peer = new ENetMultiplayerPeer();
 

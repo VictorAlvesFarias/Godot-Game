@@ -100,7 +100,7 @@ namespace Jogo25D.Characters
 		{
 			if (Multiplayer.IsServer())
 			{
-				Rpc(nameof(SyncPosition), GlobalPosition);
+				Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
 			}
 
 			foreach (var effect in Effects.Where(e => e.ApplyToOwner))
@@ -130,15 +130,43 @@ namespace Jogo25D.Characters
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-		public void SetServerInput(ControlledInputs input)
+		public void SetServerInput(
+			float moveX, float moveY,
+			bool jump, bool dash, bool attack, bool reload,
+			bool ability, bool ability2Held, bool ability2JustReleased,
+			bool scrollNext, bool scrollPrev,
+			Vector2 mousePosition)
 		{
-			Input = input;
+			Input.MoveX = moveX;
+			Input.MoveY = moveY;
+			Input.Jump = jump;
+			Input.Dash = dash;
+			Input.Attack = attack;
+			Input.Reload = reload;
+			Input.Ability = ability;
+			Input.Ability2Held = ability2Held;
+			Input.Ability2JustReleased = ability2JustReleased;
+			Input.ScrollNext = scrollNext;
+			Input.ScrollPrev = scrollPrev;
+			Input.MousePosition = mousePosition;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
-		public void SyncPosition(Vector2 pos)
+		public void SyncPosition(Vector2 pos, Vector2 vel)
 		{
 			GlobalPosition = pos;
+			Velocity = vel;
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
+		public void SyncAnimation(string animName, bool flipH)
+		{
+			Sprite.FlipH = flipH;
+
+			if (Sprite.Animation != animName)
+			{
+				Sprite.Play(animName);
+			}
 		}
 
 		public void TakeDamage(int damage)
@@ -198,11 +226,8 @@ namespace Jogo25D.Characters
 					if (Sprite.Animation != "falling")
 						Sprite.Play("falling");
 				}
-
-				return;
 			}
-
-			if (Velocity.X != 0)
+			else if (Velocity.X != 0)
 			{
 				if (Sprite.Animation != "run")
 					Sprite.Play("run");
@@ -211,6 +236,11 @@ namespace Jogo25D.Characters
 			{
 				if (Sprite.Animation != "idle")
 					Sprite.Play("idle");
+			}
+
+			if (Multiplayer.IsServer())
+			{
+				Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
 			}
 		}
 
@@ -224,7 +254,12 @@ namespace Jogo25D.Characters
 			Input = InputManager.Current;
 			Input.MousePosition = GetGlobalMousePosition();
 
-			Rpc(nameof(SetServerInput), Input);
+			Rpc(nameof(SetServerInput),
+				Input.MoveX, Input.MoveY,
+				Input.Jump, Input.Dash, Input.Attack, Input.Reload,
+				Input.Ability, Input.Ability2Held, Input.Ability2JustReleased,
+				Input.ScrollNext, Input.ScrollPrev,
+				Input.MousePosition);
 		}
 
 		public void HandleAttack(float delta)
