@@ -4,9 +4,12 @@
 [ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/1.png" id="1_y8qed"]
 [ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/4.png" id="2_danr7"]
 [ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/Word/Camera/Entities/CameraController.cs" id="2_vlsnn"]
-[ext_resource type="Texture2D" uid="uid://duhwl87r35drs" path="res://Assets/Textures/5.png" id="3_05hrf"]
 [ext_resource type="Texture2D" uid="uid://civ5j30ibc0oi" path="res://Assets/Tiles/TX Tileset Ground.png" id="3_wcluf"]
 [ext_resource type="Texture2D" uid="uid://beivbfj6e8rtt" path="res://Assets/Tiles/TX Village Props.png" id="4_y8qed"]
+[ext_resource type="Texture2D" uid="uid://c5wutnvn5ke2r" path="res://Assets/Textures/2.png" id="5_bg2tx"]
+[ext_resource type="Texture2D" uid="uid://ckrj4lovpeiwe" path="res://Assets/Textures/3.png" id="6_bg3tx"]
+[ext_resource type="Texture2D" uid="uid://dvthj1kjtge87" path="res://Assets/Textures/6.png" id="7_bg6tx"]
+[ext_resource type="Script" uid="uid://cy7x23du6g0sc" path="res://Features/Word/Background/Entities/BackgroundController.cs" id="8_bgscr"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kjd5s"]
 texture = ExtResource("3_wcluf")
@@ -982,22 +985,85 @@ sources/8 = SubResource("TileSetAtlasSource_p7pgw")
 
 [node name="Overword" type="Node2D" unique_id=1584147225]
 
-[node name="Background" type="Node2D" parent="." unique_id=1386237546]
+[node name="Background" type="Node2D" parent="." unique_id=920441478]
+script = ExtResource("8_bgscr")
+metadata/SwapDistance = 1000.0
 
-[node name="1" type="Sprite2D" parent="Background" unique_id=1083637959]
+[node name="Sky" type="Parallax2D" parent="Background" unique_id=1287173883]
+scroll_scale = Vector2(0.05, 0.05)
+repeat_size = Vector2(5184, 2916)
+repeat_times = 30
+
+[node name="Sprite" type="Sprite2D" parent="Background/Sky" unique_id=61256146]
 texture_filter = 1
 scale = Vector2(9, 9)
 texture = ExtResource("1_y8qed")
 
-[node name="4" type="Sprite2D" parent="Background" unique_id=1285568339]
+[node name="Horizon" type="Parallax2D" parent="Background" unique_id=240657449]
+scroll_scale = Vector2(0.15, 0.15)
+repeat_size = Vector2(5184, 0)
+repeat_times = 30
+
+[node name="Layer3" type="Sprite2D" parent="Background/Horizon" unique_id=236369856]
+texture_filter = 1
+scale = Vector2(9, 9)
+texture = ExtResource("6_bg3tx")
+
+[node name="Layer4" type="Sprite2D" parent="Background/Horizon" unique_id=3646455]
 texture_filter = 1
 scale = Vector2(9, 9)
 texture = ExtResource("2_danr7")
 
-[node name="5" type="Sprite2D" parent="Background" unique_id=162019657]
+[node name="HorizonFlipped" type="Parallax2D" parent="Background" unique_id=907988990]
+scroll_scale = Vector2(0.15, 0.15)
+repeat_size = Vector2(5184, 0)
+repeat_times = 30
+
+[node name="Layer3F" type="Sprite2D" parent="Background/HorizonFlipped" unique_id=15404925]
+texture_filter = 1
+position = Vector2(0, 2916)
+scale = Vector2(9, -9)
+texture = ExtResource("6_bg3tx")
+
+[node name="Layer4F" type="Sprite2D" parent="Background/HorizonFlipped" unique_id=641818964]
+texture_filter = 1
+position = Vector2(0, 2916)
+scale = Vector2(9, -9)
+texture = ExtResource("2_danr7")
+
+[node name="HorizonAlt" type="Parallax2D" parent="Background" unique_id=1287391350]
+visible = false
+scroll_scale = Vector2(0.15, 0.15)
+repeat_size = Vector2(5184, 0)
+repeat_times = 30
+
+[node name="Layer2" type="Sprite2D" parent="Background/HorizonAlt" unique_id=805961832]
 texture_filter = 1
 scale = Vector2(9, 9)
-texture = ExtResource("3_05hrf")
+texture = ExtResource("5_bg2tx")
+
+[node name="Layer6" type="Sprite2D" parent="Background/HorizonAlt" unique_id=1591443923]
+texture_filter = 1
+scale = Vector2(9, 9)
+texture = ExtResource("7_bg6tx")
+
+[node name="HorizonAltFlipped" type="Parallax2D" parent="Background" unique_id=679979564]
+visible = false
+scroll_scale = Vector2(0.15, 0.15)
+repeat_size = Vector2(5184, 0)
+repeat_times = 30
+
+[node name="Layer2F" type="Sprite2D" parent="Background/HorizonAltFlipped" unique_id=2062877360]
+texture_filter = 1
+position = Vector2(0, 2916)
+scale = Vector2(9, -9)
+texture = ExtResource("5_bg2tx")
+
+[node name="Layer6F" type="Sprite2D" parent="Background/HorizonAltFlipped" unique_id=34603920]
+texture_filter = 1
+position = Vector2(0, 2916)
+scale = Vector2(9, -9)
+texture = ExtResource("7_bg6tx")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
