@@ -59,7 +59,7 @@ namespace Jogo25D.Actions
                 Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 20, DamageType = DamageType.Physical },
-                    new AttackProperty  { AttackArea = 60f },
+                    new AttackProperty  { AttackArea = 20f, AttackRange = 1000f },
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/GroundStrike.tscn")
             });

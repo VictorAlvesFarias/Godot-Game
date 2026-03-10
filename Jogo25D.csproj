@@ -369,8 +369,10 @@
     <None Include="Scenes\UI\Ui.tscn" />
     <None Include="Scenes\World\Characters\Player.tscn" />
     <None Include="Scenes\World\Levels\Overword.tscn" />
+    <None Include="Scenes\World\Levels\Procedural.tscn" />
     <None Include="Scenes\World\Levels\Upsidedown.tscn" />
     <None Include="Scenes\World\Projectiles\Fireball.tscn" />
+    <None Include="Scenes\World\Projectiles\GroundStrike.tscn" />
     <None Include="Scenes\World\Projectiles\Projectile.tscn" />
     <None Include="Scenes\World\Projectiles\Sword.tscn" />
     <None Include="Scenes\World\World.tscn" />
