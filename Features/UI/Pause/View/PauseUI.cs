@@ -17,7 +17,6 @@ namespace Jogo25D.UI
 		public Label StatusLabel { get; set; }
 		public Player PlayerNode { get; set; }
 		public WorldManager NetworkManager { get; set; }
-		public InputManager InputManagerNode { get; set; }
 
         public override void _Ready()
 		{
@@ -33,7 +32,6 @@ namespace Jogo25D.UI
 			AddressInput = GetNode<LineEdit>("Panel/VBoxContainer/NetworkContainer/AddressInput");
 			StatusLabel = GetNode<Label>("Panel/VBoxContainer/NetworkContainer/StatusLabel");
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-            InputManagerNode = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
             ResetButton.Pressed += OnResetPressed;
 			ResumeButton.Pressed += OnResumePressed;

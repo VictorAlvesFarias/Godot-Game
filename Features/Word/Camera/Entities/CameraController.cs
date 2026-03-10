@@ -1,11 +1,12 @@
 using Godot;
+using Jogo25D.Characters;
 
 namespace Jogo25D.Systems
 {
 	public partial class CameraController : Camera2D
 	{
 		public NodePath PlayerPath;
-		public Node2D Player { get; set; }
+		public Node2D PlayerRef { get; set; }
 
 		public override void _Ready()
 		{
@@ -16,14 +17,14 @@ namespace Jogo25D.Systems
 
 		public override void _PhysicsProcess(double delta)
 		{
-			if (Player == null || !IsInstanceValid(Player))
+			if (PlayerRef == null || !IsInstanceValid(PlayerRef))
 			{
 				FindLocalPlayer();
 			}
 
-			if (Player != null && IsInstanceValid(Player))
+			if (PlayerRef != null && IsInstanceValid(PlayerRef))
 			{
-				GlobalPosition = Player.GlobalPosition;
+				GlobalPosition = PlayerRef.GlobalPosition;
 			}
 		}
 
@@ -31,44 +32,24 @@ namespace Jogo25D.Systems
 		{
 			if (PlayerPath != null && !PlayerPath.IsEmpty)
 			{
-				Player = GetNodeOrNull<Node2D>(PlayerPath);
-				if (Player != null)
+				PlayerRef = GetNodeOrNull<Node2D>(PlayerPath);
+				if (PlayerRef != null)
 				{
 					return;
 				}
 			}
 
-			int localPeerId = 1;
-			bool hasMultiplayer = false;
-		
-			if (Multiplayer != null && 
-				Multiplayer.MultiplayerPeer != null && 
-				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
-			{
-				try
-				{
-					localPeerId = Multiplayer.GetUniqueId();
-					hasMultiplayer = true;
-				}
-				catch
-				{
-					hasMultiplayer = false;
-				}
-			}
+			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
-			var players = GetTree().GetNodesInGroup("players");
-			foreach (Node node in players)
+			if (worldManager != null)
 			{
-				if (node is Node2D player2D)
-				{
-					if (!hasMultiplayer || player2D.GetMultiplayerAuthority() == localPeerId)
-					{
-						Player = player2D;
-						return;
-					}
-				}
+				var local = worldManager.GetLocalPlayer();
 
-				Player = GetTree().Root.FindChild("Player", true, false) as Node2D;
+				if (local != null)
+				{
+					PlayerRef = local;
+					return;
+				}
 			}
 		}	
 	}

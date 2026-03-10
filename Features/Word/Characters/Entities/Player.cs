@@ -8,9 +8,6 @@ using Jogo25D.Actions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Globalization;
-using System.Reflection.Metadata;
-using System.Text.RegularExpressions;
 
 namespace Jogo25D.Characters
 {
@@ -32,12 +29,11 @@ namespace Jogo25D.Characters
 		public ItemInstance EquippedInstance { get; set; }
 		public ItemInstance[] Items { get; set; } = Array.Empty<ItemInstance>();
 		public ItemDefinition EquippedDefinition { get; set; }
-		public ControlledInputs Input { get; set; } = new();
 
 		public WorldManager NetworkManager { get; set; }
-		public InputManager InputManager { get; set; }
 
 		public Inventory Inventory { get; set; }
+		public PlayerInput Input { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public GroundIndicator GroundMarker { get; set; }
 
@@ -50,9 +46,9 @@ namespace Jogo25D.Characters
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-			InputManager = GetTree().Root.GetNode<InputManager>(InputManager.DEFAULT_NODE_PATH);
 
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
+			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
 			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
 			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
 			Inventory = GetNodeOrNull<Inventory>("Systems/Inventory");
@@ -125,12 +121,12 @@ namespace Jogo25D.Characters
 
 			if (IsOwner())
 			{
-				HandleInput();
 				HandleHotbarScroll();
 			}
 
 			if (Multiplayer.IsServer())
 			{
+				// Toda lógica de jogo roda apenas no servidor
 				HandleMovement(dt);
 				HandleAttack(dt);
 				HandleReload(dt);
@@ -141,6 +137,7 @@ namespace Jogo25D.Characters
 			}
 			else if (IsOwner())
 			{
+				// Cliente dono faz prediction local e também reconcilia com posição do servidor
 				HandleMovementPrediction(dt);
 				HandleAttack(dt);
 				HandleReload(dt);
@@ -159,6 +156,7 @@ namespace Jogo25D.Characters
 			}
 			else
 			{
+				// Outros clientes apenas interpolam para a posição do servidor
 				var dist = GlobalPosition.DistanceTo(TargetPosition);
 
 				if (dist > 300f)
@@ -170,28 +168,6 @@ namespace Jogo25D.Characters
 					GlobalPosition = GlobalPosition.Lerp(TargetPosition, 15f * dt);
 				}
 			}
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-		public void SetServerInput(
-			float moveX, float moveY,
-			bool jump, bool dash, bool attack, bool reload,
-			bool ability, bool ability2Held, bool ability2JustReleased,
-			bool scrollNext, bool scrollPrev,
-			Vector2 mousePosition)
-		{
-			Input.MoveX = moveX;
-			Input.MoveY = moveY;
-			Input.Jump = jump;
-			Input.Dash = dash;
-			Input.Attack = attack;
-			Input.Reload = reload;
-			Input.Ability = ability;
-			Input.Ability2Held = ability2Held;
-			Input.Ability2JustReleased = ability2JustReleased;
-			Input.ScrollNext = scrollNext;
-			Input.ScrollPrev = scrollPrev;
-			Input.MousePosition = mousePosition;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
@@ -283,28 +259,6 @@ namespace Jogo25D.Characters
 
 		}
 
-		public void HandleInput()
-		{
-			if (!IsOwner())
-			{
-				return;
-			}
-
-			Input = InputManager.Current;
-			Input.MousePosition = GetGlobalMousePosition();
-
-			// Send input to server (if we're not already the server)
-			if (!Multiplayer.IsServer())
-			{
-				RpcId(1, nameof(SetServerInput),
-					Input.MoveX, Input.MoveY,
-					Input.Jump, Input.Dash, Input.Attack, Input.Reload,
-					Input.Ability, Input.Ability2Held, Input.Ability2JustReleased,
-					Input.ScrollNext, Input.ScrollPrev,
-					Input.MousePosition);
-			}
-		}
-
 		public void HandleAttack(float delta)
 		{
 			if (EquippedInstance == null || EquippedInstance.IsEmpty())
@@ -329,34 +283,30 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			int dir = 0;
-			if (Input.ScrollNext)
-			{
-				dir = 1;
-			}
-			else if (Input.ScrollPrev)
-			{
-				dir = -1;
-			}
+			var dir = Input.ScrollDirection;
+			
 			if (dir == 0)
 			{
 				return;
 			}
 
-			const int HotbarSize = 8;
-			int current = Inventory.GetEquippedSlotIndex();
+			var hotbarSize = 8;
+			var current = Inventory.GetEquippedSlotIndex();
+
 			if (current < 0)
 			{
 				current = 0;
 			}
 
-			for (int i = 1; i <= HotbarSize; i++)
+			for (int i = 1; i <= hotbarSize; i++)
 			{
-				int next = ((current + dir * i) % HotbarSize + HotbarSize) % HotbarSize;
+				var next = ((current + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
 				var slot = Inventory.GetSlot(next);
+
 				if (slot != null && !slot.IsEmpty())
 				{
 					Inventory.EquipItem(next);
+
 					return;
 				}
 			}
@@ -370,18 +320,19 @@ namespace Jogo25D.Characters
 			}
 
 			var chargesProp = EquippedInstance.Properties.OfType<ChargesProperty>().FirstOrDefault();
+
 			if (chargesProp == null || chargesProp.InfiniteCharges)
 			{
 				return;
 			}
 
-			if (!EquippedInstance.IsReloading &&
-				EquippedInstance.CurrentCharges < chargesProp.MaxCharges &&
-				ReloadPending)
+			if (!EquippedInstance.IsReloading && EquippedInstance.CurrentCharges < chargesProp.MaxCharges && ReloadPending)
 			{
 				ReloadPending = false;
-				int needed = chargesProp.MaxCharges - EquippedInstance.CurrentCharges;
-				int taken = Inventory?.RemoveAmmoByChargeType(chargesProp.ChargeItemId, needed) ?? 0;
+
+				var needed = chargesProp.MaxCharges - EquippedInstance.CurrentCharges;
+				var taken = Inventory?.RemoveAmmoByChargeType(chargesProp.ChargeItemId, needed) ?? 0;
+				
 				EquippedInstance.FinishReload(taken);
 			}
 

@@ -11,7 +11,7 @@ namespace Jogo25D.UI
 	{
 		public Player LocalPlayer { get; set; }
 		public Inventory Inventory => LocalPlayer?.Inventory;
-		public InputManager InputManagerNode { get; set; }
+		public PlayerInput PlayerInput => LocalPlayer?.Input;
 		public GridContainer GridContainer { get; set; }
 		public Panel ContextMenu { get; set; }
 		public VBoxContainer ContextMenuContainer { get; set; }
@@ -61,8 +61,6 @@ namespace Jogo25D.UI
 
 			CreateDragPreview();
 
-			InputManagerNode = GetTree().Root.GetNodeOrNull<InputManager>(InputManager.DEFAULT_NODE_PATH);
-
 			CallDeferred(nameof(FindLocalPlayerInventorySystem));
 
 			Visible = false;
@@ -104,48 +102,23 @@ namespace Jogo25D.UI
 			}
 			LocalPlayer = null;
 
-			var players = GetTree().GetNodesInGroup("players");
-			var localPeerId = 1;
-			var hasMultiplayer = false;
+			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
-			if (
-				Multiplayer != null && 
-				Multiplayer.MultiplayerPeer != null &&
-				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
-			)
+			if (worldManager != null)
 			{
-				try
-				{
-					localPeerId = Multiplayer.GetUniqueId();
-					hasMultiplayer = true;
-				}
-				catch
-				{
-					hasMultiplayer = false;
-				}
-			}
+				LocalPlayer = worldManager.GetLocalPlayer();
 
-			foreach (Node node in players)
-			{
-				if (node is Jogo25D.Characters.Player player)
+				if (LocalPlayer != null && Inventory != null)
 				{
-					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
+					Inventory.InventoryChanged += OnInventoryChanged;
+
+					if (SlotPanels[0] == null)
 					{
-						LocalPlayer = player;
-						if (Inventory != null)
-						{
-							Inventory.InventoryChanged += OnInventoryChanged;
-
-							if (SlotPanels[0] == null)
-							{
-								InitializeSlots();
-							}
-							else
-							{
-								OnInventoryChanged();
-							}
-						}
-						break;
+						InitializeSlots();
+					}
+					else
+					{
+						OnInventoryChanged();
 					}
 				}
 			}
@@ -228,7 +201,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (InputManagerNode != null && InputManagerNode.IsBlocked)
+			if (PlayerInput != null && PlayerInput.IsBlocked())
 			{
 				return;
 			}

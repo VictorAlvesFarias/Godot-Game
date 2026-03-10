@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://co3gj1gu87pml" path="res://Features/Word/Characters/Systems/AimIndicator.cs" id="4"]
 [ext_resource type="Script" uid="uid://brgt8qisyg4jc" path="res://Features/Word/Characters/Systems/GroundIndicator.cs" id="5"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Sprites/Character/charater.png" id="5_47fxu"]
+[ext_resource type="Script" path="res://Features/Managers/Input/Manager/PlayerInput.cs" id="6"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
 atlas = ExtResource("5_47fxu")
@@ -395,6 +396,9 @@ animation = &"idle"
 
 [node name="Inventory" type="Node" parent="Systems" unique_id=534626789]
 script = ExtResource("3")
+
+[node name="PlayerInput" type="Node" parent="Systems"]
+script = ExtResource("6")
 
 [node name="AimIndicator" type="Node2D" parent="Systems" unique_id=111111111]
 script = ExtResource("4")

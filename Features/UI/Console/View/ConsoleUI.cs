@@ -11,10 +11,11 @@ namespace Jogo25D.UI
 	public partial class ConsoleUI : CanvasLayer
 	{
 		public bool IsOpen { get; set; }
-		public InputManager InputManagerNode { get; set; }
+		public Player LocalPlayer { get; set; }
 
 		public ScrollContainer HistoryScroll { get; set; }
-		public VBoxContainer HistoryContainer { get; set; }
+		public WorldManager WorldManager { get; set; }
+        public VBoxContainer HistoryContainer { get; set; }
 		public Panel SuggestionsPanel { get; set; }
 		public HBoxContainer SuggestionsBar { get; set; }
 		public LineEdit InputField { get; set; }
@@ -50,9 +51,11 @@ namespace Jogo25D.UI
 			InputField.TextChanged   += OnInputChanged;
 			InputField.TextSubmitted += OnInputSubmitted;
 
-			InputManagerNode = GetTree().Root.GetNodeOrNull<InputManager>(InputManager.DEFAULT_NODE_PATH);
+            WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
-			RegisterCommands();
+            LocalPlayer = WorldManager?.GetLocalPlayer();
+
+            RegisterCommands();
 
 			PrintInfo("Console carregado. Digite 'help' para listar os comandos.");
 		}
@@ -118,12 +121,12 @@ namespace Jogo25D.UI
 
 			if (IsOpen)
 			{
-				InputManagerNode?.AddBlocker("console");
+				LocalPlayer?.Input?.AddBlocker("console");
 				InputField.CallDeferred(LineEdit.MethodName.GrabFocus);
 			}
 			else
 			{
-				InputManagerNode?.RemoveBlocker("console");
+				LocalPlayer?.Input?.RemoveBlocker("console");
 			}
 		}
 
@@ -396,28 +399,42 @@ namespace Jogo25D.UI
 					}
 
 					ItemDB.Initialize();
+					
 					var def = ItemDB.Get(args[0]);
+					
 					if (def == null)
 					{
 						console.PrintError($"Item '{args[0]}' nÃ£o encontrado. Use 'list_items' para ver os IDs disponÃ­veis.");
+						
 						return;
 					}
 
 					int qty = 1;
+					
 					if (args.Length >= 2 && !int.TryParse(args[1], out qty))
 					{
 						console.PrintError("Quantidade invÃ¡lida.");
 						return;
 					}
 
-					var player = GetLocalPlayer();
-					if (player == null)
+					// Garante que temos a referência correta do player local,
+					// mesmo se ele tiver sido spawnado depois do _Ready.
+					if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+					{
+						if (WorldManager != null)
+						{
+							LocalPlayer = WorldManager.GetLocalPlayer();
+						}
+					}
+
+					if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 					{
 						console.PrintError("Nenhum jogador encontrado na cena.");
 						return;
 					}
 
-					bool ok = player.Inventory?.AddItem(def, qty) ?? false;
+					var ok = LocalPlayer.Inventory?.AddItem(def, qty) ?? false;
+					
 					if (!ok)
 					{
 						console.PrintError("InventÃ¡rio cheio ou item nÃ£o pÃ´de ser adicionado.");

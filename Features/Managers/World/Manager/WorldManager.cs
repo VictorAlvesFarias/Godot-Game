@@ -264,8 +264,7 @@ namespace Jogo25D.Systems
 		public Player GetLocalPlayer()
 		{
 			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
-			
-			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
+
 			var localPeerId = 1;
 
 			if (
@@ -274,15 +273,20 @@ namespace Jogo25D.Systems
 				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
 			)
 			{
-				localPeerId = Multiplayer.GetUniqueId(); 
-				
+				localPeerId = Multiplayer.GetUniqueId();
 				GD.Print($"[WorldManager.GetLocalPlayer] localPeerId={localPeerId}");
 			}
 
-			var found = players.FirstOrDefault(p => p.PeerId == localPeerId);
-			
-			GD.Print($"[WorldManager.GetLocalPlayer] found={(found!=null)}");
-			
+			return FindPlayerByPeerId(localPeerId);
+		}
+
+		public Player FindPlayerByPeerId(long peerId)
+		{
+			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
+			var found = players.FirstOrDefault(p => p.PeerId == peerId);
+
+			GD.Print($"[WorldManager.FindPlayerByPeerId] peerId={peerId} found={(found != null)}");
+
 			return found;
 		}
 
