@@ -247,12 +247,7 @@ namespace Jogo25D.Systems
 			player.PeerId = peerId;
 
 			player.AddToGroup("players");
-			player.SetMultiplayerAuthority(1); 
-
-			if (peerId != 1)
-			{
-				player.SetMultiplayerAuthority((int)peerId);
-			}
+			player.SetMultiplayerAuthority(1);
 
 			if (OverwordParent != null)
 			{

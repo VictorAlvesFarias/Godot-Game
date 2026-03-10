@@ -25,6 +25,7 @@ namespace Jogo25D.Characters
 		public bool CanUpdateMovement { get; set; } = true;
 		public bool ReloadPending { get; set; } = true;
 		public int EquippedSlotIndex { get; set; } = -1;
+		private Vector2 TargetPosition { get; set; }
 		public List<EffectDefinition> Effects { get; set; } = new();
 		public List<BaseProperty> Buffs { get; set; } = new();
 		public List<ActionInstance> UnlockedAbilities { get; set; } = new List<ActionInstance>();
@@ -73,6 +74,8 @@ namespace Jogo25D.Characters
 
 			Sprite.Play("idle");
 
+			TargetPosition = GlobalPosition;
+
 			Sprite.AnimationFinished += () =>
 			{
 				if (Sprite.Animation == "dead")
@@ -98,38 +101,78 @@ namespace Jogo25D.Characters
 
 		public override void _PhysicsProcess(double delta)
 		{
-			if (Multiplayer.IsServer())
-			{
-				Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
-			}
+			var dt = (float)delta;
 
-			foreach (var effect in Effects.Where(e => e.ApplyToOwner))
+			for (int i = Effects.Count - 1; i >= 0; i--)
 			{
-				effect.Tick(this, (float)delta);
-
-				if (effect.Expired)
+				if (Effects[i].ApplyToOwner)
 				{
-					Effects.Remove(effect);
+					Effects[i].Tick(this, dt);
+			
+					if (Effects[i].Expired)
+					{
+						Effects.RemoveAt(i);
+					}
 				}
 			}
 
 			foreach (var action in UnlockedAbilities)
 			{
-				action.Update((float)delta);
+				action.Update(dt);
 			}
 
-			EquippedInstance?.Update((float)delta);
+			EquippedInstance?.Update(dt);
 
-			UpdateAnimation();
+			if (IsOwner())
+			{
+				HandleInput();
+				HandleHotbarScroll();
+			}
 
-			HandleInput();
-			HandleHotbarScroll();
-			HandleMovement((float)delta);
-			HandleAttack((float)delta);
-			HandleReload((float)delta);
+			if (Multiplayer.IsServer())
+			{
+				HandleMovement(dt);
+				HandleAttack(dt);
+				HandleReload(dt);
+				UpdateAnimation();
+
+				Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
+				Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
+			}
+			else if (IsOwner())
+			{
+				HandleMovementPrediction(dt);
+				HandleAttack(dt);
+				HandleReload(dt);
+				UpdateAnimationLocal();
+
+				var dist = GlobalPosition.DistanceTo(TargetPosition);
+
+				if (dist > 300f)
+				{
+					GlobalPosition = TargetPosition;
+				}
+				else if (dist > 2f)
+				{
+					GlobalPosition = GlobalPosition.Lerp(TargetPosition, 10f * dt);
+				}
+			}
+			else
+			{
+				var dist = GlobalPosition.DistanceTo(TargetPosition);
+
+				if (dist > 300f)
+				{
+					GlobalPosition = TargetPosition;
+				}
+				else
+				{
+					GlobalPosition = GlobalPosition.Lerp(TargetPosition, 15f * dt);
+				}
+			}
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 		public void SetServerInput(
 			float moveX, float moveY,
 			bool jump, bool dash, bool attack, bool reload,
@@ -151,14 +194,14 @@ namespace Jogo25D.Characters
 			Input.MousePosition = mousePosition;
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 		public void SyncPosition(Vector2 pos, Vector2 vel)
 		{
-			GlobalPosition = pos;
+			TargetPosition = pos;
 			Velocity = vel;
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 		public void SyncAnimation(string animName, bool flipH)
 		{
 			Sprite.FlipH = flipH;
@@ -238,10 +281,6 @@ namespace Jogo25D.Characters
 					Sprite.Play("idle");
 			}
 
-			if (Multiplayer.IsServer())
-			{
-				Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
-			}
 		}
 
 		public void HandleInput()
@@ -254,12 +293,16 @@ namespace Jogo25D.Characters
 			Input = InputManager.Current;
 			Input.MousePosition = GetGlobalMousePosition();
 
-			Rpc(nameof(SetServerInput),
-				Input.MoveX, Input.MoveY,
-				Input.Jump, Input.Dash, Input.Attack, Input.Reload,
-				Input.Ability, Input.Ability2Held, Input.Ability2JustReleased,
-				Input.ScrollNext, Input.ScrollPrev,
-				Input.MousePosition);
+			// Send input to server (if we're not already the server)
+			if (!Multiplayer.IsServer())
+			{
+				RpcId(1, nameof(SetServerInput),
+					Input.MoveX, Input.MoveY,
+					Input.Jump, Input.Dash, Input.Attack, Input.Reload,
+					Input.Ability, Input.Ability2Held, Input.Ability2JustReleased,
+					Input.ScrollNext, Input.ScrollPrev,
+					Input.MousePosition);
+			}
 		}
 
 		public void HandleAttack(float delta)
@@ -351,6 +394,11 @@ namespace Jogo25D.Characters
 
 		public void HandleMovement(float delta)
 		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
 			if (!CanUpdateMovement)
 			{
 				MoveAndSlide();
@@ -409,9 +457,75 @@ namespace Jogo25D.Characters
 			EquippedInstance.Definition.OnEquip(this, EquippedInstance);
 		}
 
+		private void HandleMovementPrediction(float delta)
+		{
+			if (!CanUpdateMovement)
+			{
+				MoveAndSlide();
+				return;
+			}
+
+			var v = Velocity;
+
+			if (!IsOnFloor())
+			{
+				v.Y += Gravity * delta;
+			}
+
+			if (Input.Jump && IsOnFloor())
+			{
+				v.Y = JumpVelocity;
+			}
+
+			if (Input.MoveX != 0)
+			{
+				v.X = Input.MoveX * Speed;
+			}
+			else
+			{
+				v.X = Mathf.MoveToward(v.X, 0, Speed);
+			}
+
+			Velocity = v;
+
+			MoveAndSlide();
+		}
+
+		private void UpdateAnimationLocal()
+		{
+			if (Velocity.X != 0)
+			{
+				Sprite.FlipH = Velocity.X < 0;
+			}
+
+			if (!IsOnFloor())
+			{
+				if (Velocity.Y < 0)
+				{
+					if (Sprite.Animation != "jump")
+						Sprite.Play("jump");
+				}
+				else
+				{
+					if (Sprite.Animation != "falling")
+						Sprite.Play("falling");
+				}
+			}
+			else if (Velocity.X != 0)
+			{
+				if (Sprite.Animation != "run")
+					Sprite.Play("run");
+			}
+			else
+			{
+				if (Sprite.Animation != "idle")
+					Sprite.Play("idle");
+			}
+		}
+
 		public bool IsOwner()
 		{
-			return GetMultiplayerAuthority() == Multiplayer.GetUniqueId();
+			return PeerId == Multiplayer.GetUniqueId();
 		}
 	}
 }

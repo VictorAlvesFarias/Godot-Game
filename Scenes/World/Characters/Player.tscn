@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://cmmbtq0bi3lp0" path="res://Features/Word/Characters/Entities/Player.cs" id="1"]
 [ext_resource type="Script" uid="uid://eosmfmgs6tc5" path="res://Features/Word/Items/Systems/Inventory.cs" id="3"]
-[ext_resource type="Script" uid="uid://c7jf4n2qkm8p3" path="res://Features/Word/Characters/Systems/AimIndicator.cs" id="4"]
-[ext_resource type="Script" uid="uid://b3rcindthhu0a" path="res://Features/Word/Characters/Systems/GroundIndicator.cs" id="5"]
+[ext_resource type="Script" uid="uid://co3gj1gu87pml" path="res://Features/Word/Characters/Systems/AimIndicator.cs" id="4"]
+[ext_resource type="Script" uid="uid://brgt8qisyg4jc" path="res://Features/Word/Characters/Systems/GroundIndicator.cs" id="5"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Sprites/Character/charater.png" id="5_47fxu"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
