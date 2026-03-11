@@ -1,19 +1,10 @@
-<Project Sdk="Godot.NET.Sdk/4.6.0">
+﻿<Project Sdk="Godot.NET.Sdk/4.6.0">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Jogo25D</RootNamespace>
     <DebugType>none</DebugType>
-  </PropertyGroup>
-  <PropertyGroup>
-    <GodotExePath Condition=" '$(GodotExePath)' == '' ">
-		E:\Programs\Godot\Godot_v4.6-stable_mono_win64_console.exe
-	</GodotExePath>
-    <RunCommand>powershell</RunCommand>
-    <RunArguments>
-      -NoExit -Command "dotnet build '$(MSBuildProjectDirectory)\$(MSBuildProjectFile)' ; Start-Process -FilePath '$(GodotExePath)' -ArgumentList '--path','$(MSBuildProjectDirectory)' -NoNewWindow"
-    </RunArguments>
-    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Scenes\Characters\**" />
