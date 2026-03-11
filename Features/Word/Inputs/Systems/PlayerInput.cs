@@ -100,72 +100,72 @@ namespace Jogo25D.Systems
 
             if (oldMoveX != MoveX)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetMoveX), MoveX);
+                RpcId(1, nameof(ServerSetMoveX), MoveX);
             }
 
             if (oldMoveY != MoveY)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetMoveY), MoveY);
+                RpcId(1, nameof(ServerSetMoveY), MoveY);
             }
 
             if (oldJump != Jump)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetJump), Jump);
+                RpcId(1, nameof(ServerSetJump), Jump);
             }
 
             if (oldDash != Dash)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetDash), Dash);
+                RpcId(1, nameof(ServerSetDash), Dash);
             }
 
             if (oldAttack != Attack)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetAttack), Attack);
+                RpcId(1, nameof(ServerSetAttack), Attack);
             }
 
             if (oldReload != Reload)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetReload), Reload);
+                RpcId(1, nameof(ServerSetReload), Reload);
             }
 
             if (oldAbility != Ability)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetAbility), Ability);
+                RpcId(1, nameof(ServerSetAbility), Ability);
             }
 
             if (oldAbility2Held != Ability2Held)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetAbility2Held), Ability2Held);
+                RpcId(1, nameof(ServerSetAbility2Held), Ability2Held);
             }
 
             if (oldAbility2Released != Ability2JustReleased)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetAbility2Released), Ability2JustReleased);
+                RpcId(1, nameof(ServerSetAbility2Released), Ability2JustReleased);
             }
 
             if (oldScrollNext != ScrollNext)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetScrollNext), ScrollNext);
+                RpcId(1, nameof(ServerSetScrollNext), ScrollNext);
             }
 
             if (oldScrollPrev != ScrollPrev)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetScrollPrev), ScrollPrev);
+                RpcId(1, nameof(ServerSetScrollPrev), ScrollPrev);
             }
 
             if (oldPause != Pause)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetPause), Pause);
+                RpcId(1, nameof(ServerSetPause), Pause);
             }
 
             if (oldToggleInventory != ToggleInventory)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetToggleInventory), ToggleInventory);
+                RpcId(1, nameof(ServerSetToggleInventory), ToggleInventory);
             }
 
             if (oldMouse != MousePosition)
             {
-                RpcId(PlayerRef.PeerId, nameof(ServerSetMousePosition), MousePosition);
+                RpcId(1, nameof(ServerSetMousePosition), MousePosition);
             }
         }
 

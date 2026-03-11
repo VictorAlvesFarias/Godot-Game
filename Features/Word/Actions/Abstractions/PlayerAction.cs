@@ -27,6 +27,7 @@ namespace Jogo25D.Actions
         }
 
         public abstract bool OnStartActionValidation(Player player, ActionInstance instance, float delta);
+
         public abstract void OnStartAction(Player player, ActionInstance instance, float delta);
 
         public virtual void OnUpdateWhileActive(Player player, ActionInstance instance, float delta)
