@@ -43,6 +43,19 @@ namespace Jogo25D.Systems
 
         public void Poll()
         {
+            if (PlayerRef == null)
+            {
+                Clear();
+                return;
+            }
+
+            // Só o dono do Player deve ler teclado/mouse.
+            // No servidor, os Players remotos recebem input via RPC (ServerSet*).
+            if (!PlayerRef.IsOwner())
+            {
+                return;
+            }
+
             if (IsBlocked())
             {
                 Clear();
