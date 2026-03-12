@@ -7,7 +7,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Defina a versão desejada aqui
-$version = "4.3"
+$version = "4.6"
 $url = "https://github.com/godotengine/godot/releases/download/$version-stable/Godot_v${version}-stable_mono_win64.zip"
 
 $tempZip = "$env:TEMP\godot_dotnet.zip"

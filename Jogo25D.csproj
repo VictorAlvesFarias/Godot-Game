@@ -348,9 +348,12 @@
     <None Include="Assets\Textures\.gitkeep" />
     <None Include="Assets\Textures\Screenshot 2026-02-21 014440.png.import" />
     <None Include="Assets\Textures\Screenshot 2026-02-21 014543.png.import" />
+    <None Include="configure.ps1" />
     <None Include="DefaultTheme.tres" />
+    <None Include="format.ps1" />
     <None Include="Jogo25D.sln" />
     <None Include="project.godot" />
+    <None Include="README.md" />
     <None Include="Scenes\Main.tscn" />
     <None Include="Scenes\Managers\Managers.tscn" />
     <None Include="Scenes\UI\Console\Console.tscn" />
