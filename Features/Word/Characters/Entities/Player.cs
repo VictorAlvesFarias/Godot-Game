@@ -43,7 +43,9 @@ namespace Jogo25D.Characters
 		{
 			AddToGroup("players");
 
-			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
+			ItemDB.Initialize();
+
+            Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
@@ -81,6 +83,8 @@ namespace Jogo25D.Characters
 					NetworkManager.ResetPlayerClientRequest();
 				}
 			};
+
+			Inventory.AddItem(ItemDB.Get("bow_starting2"));
 		}
 
 		public override void _ExitTree()

@@ -12,7 +12,6 @@ namespace Jogo25D.Hitboxes
         public override void _PhysicsProcess(double delta)
         {
             Position += Direction * Speed * (float)delta;
-
             Timer += (float)delta;
 
             if (Timer >= Lifetime)

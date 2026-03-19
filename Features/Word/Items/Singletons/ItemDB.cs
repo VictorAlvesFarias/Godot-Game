@@ -63,7 +63,7 @@ namespace Jogo25D.Items
                 Properties = new List<BaseProperty>
                 {
                     new DamageProperty { DamageAmount = 5, DamageType = DamageType.Fire },
-                    new AttackProperty { AttackRange = 1000f, AttackArea = 15f, ProjectileSpeed = 100f },
+                    new AttackProperty { AttackRange = 1000f, AttackArea = 15f, ProjectileSpeed = 1000f },
                     new ChargesProperty { InfiniteCharges = true, MaxCharges = 1, ReloadCooldown = 1.5f }
                 }
             };

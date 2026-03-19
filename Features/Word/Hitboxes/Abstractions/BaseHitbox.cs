@@ -14,18 +14,20 @@ namespace Jogo25D.Hitboxes
         public Player Owner { get; set; }
         public AnimatedSprite2D Sprite { get; set; }
 
+        public int Perfuracao { get; set; } = 0;
+        public bool DestroyInAllBodies { get; set; } = true;
+
+        protected int _hitCount = 0;
+
         public override void _Ready()
         {
             base._Ready();
-
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
-        
+
             if (Sprite is not null)
             {
                 Sprite.Play("idle");
             }
-
-            Console.WriteLine(GetPath());
         }
 
         public virtual void Initialize(List<DamageInfo> damages, List<EffectDefinition> effects, Player owner)
@@ -39,23 +41,47 @@ namespace Jogo25D.Hitboxes
 
         public virtual void OnBodyEntered(Node body)
         {
-            if (body == Owner)
-            {
-                return;
-            }
+            if (body == Owner) return;
 
             if (body is Player target)
             {
-                foreach (var damage in Damages)
-                {
-                    target.ReceiveDamage(damage);
-                }
+                ApplyImpact(target);
+                HandleDestruction(true);
+            }
+            else if (DestroyInAllBodies)
+            {
+                HandleDestruction(false);
+            }
+        }
 
-                foreach (var effect in Effects)
-                {
-                    target.AddEffect(effect);
-                }
+        protected void ApplyImpact(Player target)
+        {
+            foreach (var damage in Damages)
+            {
+                target.ReceiveDamage(damage);
+            }
 
+            foreach (var effect in Effects)
+            {
+                target.AddEffect(effect);
+            }
+        }
+
+        protected void HandleDestruction(bool hitTarget)
+        {
+            if (hitTarget)
+            {
+                if (_hitCount >= Perfuracao)
+                {
+                    QueueFree();
+                }
+                else
+                {
+                    _hitCount++;
+                }
+            }
+            else
+            {
                 QueueFree();
             }
         }
