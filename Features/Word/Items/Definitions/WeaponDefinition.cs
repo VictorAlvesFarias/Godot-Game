@@ -5,6 +5,8 @@ using Jogo25D.Properties;
 using Jogo25D.Hitboxes;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
+using System;
+using System.Diagnostics.Metrics;
 
 namespace Jogo25D.Items
 {
@@ -24,6 +26,8 @@ namespace Jogo25D.Items
         }
         public override void Use(Player player, ItemInstance instance)
         {
+
+
             if (!instance.CanAttack())
             {
                 GD.Print($"[Attack] Bloqueado - cooldown={instance.CooldownRemaining:F2} reloading={instance.IsReloading} charges={instance.CurrentCharges}");
@@ -65,6 +69,10 @@ namespace Jogo25D.Items
             var dir = rawDir.LengthSquared() > 0.001f ? rawDir.Normalized() : Vector2.Right;
             var angle = dir.Angle();
 
+            player.Sprite.FlipH = !(angle >= -1.5f && angle <= 1.5f);
+
+            player.Sprite.Play("melee");
+
             if (hitbox is ProjectileHitbox proj)
             {
                 proj.Direction = dir;
@@ -79,6 +87,7 @@ namespace Jogo25D.Items
                 melee.Offset = dir * weapon.AttackRange * 0.7f;
                 hitbox.GlobalPosition = player.GlobalPosition + melee.Offset;
                 hitbox.Rotation = angle;
+                hitbox.DestroyInAllBodies = false;
             }
             else
             {

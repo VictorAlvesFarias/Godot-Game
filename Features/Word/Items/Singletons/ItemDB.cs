@@ -167,6 +167,7 @@ namespace Jogo25D.Items
             }
 
             Items.TryGetValue(id, out var def);
+
             return def;
         }
 

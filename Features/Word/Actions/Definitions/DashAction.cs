@@ -1,16 +1,16 @@
 using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Properties;
+using System.Linq;
 
 namespace Jogo25D.Actions
 {
 	public class DashDefinition : ActionDefinition
 	{
-		public float DashSpeed { get; init; } = 800f;
-		public float MovementInfluence { get; init; } = 0.4f;
-
 		public override void OnCreate(Player player, ActionInstance instance)
 		{
 			var particles = new CpuParticles2D();
+
 			player.AddChild(particles);
 			instance.DashParticles = particles;
 		}
@@ -18,7 +18,8 @@ namespace Jogo25D.Actions
 		public override void OnStartAction(Player player, ActionInstance instance, float delta)
 		{
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
-			Vector2 dir;
+			var dir = Vector2.Zero;
+			var dash = Properties.OfType<DashProperty>().DefaultIfEmpty(new DashProperty()).First();
 
 			if (input.LengthSquared() > 0.01f)
 			{
@@ -37,11 +38,18 @@ namespace Jogo25D.Actions
 
 			if (player.Sprite != null)
 			{
-				if (player.Sprite.Animation != "dash")
-					player.Sprite.Play("dash");
+				if (Mathf.Abs(dir.Y) <= Mathf.Abs(dir.X))
+				{
+					if (player.Sprite.Animation != "dash")
+					{
+						player.Sprite.Play("dash");
+					}
 
-				if (dir.X != 0)
-					player.Sprite.FlipH = dir.X < 0;
+					if (dir.X != 0)
+					{
+						player.Sprite.FlipH = dir.X < 0;
+					}
+				}
 			}
 
 			if (instance.DashParticles != null)
@@ -49,7 +57,7 @@ namespace Jogo25D.Actions
 				instance.DashParticles.Emitting = true;
 			}
 
-			player.Velocity = dir * DashSpeed;
+			player.Velocity = dir * dash.DashSpeed;
 			player.CanUpdateMovement = false;
 		}
 
@@ -57,21 +65,17 @@ namespace Jogo25D.Actions
 		{
 			var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
+			var dash = Properties.OfType<DashProperty>().DefaultIfEmpty(new DashProperty()).First();
 
-			if (player.Sprite != null && player.Sprite.Animation != "dash")
+			if (input.LengthSquared() > 0.01f && dash.MovementInfluence > 0f)
 			{
-				player.Sprite.Play("dash");
-			}
-
-			if (input.LengthSquared() > 0.01f && MovementInfluence > 0f)
-			{
-				var blended = dir + input.Normalized() * MovementInfluence;
+				var blended = dir + input.Normalized() * dash.MovementInfluence;
 
 				if (blended.LengthSquared() > 0.01f)
 				{
 					var finalDir = blended.Normalized();
 
-					player.Velocity = finalDir * DashSpeed;
+					player.Velocity = finalDir * dash.DashSpeed;
 
 					if (player.Sprite != null && finalDir.X != 0)
 						player.Sprite.FlipH = finalDir.X < 0;
@@ -80,10 +84,12 @@ namespace Jogo25D.Actions
 				}
 			}
 
-			player.Velocity = dir * DashSpeed;
+			player.Velocity = dir * dash.DashSpeed;
 
 			if (player.Sprite != null && dir.X != 0)
+			{
 				player.Sprite.FlipH = dir.X < 0;
+			}
 		}
 
 		public override void OnFinishedAction(Player player, ActionInstance instance, float delta)

@@ -26,5 +26,17 @@ namespace Jogo25D.Hitboxes
                 QueueFree();
             }
         }
+
+        public override void _Ready()
+        {
+            base._Ready();
+
+            if (Sprite is not null)
+            {
+                GD.Print(Rotation >= -1.5f && Rotation <= 1.5f, Rotation);
+
+                Sprite.FlipV = !(Rotation >= -1.5f && Rotation <= 1.5f);
+            }
+        }
     }
 }

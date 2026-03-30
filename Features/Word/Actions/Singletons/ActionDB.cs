@@ -29,8 +29,10 @@ namespace Jogo25D.Actions
                 Duration = 0.2f,
                 MaxCharges = 2,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_10),
-                DashSpeed = 800f,
-                MovementInfluence = 0.4f,
+                Properties = new List<BaseProperty>
+                { 
+                    new DashProperty { DashSpeed = 800f, MovementInfluence = 0.4f }
+                }
             });
             Register(new FireballDefinition
             {
@@ -44,7 +46,6 @@ namespace Jogo25D.Actions
                 {
                     new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical } ,
                     new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 75f },
-
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn")
             });

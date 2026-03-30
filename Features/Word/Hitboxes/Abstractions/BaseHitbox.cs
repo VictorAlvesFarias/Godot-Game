@@ -16,12 +16,14 @@ namespace Jogo25D.Hitboxes
 
         public int Perfuracao { get; set; } = 0;
         public bool DestroyInAllBodies { get; set; } = true;
+        public bool Destroy { get; set; } = true;
 
         protected int _hitCount = 0;
 
         public override void _Ready()
         {
             base._Ready();
+
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
 
             if (Sprite is not null)
@@ -43,12 +45,12 @@ namespace Jogo25D.Hitboxes
         {
             if (body == Owner) return;
 
-            if (body is Player target)
+            if (body is Player target && Destroy)
             {
                 ApplyImpact(target);
                 HandleDestruction(true);
             }
-            else if (DestroyInAllBodies)
+            else if (DestroyInAllBodies && Destroy)
             {
                 HandleDestruction(false);
             }

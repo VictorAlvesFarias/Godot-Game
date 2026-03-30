@@ -45,7 +45,7 @@ namespace Jogo25D.Characters
 
 			ItemDB.Initialize();
 
-            Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
+			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
@@ -85,6 +85,7 @@ namespace Jogo25D.Characters
 			};
 
 			Inventory.AddItem(ItemDB.Get("bow_starting2"));
+			Inventory.AddItem(ItemDB.Get("sword_starting"));
 		}
 
 		public override void _ExitTree()
@@ -236,31 +237,53 @@ namespace Jogo25D.Characters
 			{
 				Sprite.FlipH = Velocity.X < 0;
 			}
-			
+
+			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
+			{
+				return;
+			}
+
 			if (!IsOnFloor())
 			{
 				if (Velocity.Y < 0)
 				{
 					if (Sprite.Animation != "jump")
+					{
+						GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> jump");
 						Sprite.Play("jump");
+					}
 				}
 				else
 				{
-					if (Sprite.Animation != "falling")
+					if (Sprite.Animation != "falling" && Sprite.Animation != "dash")
+					{
+						GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> falling");
 						Sprite.Play("falling");
+					}
 				}
+				return;
 			}
-			else if (Velocity.X != 0)
+
+			if (Sprite.Animation == "dash")
+				return;
+
+			if (Velocity.X != 0)
 			{
 				if (Sprite.Animation != "run")
+				{
+					GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> run");
 					Sprite.Play("run");
+				}
 			}
 			else
 			{
 				if (Sprite.Animation != "idle")
-					Sprite.Play("idle");
-			}
+				{
+					GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> idle");
 
+					Sprite.Play("idle");
+				}
+			}
 		}
 
 		public void HandleAttack(float delta)
