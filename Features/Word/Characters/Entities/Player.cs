@@ -5,6 +5,7 @@ using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.Effects;
 using Jogo25D.Actions;
+using Jogo25D.Hitboxes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,9 +30,7 @@ namespace Jogo25D.Characters
 		public ItemInstance EquippedInstance { get; set; }
 		public ItemInstance[] Items { get; set; } = Array.Empty<ItemInstance>();
 		public ItemDefinition EquippedDefinition { get; set; }
-
 		public WorldManager NetworkManager { get; set; }
-
 		public Inventory Inventory { get; set; }
 		public PlayerInput Input { get; set; }
 		public AimIndicator AimIndicator { get; set; }
@@ -86,6 +85,27 @@ namespace Jogo25D.Characters
 
 			Inventory.AddItem(ItemDB.Get("bow_starting2"));
 			Inventory.AddItem(ItemDB.Get("sword_starting"));
+
+			if (EquippedSlotIndex < 0)
+			{
+				for (int i = 0; i < Items.Length; i++)
+				{
+					var slot = Items[i];
+
+					if (slot == null || slot.IsEmpty() || slot.Definition == null || !slot.Definition.IsEquippable)
+					{
+						continue;
+					}
+
+					EquippedSlotIndex = i;
+					break;
+				}
+			}
+
+			if (EquippedSlotIndex >= 0)
+			{
+				Inventory.EquipItem(EquippedSlotIndex);
+			}
 		}
 
 		public override void _ExitTree()
@@ -161,6 +181,8 @@ namespace Jogo25D.Characters
 			}
 			else
 			{
+				HandleAttack(dt);
+
 				// Outros clientes apenas interpolam para a posição do servidor
 				var dist = GlobalPosition.DistanceTo(TargetPosition);
 
@@ -182,7 +204,7 @@ namespace Jogo25D.Characters
 			Velocity = vel;
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
+       [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SyncAnimation(string animName, bool flipH)
 		{
 			Sprite.FlipH = flipH;
@@ -193,14 +215,30 @@ namespace Jogo25D.Characters
 			}
 		}
 
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SyncHealth(int currentHealth)
+		{
+			CurrentHealth = Mathf.Clamp(currentHealth, 0, MaxHealth);
+		}
+
 		public void TakeDamage(int damage)
 		{
-			if (CurrentHealth <= 0)
+         if (CurrentHealth <= 0 || damage <= 0)
 			{
 				return;
 			}
 
-			Sprite.Play("dead");
+			CurrentHealth = Mathf.Max(0, CurrentHealth - damage);
+
+			if (Multiplayer != null && Multiplayer.HasMultiplayerPeer() && Multiplayer.IsServer())
+			{
+				Rpc(nameof(SyncHealth), CurrentHealth);
+			}
+
+            if (CurrentHealth <= 0)
+			{
+				Sprite.Play("dead");
+			}
 		}
 
 		public void ReceiveDamage(DamageInfo damage)
@@ -264,7 +302,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			if (Sprite.Animation == "dash")
+			if (Sprite.Animation == "dash" && Sprite.IsPlaying())
 				return;
 
 			if (Velocity.X != 0)
@@ -332,7 +370,14 @@ namespace Jogo25D.Characters
 
 				if (slot != null && !slot.IsEmpty())
 				{
-					Inventory.EquipItem(next);
+					if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
+					{
+						Inventory.Rpc(nameof(Inventory.EquipItem), next);
+					}
+					else
+					{
+						Inventory.EquipItem(next);
+					}
 
 					return;
 				}
@@ -476,6 +521,11 @@ namespace Jogo25D.Characters
 				Sprite.FlipH = Velocity.X < 0;
 			}
 
+			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
+			{
+				return;
+			}
+
 			if (!IsOnFloor())
 			{
 				if (Velocity.Y < 0)
@@ -489,7 +539,12 @@ namespace Jogo25D.Characters
 						Sprite.Play("falling");
 				}
 			}
-			else if (Velocity.X != 0)
+           if (Sprite.Animation == "dash" && Sprite.IsPlaying())
+			{
+				return;
+			}
+
+			if (Velocity.X != 0)
 			{
 				if (Sprite.Animation != "run")
 					Sprite.Play("run");

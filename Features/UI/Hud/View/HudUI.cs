@@ -193,48 +193,37 @@ namespace Jogo25D.UI
 
 		public void FindLocalPlayer()
 		{
-			var players = GetTree().GetNodesInGroup("players");
-			var localPeerId = 1;
-			var hasMultiplayer = false;
+			var oldInventory = localPlayer?.Inventory;
 
-			if (Multiplayer != null && Multiplayer.MultiplayerPeer != null && Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+			if (oldInventory != null && IsInstanceValid(oldInventory))
 			{
-				try
-				{
-					localPeerId = Multiplayer.GetUniqueId();
-					hasMultiplayer = true;
-				}
-				catch
-				{
-					hasMultiplayer = false;
-				}
+				oldInventory.ItemEquipped -= OnItemEquipped;
+				oldInventory.InventoryChanged -= UpdateHotbar;
 			}
 
-			foreach (Node node in players)
+			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+
+			localPlayer = worldManager?.GetLocalPlayer();
+
+			if (localPlayer == null || !IsInstanceValid(localPlayer))
 			{
-				if (node is Player player)
-				{
-					if (!hasMultiplayer || player.GetMultiplayerAuthority() == localPeerId)
-					{
-						localPlayer = player;
+				return;
+			}
 
-						if (minimap != null && IsInstanceValid(minimap))
-						{
-							minimap.SetLocalPlayer(player);
-						}
+			if (minimap != null && IsInstanceValid(minimap))
+			{
+				minimap.SetLocalPlayer(localPlayer);
+			}
 
-						var inv = localPlayer.Inventory;
-						if (inv != null && IsInstanceValid(inv))
-						{
-							inv.ItemEquipped += OnItemEquipped;
-							inv.InventoryChanged += UpdateHotbar;
-							UpdateWeaponDisplay();
-							UpdateHotbar();
-						}
+			var inv = localPlayer.Inventory;
 
-						break;
-					}
-				}
+			if (inv != null && IsInstanceValid(inv))
+			{
+				inv.ItemEquipped += OnItemEquipped;
+				inv.InventoryChanged += UpdateHotbar;
+
+				UpdateWeaponDisplay();
+				UpdateHotbar();
 			}
 		}
 

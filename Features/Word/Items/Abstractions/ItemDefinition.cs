@@ -14,10 +14,8 @@ namespace Jogo25D.Items
         public string Description { get; init; } = "";
         public Texture2D Icon { get; set; }
         public ItemType Type { get; init; }
-
         public bool Stackable { get; init; } = false;
         public int MaxStackSize { get; init; } = 99;
-
         public bool Rechargeable { get; set; }
 
         public float Cooldown { get; init; } = 0.5f;

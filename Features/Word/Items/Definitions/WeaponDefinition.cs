@@ -26,8 +26,6 @@ namespace Jogo25D.Items
         }
         public override void Use(Player player, ItemInstance instance)
         {
-
-
             if (!instance.CanAttack())
             {
                 GD.Print($"[Attack] Bloqueado - cooldown={instance.CooldownRemaining:F2} reloading={instance.IsReloading} charges={instance.CurrentCharges}");

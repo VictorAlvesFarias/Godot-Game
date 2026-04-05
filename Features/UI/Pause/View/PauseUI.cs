@@ -70,23 +70,7 @@ namespace Jogo25D.UI
 	
 		public void OnResetPressed()
 		{
-			Player localPlayer = null;
-			bool hasMultiplayer = Multiplayer.HasMultiplayerPeer();
-			int localPeerId = hasMultiplayer ? Multiplayer.GetUniqueId() : 0;
-			var players = GetTree().GetNodesInGroup("players");
-
-			foreach (Node node in players)
-			{
-				if (node is Player p)
-				{
-					if (!hasMultiplayer || p.GetMultiplayerAuthority() == localPeerId)
-					{
-						localPlayer = p;
-	
-						break;
-					}
-				}
-			}
+          var localPlayer = NetworkManager?.GetLocalPlayer();
 		
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{

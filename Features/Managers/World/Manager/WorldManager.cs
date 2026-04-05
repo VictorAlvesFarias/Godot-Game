@@ -236,15 +236,16 @@ namespace Jogo25D.Systems
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
-		public void SpawnPlayer(long peerId, Vector2 position)
+		public void SpawnPlayer(long peerId, Vector2 position, int equippedSlotIndex = -1)
 		{	
-			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={peerId}, position={position})");
+			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={peerId}, position={position}, equippedSlotIndex={equippedSlotIndex})");
 			
 			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
 			player.Name = $"Player{peerId}";
 			player.Position = position;
 			player.PeerId = peerId;
+			player.EquippedSlotIndex = equippedSlotIndex;
 
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
@@ -339,17 +340,13 @@ namespace Jogo25D.Systems
         {
             GD.Print($"[WorldManager.TradeDimension] targetPeerId={targetPeerId}");
 
-            // 1. Localizar o jogador em qualquer um dos três mundos
-            var playerNode = GetTree().GetNodesInGroup("players")
-                .OfType<Player>()
-                .FirstOrDefault(p => p.PeerId == targetPeerId);
+            var playerNode = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(p => p.PeerId == targetPeerId);
 
             if (playerNode == null) return;
 
             Node2D currentParent = playerNode.GetParent<Node2D>();
             Node2D nextParent;
 
-            // 2. Lógica de Ciclo: Overworld -> Upsidedown -> Procedural -> Overworld
             if (currentParent == OverwordParent)
             {
                 nextParent = UpsidedownParent;
@@ -365,10 +362,15 @@ namespace Jogo25D.Systems
 
             GD.Print($"[WorldManager] Moving player from {currentParent.Name} to {nextParent.Name}");
 
-            // 3. Reparentar
             playerNode.Reparent(nextParent, true);
 
-            // 4. Atualizar UI local (Apenas para o dono do boneco)
+			var equippedSlot = playerNode.Inventory?.GetEquippedSlotIndex() ?? -1;
+			
+			if (equippedSlot >= 0)
+			{
+				playerNode.Inventory.EquipItem(equippedSlot);
+			}
+
             if (targetPeerId == Multiplayer.GetUniqueId())
             {
                 OverContainer.Visible = (nextParent == OverwordParent);
@@ -415,9 +417,9 @@ namespace Jogo25D.Systems
 
 			var spawnPos = Vector2.Zero;
 
-			SpawnPlayer(id, spawnPos);
+			SpawnPlayer(id, spawnPos, -1);
 
-			Rpc(nameof(SpawnPlayer), id, spawnPos);
+			Rpc(nameof(SpawnPlayer), id, spawnPos, -1);
 
 			var players = GetTree().GetNodesInGroup("players");
 
@@ -426,10 +428,11 @@ namespace Jogo25D.Systems
 				if (node is Player player && player.PeerId != id)
 				{
 					var playerName = player.Name;
+					var equippedSlotIndex = player.Inventory?.GetEquippedSlotIndex() ?? player.EquippedSlotIndex;
 					
 					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {playerName}");
 					
-					RpcId(id, nameof(SpawnPlayer), player.PeerId, player.Position);
+					RpcId(id, nameof(SpawnPlayer), player.PeerId, player.Position, equippedSlotIndex);
 				}
 			}
 		}

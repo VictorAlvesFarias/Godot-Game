@@ -30,11 +30,13 @@ namespace Jogo25D.Items
         public float GetReloadProgress()
         {
             var chargesProp = Properties.OfType<ChargesProperty>().FirstOrDefault();
-            float reloadCooldown = chargesProp != null ? chargesProp.ReloadCooldown : 1f;
+            var reloadCooldown = chargesProp != null ? chargesProp.ReloadCooldown : 1f;
+
             if (reloadCooldown <= 0f)
             {
                 return 1f;
             }
+
             return 1f - ReloadTimer / reloadCooldown;
         }
 
@@ -46,18 +48,21 @@ namespace Jogo25D.Items
         public virtual bool CanAttack()
         {
             var chargesProp = Properties.OfType<ChargesProperty>().FirstOrDefault();
-            bool infiniteCharges = chargesProp != null ? chargesProp.InfiniteCharges : true;
-            bool hasCharges = infiniteCharges || CurrentCharges > 0;
+            var infiniteCharges = chargesProp != null ? chargesProp.InfiniteCharges : true;
+            var hasCharges = infiniteCharges || CurrentCharges > 0;
+
             return CooldownRemaining <= 0f && !IsReloading && hasCharges;
         }
 
         public bool CanReload()
         {
             var chargesProp = Properties.OfType<ChargesProperty>().FirstOrDefault();
+
             if (chargesProp == null || chargesProp.InfiniteCharges)
             {
                 return false;
             }
+
             return !IsReloading && CurrentCharges < chargesProp.MaxCharges;
         }
 
@@ -72,7 +77,9 @@ namespace Jogo25D.Items
             {
                 return;
             }
+
             var chargesProp = Properties.OfType<ChargesProperty>().FirstOrDefault();
+
             if (chargesProp != null)
             {
                 ReloadTimer = chargesProp.ReloadCooldown;
@@ -82,7 +89,8 @@ namespace Jogo25D.Items
         public void FinishReload(int chargesAdded)
         {
             var chargesProp = Properties.OfType<ChargesProperty>().FirstOrDefault();
-            int maxCharges = chargesProp != null ? chargesProp.MaxCharges : chargesAdded;
+            var maxCharges = chargesProp != null ? chargesProp.MaxCharges : chargesAdded;
+
             ReloadTimer = 0f;
             CurrentCharges = Math.Min(CurrentCharges + chargesAdded, maxCharges);
         }
