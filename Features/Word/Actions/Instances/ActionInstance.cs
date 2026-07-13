@@ -5,11 +5,8 @@ namespace Jogo25D.Actions
 {
     public class ActionInstance
     {
-
         public ActionDefinition Definition { get; set; }
-
         public Player Owner { get; set; }
-
         public int CurrentCharges { get; set; }
         public bool CanUse { get; set; } = true;
         public bool InCooldown { get; set; } = false;
@@ -18,7 +15,6 @@ namespace Jogo25D.Actions
         public float DurationTimer { get; set; } = 0f;
         public Vector2 DashDirection { get; set; } = Vector2.Zero;
         public CpuParticles2D DashParticles { get; set; }
-
         public string ActionName => Definition?.ActionName ?? "";
         public Texture2D Icon => Definition?.Icon;
         public int MaxCharges => Definition?.MaxCharges ?? 1;
@@ -40,10 +36,12 @@ namespace Jogo25D.Actions
             if (Definition.OnStartActionValidation(Owner, this, delta))
             {
                 IsActive = true;
+                
                 if (!InCooldown)
                 {
                     CooldownTimer = 0f;
                 }
+                
                 CurrentCharges--;
                 CanUse = CurrentCharges > 0;
                 InCooldown = CurrentCharges < MaxCharges;

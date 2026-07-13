@@ -10,7 +10,9 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var quantidadeInstancias = 2; 
+        var quantidadeInstancias = 3;
+        var processos = new List<Process>();
+
         var executionPath = AppContext.BaseDirectory;
         var projectRoot = Directory.GetParent(executionPath);
 
@@ -20,65 +22,49 @@ public class Program
         }
 
         if (projectRoot == null)
-        {
             return;
-        }
 
         var projectPath = projectRoot.FullName;
+
         var godotPath = @"C:\Tools\Godot\godot_console.exe";
-        var godotExe = File.Exists(godotPath) ? godotPath : "godot_console.exe";
-        var fullCommand = $"/c \"\"{godotExe}\" --path \"{projectPath}\"\"";
-        var processosAtivos = new List<Process>();
+        var godotExe = File.Exists(godotPath)
+            ? godotPath
+            : "godot_console.exe";
 
         try
         {
-            Console.WriteLine($"[C#] Launcher Ativo. Abrindo {quantidadeInstancias} instâncias...");
-
             for (int i = 0; i < quantidadeInstancias; i++)
             {
-                var startInfo = new ProcessStartInfo
+                var p = Process.Start(new ProcessStartInfo
                 {
-                    FileName = "cmd.exe",
-                    Arguments = fullCommand,
-                    UseShellExecute = false,
-                    CreateNoWindow = false,
-                    WorkingDirectory = projectPath
-                };
-
-                var p = Process.Start(startInfo);
+                    FileName = godotExe,
+                    Arguments = $"--path \"{projectPath}\"",
+                    WorkingDirectory = projectPath,
+                    UseShellExecute = false
+                });
 
                 if (p != null)
-                {
-                    processosAtivos.Add(p);
-                }
-
-                Console.WriteLine($"[C#] Instância {i + 1} iniciada.");
+                    processos.Add(p);
             }
 
-            Console.WriteLine("[C#] Monitorando instâncias. O console fechará quando todos os jogos fecharem.");
-
-            while (processosAtivos.Any(p => !p.HasExited))
+            while (processos.All(p => !p.HasExited))
             {
-                System.Threading.Thread.Sleep(500);
+                System.Threading.Thread.Sleep(200);
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"\n[C#] ERRO: {e.Message}");
-            Console.WriteLine("Pressione qualquer tecla para sair...");
-            Console.ReadKey();
         }
         finally
         {
-            foreach (var p in processosAtivos)
+            foreach (var p in processos)
             {
-                if (p != null && !p.HasExited)
+                try
                 {
-                    p.Kill(true);
+                    if (!p.HasExited)
+                        p.Kill(true);
+                }
+                catch
+                {
                 }
             }
         }
-
-        Environment.Exit(0);
     }
 }

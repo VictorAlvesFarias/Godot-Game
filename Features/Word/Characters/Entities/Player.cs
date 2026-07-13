@@ -35,7 +35,6 @@ namespace Jogo25D.Characters
 		public PlayerInput Input { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public GroundIndicator GroundMarker { get; set; }
-
 		public AnimatedSprite2D Sprite { get; set; }
 
 		public override void _Ready()
@@ -124,6 +123,7 @@ namespace Jogo25D.Characters
 		{
 			var dt = (float)delta;
 
+			//TODO: Player process effects
 			for (int i = Effects.Count - 1; i >= 0; i--)
 			{
 				if (Effects[i].ApplyToOwner)
@@ -137,6 +137,7 @@ namespace Jogo25D.Characters
 				}
 			}
 
+			//Action process
 			foreach (var action in UnlockedAbilities)
 			{
 				action.Update(dt);
@@ -160,28 +161,10 @@ namespace Jogo25D.Characters
 				Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
 				Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
 			}
-			else if (IsOwner())
-			{
-				// Cliente dono faz prediction local e também reconcilia com posição do servidor
-				HandleMovementPrediction(dt);
-				HandleAttack(dt);
-				HandleReload(dt);
-				UpdateAnimationLocal();
-
-				var dist = GlobalPosition.DistanceTo(TargetPosition);
-
-				if (dist > 300f)
-				{
-					GlobalPosition = TargetPosition;
-				}
-				else if (dist > 2f)
-				{
-					GlobalPosition = GlobalPosition.Lerp(TargetPosition, 10f * dt);
-				}
-			}
 			else
 			{
-				HandleAttack(dt);
+                HandleReload(dt);
+                HandleAttack(dt);
 
 				// Outros clientes apenas interpolam para a posição do servidor
 				var dist = GlobalPosition.DistanceTo(TargetPosition);
@@ -192,8 +175,11 @@ namespace Jogo25D.Characters
 				}
 				else
 				{
-					GlobalPosition = GlobalPosition.Lerp(TargetPosition, 15f * dt);
-				}
+                    if (GlobalPosition.DistanceTo(TargetPosition) < 1f)
+                        GlobalPosition = TargetPosition;
+                    else
+                        GlobalPosition = GlobalPosition.Lerp(TargetPosition, 15f * dt);
+                }
 			}
 		}
 
@@ -204,7 +190,7 @@ namespace Jogo25D.Characters
 			Velocity = vel;
 		}
 
-       [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SyncAnimation(string animName, bool flipH)
 		{
 			Sprite.FlipH = flipH;
@@ -478,82 +464,6 @@ namespace Jogo25D.Characters
 			ReloadPending = false;
 
 			EquippedInstance.Definition.OnEquip(this, EquippedInstance);
-		}
-
-		private void HandleMovementPrediction(float delta)
-		{
-			if (!CanUpdateMovement)
-			{
-				MoveAndSlide();
-				return;
-			}
-
-			var v = Velocity;
-
-			if (!IsOnFloor())
-			{
-				v.Y += Gravity * delta;
-			}
-
-			if (Input.Jump && IsOnFloor())
-			{
-				v.Y = JumpVelocity;
-			}
-
-			if (Input.MoveX != 0)
-			{
-				v.X = Input.MoveX * Speed;
-			}
-			else
-			{
-				v.X = Mathf.MoveToward(v.X, 0, Speed);
-			}
-
-			Velocity = v;
-
-			MoveAndSlide();
-		}
-
-		private void UpdateAnimationLocal()
-		{
-			if (Velocity.X != 0)
-			{
-				Sprite.FlipH = Velocity.X < 0;
-			}
-
-			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
-			{
-				return;
-			}
-
-			if (!IsOnFloor())
-			{
-				if (Velocity.Y < 0)
-				{
-					if (Sprite.Animation != "jump")
-						Sprite.Play("jump");
-				}
-				else
-				{
-					if (Sprite.Animation != "falling")
-						Sprite.Play("falling");
-				}
-			}
-           if (Sprite.Animation == "dash" && Sprite.IsPlaying())
-			{
-				return;
-			}
-
-			if (Velocity.X != 0)
-			{
-				if (Sprite.Animation != "run")
-					Sprite.Play("run");
-			}
-			else
-			{
-				if (Sprite.Animation != "idle")
-					Sprite.Play("idle");
-			}
 		}
 
 		public bool IsOwner()

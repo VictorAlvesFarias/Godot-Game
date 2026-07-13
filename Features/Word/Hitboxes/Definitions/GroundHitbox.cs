@@ -9,8 +9,8 @@ namespace Jogo25D.Hitboxes
     public partial class GroundHitbox : BaseHitbox
     {
         public float Lifetime { get; set; } = 1.5f;
-
         public float _timer;
+
         public readonly HashSet<Player> _alreadyHit = new();
 
         public override void _PhysicsProcess(double delta)

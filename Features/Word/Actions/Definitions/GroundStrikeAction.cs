@@ -134,8 +134,16 @@ namespace Jogo25D.Actions
             return null;
         }
 
-        public override void OnUpdateWhileActive(Player player, ActionInstance instance, float delta) { }
-        public override void OnFinishedAction(Player player, ActionInstance instance, float delta) { }
-        public override void OnEnableAction(Player player, ActionInstance instance, float delta) { }
+        public override void OnUpdateWhileActive(Player player, ActionInstance instance, float delta) 
+        {
+        }
+
+        public override void OnFinishedAction(Player player, ActionInstance instance, float delta) 
+        { 
+        }
+        
+        public override void OnEnableAction(Player player, ActionInstance instance, float delta) 
+        { 
+        }
     }
 }
