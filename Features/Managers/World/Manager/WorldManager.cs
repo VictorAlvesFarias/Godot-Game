@@ -368,7 +368,7 @@ namespace Jogo25D.Systems
 			
 			if (equippedSlot >= 0)
 			{
-				playerNode.Inventory.EquipItem(equippedSlot);
+				playerNode.Inventory.EquipItemRequest(equippedSlot);
 			}
 
             if (targetPeerId == Multiplayer.GetUniqueId())

@@ -416,7 +416,7 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			Inventory.SwapSlots(fromIndex, toIndex);
+			Inventory.SwapSlotsRequest(fromIndex, toIndex);
 		}
 
 		public void UpdateSlot(int index)
@@ -544,7 +544,7 @@ namespace Jogo25D.UI
 
 			if (option == "Equipar")
 			{
-				Inventory.Rpc(nameof(Inventory.EquipItem), SelectedSlotIndex);
+				Inventory.EquipItemRequest(SelectedSlotIndex);
 			}
 
 			ContextMenu.Visible = false;
@@ -587,7 +587,7 @@ namespace Jogo25D.UI
 		{
 			if (Inventory != null && IsInstanceValid(Inventory))
 			{
-				Inventory.AddItem(definition, quantity);
+				Inventory.AddItemRequest(definition.Id, quantity);
 			}
 		}
 	}

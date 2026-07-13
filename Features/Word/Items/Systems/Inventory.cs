@@ -11,36 +11,53 @@ namespace Jogo25D.Systems
 {
 	public partial class Inventory : Node
 	{
-		[Signal]
+        #region Events
+
+        [Signal]
 		public delegate void InventoryChangedEventHandler();
 
 		[Signal]
 		public delegate void ItemEquippedEventHandler(int slotIndex);
 
-		public const int INVENTORY_SIZE = 16;
-		public Player LocalPlayer { get; set; }
+        #endregion
 
-		public override void _Ready()
+        #region Constants
+
+        public const int INVENTORY_SIZE = 16;
+
+        #endregion
+
+        #region Node references
+
+        public Player LocalPlayer { get; set; }
+
+        #endregion
+
+        #region Properties
+
+        public ItemInstance[] Items { get; set; } = Array.Empty<ItemInstance>();
+
+        #endregion
+
+        #region Godot implementation
+
+        public override void _Ready()
 		{
 			LocalPlayer = GetOwner<Player>();
 		}
 
-		public ItemInstance GetSlot(int index)
-		{
-			if (index < 0 || index >= INVENTORY_SIZE)
-			{ 
-				return null;
-			}
+        #endregion
 
-			return LocalPlayer.Items[index];
-		}
-
-		public bool AddItem(ItemDefinition definition, int quantity = 1)
+        #region Core - Actions
+		
+		private void AddItem(string id, int quantity = 1)
 		{
-			if (definition == null)
+			if (id == null)
 			{
-				return false;
+				return;
 			}
+
+			var definition = ItemDB.Get(id);
 
 			if (definition.Stackable)
 			{
@@ -61,7 +78,7 @@ namespace Jogo25D.Systems
 
 							if (quantity <= 0)
 							{
-								return true;
+								return;
 							}
 						}
 					}
@@ -81,25 +98,23 @@ namespace Jogo25D.Systems
 					
 					EmitSignal(SignalName.InventoryChanged);
 					
-					return true;
+					return;
 				}
-			}
-
-			return false;
+			};
 		}
-
-		public bool RemoveItem(int slotIndex, int quantity = 1)
+		
+		private void RemoveItem(int slotIndex, int quantity = 1)
 		{
 			if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
 			{ 
-				return false;
+				return;
 			}
 
 			var slot = LocalPlayer.Items[slotIndex];
 
 			if (slot.IsEmpty())
 			{ 
-				return false;
+				return;
 			}
 
 			slot.Quantity -= quantity;
@@ -111,24 +126,24 @@ namespace Jogo25D.Systems
 
 			EmitSignal(SignalName.InventoryChanged);
 
-			return true;
+			return;
 		}
 
-		public bool SwapSlots(int fromIndex, int toIndex)
+		private void SwapSlots(int fromIndex, int toIndex)
 		{
 			if (fromIndex < 0 || fromIndex >= INVENTORY_SIZE)
 			{
-				return false;
+				return;
 			}
 
 			if (toIndex < 0 || toIndex >= INVENTORY_SIZE)
 			{ 
-				return false;
+				return;
 			}
 
 			if (fromIndex == toIndex)
 			{ 
-				return false;
+				return;
 			}
 
 			GD.Print($"Trocando slot {fromIndex} ({LocalPlayer.Items[fromIndex].Definition?.Name ?? "vazio"}) com slot {toIndex} ({LocalPlayer.Items[toIndex].Definition?.Name ?? "vazio"})");
@@ -150,22 +165,22 @@ namespace Jogo25D.Systems
 			GD.Print($"ApÃ³s troca - slot {fromIndex}: {LocalPlayer.Items[fromIndex].Definition?.Name ?? "vazio"}, slot {toIndex}: {LocalPlayer.Items[toIndex].Definition?.Name ?? "vazio"}");
 
 			EmitSignal(SignalName.InventoryChanged);
-			return true;
+			
+			return;
 		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-		public bool EquipItem(int slotIndex)
+        
+		private void EquipItem(int slotIndex)
 		{
 			if (slotIndex < 0 || slotIndex >= INVENTORY_SIZE)
 			{
-				return false;
+				return;
 			}
 
 			var slot = LocalPlayer.Items[slotIndex];
 
 			if (slot.IsEmpty() || slot.Definition == null || !slot.Definition.IsEquippable)
 			{
-				return false;
+				return;
 			}
 
 			LocalPlayer.EquippedDefinition = slot.Definition;
@@ -173,7 +188,21 @@ namespace Jogo25D.Systems
 
 			EmitSignal(SignalName.ItemEquipped, slotIndex);
 
-			return true;
+			return;
+		}
+
+        #endregion
+
+        #region Core - Information
+
+        public ItemInstance GetSlot(int index)
+		{
+			if (index < 0 || index >= INVENTORY_SIZE)
+			{ 
+				return null;
+			}
+
+			return LocalPlayer.Items[index];
 		}
 
 		public int GetEquippedSlotIndex()
@@ -202,6 +231,7 @@ namespace Jogo25D.Systems
 			}
 
 			int count = 0;
+
 			for (int i = 0; i < INVENTORY_SIZE; i++)
 			{
 				if (i == LocalPlayer.EquippedSlotIndex)
@@ -215,6 +245,7 @@ namespace Jogo25D.Systems
 				}
 
 				var chargesProp = LocalPlayer.Items[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+
 				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
 				{
 					count += LocalPlayer.Items[i].Quantity;
@@ -231,6 +262,7 @@ namespace Jogo25D.Systems
 			}
 
 			int removed = 0;
+
 			for (int i = 0; i < INVENTORY_SIZE && removed < quantity; i++)
 			{
 				if (i == LocalPlayer.EquippedSlotIndex)
@@ -244,13 +276,16 @@ namespace Jogo25D.Systems
 				}
 
 				var chargesProp = LocalPlayer.Items[i].Properties.OfType<ChargesProperty>().FirstOrDefault();
+
 				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
 				{
 					continue;
 				}
 
 				int toRemove = Mathf.Min(quantity - removed, LocalPlayer.Items[i].Quantity);
+
 				LocalPlayer.Items[i].Quantity -= toRemove;
+
 				removed += toRemove;
 
 				if (LocalPlayer.Items[i].Quantity <= 0)
@@ -266,5 +301,55 @@ namespace Jogo25D.Systems
 
 			return removed;
 		}
-	} 
+
+        #endregion
+
+        #region Core - Rpc
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void EquipItemReceive(int slotIndex)
+		{
+			this.EquipItem(slotIndex);
+		}
+
+		public void EquipItemRequest(int slotIndex)
+		{
+			Rpc(nameof (EquipItemReceive), slotIndex);
+		}
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void AddItemReceive(string id, int quantity)
+        {
+            this.AddItem(id, quantity);
+        }
+
+        public void AddItemRequest(string id, int quantity)
+        {
+            Rpc(nameof(AddItemReceive), id, quantity);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void SwapSlotsReceive(int fromIndex, int toIndex)
+        {
+            this.SwapSlots(fromIndex, toIndex);
+        }
+
+        public void SwapSlotsRequest(int fromIndex, int toIndex)
+        {
+            Rpc(nameof(SwapSlotsReceive), fromIndex, toIndex);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void RemoveItemReceive(int slotIndex, int quantity)
+        {
+            this.RemoveItemReceive(slotIndex, quantity);
+        }
+
+        public void RemoveItemRequest(int slotIndex, int quantity)
+        {
+            Rpc(nameof(RemoveItemReceive), slotIndex, quantity);
+        }
+
+        #endregion
+    }
 }

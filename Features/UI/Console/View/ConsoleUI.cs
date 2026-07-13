@@ -433,14 +433,8 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					var ok = LocalPlayer.Inventory?.AddItem(def, qty) ?? false;
+					LocalPlayer.Inventory?.AddItemRequest(def.Id, qty);
 					
-					if (!ok)
-					{
-						console.PrintError("InventÃ¡rio cheio ou item nÃ£o pÃ´de ser adicionado.");
-						return;
-					}
-
 					console.PrintSuccess($"+{qty}x {def.Name} adicionado ao inventÃ¡rio.");
 				},
 				getCompletions: partial =>

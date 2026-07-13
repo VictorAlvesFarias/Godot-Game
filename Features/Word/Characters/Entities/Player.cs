@@ -82,8 +82,8 @@ namespace Jogo25D.Characters
 				}
 			};
 
-			Inventory.AddItem(ItemDB.Get("bow_starting2"));
-			Inventory.AddItem(ItemDB.Get("sword_starting"));
+			Inventory.AddItemRequest("bow_starting2", 1);
+			Inventory.AddItemRequest("sword_starting", 1);
 
 			if (EquippedSlotIndex < 0)
 			{
@@ -103,7 +103,7 @@ namespace Jogo25D.Characters
 
 			if (EquippedSlotIndex >= 0)
 			{
-				Inventory.EquipItem(EquippedSlotIndex);
+				Inventory.EquipItemRequest(EquippedSlotIndex);
 			}
 		}
 
@@ -158,8 +158,10 @@ namespace Jogo25D.Characters
 				HandleReload(dt);
 				UpdateAnimation();
 
-				Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
-				Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
+
+				//TODO: Verificar
+				//Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
+				//Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
 			}
 			else
 			{
@@ -183,43 +185,45 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-		public void SyncPosition(Vector2 pos, Vector2 vel)
-		{
-			TargetPosition = pos;
-			Velocity = vel;
-		}
+		//TODO:Verificar
+		//[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
+		//public void SyncPosition(Vector2 pos, Vector2 vel)
+		//{
+		//	TargetPosition = pos;
+		//	Velocity = vel;
+		//}
 
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SyncAnimation(string animName, bool flipH)
-		{
-			Sprite.FlipH = flipH;
+  //      [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		//public void SyncAnimation(string animName, bool flipH)
+		//{
+		//	Sprite.FlipH = flipH;
 
-			if (Sprite.Animation != animName)
-			{
-				Sprite.Play(animName);
-			}
-		}
+		//	if (Sprite.Animation != animName)
+		//	{
+		//		Sprite.Play(animName);
+		//	}
+		//}
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SyncHealth(int currentHealth)
-		{
-			CurrentHealth = Mathf.Clamp(currentHealth, 0, MaxHealth);
-		}
+		//[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		//public void SyncHealth(int currentHealth)
+		//{
+		//	CurrentHealth = Mathf.Clamp(currentHealth, 0, MaxHealth);
+		//}
 
 		public void TakeDamage(int damage)
 		{
-         if (CurrentHealth <= 0 || damage <= 0)
+			if (CurrentHealth <= 0 || damage <= 0)
 			{
 				return;
 			}
 
 			CurrentHealth = Mathf.Max(0, CurrentHealth - damage);
 
-			if (Multiplayer != null && Multiplayer.HasMultiplayerPeer() && Multiplayer.IsServer())
-			{
-				Rpc(nameof(SyncHealth), CurrentHealth);
-			}
+			//TODO: Verificar
+			//if (Multiplayer != null && Multiplayer.HasMultiplayerPeer() && Multiplayer.IsServer())
+			//{
+			//	Rpc(nameof(SyncHealth), CurrentHealth);
+			//}
 
             if (CurrentHealth <= 0)
 			{
@@ -358,11 +362,11 @@ namespace Jogo25D.Characters
 				{
 					if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
 					{
-						Inventory.Rpc(nameof(Inventory.EquipItem), next);
+						Inventory.EquipItemRequest(next);
 					}
 					else
 					{
-						Inventory.EquipItem(next);
+						Inventory.EquipItemRequest(next);
 					}
 
 					return;
