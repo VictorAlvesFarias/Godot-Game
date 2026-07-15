@@ -1,13 +1,18 @@
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Items;
+using Jogo25D.Utils.GodotDictionaryParser;
 using System.Collections.Generic;
 using System.Dynamic;
 
 namespace Jogo25D.Effects
 {
-    public class DamageEffectDefinition : EffectDefinition
+    public partial class DamageEffectDefinition : EffectDefinition
     {
-        public List<DamageInfo> Damages { get; set; }
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<DamageInfo> Damages { get; set; }
+
+        [Export, GodotDictionaryField]
         public float Timer { get; set; }
 
         public override void Apply(Player player, float delta)

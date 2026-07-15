@@ -4,6 +4,7 @@ using Jogo25D.Effects;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
+using Jogo25D.Utils.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,19 +12,19 @@ namespace Jogo25D.Actions
 {
     public class FireballDefinition : ActionDefinition
     {
-        public override bool OnStartActionValidation(Player player, ActionInstance instance, float delta)
+        public override bool OnStartActionValidation(Player player, ActionDefinitionData instance, float delta)
         {
             return player.Input.Ability && instance.CanUse;
         }
 
-        public override void OnStartAction(Player player, ActionInstance instance, float delta)
+        public override void OnStartAction(Player player, ActionDefinitionData instance, float delta)
         {
             if (HitboxScene == null)
             {
                 return;
             }
 
-            var damageProps = Properties.OfType<DamageProperty>().ToList();
+            var damageProps = Properties.OfType<DamagePropertyData>().ToList();
 
             if (damageProps.Count == 0 || HitboxScene == null)
             {
@@ -34,9 +35,9 @@ namespace Jogo25D.Actions
 
             var direction = (player.Input.MousePosition - player.GlobalPosition).Normalized();
             var hitbox = HitboxScene.Instantiate<ProjectileHitbox>();
-            var weapon = Properties.OfType<AttackProperty>().DefaultIfEmpty(new AttackProperty()).First();
-            var charges = Properties.OfType<ChargesProperty>().DefaultIfEmpty(new ChargesProperty()).First();
-            var crit = Properties.OfType<CritProperty>().DefaultIfEmpty(new CritProperty()).First();
+            var weapon = Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
+            var charges = Properties.OfType<ChargesPropertyData>().DefaultIfEmpty(new ChargesPropertyData()).First();
+            var crit = Properties.OfType<CritPropertyData>().DefaultIfEmpty(new CritPropertyData()).First();
             var damages = damageProps.ConvertAll(d => new DamageInfo
             {
                 Amount = d.DamageAmount,
@@ -44,7 +45,7 @@ namespace Jogo25D.Actions
                 SourcePeerId = (int)player.PeerId,
                 CritChance = crit.CritChance,
                 CritDamage = crit.CritDamage
-            });
+            }).ToGodotArray();
 
             hitbox.Initialize(damages, OnHitEffects, player);
 

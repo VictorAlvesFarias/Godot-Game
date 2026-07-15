@@ -28,6 +28,7 @@ namespace Jogo25D.UI
 		public int DraggedSlotIndex { get; set; } = -1;
 		public Control DragPreview { get; set; }
 		public Vector2 DragOffset { get; set; }
+
 		public const float DragThreshold = 5.0f;
 
 		public override void _UnhandledInput(InputEvent @event)
@@ -96,9 +97,9 @@ namespace Jogo25D.UI
 
 		public void FindLocalPlayerInventorySystem()
 		{
-			if (Inventory != null && IsInstanceValid(Inventory))
+			if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 			{
-				Inventory.InventoryChanged -= OnInventoryChanged;
+				LocalPlayer.InventoryChanged -= OnInventoryChanged;
 			}
 			LocalPlayer = null;
 
@@ -108,9 +109,9 @@ namespace Jogo25D.UI
 			{
 				LocalPlayer = worldManager.GetLocalPlayer();
 
-				if (LocalPlayer != null && Inventory != null)
+				if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 				{
-					Inventory.InventoryChanged += OnInventoryChanged;
+					LocalPlayer.InventoryChanged += OnInventoryChanged;
 
 					if (SlotPanels[0] == null)
 					{
@@ -160,9 +161,9 @@ namespace Jogo25D.UI
 
 		public override void _ExitTree()
 		{
-			if (Inventory != null && IsInstanceValid(Inventory))
+			if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 			{
-				Inventory.InventoryChanged -= OnInventoryChanged;
+				LocalPlayer.InventoryChanged -= OnInventoryChanged;
 			}
 		}
 
@@ -305,16 +306,16 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			var slot = Inventory.GetSlot(slotIndex);
+			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
 
 			if (@event is InputEventMouseButton mouseEvent)
 			{
-				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !slot.IsEmpty())
+				if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && slot != null)
 				{
 					StartDrag(slotIndex, mouseEvent.GlobalPosition);
 					SlotPanels[slotIndex].AcceptEvent();
 				}
-				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && !slot.IsEmpty())
+				else if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed && slot != null)
 				{
 					ShowContextMenuForSlot(slotIndex, mouseEvent.GlobalPosition);
 					SlotPanels[slotIndex].AcceptEvent();
@@ -329,13 +330,16 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			var slot = Inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty())
+            var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
+
+			if (slot == null)
 			{
 			    return;
 			}
 
-			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({slot.Definition?.Name})");
+			var def = ItemDB.Get(slot.Id);
+
+            GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({def?.Name})");
 
 			IsDragging = true;
 			DraggedSlotIndex = slotIndex;
@@ -343,7 +347,8 @@ namespace Jogo25D.UI
 			if (DragPreview != null)
 			{
 				var iconRect = DragPreview.GetNode<TextureRect>("Icon");
-				iconRect.Texture = slot.Definition?.Icon;
+
+				iconRect.Texture = def?.Icon;
 
 				DragOffset = new Vector2(-32, -32);
 				DragPreview.GlobalPosition = mousePos + DragOffset;
@@ -407,7 +412,7 @@ namespace Jogo25D.UI
 
 		public void SwapItems(int fromIndex, int toIndex)
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
 			    return;
 			}
@@ -416,7 +421,7 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			Inventory.SwapSlotsRequest(fromIndex, toIndex);
+			LocalPlayer.SwapSlotsRequest(fromIndex, toIndex);
 		}
 
 		public void UpdateSlot(int index)
@@ -437,33 +442,37 @@ namespace Jogo25D.UI
 				|| index >= QuantityLabels.Length)
 				return;
 
-			var slot = Inventory.GetSlot(index);
+			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, index);
+
 			if (slot == null)
 			{
 				return;
 			}
 
-			if (slot.IsEmpty() || slot.Definition == null)
+			var definition = ItemDB.Get(slot.Id);
+
+			if (definition == null || definition.IsEmpty(slot))
 			{
 				IconRects[index].Texture = null;
 				NameLabels[index].Visible = false;
 				QuantityLabels[index].Text = "";
+
 				return;
 			}
 
-			if (slot.Definition.Icon != null)
+			if (definition.Icon != null)
 			{
-				IconRects[index].Texture = slot.Definition.Icon;
+				IconRects[index].Texture = definition.Icon;
 				NameLabels[index].Visible = false;
 			}
 			else
 			{
 				IconRects[index].Texture = null;
-				NameLabels[index].Text = slot.Definition.Name;
+				NameLabels[index].Text = definition.Name;
 				NameLabels[index].Visible = true;
 			}
 
-			if (slot.Definition.Stackable && slot.Quantity > 1)
+			if (definition.Stackable && slot.Quantity > 1)
 			{
 				QuantityLabels[index].Text = $"x{slot.Quantity}";
 			}
@@ -495,8 +504,16 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			var slot = Inventory.GetSlot(slotIndex);
-			if (slot.IsEmpty())
+            var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
+
+            if (slot == null)
+            {
+                return;
+            }
+
+            var definition = ItemDB.Get(slot.Id);
+
+            if (definition == null || definition.IsEmpty(slot))
 			{
 			    return;
 			}
@@ -509,7 +526,7 @@ namespace Jogo25D.UI
 				child.QueueFree();
 			}
 
-			if (slot.Definition != null && slot.Definition.IsEquippable)
+			if (definition != null && definition.IsEquippable)
 			{
 				var button = new Button();
 				button.Text = "Equipar";
@@ -536,15 +553,16 @@ namespace Jogo25D.UI
 			    return;
 			}
 
-			var slot = Inventory.GetSlot(SelectedSlotIndex);
-			if (slot.IsEmpty())
+			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, SelectedSlotIndex);
+
+			if (slot == null)
 			{
 			    return;
 			}
 
 			if (option == "Equipar")
 			{
-				Inventory.EquipItemRequest(SelectedSlotIndex);
+				LocalPlayer.EquipItemRequest(SelectedSlotIndex);
 			}
 
 			ContextMenu.Visible = false;
@@ -580,14 +598,6 @@ namespace Jogo25D.UI
 			if (Visible)
 			{
 				OnInventoryChanged();
-			}
-		}
-
-		public void AddItemToInventory(ItemDefinition definition, int quantity = 1)
-		{
-			if (Inventory != null && IsInstanceValid(Inventory))
-			{
-				Inventory.AddItemRequest(definition.Id, quantity);
 			}
 		}
 	}

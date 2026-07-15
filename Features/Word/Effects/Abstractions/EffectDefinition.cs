@@ -1,15 +1,30 @@
+using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Effects
 {
-    public abstract class EffectDefinition
+    public abstract partial class EffectDefinition : Resource
     {
+        [Export, GodotDictionaryField]
         public float Duration { get; set; }
+
+        [Export, GodotDictionaryField]
         public float Elapsed { get; set; }
+
+        [Export, GodotDictionaryField]
         public bool Expired { get; set; }
+
+        [Export, GodotDictionaryField]
         public bool RemoveInOnUnequip { get; set; }
+
+        [Export, GodotDictionaryField]
         public bool Infinite { get; set; }
+
+        [Export, GodotDictionaryField]
         public bool ApplyToOwner { get; set; }
+
+        [Export, GodotDictionaryField]
         public bool ApplyToTarget { get; set; }
 
         public void Tick(Player player, float delta)

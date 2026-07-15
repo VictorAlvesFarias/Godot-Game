@@ -372,6 +372,6 @@
     <None Include="Scenes\World\World.tscn" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Logs\" />
+    <Folder Include="Features\Word\Actions\Resources\" />
   </ItemGroup>
 </Project>

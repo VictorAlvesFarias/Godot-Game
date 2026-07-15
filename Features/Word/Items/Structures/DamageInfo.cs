@@ -1,3 +1,6 @@
+using Godot;
+using Jogo25D.Utils.GodotDictionaryParser;
+
 namespace Jogo25D.Items
 {
     public enum DamageType
@@ -10,12 +13,21 @@ namespace Jogo25D.Items
         True
     }
 
-    public struct DamageInfo
+    public partial class DamageInfo: Resource
     {
-        public int Amount;
-        public DamageType Type;
-        public int SourcePeerId;
-        public float CritChance;
-        public float CritDamage;
+        [Export, GodotDictionaryField]
+        public int Amount { get; set; }
+
+        [Export, GodotDictionaryField]
+        public DamageType Type { get; set; }
+
+        [Export, GodotDictionaryField]
+        public int SourcePeerId { get; set; }
+
+        [Export, GodotDictionaryField]
+        public float CritChance { get; set; }
+
+        [Export, GodotDictionaryField]
+        public float CritDamage { get; set; }
     }
 }

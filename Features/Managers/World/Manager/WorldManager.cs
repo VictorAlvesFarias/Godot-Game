@@ -1,7 +1,10 @@
 using Godot;
 using System;
 using Jogo25D.Characters;
+using Jogo25D.Features.Word.Characters.Resources;
 using System.Linq;
+using Jogo25D.Items;
+using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Systems
 {
@@ -19,6 +22,12 @@ namespace Jogo25D.Systems
 		public SubViewportContainer UpContainer { get; set; }
 		private Node2D ProceduralParent { get; set; }
         private SubViewportContainer ProceduralContainer { get; set; }
+
+        #region Systems
+
+		private Inventory Inventory { get; set; } = new Inventory();
+
+        #endregion
 
         public override void _Ready()
 		{
@@ -235,17 +244,9 @@ namespace Jogo25D.Systems
 			GD.Print($"[WorldManager.Disconnect] freed {players.Count} player nodes");
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false)]
-		public void SpawnPlayer(long peerId, Vector2 position, int equippedSlotIndex = -1)
-		{	
-			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={peerId}, position={position}, equippedSlotIndex={equippedSlotIndex})");
-			
-			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
-
-			player.Name = $"Player{peerId}";
-			player.Position = position;
-			player.PeerId = peerId;
-			player.EquippedSlotIndex = equippedSlotIndex;
+		public void SpawnPlayer(Player player)
+		{
+			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={player.PeerId}, position={player.Position}, equippedSlotIndex={player.Data.EquippedSlotIndex})");
 
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
@@ -253,13 +254,42 @@ namespace Jogo25D.Systems
 			if (OverwordParent != null)
 			{
 				OverwordParent.AddChild(player);
-				
-				GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");	
+
+				GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");
 			}
 			else
 			{
 				GD.Print($"[WorldManager.SpawnPlayer] WARNING: OverwordParent is null, cannot add {player.Name}");
 			}
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SpawnPlayerReceive(long peerId, Vector2 position, Godot.Collections.Dictionary data)
+		{
+			GD.Print($"[WorldManager.SpawnPlayerReceive] peerId={peerId} position={position}");
+
+			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+
+			player.Name = $"Player{peerId}";
+			player.Position = position;
+			player.PeerId = peerId;
+			player.Data = GodotDictionaryParser.ToResource<PlayerData>(data) ?? new PlayerData();
+
+			SpawnPlayer(player);
+		}
+
+		public void SpawnPlayerRequest(Player player)
+		{
+			var data = GodotDictionaryParser.ToDictionary(player.Data);
+
+			Rpc(nameof(SpawnPlayerReceive), player.PeerId, player.Position, data);
+		}
+
+		public void SpawnPlayerRequest(Player player, long targetPeerId)
+		{
+			var data = GodotDictionaryParser.ToDictionary(player.Data);
+
+			RpcId(targetPeerId, nameof(SpawnPlayerReceive), player.PeerId, player.Position, data);
 		}
 
 		public Player GetLocalPlayer()
@@ -305,7 +335,7 @@ namespace Jogo25D.Systems
 
 			player.GlobalPosition = Vector2.Zero;
 			player.Velocity = Vector2.Zero;
-			player.CurrentHealth = player.MaxHealth;
+			player.Data.CurrentHealth = player.Data.MaxHealth;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -364,11 +394,11 @@ namespace Jogo25D.Systems
 
             playerNode.Reparent(nextParent, true);
 
-			var equippedSlot = playerNode.Inventory?.GetEquippedSlotIndex() ?? -1;
+			var equippedSlot = playerNode.Data.EquippedSlotIndex;
 			
 			if (equippedSlot >= 0)
 			{
-				playerNode.Inventory.EquipItemRequest(equippedSlot);
+				playerNode.EquipItemRequest(equippedSlot);
 			}
 
             if (targetPeerId == Multiplayer.GetUniqueId())
@@ -415,24 +445,29 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var spawnPos = Vector2.Zero;
+            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
-			SpawnPlayer(id, spawnPos, -1);
+            player.Name = $"Player{id}";
+			player.Position = Godot.Vector2.Zero;
+            player.PeerId = id;
+            player.Data.EquippedSlotIndex = 1;
 
-			Rpc(nameof(SpawnPlayer), id, spawnPos, -1);
+			player.GiveItem(ItemDB.CreateInstance("bow_starting2"));
+            player.GiveItem(ItemDB.CreateInstance("bow_starting2"));
+
+			SpawnPlayer(player);
+
+            SpawnPlayerRequest(player);
 
 			var players = GetTree().GetNodesInGroup("players");
 
 			foreach (Node node in players)
 			{
-				if (node is Player player && player.PeerId != id)
+				if (node is Player existingPlayer && existingPlayer.PeerId != id)
 				{
-					var playerName = player.Name;
-					var equippedSlotIndex = player.Inventory?.GetEquippedSlotIndex() ?? player.EquippedSlotIndex;
-					
-					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {playerName}");
-					
-					RpcId(id, nameof(SpawnPlayer), player.PeerId, player.Position, equippedSlotIndex);
+					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {existingPlayer.Name}");
+
+					SpawnPlayerRequest(existingPlayer, id);
 				}
 			}
 		}

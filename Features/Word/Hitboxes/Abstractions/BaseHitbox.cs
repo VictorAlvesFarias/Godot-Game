@@ -9,8 +9,8 @@ namespace Jogo25D.Hitboxes
 {
     public partial class BaseHitbox : Area2D
     {
-        public List<DamageInfo> Damages { get; set; } = new();
-        public List<EffectDefinition> Effects { get; set; } = new();
+        public Godot.Collections.Array<DamageInfo> Damages { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinition> Effects { get; set; } = new();
         public Player Owner { get; set; }
         public AnimatedSprite2D Sprite { get; set; }
         public int Perfuracao { get; set; } = 0;
@@ -31,10 +31,10 @@ namespace Jogo25D.Hitboxes
             }
         }
 
-        public virtual void Initialize(List<DamageInfo> damages, List<EffectDefinition> effects, Player owner)
+        public virtual void Initialize(Godot.Collections.Array<DamageInfo> damages, Godot.Collections.Array<EffectDefinition> effects, Player owner)
         {
             Damages = damages ?? new();
-            Effects = new List<EffectDefinition>(effects ?? new());
+            Effects = new Godot.Collections.Array<EffectDefinition>(effects ?? new());
             Owner = owner;
 
             BodyEntered += OnBodyEntered;

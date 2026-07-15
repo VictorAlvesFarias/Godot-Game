@@ -9,68 +9,82 @@ using Jogo25D.Hitboxes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jogo25D.Features.Word.Characters.Resources;
+using Jogo25D.Features.Word.Items.Resources;
 
 namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-		public long PeerId { get; set; } = 1;
-		public float Speed { get; set; } = 300.0f;
-		public float JumpVelocity { get; set; } = -750.0f;
-		public float Gravity { get; set; }
-		public int MaxHealth { get; set; } = 50;
-		public int CurrentHealth { get; set; } = 50;
-		public bool CanUpdateMovement { get; set; } = true;
-		public bool ReloadPending { get; set; } = true;
-		public int EquippedSlotIndex { get; set; } = -1;
-		private Vector2 TargetPosition { get; set; }
-		public List<EffectDefinition> Effects { get; set; } = new();
-		public List<BaseProperty> Buffs { get; set; } = new();
-		public List<ActionInstance> UnlockedAbilities { get; set; } = new List<ActionInstance>();
-		public ItemInstance EquippedInstance { get; set; }
-		public ItemInstance[] Items { get; set; } = Array.Empty<ItemInstance>();
-		public ItemDefinition EquippedDefinition { get; set; }
-		public WorldManager NetworkManager { get; set; }
-		public Inventory Inventory { get; set; }
-		public PlayerInput Input { get; set; }
-		public AimIndicator AimIndicator { get; set; }
-		public GroundIndicator GroundMarker { get; set; }
-		public AnimatedSprite2D Sprite { get; set; }
+        #region Events 
 
-		public override void _Ready()
+        [Signal]
+        public delegate void InventoryChangedEventHandler();
+
+        [Signal]
+        public delegate void ItemEquippedEventHandler(int slotIndex);
+
+        #endregion
+
+        #region Properties
+
+        [Export]
+        public long PeerId { get; set; } = 1;
+
+        [Export]
+        public float Gravity { get; set; }
+
+		[Export]
+		public PlayerData Data { get; set; } = new PlayerData();
+
+		[Export]
+		public bool Loaded { get; set;  }
+
+        #endregion
+
+        #region Systems
+
+		public Inventory Inventory { get; set; } = new Inventory();
+
+        #endregion
+
+		#region Node references
+
+		private WorldManager NetworkManager { get; set; }
+		public AnimatedSprite2D Sprite { get; set; }
+		public GroundIndicator GroundMarker { get; set; }
+		public AimIndicator AimIndicator { get; set; }
+		public PlayerInput Input { get; set; }
+
+        #endregion
+
+        #region Godot implementation
+
+        public override void _Ready()
 		{
+			GD.Print("[Player._Ready] Starting method");
+			GD.Print("[Player._Ready] Adding players to group");
+
 			AddToGroup("players");
+
+			GD.Print("[Player._Ready] Initializating ItemDB");
 
 			ItemDB.Initialize();
 
-			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			GD.Print("[Player._Ready] Trying get Nodes");
 
+			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
+			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
 			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
 			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
 			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
-			Inventory = GetNodeOrNull<Inventory>("Systems/Inventory");
 
-			Items = new ItemInstance[Inventory.INVENTORY_SIZE];
-
-			for (int i = 0; i < Inventory.INVENTORY_SIZE; i++)
-			{
-				Items[i] = new ItemInstance();
-			}
-
-			ActionDB.Initialize();
-			
-			UnlockedAbilities.Add(ActionDB.CreateInstance("dash", this));
-			UnlockedAbilities.Add(ActionDB.CreateInstance("fireball", this));
-			UnlockedAbilities.Add(ActionDB.CreateInstance("ground_strike", this));
-
-			Inventory.ItemEquipped += OnItemEquipped;
+			GD.Print("[Player._Ready] Setting default states");
 
 			Sprite.Play("idle");
 
-			TargetPosition = GlobalPosition;
+			GD.Print("[Player._Ready] Adding animation events");
 
 			Sprite.AnimationFinished += () =>
 			{
@@ -82,41 +96,21 @@ namespace Jogo25D.Characters
 				}
 			};
 
-			Inventory.AddItemRequest("bow_starting2", 1);
-			Inventory.AddItemRequest("sword_starting", 1);
+			GD.Print("[Player._Ready] Seting starter slot");
 
-			if (EquippedSlotIndex < 0)
+			Data ??= new PlayerData();
+			Data.Inventory ??= new InventoryData();
+
+			Inventory.EnsureSize(Data.Inventory);
+
+			var equipped = Data.EquippedSlotIndex;
+
+			if (equipped >= 0 && equipped < Data.Inventory.Size && Data.Inventory.Items[equipped] != null)
 			{
-				for (int i = 0; i < Items.Length; i++)
-				{
-					var slot = Items[i];
+				GD.Print("[Player._Ready] Running equip item");
 
-					if (slot == null || slot.IsEmpty() || slot.Definition == null || !slot.Definition.IsEquippable)
-					{
-						continue;
-					}
-
-					EquippedSlotIndex = i;
-					break;
-				}
+				EquipItemRequest(equipped);
 			}
-
-			if (EquippedSlotIndex >= 0)
-			{
-				Inventory.EquipItemRequest(EquippedSlotIndex);
-			}
-		}
-
-		public override void _ExitTree()
-		{
-			if (Inventory != null)
-			{
-				Inventory.ItemEquipped -= OnItemEquipped;
-			}
-
-			EquippedInstance = null;
-
-			base._ExitTree();
 		}
 
 		public override void _PhysicsProcess(double delta)
@@ -124,120 +118,63 @@ namespace Jogo25D.Characters
 			var dt = (float)delta;
 
 			//TODO: Player process effects
-			for (int i = Effects.Count - 1; i >= 0; i--)
+			for (int i = Data.Effects.Count - 1; i >= 0; i--)
 			{
-				if (Effects[i].ApplyToOwner)
+				if (Data.Effects[i].ApplyToOwner)
 				{
-					Effects[i].Tick(this, dt);
-			
-					if (Effects[i].Expired)
+					Data.Effects[i].Tick(this, dt);
+
+					if (Data.Effects[i].Expired)
 					{
-						Effects.RemoveAt(i);
+						Data.Effects.RemoveAt(i);
 					}
 				}
 			}
 
 			//Action process
-			foreach (var action in UnlockedAbilities)
+			foreach (var action in Data.UnlockedAbilities)
 			{
-				action.Update(dt);
+				if (action == null)
+				{
+					continue;
+				}
+
+				ActionDB.Get(action.Id)?.Update(dt, this, action);
 			}
 
-			EquippedInstance?.Update(dt);
+			foreach(var item in Data.Inventory.Items)
+			{
+				if (item == null)
+				{
+					continue;
+				}
+
+				ItemDB.Get(item.Id)?.Update(dt, item);
+			}
 
 			if (IsOwner())
 			{
 				HandleHotbarScroll();
 			}
 
-			if (Multiplayer.IsServer())
-			{
-				// Toda lógica de jogo roda apenas no servidor
-				HandleMovement(dt);
-				HandleAttack(dt);
-				HandleReload(dt);
-				UpdateAnimation();
-
-
-				//TODO: Verificar
-				//Rpc(nameof(SyncPosition), GlobalPosition, Velocity);
-				//Rpc(nameof(SyncAnimation), (string)Sprite.Animation, Sprite.FlipH);
-			}
-			else
-			{
-                HandleReload(dt);
-                HandleAttack(dt);
-
-				// Outros clientes apenas interpolam para a posição do servidor
-				var dist = GlobalPosition.DistanceTo(TargetPosition);
-
-				if (dist > 300f)
-				{
-					GlobalPosition = TargetPosition;
-				}
-				else
-				{
-                    if (GlobalPosition.DistanceTo(TargetPosition) < 1f)
-                        GlobalPosition = TargetPosition;
-                    else
-                        GlobalPosition = GlobalPosition.Lerp(TargetPosition, 15f * dt);
-                }
-			}
+			TestPositionRequest(Position);
+			HandleMovement(dt);
+			HandleUseItem(dt);
+			HandleReload(dt);
+			UpdateAnimation();
 		}
 
-		//TODO:Verificar
-		//[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-		//public void SyncPosition(Vector2 pos, Vector2 vel)
-		//{
-		//	TargetPosition = pos;
-		//	Velocity = vel;
-		//}
+		#endregion
 
-  //      [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		//public void SyncAnimation(string animName, bool flipH)
-		//{
-		//	Sprite.FlipH = flipH;
-
-		//	if (Sprite.Animation != animName)
-		//	{
-		//		Sprite.Play(animName);
-		//	}
-		//}
-
-		//[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		//public void SyncHealth(int currentHealth)
-		//{
-		//	CurrentHealth = Mathf.Clamp(currentHealth, 0, MaxHealth);
-		//}
-
-		public void TakeDamage(int damage)
-		{
-			if (CurrentHealth <= 0 || damage <= 0)
-			{
-				return;
-			}
-
-			CurrentHealth = Mathf.Max(0, CurrentHealth - damage);
-
-			//TODO: Verificar
-			//if (Multiplayer != null && Multiplayer.HasMultiplayerPeer() && Multiplayer.IsServer())
-			//{
-			//	Rpc(nameof(SyncHealth), CurrentHealth);
-			//}
-
-            if (CurrentHealth <= 0)
-			{
-				Sprite.Play("dead");
-			}
-		}
+		#region Core - Damage system
 
 		public void ReceiveDamage(DamageInfo damage)
 		{
 			var resistanceFactor = 0f;
 
-			foreach (var buff in Buffs)
+			foreach (var buff in Data.Buffs)
 			{
-				if (buff is DamageResistenceProperty r && r.DamageType == damage.Type)
+				if (buff is DamageResistencePropertyData r && r.DamageType == damage.Type)
 				{
 					resistanceFactor = System.Math.Max(resistanceFactor, r.ResistanceFactor);
 				}
@@ -245,19 +182,262 @@ namespace Jogo25D.Characters
 
 			var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
 			var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor));
-			
-			TakeDamage(finalDamage);
-		}
 
-		public void AddEffect(EffectDefinition definition)
-		{
-			if (definition == null)
+			if (Data.CurrentHealth <= 0 || finalDamage <= 0)
 			{
 				return;
 			}
 
-			Effects.Add(definition.Clone());
+			Data.CurrentHealth = Mathf.Max(0, Data.CurrentHealth - finalDamage);
+
+			if (Data.CurrentHealth <= 0)
+			{
+				Sprite.Play("dead");
+			}
 		}
+
+		#endregion
+
+		#region Core - Items system handlers
+
+		public void HandleUseItem(float delta)
+		{
+			var data = GetSlot(Data.EquippedSlotIndex);
+
+            if (data == null)
+			{
+				return;
+			}
+
+			if (!Input.Attack)
+			{
+				return;
+			}
+
+			var def = ItemDB.Get(data.Id);
+
+			GD.Print($"[HandleAttack] cooldown={data.CooldownRemainingTimer:F2} reloading={def.IsReloading(data)} charges={data.CurrentCharges}");
+
+			def.Use(this, data);
+		}
+
+		public void HandleReload(float delta)
+		{
+            var data = GetSlot(Data.EquippedSlotIndex);
+
+            if (data == null)
+            {
+                return;
+            }
+
+            var def = ItemDB.Get(data.Id);
+            var chargesProp = data.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+
+			if (chargesProp == null || chargesProp.InfiniteCharges)
+			{
+				return;
+			}
+
+			if (!def.IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges && Data.ReloadPending)
+			{
+				Data.ReloadPending = false;
+
+				var needed = chargesProp.MaxCharges - data.CurrentCharges;
+				var taken = RemoveAmmoByChargeType(chargesProp.ChargeItemId, needed);
+
+                def.FinishReload(taken, data);
+			}
+
+			if (Input.Reload && def.CanReload(data))
+			{
+                def.TriggerReloadTimer(data);
+
+				Data.ReloadPending = true;
+			}
+		}
+
+		public void HandleHotbarScroll()
+		{
+			if (!IsOwner() || Inventory == null)
+			{
+				return;
+			}
+
+			var dir = Input.ScrollDirection;
+
+			if (dir == 0)
+			{
+				return;
+			}
+
+			var hotbarSize = 8;
+
+			if (Data.EquippedSlotIndex < 0)
+			{
+				Data.EquippedSlotIndex = 0;
+			}
+
+			for (int i = 1; i <= hotbarSize; i++)
+			{
+				var next = ((Data.EquippedSlotIndex + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
+				var slot = Inventory.GetSlot(Data.Inventory, next);
+
+				if (slot != null)
+				{
+					if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
+					{
+						EquipItemRequest(next);
+					}
+					else
+					{
+						EquipItemRequest(next);
+					}
+
+					return;
+				}
+			}
+		}
+
+		#endregion
+
+		#region Core - Items system 
+
+		public void RemoveItemRequest(int slotIndex, int quantity)
+		{
+			GD.Print("[Inventory.RemoveItemRequest] Starting method");
+
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				RemoveItemReceive(slotIndex, quantity);
+
+				return;
+			}
+
+			Rpc(nameof(RemoveItemReceive), slotIndex, quantity);
+		}
+
+		public int CountAmmoByChargeType(string chargeType)
+		{
+			if (string.IsNullOrEmpty(chargeType))
+			{
+				return 0;
+			}
+
+			int count = 0;
+
+			for (int i = 0; i < Data.Inventory.Size; i++)
+			{
+				if (i == Data.EquippedSlotIndex)
+				{
+					continue;
+				}
+
+				if (Data.Inventory.Items[i] == null)
+				{
+					continue;
+				}
+
+				var chargesProp = Data.Inventory.Items[i].Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+
+				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
+				{
+					count += Data.Inventory.Items[i].Quantity;
+				}
+			}
+			return count;
+		}
+
+		public int RemoveAmmoByChargeType(string chargeType, int quantity)
+		{
+			if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
+			{
+				return 0;
+			}
+
+			int removed = 0;
+
+			for (int i = 0; i < Data.Inventory.Size && removed < quantity; i++)
+			{
+				if (Data.Inventory.Items[i] == null)
+				{
+					continue;
+				}
+
+				var chargesProp = Data.Inventory.Items[i].Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+
+				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
+				{
+					continue;
+				}
+
+				int toRemove = Mathf.Min(quantity - removed, Data.Inventory.Items[i].Quantity);
+
+				Data.Inventory.Items[i].Quantity -= toRemove;
+
+				removed += toRemove;
+
+				if (Data.Inventory.Items[i].Quantity <= 0)
+				{
+					Data.Inventory.Items[i] = null;
+				}
+			}
+
+			if (removed > 0)
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+
+			return removed;
+		}
+
+		public void EquipItem(int slotIndex)
+		{
+			if (slotIndex < 0 || slotIndex >= Data.Inventory.Size)
+			{
+				return;
+			}
+
+			var slot = Data.Inventory.Items[slotIndex];
+
+			if (slot == null)
+			{
+				return;
+			}
+
+			Data.EquippedSlotIndex = slotIndex;
+
+			EmitSignal(SignalName.ItemEquipped, slotIndex);
+
+			return;
+		}
+
+		#region Public API - Items query
+
+		public ItemDefinitionData GetSlot(int index)
+		{
+			return Inventory.GetSlot(Data?.Inventory, index);
+		}
+
+		public ItemDefinitionData EquippedInstance => GetSlot(Data?.EquippedSlotIndex ?? -1);
+
+		public void GiveItem(ItemDefinitionData item)
+		{
+			if (Data?.Inventory == null)
+			{
+				return;
+			}
+
+			if (Inventory.AddItem(Data.Inventory, item))
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+		}
+
+		#endregion
+
+		#endregion
+
+		#region Animation 
 
 		public void UpdateAnimation()
 		{
@@ -314,108 +494,30 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		public void HandleAttack(float delta)
+		#endregion
+
+		#region Core - Effects system
+
+		public void AddEffect(EffectDefinition definition)
 		{
-			if (EquippedInstance == null || EquippedInstance.IsEmpty())
+			if (definition == null)
 			{
 				return;
 			}
 
-			if (!Input.Attack)
-			{
-				return;
-			}
-
-			GD.Print($"[HandleAttack] cooldown={EquippedInstance.CooldownRemaining:F2} reloading={EquippedInstance.IsReloading} charges={EquippedInstance.CurrentCharges}");
-
-			EquippedInstance.Definition.Use(this, EquippedInstance);
+			Data.Effects.Add(definition.Clone());
 		}
 
-		public void HandleHotbarScroll()
-		{
-			if (!IsOwner() || Inventory == null)
-			{
-				return;
-			}
+		#endregion
 
-			var dir = Input.ScrollDirection;
-			
-			if (dir == 0)
-			{
-				return;
-			}
-
-			var hotbarSize = 8;
-			var current = Inventory.GetEquippedSlotIndex();
-
-			if (current < 0)
-			{
-				current = 0;
-			}
-
-			for (int i = 1; i <= hotbarSize; i++)
-			{
-				var next = ((current + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
-				var slot = Inventory.GetSlot(next);
-
-				if (slot != null && !slot.IsEmpty())
-				{
-					if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
-					{
-						Inventory.EquipItemRequest(next);
-					}
-					else
-					{
-						Inventory.EquipItemRequest(next);
-					}
-
-					return;
-				}
-			}
-		}
-
-		public void HandleReload(float delta)
-		{
-			if (EquippedInstance == null || EquippedInstance.IsEmpty())
-			{
-				return;
-			}
-
-			var chargesProp = EquippedInstance.Properties.OfType<ChargesProperty>().FirstOrDefault();
-
-			if (chargesProp == null || chargesProp.InfiniteCharges)
-			{
-				return;
-			}
-
-			if (!EquippedInstance.IsReloading && EquippedInstance.CurrentCharges < chargesProp.MaxCharges && ReloadPending)
-			{
-				ReloadPending = false;
-
-				var needed = chargesProp.MaxCharges - EquippedInstance.CurrentCharges;
-				var taken = Inventory?.RemoveAmmoByChargeType(chargesProp.ChargeItemId, needed) ?? 0;
-				
-				EquippedInstance.FinishReload(taken);
-			}
-
-			if (Input.Reload && EquippedInstance.CanReload())
-			{
-				EquippedInstance.StartReload();
-				ReloadPending = true;
-			}
-		}
+		#region Core - Movement handlers
 
 		public void HandleMovement(float delta)
 		{
-			if (!Multiplayer.IsServer())
-			{
-				return;
-			}
-
-			if (!CanUpdateMovement)
+			if (!Data.CanUpdateMovement)
 			{
 				MoveAndSlide();
-			 
+
 				return;
 			}
 
@@ -428,51 +530,190 @@ namespace Jogo25D.Characters
 
 			if (Input.Jump && IsOnFloor())
 			{
-				v.Y = JumpVelocity;
+				v.Y = Data.JumpVelocity;
 
 				GD.Print("[HandleMovement] Pulando");
 			}
 
 			if (Input.MoveX != 0)
 			{
-				v.X = Input.MoveX * Speed;
+				v.X = Input.MoveX * Data.Speed;
 			}
 			else
 			{
-				v.X = Mathf.MoveToward(v.X, 0, Speed);
+				v.X = Mathf.MoveToward(v.X, 0, Data.Speed);
 			}
 
 			Velocity = v;
 
 			MoveAndSlide();
 		}
-		
-		public void OnItemEquipped(int slotIndex)
-		{
-			if (EquippedInstance != null && EquippedInstance.Definition != null)
-			{
-				EquippedInstance.Definition.OnUnequip(this, EquippedInstance);
-			}
 
-			var slot = Inventory?.GetSlot(slotIndex);
+		#endregion
 
-			if (slot == null || slot.IsEmpty())
-			{
-				return;
-			}
-
-			EquippedInstance = slot;
-
-			var chargesProp = EquippedInstance.Properties.OfType<ChargesProperty>().FirstOrDefault();
-			EquippedInstance.CurrentCharges = chargesProp != null ? chargesProp.MaxCharges : 0;
-			ReloadPending = false;
-
-			EquippedInstance.Definition.OnEquip(this, EquippedInstance);
-		}
+		#region Utils
 
 		public bool IsOwner()
 		{
 			return PeerId == Multiplayer.GetUniqueId();
 		}
+
+		public bool IsServer()
+		{
+			return PeerId == 1;
+		}
+
+		#endregion
+
+		#region Core - Rpc - Items system
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void EquipItemReceive(int slotIndex)
+		{
+			this.EquipItem(slotIndex);
+		}
+
+		public void EquipItemRequest(int slotIndex)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				EquipItemReceive(slotIndex);
+
+				return;
+			}
+
+			RpcId(1, nameof(EquipItemReceive), slotIndex);
+		}
+
+		#endregion
+
+		#region Core - Rpc - Movemet system
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+		public void TestPositionReceive(Vector2 pos)
+		{
+			var maxTolerance = 50.0f;
+			var distance = GlobalPosition.DistanceTo(pos);
+			var sendToOwner = false;
+
+			if (distance > maxTolerance && !IsServer())
+			{
+				GD.Print($"[Sync] Diferença muito grande detectada ({distance:F2}). Sincronizando cliente.");
+
+				sendToOwner = true;
+			}
+			else if (!IsServer())
+			{
+				// Opcional: Se a distância for aceitável, o servidor pode assumir a posição do cliente para ficar mais fluído
+				GlobalPosition = pos;
+			}
+
+			SyncPositionRequest(GlobalPosition, sendToOwner);
+		}
+
+		public void TestPositionRequest(Vector2 pos)
+		{
+			if (Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			if (!IsOwner() && !IsServer())
+			{
+				return;
+			}
+
+			// O cliente envia sua posição atual diretamente para o servidor (Peer ID 1)
+			RpcId(1, nameof(TestPositionReceive), pos);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SyncPositionReceive(Vector2 pos, bool sendToOwner)
+		{
+			// O cliente recebe a posição imposta pelo servidor e corrige sua localização
+			if (Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			if (!sendToOwner && !IsServer())
+			{
+				return;
+			}
+
+			GlobalPosition = pos;
+		}
+
+		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
+		{
+			// Apenas o servidor executa isso: envia a posição oficial apenas para o dono deste Player
+			//RpcId((int)PeerId, nameof(SyncPositionReceive), pos);
+
+			// Nota: Se quiser que TODOS vejam a posição corrigida ao mesmo tempo, use:
+			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void AddItemReceive(ItemDefinitionData item)
+		{
+			GD.Print("[Inventory.AddItemReceive] Starting method");
+
+			if(Inventory.AddItem(Data.Inventory, item))
+			{
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
+
+		public void AddItemRequest(ItemDefinitionData item)
+		{
+			GD.Print("[Inventory.AddItemRequest] Starting method");
+
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				AddItemReceive(item);
+
+				return;
+			}
+
+			Rpc(nameof(AddItemReceive), item);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+		public void SwapSlotsReceive(int fromIndex, int toIndex)
+		{
+			GD.Print("[Inventory.SwapSlotsReceive] Starting method");
+
+			if(Inventory.SwapSlots(Data.Inventory, fromIndex, toIndex))
+			{
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
+
+		public void SwapSlotsRequest(int fromIndex, int toIndex)
+		{
+			GD.Print("[Inventory.SwapSlotsRequest] Starting method");
+
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				SwapSlotsReceive(fromIndex, toIndex);
+
+				return;
+			}
+
+			Rpc(nameof(SwapSlotsReceive), fromIndex, toIndex);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+		public void RemoveItemReceive(int slotIndex, int quantity)
+		{
+			GD.Print("[Inventory.RemoveItemReceive] Starting method");
+
+			if(Inventory.RemoveItem(Data.Inventory, slotIndex, quantity))
+			{
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
+
+		#endregion
 	}
 }

@@ -8,9 +8,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
 {
     public static class Resolver
     {
-        public static List<DamageProperty> Resolve(params List<DamageProperty>[] lists)
+        public static List<DamagePropertyData> Resolve(params List<DamagePropertyData>[] lists)
         {
-            var result = new List<DamageProperty>();
+            var result = new List<DamagePropertyData>();
 
             foreach (var list in lists)
             {
@@ -24,7 +24,7 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
                     }
                     else
                     {
-                        result.Add(new DamageProperty
+                        result.Add(new DamagePropertyData
                         {
                             DamageType = prop.DamageType,
                             DamageAmount = prop.DamageAmount
@@ -36,9 +36,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
 
-        public static List<DamageMultiplierProperty> Resolve(params List<DamageMultiplierProperty>[] lists)
+        public static List<DamageMultiplierPropertyData> Resolve(params List<DamageMultiplierPropertyData>[] lists)
         {
-            var result = new List<DamageMultiplierProperty>();
+            var result = new List<DamageMultiplierPropertyData>();
 
             foreach (var list in lists)
             {
@@ -52,7 +52,7 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
                     }
                     else
                     {
-                        result.Add(new DamageMultiplierProperty
+                        result.Add(new DamageMultiplierPropertyData
                         {
                             DamageType = prop.DamageType,
                             DamageMultiplier = prop.DamageMultiplier
@@ -64,9 +64,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
 
-        public static List<DamageResistenceProperty> Resolve(params List<DamageResistenceProperty>[] lists)
+        public static List<DamageResistencePropertyData> Resolve(params List<DamageResistencePropertyData>[] lists)
         {
-            var result = new List<DamageResistenceProperty>();
+            var result = new List<DamageResistencePropertyData>();
 
             foreach (var list in lists)
             {
@@ -80,7 +80,7 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
                     }
                     else
                     {
-                        result.Add(new DamageResistenceProperty
+                        result.Add(new DamageResistencePropertyData
                         {
                             DamageType = prop.DamageType,
                             ResistanceFactor = Math.Clamp(prop.ResistanceFactor, 0f, 1f)
@@ -92,9 +92,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
 
-        public static List<DamageResistenceMultiplierProperty> Resolve(params List<DamageResistenceMultiplierProperty>[] lists)
+        public static List<DamageResistenceMultiplierPropertyData> Resolve(params List<DamageResistenceMultiplierPropertyData>[] lists)
         {
-            var result = new List<DamageResistenceMultiplierProperty>();
+            var result = new List<DamageResistenceMultiplierPropertyData>();
 
             foreach (var list in lists)
             {
@@ -108,7 +108,7 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
                     }
                     else
                     {
-                        result.Add(new DamageResistenceMultiplierProperty
+                        result.Add(new DamageResistenceMultiplierPropertyData
                         {
                             DamageType = prop.DamageType,
                             Multiplier = prop.Multiplier
@@ -120,9 +120,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
         
-        public static List<ChargesProperty> Resolve(params List<ChargesProperty>[] lists)
+        public static List<ChargesPropertyData> Resolve(params List<ChargesPropertyData>[] lists)
         {
-            var result = new List<ChargesProperty>();
+            var result = new List<ChargesPropertyData>();
 
             foreach (var list in lists)
             {
@@ -138,7 +138,7 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
                     }
                     else
                     {
-                        result.Add(new ChargesProperty
+                        result.Add(new ChargesPropertyData
                         {
                             ChargeItemId = prop.ChargeItemId,
                             MaxCharges = prop.MaxCharges,
@@ -152,9 +152,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
 
-        public static CritProperty Resolve(params List<CritProperty>[] lists)
+        public static CritPropertyData Resolve(params List<CritPropertyData>[] lists)
         {
-            var result = new CritProperty();
+            var result = new CritPropertyData();
 
             foreach (var list in lists)
             {
@@ -170,9 +170,9 @@ namespace Jogo25D.Features.Word.Resolver.Singletons
             return result;
         }
 
-        public static AttackProperty Resolve(params List<AttackProperty>[] lists)
+        public static AttackPropertyData Resolve(params List<AttackPropertyData>[] lists)
         {
-            var result = new AttackProperty
+            var result = new AttackPropertyData
             {
                 AttackRange = 0f,
                 AttackArea = 0f,

@@ -433,7 +433,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					LocalPlayer.Inventory?.AddItemRequest(def.Id, qty);
+					LocalPlayer.AddItemRequest(ItemDB.CreateInstance(def.Id));
 					
 					console.PrintSuccess($"+{qty}x {def.Name} adicionado ao inventÃ¡rio.");
 				},
