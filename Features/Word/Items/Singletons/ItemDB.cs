@@ -179,6 +179,13 @@ namespace Jogo25D.Items
             return def;
         }
 
+        private static long _nextInstanceId = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
+
+        public static long NextInstanceId()
+        {
+            return ++_nextInstanceId;
+        }
+
         public static ItemDefinitionData CreateInstance(string id)
         {
             if (!Initialized)
@@ -189,6 +196,7 @@ namespace Jogo25D.Items
             var def = Get(id) ?? throw new System.Exception($"[ItemDB] Item '{id}' nao encontrado.");
             var instance = new ItemDefinitionData(id);
 
+            instance.InstanceId = NextInstanceId();
             instance.Quantity = 1;
 
             foreach (var property in def.Properties)

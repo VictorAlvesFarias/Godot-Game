@@ -22,7 +22,7 @@ namespace Jogo25D.Items
         public int MaxStackSize { get; init; } = 99;
         public bool Rechargeable { get; set; }
         public float Cooldown { get; init; } = 0.5f;
-        public bool IsEquippable => true;
+
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<EffectDefinition> OnHitEffects { get; set; } = new();
         public Godot.Collections.Array<EffectDefinition> OnUseEffects { get; set; } = new();

@@ -246,7 +246,7 @@ namespace Jogo25D.Systems
 
 		public void SpawnPlayer(Player player)
 		{
-			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={player.PeerId}, position={player.Position}, equippedSlotIndex={player.Data.EquippedSlotIndex})");
+			GD.Print($"[WorldManager.SpawnPlayer] SpawnPlayer(peerId={player.PeerId}, position={player.Position}, equippedItemId={player.Data.EquippedItemId})");
 
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
@@ -273,7 +273,7 @@ namespace Jogo25D.Systems
 			player.Name = $"Player{peerId}";
 			player.Position = position;
 			player.PeerId = peerId;
-			player.Data = GodotDictionaryParser.ToResource<PlayerData>(data) ?? new PlayerData();
+			player.Data = GodotDictionaryParser.ToResource<PlayerData>(data);
 
 			SpawnPlayer(player);
 		}
@@ -394,11 +394,11 @@ namespace Jogo25D.Systems
 
             playerNode.Reparent(nextParent, true);
 
-			var equippedSlot = playerNode.Data.EquippedSlotIndex;
-			
-			if (equippedSlot >= 0)
+			var equippedItemId = playerNode.Data.EquippedItemId;
+
+			if (equippedItemId > 0)
 			{
-				playerNode.EquipItemRequest(equippedSlot);
+				playerNode.EquipItemRequest(equippedItemId);
 			}
 
             if (targetPeerId == Multiplayer.GetUniqueId())
@@ -450,10 +450,12 @@ namespace Jogo25D.Systems
             player.Name = $"Player{id}";
 			player.Position = Godot.Vector2.Zero;
             player.PeerId = id;
-            player.Data.EquippedSlotIndex = 1;
 
-			player.GiveItem(ItemDB.CreateInstance("bow_starting2"));
-            player.GiveItem(ItemDB.CreateInstance("bow_starting2"));
+            var startingWeapon = ItemDB.CreateInstance("bow_starting2");
+
+			player.GiveItem(startingWeapon);
+
+            player.Data.EquippedItemId = startingWeapon.InstanceId;
 
 			SpawnPlayer(player);
 

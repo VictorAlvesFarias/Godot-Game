@@ -101,21 +101,18 @@ namespace Jogo25D.Systems
             return false;
         }
 
-        public bool RemoveItem(InventoryData inv, int slotIndex, int quantity = 1)
+        public bool RemoveItem(InventoryData inv, long instanceId, int quantity = 1)
         {
-            GD.Print($"[Inventory.RemoveItem] Starting method, slotIndex={slotIndex} quantity={quantity}");
+            GD.Print($"[Inventory.RemoveItem] Starting method, instanceId={instanceId} quantity={quantity}");
 
-            if (inv == null || slotIndex < 0 || slotIndex >= inv.Size)
+            var slotIndex = FindSlotIndex(inv, instanceId);
+
+            if (slotIndex < 0)
             {
                 return false;
             }
 
             var slot = inv.Items[slotIndex];
-
-            if (slot == null)
-            {
-                return false;
-            }
 
             slot.Quantity -= quantity;
 
@@ -127,21 +124,18 @@ namespace Jogo25D.Systems
             return true;
         }
 
-        public bool SwapSlots(InventoryData inv, int fromIndex, int toIndex)
+        public bool MoveItem(InventoryData inv, long instanceId, int toIndex)
         {
-            GD.Print($"[Inventory.SwapSlots] Starting method, fromIndex={fromIndex} toIndex={toIndex}");
+            GD.Print($"[Inventory.MoveItem] Starting method, instanceId={instanceId} toIndex={toIndex}");
 
-            if (inv == null || fromIndex < 0 || fromIndex >= inv.Size)
+            if (inv == null || toIndex < 0 || toIndex >= inv.Size)
             {
                 return false;
             }
 
-            if (toIndex < 0 || toIndex >= inv.Size)
-            {
-                return false;
-            }
+            var fromIndex = FindSlotIndex(inv, instanceId);
 
-            if (fromIndex == toIndex)
+            if (fromIndex < 0 || fromIndex == toIndex)
             {
                 return false;
             }
@@ -163,6 +157,31 @@ namespace Jogo25D.Systems
             }
 
             return inv.Items[index];
+        }
+
+        public int FindSlotIndex(InventoryData inv, long instanceId)
+        {
+            if (inv == null || instanceId <= 0)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < inv.Items.Count; i++)
+            {
+                if (inv.Items[i]?.InstanceId == instanceId)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public ItemDefinitionData FindItem(InventoryData inv, long instanceId)
+        {
+            var index = FindSlotIndex(inv, instanceId);
+
+            return index < 0 ? null : inv.Items[index];
         }
 
         public void EnsureSize(InventoryData inv)

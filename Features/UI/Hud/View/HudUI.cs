@@ -219,7 +219,7 @@ namespace Jogo25D.UI
 			UpdateHotbar();
 		}
 
-		public void OnItemEquipped(int slotIndex)
+		public void OnItemEquipped(long instanceId)
 		{
 			UpdateWeaponDisplay();
 			UpdateHotbar();
@@ -608,7 +608,8 @@ namespace Jogo25D.UI
 				    continue;
 				}
 
-				var isSelected = i == localPlayer.Data.EquippedSlotIndex;
+				var slot = localPlayer.GetSlot(i);
+				var isSelected = slot != null && slot.InstanceId == localPlayer.Data.EquippedItemId;
 				var hotbarStyle = _hotbarNormalStyle;
 
 
@@ -619,7 +620,6 @@ namespace Jogo25D.UI
 
 				panel.AddThemeStyleboxOverride("panel", hotbarStyle);
 
-				var slot = localPlayer.GetSlot(i);
 				var def = ItemDB.Get(slot?.Id);
 				var empty = def == null || slot == null;
 

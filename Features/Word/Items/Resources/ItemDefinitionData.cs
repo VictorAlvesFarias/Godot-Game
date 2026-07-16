@@ -25,6 +25,9 @@ namespace Jogo25D.Features.Word.Items.Resources
         public string Id { get; set; }
 
         [Export, GodotDictionaryField]
+        public long InstanceId { get; set; }
+
+        [Export, GodotDictionaryField]
         public int Quantity { get; set; }
 
         [Export, GodotDictionaryField]

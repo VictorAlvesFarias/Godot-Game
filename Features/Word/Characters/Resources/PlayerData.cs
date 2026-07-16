@@ -34,7 +34,7 @@ namespace Jogo25D.Features.Word.Characters.Resources
         public bool ReloadPending { get; set; } = true;
 
         [Export, GodotDictionaryField]
-        public int EquippedSlotIndex { get; set; } = -1;
+        public long EquippedItemId { get; set; } = 0;
 
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<BasePropertyData> Buffs { get; set; } = new();

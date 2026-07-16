@@ -26,6 +26,7 @@ namespace Jogo25D.UI
 
 		public bool IsDragging { get; set; } = false;
 		public int DraggedSlotIndex { get; set; } = -1;
+		public long DraggedInstanceId { get; set; } = 0;
 		public Control DragPreview { get; set; }
 		public Vector2 DragOffset { get; set; }
 
@@ -343,6 +344,7 @@ namespace Jogo25D.UI
 
 			IsDragging = true;
 			DraggedSlotIndex = slotIndex;
+			DraggedInstanceId = slot.InstanceId;
 
 			if (DragPreview != null)
 			{
@@ -382,11 +384,12 @@ namespace Jogo25D.UI
 
 			if (targetSlotIndex != DraggedSlotIndex && Inventory != null)
 			{
-				SwapItems(DraggedSlotIndex, targetSlotIndex);
+				SwapItems(DraggedInstanceId, targetSlotIndex);
 			}
 
 			IsDragging = false;
 			DraggedSlotIndex = -1;
+			DraggedInstanceId = 0;
 		}
 
 		public void CancelDrag()
@@ -408,20 +411,21 @@ namespace Jogo25D.UI
 
 			IsDragging = false;
 			DraggedSlotIndex = -1;
+			DraggedInstanceId = 0;
 		}
 
-		public void SwapItems(int fromIndex, int toIndex)
+		public void SwapItems(long instanceId, int toIndex)
 		{
 			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
 			    return;
 			}
-			if (fromIndex < 0 || fromIndex >= 16 || toIndex < 0 || toIndex >= 16)
+			if (instanceId <= 0 || toIndex < 0 || toIndex >= 16)
 			{
 			    return;
 			}
 
-			LocalPlayer.SwapSlotsRequest(fromIndex, toIndex);
+			LocalPlayer.MoveItemRequest(instanceId, toIndex);
 		}
 
 		public void UpdateSlot(int index)
@@ -526,14 +530,16 @@ namespace Jogo25D.UI
 				child.QueueFree();
 			}
 
-			if (definition != null && definition.IsEquippable)
+			if (definition != null)
 			{
 				var button = new Button();
+
 				button.Text = "Equipar";
 				button.CustomMinimumSize = new Vector2(120, 30);
 				button.Alignment = HorizontalAlignment.Center;
 				button.MouseFilter = Control.MouseFilterEnum.Stop;
 				button.Pressed += () => OnContextMenuOption("Equipar");
+
 				ContextMenuContainer.AddChild(button);
 			}
 
@@ -562,7 +568,7 @@ namespace Jogo25D.UI
 
 			if (option == "Equipar")
 			{
-				LocalPlayer.EquipItemRequest(SelectedSlotIndex);
+				LocalPlayer.EquipItemRequest(slot.InstanceId);
 			}
 
 			ContextMenu.Visible = false;
