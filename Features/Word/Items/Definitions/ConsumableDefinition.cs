@@ -8,6 +8,8 @@ namespace Jogo25D.Items
 {
     public class ConsumableDefinition : ItemDefinition
     {
+        #region Core - Virtuals
+
         public override void Use(Player player, ItemDefinitionData instance)
         {
             if (instance == null || instance.Quantity <= 0)
@@ -24,12 +26,14 @@ namespace Jogo25D.Items
 
             foreach (var effect in instance.OnUseEffects)
             {
-                player.AddEffect(effect);
+                player.GiveEffect(effect.Id);
             }
 
             instance.Quantity -= 1;
 
             GD.Print($"[Use] '{Name}' consumido - {instance.Quantity} restante(s)");
         }
+
+        #endregion
     }
 }

@@ -9,8 +9,10 @@ namespace Jogo25D.Hitboxes
 {
     public partial class BaseHitbox : Area2D
     {
+        #region Properties
+
         public Godot.Collections.Array<DamageInfo> Damages { get; set; } = new();
-        public Godot.Collections.Array<EffectDefinition> Effects { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
         public Player Owner { get; set; }
         public AnimatedSprite2D Sprite { get; set; }
         public int Perfuracao { get; set; } = 0;
@@ -18,6 +20,10 @@ namespace Jogo25D.Hitboxes
         public bool Destroy { get; set; } = true;
         public bool StopDamageOnMaxPerfuracao { get; set; } = false;
         public int HitCount { get; set; } = 0;
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
@@ -31,10 +37,14 @@ namespace Jogo25D.Hitboxes
             }
         }
 
-        public virtual void Initialize(Godot.Collections.Array<DamageInfo> damages, Godot.Collections.Array<EffectDefinition> effects, Player owner)
+        #endregion
+
+        #region Core - Virtuals
+
+        public virtual void Initialize(Godot.Collections.Array<DamageInfo> damages, Godot.Collections.Array<EffectDefinitionData> effects, Player owner)
         {
             Damages = damages ?? new();
-            Effects = new Godot.Collections.Array<EffectDefinition>(effects ?? new());
+            Effects = new Godot.Collections.Array<EffectDefinitionData>(effects ?? new());
             Owner = owner;
 
             BodyEntered += OnBodyEntered;
@@ -62,6 +72,10 @@ namespace Jogo25D.Hitboxes
             }
         }
 
+        #endregion
+
+        #region Core - Utils
+
         protected bool CanApplyImpact()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
@@ -81,7 +95,7 @@ namespace Jogo25D.Hitboxes
 
             foreach (var effect in Effects)
             {
-                target.AddEffect(effect);
+                target.GiveEffect(effect.Id);
             }
         }
 
@@ -110,5 +124,7 @@ namespace Jogo25D.Hitboxes
                 QueueFree();
             }
         }
+
+        #endregion
     }
 }

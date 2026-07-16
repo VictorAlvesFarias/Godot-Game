@@ -12,10 +12,16 @@ namespace Jogo25D.Actions
 {
     public class GroundStrikeDefinition : ActionDefinition
     {
+        #region Properties
+
         private const uint RayMask = 1;
 
         private float _halfHeight;
         private float _halfWidth;
+
+        #endregion
+
+        #region Core - Virtuals
 
         public override void OnCreate(Player player, ActionDefinitionData instance)
         {
@@ -55,6 +61,10 @@ namespace Jogo25D.Actions
                 player.GroundMarker.IsActive = player.Input.Ability2Held && instance.CanUse;
         }
 
+        #endregion
+
+        #region Core - Abstract
+
         public override bool OnStartActionValidation(Player player, ActionDefinitionData instance, float delta)
         {
             return player.Input.Ability2JustReleased && instance.CanUse;
@@ -92,7 +102,7 @@ namespace Jogo25D.Actions
 
             var hitbox = HitboxScene.Instantiate<GroundHitbox>();
 
-            hitbox.Initialize(damages, OnHitEffects, player);
+            hitbox.Initialize(damages, CreateHitEffects(), player);
 
             float scale = weapon.AttackArea / 25f;
             hitbox.Scale = Vector2.One * scale;
@@ -101,6 +111,10 @@ namespace Jogo25D.Actions
 
             hitbox.GlobalPosition = ground.Value - new Vector2(0, _halfHeight);
         }
+
+        #endregion
+
+        #region Core - Utils
 
         private Vector2? CalculateGroundPosition(Player player, float horizontalRange, float maxVerticalDrop)
         {
@@ -135,16 +149,22 @@ namespace Jogo25D.Actions
             return null;
         }
 
-        public override void OnUpdateWhileActive(Player player, ActionDefinitionData instance, float delta) 
+        #endregion
+
+        #region Core - Virtuals
+
+        public override void OnUpdateWhileActive(Player player, ActionDefinitionData instance, float delta)
         {
         }
 
-        public override void OnFinishedAction(Player player, ActionDefinitionData instance, float delta) 
-        { 
+        public override void OnFinishedAction(Player player, ActionDefinitionData instance, float delta)
+        {
         }
-        
-        public override void OnEnableAction(Player player, ActionDefinitionData instance, float delta) 
-        { 
+
+        public override void OnEnableAction(Player player, ActionDefinitionData instance, float delta)
+        {
         }
+
+        #endregion
     }
 }

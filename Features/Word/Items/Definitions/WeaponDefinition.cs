@@ -15,6 +15,8 @@ namespace Jogo25D.Items
 {
     public class WeaponDefinition : ItemDefinition
     {
+        #region Core - Virtuals
+
         public override void OnEquip(Player player, ItemDefinitionData data)
         {
             if (player.AimIndicator != null)
@@ -103,10 +105,12 @@ namespace Jogo25D.Items
 
             TriggerCooldownTimer(instance);
 
-            if (!charges.InfiniteCharges)
+            if (!charges.InfiniteCharges && player.IsOwner())
             {
-                ConsumeCharge(instance);
+                player.ConsumeChargeRequest(instance.InstanceId);
             }
         }
+
+        #endregion
     }
 }

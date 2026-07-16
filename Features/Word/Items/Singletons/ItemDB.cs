@@ -11,8 +11,14 @@ namespace Jogo25D.Items
 {
     public static class ItemDB
     {
+        #region Properties
+
         public static Dictionary<string, ItemDefinition> Items { get; set; }
         public static bool Initialized { get; set; }
+
+        #endregion
+
+        #region Core - Setup
 
         public static void Initialize()
         {
@@ -123,22 +129,9 @@ namespace Jogo25D.Items
                 Stackable = true,
                 MaxStackSize = 10,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_1),
-                OnUseEffects = new Godot.Collections.Array<EffectDefinition>
+                OnUseEffects = new Godot.Collections.Array<string>
                 {
-                    new DamageEffectDefinition
-                    {
-                        Damages = new Godot.Collections.Array<DamageInfo>() 
-                        { 
-                            new DamageInfo()
-                            { 
-                                Type = DamageType.Physical,
-                                Amount = 5,
-                                SourcePeerId = -1,
-                                CritChance = 0.2f,
-                                CritDamage = 0.5f
-                            }
-                        }
-                    }
+                    "poison_damage"
                 }
             };
 
@@ -162,6 +155,10 @@ namespace Jogo25D.Items
             Items[definition.Id] = definition;
         }
 
+        #endregion
+
+        #region Core - Query
+
         public static ItemDefinition Get(string id)
         {
             if (!Initialized)
@@ -178,6 +175,30 @@ namespace Jogo25D.Items
 
             return def;
         }
+
+        public static bool TryGet(string id, out ItemDefinition definition)
+        {
+            if (!Initialized)
+            {
+                Initialize();
+            }
+
+            return Items.TryGetValue(id, out definition);
+        }
+
+        public static IEnumerable<string> GetAllIds()
+        {
+            if (!Initialized)
+            {
+                Initialize();
+            }
+
+            return Items.Keys;
+        }
+
+        #endregion
+
+        #region Core - Instancing
 
         private static long _nextInstanceId = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
 
@@ -204,14 +225,14 @@ namespace Jogo25D.Items
                 instance.Properties.Add(CloneProperty(property));
             }
 
-            foreach (var effect in def.OnHitEffects)
+            foreach (var effectId in def.OnHitEffects)
             {
-                instance.OnHitEffects.Add(effect.Clone());
+                instance.OnHitEffects.Add(EffectDB.CreateInstance(effectId));
             }
 
-            foreach (var effect in def.OnUseEffects)
+            foreach (var effectId in def.OnUseEffects)
             {
-                instance.OnUseEffects.Add(effect.Clone());
+                instance.OnUseEffects.Add(EffectDB.CreateInstance(effectId));
             }
 
             return instance;
@@ -233,24 +254,6 @@ namespace Jogo25D.Items
             };
         }
 
-        public static bool TryGet(string id, out ItemDefinition definition)
-        {
-            if (!Initialized)
-            {
-                Initialize();
-            }
-
-            return Items.TryGetValue(id, out definition);
-        }
-
-        public static IEnumerable<string> GetAllIds()
-        {
-            if (!Initialized)
-            {
-                Initialize();
-            }
-
-            return Items.Keys;
-        }
+        #endregion
     }
 }

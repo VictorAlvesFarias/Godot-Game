@@ -24,8 +24,8 @@ namespace Jogo25D.Items
         public float Cooldown { get; init; } = 0.5f;
 
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
-        public Godot.Collections.Array<EffectDefinition> OnHitEffects { get; set; } = new();
-        public Godot.Collections.Array<EffectDefinition> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<string> OnHitEffects { get; set; } = new();
+        public Godot.Collections.Array<string> OnUseEffects { get; set; } = new();
 
         #endregion
 

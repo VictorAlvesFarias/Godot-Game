@@ -12,6 +12,8 @@ namespace Jogo25D.Actions
 {
     public class FireballDefinition : ActionDefinition
     {
+        #region Core - Abstract
+
         public override bool OnStartActionValidation(Player player, ActionDefinitionData instance, float delta)
         {
             return player.Input.Ability && instance.CanUse;
@@ -47,7 +49,7 @@ namespace Jogo25D.Actions
                 CritDamage = crit.CritDamage
             }).ToGodotArray();
 
-            hitbox.Initialize(damages, OnHitEffects, player);
+            hitbox.Initialize(damages, CreateHitEffects(), player);
 
             hitbox.Direction = direction;
             hitbox.Speed = weapon.ProjectileSpeed;
@@ -57,5 +59,7 @@ namespace Jogo25D.Actions
 
             player.GetParent().AddChild(hitbox);
         }
+
+        #endregion
     }
 }

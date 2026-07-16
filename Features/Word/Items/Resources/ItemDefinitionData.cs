@@ -34,10 +34,10 @@ namespace Jogo25D.Features.Word.Items.Resources
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinition> OnHitEffects { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> OnHitEffects { get; set; } = new();
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinition> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> OnUseEffects { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public int CurrentCharges { get; set; }

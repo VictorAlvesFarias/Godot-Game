@@ -15,6 +15,8 @@ namespace Jogo25D.Features.Word.Characters.Resources
 {
     public partial class PlayerData : Resource
     {
+        #region Properties
+
         [Export, GodotDictionaryField]
         public float Speed { get; set; } = 300.0f;
 
@@ -40,12 +42,14 @@ namespace Jogo25D.Features.Word.Characters.Resources
         public Godot.Collections.Array<BasePropertyData> Buffs { get; set; } = new();
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinition> Effects { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 
         [Export, GodotDictionaryField]
         public InventoryData Inventory { get; set; } = new InventoryData();
+
+        #endregion
     }
 }

@@ -8,10 +8,16 @@ namespace Jogo25D.Hitboxes
 {
     public partial class GroundHitbox : BaseHitbox
     {
+        #region Properties
+
         public float Lifetime { get; set; } = 1.5f;
         public float _timer;
 
         public readonly HashSet<Player> _alreadyHit = new();
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _PhysicsProcess(double delta)
         {
@@ -22,6 +28,10 @@ namespace Jogo25D.Hitboxes
                 QueueFree();
             }
         }
+
+        #endregion
+
+        #region Core - Virtuals
 
         public override void OnBodyEntered(Node body)
         {
@@ -41,9 +51,11 @@ namespace Jogo25D.Hitboxes
 
                 foreach (var effect in Effects)
                 {
-                    target.AddEffect(effect);
+                    target.GiveEffect(effect.Id);
                 }
             }
         }
+
+        #endregion
     }
 }

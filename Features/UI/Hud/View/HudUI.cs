@@ -7,11 +7,14 @@ using Jogo25D.Systems;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.Actions;
+using Jogo25D.Effects;
 
 namespace Jogo25D.UI
 {
 	public partial class HudUI : CanvasLayer
 	{
+		#region Properties
+
 		public string PlayerGroupName { get; set; } = "players";
 
 		public Label fpsLabel;
@@ -19,6 +22,7 @@ namespace Jogo25D.UI
 		public Label healthBarLabel;
 		public Label weaponLabel;
 		public HBoxContainer abilitiesContainer;
+		public HBoxContainer effectsContainer;
 		public Player localPlayer;
 		public readonly List<Panel> abilitySlots = new List<Panel>();
 		public readonly List<ProgressBar> abilityFillBars = new List<ProgressBar>();
@@ -26,6 +30,7 @@ namespace Jogo25D.UI
 		public readonly List<Label> abilityInnerNameLabels = new List<Label>();
 		public readonly List<Label> abilityTimerLabels = new List<Label>();
 		public readonly List<Label> abilityChargesLabels = new List<Label>();
+		public readonly List<EffectSlotViews> effectSlots = new List<EffectSlotViews>();
 		public double pingTimer = 0.0;
 		public double pingInterval = 1.0;
 		public double lastPingSentTime = 0.0;
@@ -41,6 +46,10 @@ namespace Jogo25D.UI
 		public StyleBoxFlat _hotbarNormalStyle;
 		public StyleBoxFlat _hotbarSelectedStyle;
 
+		#endregion
+
+		#region Godot implementation
+
 		public override void _Ready()
 		{
 			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
@@ -49,6 +58,10 @@ namespace Jogo25D.UI
 			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
 			minimap = GetNode<MinimapUI>("MarginContainer/MinimapPanel/Minimap");
+
+			effectsContainer = new HBoxContainer();
+			effectsContainer.AddThemeConstantOverride("separation", 6);
+			abilitiesContainer.GetParent().AddChild(effectsContainer);
 
 			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
 			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
@@ -103,8 +116,13 @@ namespace Jogo25D.UI
 			}
 
 			UpdateAbilitySlots();
+			UpdateEffectIcons();
 			//UpdateHotbar();
 		}
+
+		#endregion
+
+		#region Core - Ping
 
 		public void UpdateFpsDisplay(double delta)
 		{
@@ -164,6 +182,10 @@ namespace Jogo25D.UI
 
 			currentPing = (int)(now - lastPingSentTime);
 		}
+
+		#endregion
+
+		#region Core - Health
 
 		public void UpdateHealthDisplay()
 		{
@@ -225,6 +247,10 @@ namespace Jogo25D.UI
 			UpdateHotbar();
 		}
 
+		#endregion
+
+		#region Core - Weapon
+
 		public void UpdateWeaponDisplay()
 		{
 			if (localPlayer == null || !IsInstanceValid(localPlayer))
@@ -266,6 +292,10 @@ namespace Jogo25D.UI
 				weaponLabel.Text = $"{reloadPrefix}{def.Name} {instance.CurrentCharges}/{ammo}";
 			}
 		}
+
+		#endregion
+
+		#region Core - Abilities
 
 		public void BuildAbilitySlots()
 		{
@@ -582,6 +612,94 @@ namespace Jogo25D.UI
 			}
 		}
 
+		#endregion
+
+		#region Core - Effects
+
+		public EffectSlotViews CreateEffectSlot()
+		{
+			var panel = new Panel();
+
+			panel.CustomMinimumSize = new Vector2(32, 32);
+
+			var iconRect = new TextureRect();
+
+			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+			iconRect.TextureFilter = Control.TextureFilterEnum.Nearest;
+			iconRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+			panel.AddChild(iconRect);
+
+			var timerLabel = new Label();
+
+			timerLabel.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			timerLabel.HorizontalAlignment = HorizontalAlignment.Center;
+			timerLabel.VerticalAlignment = VerticalAlignment.Center;
+			timerLabel.AddThemeFontSizeOverride("font_size", 11);
+			timerLabel.AddThemeColorOverride("font_color", Colors.White);
+			timerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+			timerLabel.AddThemeConstantOverride("outline_size", 2);
+			timerLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+			panel.AddChild(timerLabel);
+
+			effectsContainer.AddChild(panel);
+
+			return new EffectSlotViews(panel, iconRect, timerLabel);
+		}
+
+		public void UpdateEffectIcons()
+		{
+			if (localPlayer == null || !IsInstanceValid(localPlayer) || effectsContainer == null)
+			{
+				return;
+			}
+
+			var effects = localPlayer.Data.Effects;
+
+			while (effectSlots.Count < effects.Count)
+			{
+				effectSlots.Add(CreateEffectSlot());
+			}
+
+			while (effectSlots.Count > effects.Count)
+			{
+				var last = effectSlots[^1];
+
+				effectSlots.RemoveAt(effectSlots.Count - 1);
+				last.Panel.QueueFree();
+			}
+
+			for (int i = 0; i < effects.Count; i++)
+			{
+				var def = EffectDB.Get(effects[i].Id);
+				var slot = effectSlots[i];
+
+				slot.IconRect.Texture = def?.Icon;
+				slot.IconRect.Visible = def?.Icon != null;
+				slot.Panel.TooltipText = def?.Name ?? "";
+
+				var remaining = def?.GetRemainingDuration(effects[i]) ?? 0f;
+
+				if (remaining > 0f)
+				{
+					slot.TimerLabel.Text = $"{remaining:F0}";
+					slot.TimerLabel.Visible = true;
+				}
+				else
+				{
+					slot.TimerLabel.Text = "";
+					slot.TimerLabel.Visible = false;
+				}
+			}
+		}
+
+		#endregion
+
+		#region Core - Hotbar
+
 		public void UpdateHotbar()
 		{
 			if (_hotbarNormalStyle == null)
@@ -644,6 +762,8 @@ namespace Jogo25D.UI
 				}
 			}
 		}
+
+		#endregion
 
 	}
 }

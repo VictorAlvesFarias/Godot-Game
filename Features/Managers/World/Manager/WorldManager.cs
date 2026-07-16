@@ -10,6 +10,8 @@ namespace Jogo25D.Systems
 {
 	public partial class WorldManager : Node
 	{
+		#region Properties
+
 		public static int MAX_PLAYER = 4;
 		public static int DEFAULT_PORT = 9876;
 		public static string DEFAULT_ADDRESS = "127.0.0.1";
@@ -23,11 +25,15 @@ namespace Jogo25D.Systems
 		private Node2D ProceduralParent { get; set; }
         private SubViewportContainer ProceduralContainer { get; set; }
 
+        #endregion
+
         #region Systems
 
 		private Inventory Inventory { get; set; } = new Inventory();
 
         #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
 		{
@@ -117,7 +123,29 @@ namespace Jogo25D.Systems
                 GD.Print($"[WorldManager._Ready] UpContainer found: {ProceduralContainer.Name}");
             }
 
+            SpawnTestNPC();
         }
+
+        private void SpawnTestNPC()
+        {
+            if (OverwordParent == null || OverwordParent.GetNodeOrNull("NPC_Dummy") != null)
+            {
+                return;
+            }
+
+            var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
+
+            npc.Name = "NPC_Dummy";
+            npc.Position = new Vector2(200, 0);
+
+            npc.SetMultiplayerAuthority(1);
+
+            OverwordParent.AddChild(npc);
+        }
+
+        #endregion
+
+        #region Core - Connection
 
 		public string CreateServer(string textPort)
 		{
@@ -210,12 +238,21 @@ namespace Jogo25D.Systems
 			if (localPlayer != null)
 			{
 				localPlayer.QueueFree();
-				
+
 				GD.Print("[WorldManager.JoinServer] local player queued for free");
 			}
 			else
-			{	
-				GD.Print("[WorldManager.JoinServer] no local player to remove");	
+			{
+				GD.Print("[WorldManager.JoinServer] no local player to remove");
+			}
+
+			var localNpc = OverwordParent?.GetNodeOrNull("NPC_Dummy");
+
+			if (localNpc != null)
+			{
+				localNpc.QueueFree();
+
+				GD.Print("[WorldManager.JoinServer] local NPC queued for free");
 			}
 
 			return $"{ip}:{port}";
@@ -243,6 +280,10 @@ namespace Jogo25D.Systems
 			
 			GD.Print($"[WorldManager.Disconnect] freed {players.Count} player nodes");
 		}
+
+        #endregion
+
+        #region Core - Rpc - Player spawn
 
 		public void SpawnPlayer(Player player)
 		{
@@ -292,6 +333,32 @@ namespace Jogo25D.Systems
 			RpcId(targetPeerId, nameof(SpawnPlayerReceive), player.PeerId, player.Position, data);
 		}
 
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SpawnNpcReceive(Vector2 position)
+		{
+			GD.Print($"[WorldManager.SpawnNpcReceive] position={position}");
+
+			if (OverwordParent == null || OverwordParent.GetNodeOrNull("NPC_Dummy") != null)
+			{
+				return;
+			}
+
+			var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
+
+			npc.Name = "NPC_Dummy";
+			npc.Position = position;
+
+			npc.AddToGroup("players");
+			npc.SetMultiplayerAuthority(1);
+
+			OverwordParent.AddChild(npc);
+		}
+
+		public void SpawnNpcRequest(Vector2 position, long targetPeerId)
+		{
+			RpcId(targetPeerId, nameof(SpawnNpcReceive), position);
+		}
+
 		public Player GetLocalPlayer()
 		{
 			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
@@ -320,6 +387,10 @@ namespace Jogo25D.Systems
 
 			return found;
 		}
+
+        #endregion
+
+        #region Core - Rpc - Player state
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ResetPlayer(long peerId, Vector2 position)
@@ -364,6 +435,10 @@ namespace Jogo25D.Systems
 
 			RpcId(1, nameof(ResetPlayerServerReceive));
 		}
+
+        #endregion
+
+        #region Core - Rpc - Dimension trade
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void TradeDimension(long targetPeerId)
@@ -436,6 +511,10 @@ namespace Jogo25D.Systems
 			RpcId(1, nameof(TradeDimensionServerReceive));
 		}
 
+        #endregion
+
+        #region Core - Peer events
+
 		public void OnPeerConnected(long id)
 		{
 			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
@@ -465,12 +544,26 @@ namespace Jogo25D.Systems
 
 			foreach (Node node in players)
 			{
+				if (node is NPC)
+				{
+					continue;
+				}
+
 				if (node is Player existingPlayer && existingPlayer.PeerId != id)
 				{
 					GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {existingPlayer.Name}");
 
 					SpawnPlayerRequest(existingPlayer, id);
 				}
+			}
+
+			var npc = OverwordParent?.GetNodeOrNull<Player>("NPC_Dummy");
+
+			if (npc != null)
+			{
+				GD.Print($"[WorldManager.OnPeerConnected] informing {id} about NPC_Dummy");
+
+				SpawnNpcRequest(npc.Position, id);
 			}
 		}
 
@@ -514,6 +607,10 @@ namespace Jogo25D.Systems
 			Disconnect();
 		}
 
+        #endregion
+
+        #region Utils
+
 		public bool IsConnected()
 		{
 			var connected = Peer != null && Peer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected;
@@ -527,6 +624,28 @@ namespace Jogo25D.Systems
 
 			return isServer;
 		}
+
+		public SubViewportContainer GetContainerForParent(Node2D parent)
+		{
+			if (parent == OverwordParent)
+			{
+				return OverContainer;
+			}
+
+			if (parent == UpsidedownParent)
+			{
+				return UpContainer;
+			}
+
+			if (parent == ProceduralParent)
+			{
+				return ProceduralContainer;
+			}
+
+			return null;
+		}
+
+        #endregion
 
 	}
 }

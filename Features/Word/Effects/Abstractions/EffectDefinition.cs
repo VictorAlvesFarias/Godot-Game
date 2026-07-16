@@ -1,68 +1,72 @@
 using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Effects
 {
-    public abstract partial class EffectDefinition : Resource
+    public abstract class EffectDefinition
     {
-        [Export, GodotDictionaryField]
-        public float Duration { get; set; }
+        #region Properties
 
-        [Export, GodotDictionaryField]
-        public float Elapsed { get; set; }
+        public string Id { get; init; } = "";
+        public string Name { get; init; } = "";
+        public string Description { get; init; } = "";
+        public Texture2D Icon { get; set; }
 
-        [Export, GodotDictionaryField]
-        public bool Expired { get; set; }
+        public float Duration { get; init; } = 0f;
+        public bool Infinite { get; init; } = false;
+        public bool ApplyToOwner { get; init; } = true;
+        public bool ApplyToTarget { get; init; } = false;
+        public bool RemoveInOnUnequip { get; init; } = false;
 
-        [Export, GodotDictionaryField]
-        public bool RemoveInOnUnequip { get; set; }
+        #endregion
 
-        [Export, GodotDictionaryField]
-        public bool Infinite { get; set; }
+        #region Core - Virtuals
 
-        [Export, GodotDictionaryField]
-        public bool ApplyToOwner { get; set; }
+        public virtual void Apply(Player player, EffectDefinitionData data, float delta) { }
 
-        [Export, GodotDictionaryField]
-        public bool ApplyToTarget { get; set; }
+        public virtual void OnFinished(Player player, EffectDefinitionData data, float delta) { }
 
-        public void Tick(Player player, float delta)
+        #endregion
+
+        #region Core - Utils
+
+        public void Tick(Player player, EffectDefinitionData data, float delta)
         {
-            if (!Infinite)
+            if (!data.Infinite)
             {
-                if (Expired)
+                if (data.Expired)
                 {
                     return;
                 }
 
-                if (Duration > 0)
+                if (data.Duration > 0)
                 {
-                    Elapsed += delta;
+                    data.Elapsed += delta;
 
-                    if (Elapsed >= Duration)
+                    if (data.Elapsed >= data.Duration)
                     {
-                        Expired = true;
-                        OnFinished(player, delta);
+                        data.Expired = true;
+
+                        OnFinished(player, data, delta);
+
                         return;
                     }
                 }
             }
 
-            Apply(player, delta);
+            Apply(player, data, delta);
         }
 
-        public EffectDefinition Clone()
+        public float GetRemainingDuration(EffectDefinitionData data)
         {
-            return (EffectDefinition)MemberwiseClone();
+            if (data == null || data.Infinite || data.Duration <= 0f)
+            {
+                return 0f;
+            }
+
+            return Mathf.Max(0f, data.Duration - data.Elapsed);
         }
 
-        public virtual void Apply(Player player, float delta)
-        {
-        }
-
-        public virtual void OnFinished(Player player, float delta)
-        {
-        }
+        #endregion
     }
 }

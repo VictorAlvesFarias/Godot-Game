@@ -3,7 +3,6 @@ using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Properties;
 using System.Collections.Generic;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Jogo25D.Actions
 {
@@ -20,8 +19,8 @@ namespace Jogo25D.Actions
         public float Duration { get; init; } = 0f;
         public int MaxCharges { get; init; } = 1;
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
-        public Godot.Collections.Array<EffectDefinition> OnHitEffects { get; set; } = new();
-        public Godot.Collections.Array<EffectDefinition> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<string> OnHitEffects { get; set; } = new();
+        public Godot.Collections.Array<string> OnUseEffects { get; set; } = new();
 
         #endregion
 
@@ -142,6 +141,22 @@ namespace Jogo25D.Actions
                 return Mathf.Max(0f, Cooldown - data.CooldownTimer);
             }
             return 0f;
+        }
+
+        #endregion
+
+        #region Core - Effects
+
+        protected Godot.Collections.Array<EffectDefinitionData> CreateHitEffects()
+        {
+            var effects = new Godot.Collections.Array<EffectDefinitionData>();
+
+            foreach (var effectId in OnHitEffects)
+            {
+                effects.Add(EffectDB.CreateInstance(effectId));
+            }
+
+            return effects;
         }
 
         #endregion

@@ -8,40 +8,50 @@ using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.Systems;
+using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-        #region Events 
+		#region Events 
 
-        [Signal]
-        public delegate void InventoryChangedEventHandler();
+		[Signal]
+		public delegate void InventoryChangedEventHandler();
 
-        [Signal]
-        public delegate void ItemEquippedEventHandler(long instanceId);
+		[Signal]
+		public delegate void ItemEquippedEventHandler(long instanceId);
 
-        #endregion
+		[Signal]
+		public delegate void EffectsChangedEventHandler();
 
-        #region Properties
+		[Signal]
+		public delegate void BuffsChangedEventHandler();
 
-        public long PeerId { get; set; } = 1;
-        public float Gravity { get; set; }
+		[Signal]
+		public delegate void AbilitiesChangedEventHandler();
+
+		#endregion
+
+		#region Properties
+
+		public long PeerId { get; set; } = 1;
+		public float Gravity { get; set; }
 		public PlayerData Data { get; set; } = new PlayerData();
 		public bool Loaded { get; set;  }
+		public string DisplayName { get; set; } = "";
 
-        #endregion
+		#endregion
 
-        #region Systems
+		#region Systems
 
 		public Inventory Inventory { get; set; } = new Inventory();
 
-        #endregion
+		#endregion
 
 		#region Node references
 
@@ -51,11 +61,11 @@ namespace Jogo25D.Characters
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
 
-        #endregion
+		#endregion
 
-        #region Godot implementation
+		#region Godot implementation
 
-        public override void _Ready()
+		public override void _Ready()
 		{
 			GD.Print("[Player._Ready] Starting method");
 			GD.Print("[Player._Ready] Adding players to group");
@@ -93,17 +103,32 @@ namespace Jogo25D.Characters
 
 			GD.Print("[Player._Ready] Seting starter slot");
 
-			if (Multiplayer.IsServer())
+			if (IsAuthoritative())
 			{
 				Data ??= new PlayerData();
 				Data.Inventory ??= new InventoryData();
 
-                var startingWeapon = ItemDB.CreateInstance("bow_starting2");
+				var startingWeapon = ItemDB.CreateInstance("bow_starting2");
 
-                GiveItem(startingWeapon);
+				GiveItem(startingWeapon);
 
-                Data.EquippedItemId = startingWeapon.InstanceId;
-            }
+				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
+
+				GiveItem(startingMeleeWeapon);
+
+				var startingPoisonFlask = ItemDB.CreateInstance("poison_flask");
+
+				startingPoisonFlask.Quantity = 20;
+
+				GiveItem(startingPoisonFlask);
+
+				Data.EquippedItemId = startingWeapon.InstanceId;
+
+				foreach (var actionId in ActionDB.GetAllIds())
+				{
+					GiveAbility(actionId);
+				}
+			}
 
 			Inventory.EnsureSize(Data.Inventory);
 
@@ -119,14 +144,22 @@ namespace Jogo25D.Characters
 		{
 			var dt = (float)delta;
 
-			//TODO: Player process effects
 			for (int i = Data.Effects.Count - 1; i >= 0; i--)
 			{
-				if (Data.Effects[i].ApplyToOwner)
-				{
-					Data.Effects[i].Tick(this, dt);
+				var effect = Data.Effects[i];
 
-					if (Data.Effects[i].Expired)
+				if (effect == null)
+				{
+					Data.Effects.RemoveAt(i);
+
+					continue;
+				}
+
+				if (effect.ApplyToOwner)
+				{
+					EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+
+					if (effect.Expired)
 					{
 						Data.Effects.RemoveAt(i);
 					}
@@ -170,11 +203,11 @@ namespace Jogo25D.Characters
 
 		#region Core - Damage system
 
-		public void ReceiveDamage(DamageInfo damage)
+		public virtual void ReceiveDamage(DamageInfo damage)
 		{
 			var resistanceFactor = 0f;
 
-			if (Multiplayer.IsServer())
+			if (IsAuthoritative())
 			{
 				foreach (var buff in Data.Buffs)
 				{
@@ -201,13 +234,27 @@ namespace Jogo25D.Characters
 
 		#endregion
 
+		#region Core - Damage popup
+
+		public void ShowDamagePopup(int amount)
+		{
+			if (amount <= 0)
+			{
+				return;
+			}
+
+			DamagePopupOverlayUI.Instance?.ShowDamagePopup(this, amount);
+		}
+
+		#endregion
+
 		#region Core - Items system handlers
 
 		public void HandleUseItem(float delta)
 		{
 			var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
 
-            if (data == null)
+			if (data == null)
 			{
 				return;
 			}
@@ -226,15 +273,15 @@ namespace Jogo25D.Characters
 
 		public void HandleReload(float delta)
 		{
-            var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
+			var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
 
-            if (data == null)
-            {
-                return;
-            }
+			if (data == null)
+			{
+				return;
+			}
 
-            var def = ItemDB.Get(data.Id);
-            var chargesProp = data.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+			var def = ItemDB.Get(data.Id);
+			var chargesProp = data.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
 			{
@@ -245,15 +292,17 @@ namespace Jogo25D.Characters
 			{
 				Data.ReloadPending = false;
 
-				var needed = chargesProp.MaxCharges - data.CurrentCharges;
-				var taken = RemoveAmmoByChargeType(chargesProp.ChargeItemId, needed);
+				if (IsOwner())
+				{
+					var needed = chargesProp.MaxCharges - data.CurrentCharges;
 
-                def.FinishReload(taken, data);
+					FinishReloadRequest(data.InstanceId, chargesProp.ChargeItemId, needed);
+				}
 			}
 
 			if (Input.Reload && def.CanReload(data))
 			{
-                def.TriggerReloadTimer(data);
+				def.TriggerReloadTimer(data);
 
 				Data.ReloadPending = true;
 			}
@@ -473,18 +522,151 @@ namespace Jogo25D.Characters
 
 		#region Core - Effects system
 
-		public void AddEffect(EffectDefinition definition)
+		public void GiveEffect(string effectId)
 		{
-			if (definition == null)
+			if (string.IsNullOrEmpty(effectId) || Data?.Effects == null)
 			{
 				return;
 			}
 
-			Data.Effects.Add(definition.Clone());
+			Data.Effects.Add(EffectDB.CreateInstance(effectId));
+
+			EmitSignal(SignalName.EffectsChanged);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void AddEffectReceive(string effectId)
+		{
+			GiveEffect(effectId);
+		}
+
+		public void AddEffectRequest(string effectId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				AddEffectReceive(effectId);
+
+				return;
+			}
+
+			RpcId(1, nameof(AddEffectReceive), effectId);
 		}
 
 		#endregion
-		
+
+		#region Core - Buffs system
+
+		public void GiveBuff(BasePropertyData buff)
+		{
+			if (buff == null || Data?.Buffs == null)
+			{
+				return;
+			}
+
+			if (buff.InstanceId <= 0)
+			{
+				buff.InstanceId = BasePropertyData.NextInstanceId();
+			}
+
+			Data.Buffs.Add(buff);
+
+			EmitSignal(SignalName.BuffsChanged);
+		}
+
+		public void RemoveBuff(long instanceId)
+		{
+			if (Data?.Buffs == null || instanceId <= 0)
+			{
+				return;
+			}
+
+			for (int i = 0; i < Data.Buffs.Count; i++)
+			{
+				if (Data.Buffs[i]?.InstanceId == instanceId)
+				{
+					Data.Buffs.RemoveAt(i);
+
+					EmitSignal(SignalName.BuffsChanged);
+
+					return;
+				}
+			}
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void AddBuffReceive(Godot.Collections.Dictionary data)
+		{
+			GiveBuff(GodotDictionaryParser.ToResource<BasePropertyData>(data));
+		}
+
+		public void AddBuffRequest(BasePropertyData buff)
+		{
+			var data = GodotDictionaryParser.ToDictionary(buff);
+
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				AddBuffReceive(data);
+
+				return;
+			}
+
+			Rpc(nameof(AddBuffReceive), data);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void RemoveBuffReceive(long instanceId)
+		{
+			RemoveBuff(instanceId);
+		}
+
+		public void RemoveBuffRequest(long instanceId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				RemoveBuffReceive(instanceId);
+
+				return;
+			}
+
+			Rpc(nameof(RemoveBuffReceive), instanceId);
+		}
+
+		#endregion
+
+		#region Core - Abilities system
+
+		public void GiveAbility(string actionId)
+		{
+			if (string.IsNullOrEmpty(actionId) || Data?.UnlockedAbilities == null)
+			{
+				return;
+			}
+
+			Data.UnlockedAbilities.Add(ActionDB.CreateInstance(actionId, this));
+
+			EmitSignal(SignalName.AbilitiesChanged);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void UnlockAbilityReceive(string actionId)
+		{
+			GiveAbility(actionId);
+		}
+
+		public void UnlockAbilityRequest(string actionId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				UnlockAbilityReceive(actionId);
+
+				return;
+			}
+
+			RpcId(1, nameof(UnlockAbilityReceive), actionId);
+		}
+
+		#endregion
+
 		#region Core - Movement handlers
 
 		public void HandleMovement(float delta)
@@ -538,137 +720,205 @@ namespace Jogo25D.Characters
 			return PeerId == 1;
 		}
 
-        #endregion
+		public bool IsAuthoritative()
+		{
+			return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
+		}
 
-        #region Core - Rpc - Stats
+		#endregion
+
+		#region Core - Rpc - Stats
 
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void EquipItemReceive(long instanceId)
-        {
-            this.EquipItem(instanceId);
-        }
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void EquipItemReceive(long instanceId)
+		{
+			this.EquipItem(instanceId);
+		}
 
-        public void EquipItemRequest(long instanceId)
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-            {
-                EquipItemReceive(instanceId);
+		public void EquipItemRequest(long instanceId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				EquipItemReceive(instanceId);
 
-                return;
-            }
+				return;
+			}
 
-            RpcId(1, nameof(EquipItemReceive), instanceId);
-        }
+			RpcId(1, nameof(EquipItemReceive), instanceId);
+		}
 
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void SetHealthReceive(int health)
-        {
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SetHealthReceive(int health)
+		{
 			GD.Print($"[Player.SetHealthReceive] - Tentando definir o valor da saude para o peer {PeerId} no {(Multiplayer.IsServer() ? "server" : "cliente")}");
 
+			var previousHealth = Data.CurrentHealth;
+
 			Data.CurrentHealth = health;
-        }
 
-        public void SetHealthRequest(int health)
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-            {
-                SetHealthReceive(health);
+			if (health < previousHealth)
+			{
+				ShowDamagePopup(previousHealth - health);
+			}
+		}
 
-                return;
-            }
+		public void SetHealthRequest(int health)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				SetHealthReceive(health);
 
-            Rpc(nameof(SetHealthReceive), health);
-        }
+				return;
+			}
 
-        #endregion
+			Rpc(nameof(SetHealthReceive), health);
+		}
 
-        #region Core - Rpc - Iventory and items
+		#endregion
 
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void AddItemReceive(Godot.Collections.Dictionary data)
-        {
-            GD.Print("[Inventory.AddItemReceive] Starting method");
+		#region Core - Rpc - Iventory and items
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void AddItemReceive(Godot.Collections.Dictionary data)
+		{
+			GD.Print("[Inventory.AddItemReceive] Starting method");
 
 			var item = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
 
-            if (Inventory.AddItem(Data.Inventory, item))
-            {
-                EmitSignal(SignalName.InventoryChanged);
-            }
-        }
+			if (Inventory.AddItem(Data.Inventory, item))
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+		}
 
-        public void AddItemRequest(ItemDefinitionData item)
-        {
-            GD.Print("[Inventory.AddItemRequest] Starting method");
+		public void AddItemRequest(ItemDefinitionData item)
+		{
+			GD.Print("[Inventory.AddItemRequest] Starting method");
 
 			var data = GodotDictionaryParser.ToDictionary(item);
 
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-            {
-                AddItemReceive(data);
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				AddItemReceive(data);
 
-                return;
-            }
+				return;
+			}
 
-            Rpc(nameof(AddItemReceive), data);
-        }
+			Rpc(nameof(AddItemReceive), data);
+		}
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-        public void MoveItemReceive(long instanceId, int toIndex)
-        {
-            GD.Print("[Inventory.MoveItemReceive] Starting method");
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+		public void MoveItemReceive(long instanceId, int toIndex)
+		{
+			GD.Print("[Inventory.MoveItemReceive] Starting method");
 
-            if (Inventory.MoveItem(Data.Inventory, instanceId, toIndex))
-            {
-                EmitSignal(SignalName.InventoryChanged);
-            }
-        }
+			if (Inventory.MoveItem(Data.Inventory, instanceId, toIndex))
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+		}
 
-        public void MoveItemRequest(long instanceId, int toIndex)
-        {
-            GD.Print("[Inventory.MoveItemRequest] Starting method");
+		public void MoveItemRequest(long instanceId, int toIndex)
+		{
+			GD.Print("[Inventory.MoveItemRequest] Starting method");
 
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-            {
-                MoveItemReceive(instanceId, toIndex);
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				MoveItemReceive(instanceId, toIndex);
 
-                return;
-            }
+				return;
+			}
 
-            Rpc(nameof(MoveItemReceive), instanceId, toIndex);
-        }
+			Rpc(nameof(MoveItemReceive), instanceId, toIndex);
+		}
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-        public void RemoveItemReceive(long instanceId, int quantity)
-        {
-            GD.Print("[Inventory.RemoveItemReceive] Starting method");
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+		public void RemoveItemReceive(long instanceId, int quantity)
+		{
+			GD.Print("[Inventory.RemoveItemReceive] Starting method");
 
-            if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
-            {
-                EmitSignal(SignalName.InventoryChanged);
-            }
-        }
+			if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+		}
 
-        public void RemoveItemRequest(long instanceId, int quantity)
-        {
-            GD.Print("[Inventory.RemoveItemRequest] Starting method");
+		public void RemoveItemRequest(long instanceId, int quantity)
+		{
+			GD.Print("[Inventory.RemoveItemRequest] Starting method");
 
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-            {
-                RemoveItemReceive(instanceId, quantity);
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				RemoveItemReceive(instanceId, quantity);
 
-                return;
-            }
+				return;
+			}
 
-            Rpc(nameof(RemoveItemReceive), instanceId, quantity);
-        }
+			Rpc(nameof(RemoveItemReceive), instanceId, quantity);
+		}
 
-        #endregion
+		#endregion
 
-        #region Core - Rpc - Validate and sync position
+		#region Core - Rpc - Item charges
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void ConsumeChargeReceive(long instanceId)
+		{
+			var data = Inventory.FindItem(Data.Inventory, instanceId);
+
+			if (data == null)
+			{
+				return;
+			}
+
+			ItemDB.Get(data.Id)?.ConsumeCharge(data);
+		}
+
+		public void ConsumeChargeRequest(long instanceId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				ConsumeChargeReceive(instanceId);
+
+				return;
+			}
+
+			RpcId(1, nameof(ConsumeChargeReceive), instanceId);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void FinishReloadReceive(long instanceId, string chargeType, int needed)
+		{
+			var data = Inventory.FindItem(Data.Inventory, instanceId);
+
+			if (data == null)
+			{
+				return;
+			}
+
+			var taken = RemoveAmmoByChargeType(chargeType, needed);
+
+			ItemDB.Get(data.Id)?.FinishReload(taken, data);
+		}
+
+		public void FinishReloadRequest(long instanceId, string chargeType, int needed)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				FinishReloadReceive(instanceId, chargeType, needed);
+
+				return;
+			}
+
+			RpcId(1, nameof(FinishReloadReceive), instanceId, chargeType, needed);
+		}
+
+		#endregion
+
+		#region Core - Rpc - Validate and sync position
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
 		public void TestPositionReceive(Vector2 pos)
 		{
 			var maxTolerance = 50.0f;
