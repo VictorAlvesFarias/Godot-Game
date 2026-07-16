@@ -1,29 +1,33 @@
 using Jogo25D.Characters;
 using Jogo25D.Items;
-using System.Collections.Generic;
-using System.Dynamic;
 
 namespace Jogo25D.Effects
 {
     public class DamageEffectDefinition : EffectDefinition
     {
-        public List<DamageInfo> Damages { get; set; }
-        public float Timer { get; set; }
+        #region Properties
 
-        public override void Apply(Player player, float delta)
+        public Godot.Collections.Array<DamageInfo> Damages { get; set; } = new();
+
+        #endregion
+
+        #region Core - Virtuals
+
+        public override void Apply(Player player, EffectDefinitionData data, float delta)
         {
-            Timer += delta;
+            data.Timer += delta;
 
-            if (Timer >= 1f)
+            if (data.Timer >= 1f)
             {
-                Timer -= 1f;
+                data.Timer -= 1f;
 
                 foreach (var damage in Damages)
                 {
                     player.ReceiveDamage(damage);
                 }
-
             }
         }
+
+        #endregion
     }
 }

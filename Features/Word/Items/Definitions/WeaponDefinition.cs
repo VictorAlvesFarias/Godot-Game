@@ -1,18 +1,23 @@
 using Godot;
-using System.Collections.Generic;
-using System.Linq;
-using Jogo25D.Properties;
-using Jogo25D.Hitboxes;
 using Jogo25D.Characters;
+using Jogo25D.Effects;
+using Jogo25D.Features.Word.Items.Resources;
+using Jogo25D.Hitboxes;
+using Jogo25D.Properties;
 using Jogo25D.Systems;
+using Jogo25D.Utils.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Linq;
 
 namespace Jogo25D.Items
 {
     public class WeaponDefinition : ItemDefinition
     {
-        public override void OnEquip(Player player, ItemInstance instance)
+        #region Core - Virtuals
+
+        public override void OnEquip(Player player, ItemDefinitionData data)
         {
             if (player.AimIndicator != null)
             {
@@ -20,20 +25,21 @@ namespace Jogo25D.Items
             }
         }
 
-        public override void OnUnequip(Player player, ItemInstance instance)
+        public override void OnUnequip(Player player, ItemDefinitionData data)
         {
             player.AimIndicator?.Hide();
         }
-        public override void Use(Player player, ItemInstance instance)
+
+        public override void Use(Player player, ItemDefinitionData instance)
         {
-            if (!instance.CanAttack())
+            if (!CanUse(instance))
             {
-                GD.Print($"[Attack] Bloqueado - cooldown={instance.CooldownRemaining:F2} reloading={instance.IsReloading} charges={instance.CurrentCharges}");
+                GD.Print($"[Attack] Bloqueado - cooldown={instance.CooldownRemainingTimer:F2} reloading={IsReloading(instance)} charges={instance.CurrentCharges}");
                 
                 return;
             }
 
-            var damageProps = instance.Properties.OfType<DamageProperty>().ToList();
+            var damageProps = instance.Properties.OfType<DamagePropertyData>().ToList();
 
             if (damageProps.Count == 0 || HitboxScene == null)
             {
@@ -42,9 +48,9 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var weapon = instance.Properties.OfType<AttackProperty>().DefaultIfEmpty(new AttackProperty()).First();
-            var charges = instance.Properties.OfType<ChargesProperty>().DefaultIfEmpty(new ChargesProperty()).First();
-            var crit = instance.Properties.OfType<CritProperty>().DefaultIfEmpty(new CritProperty()).First();
+            var weapon = instance.Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
+            var charges = instance.Properties.OfType<ChargesPropertyData>().DefaultIfEmpty(new ChargesPropertyData()).First();
+            var crit = instance.Properties.OfType<CritPropertyData>().DefaultIfEmpty(new CritPropertyData()).First();
             var damages = damageProps.ConvertAll(d => new DamageInfo
             {
                 Amount = d.DamageAmount,
@@ -52,7 +58,7 @@ namespace Jogo25D.Items
                 SourcePeerId = (int)player.PeerId,
                 CritChance = crit.CritChance,
                 CritDamage = crit.CritDamage
-            });
+            }).ToGodotArray();
 
             if (HitboxScene.Instantiate<Area2D>() is not BaseHitbox hitbox)
             {
@@ -97,12 +103,14 @@ namespace Jogo25D.Items
 
             GD.Print($"[Attack] Hitbox '{hitbox.GetType().Name}' criado - danos={damages.Count} dir={dir}");
 
-            instance.TriggerCooldown();
+            TriggerCooldownTimer(instance);
 
-            if (!charges.InfiniteCharges)
+            if (!charges.InfiniteCharges && player.IsOwner())
             {
-                instance.ConsumeCharge();
+                player.ConsumeChargeRequest(instance.InstanceId);
             }
         }
+
+        #endregion
     }
 }

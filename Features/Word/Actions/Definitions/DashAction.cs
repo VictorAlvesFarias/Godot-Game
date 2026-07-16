@@ -7,19 +7,21 @@ namespace Jogo25D.Actions
 {
 	public class DashDefinition : ActionDefinition
 	{
-		public override void OnCreate(Player player, ActionInstance instance)
+        public CpuParticles2D DashParticles { get; set; }
+
+        public override void OnCreate(Player player, ActionDefinitionData instance)
 		{
 			var particles = new CpuParticles2D();
 
 			player.AddChild(particles);
-			instance.DashParticles = particles;
+            DashParticles = particles;
 		}
 
-		public override void OnStartAction(Player player, ActionInstance instance, float delta)
+		public override void OnStartAction(Player player, ActionDefinitionData instance, float delta)
 		{
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
 			var dir = Vector2.Zero;
-			var dash = Properties.OfType<DashProperty>().DefaultIfEmpty(new DashProperty()).First();
+			var dash = Properties.OfType<DashPropertyData>().DefaultIfEmpty(new DashPropertyData()).First();
 
 			if (input.LengthSquared() > 0.01f)
 			{
@@ -52,20 +54,20 @@ namespace Jogo25D.Actions
 				}
 			}
 
-			if (instance.DashParticles != null)
+			if (DashParticles != null)
 			{
-				instance.DashParticles.Emitting = true;
+				DashParticles.Emitting = true;
 			}
 
 			player.Velocity = dir * dash.DashSpeed;
-			player.CanUpdateMovement = false;
+			player.Data.CanUpdateMovement = false;
 		}
 
-		public override void OnUpdateWhileActive(Player player, ActionInstance instance, float delta)
+		public override void OnUpdateWhileActive(Player player, ActionDefinitionData instance, float delta)
 		{
 			var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
-			var dash = Properties.OfType<DashProperty>().DefaultIfEmpty(new DashProperty()).First();
+			var dash = Properties.OfType<DashPropertyData>().DefaultIfEmpty(new DashPropertyData()).First();
 
 			if (input.LengthSquared() > 0.01f && dash.MovementInfluence > 0f)
 			{
@@ -92,24 +94,22 @@ namespace Jogo25D.Actions
 			}
 		}
 
-		public override void OnFinishedAction(Player player, ActionInstance instance, float delta)
+		public override void OnFinishedAction(Player player, ActionDefinitionData instance, float delta)
 		{
-			player.CanUpdateMovement = true;
+			player.Data.CanUpdateMovement = true;
 			instance.DashDirection = Vector2.Zero;
 
-			if (instance.DashParticles != null)
+			if (DashParticles != null)
 			{
-				instance.DashParticles.Emitting = false;
+				DashParticles.Emitting = false;
 			}
 		}
 
-		public override bool OnStartActionValidation(Player player, ActionInstance instance, float delta)
+		public override bool OnStartActionValidation(Player player, ActionDefinitionData instance, float delta)
 		{
 			return player.Input.Dash && instance.CanUse;
 		}
 
-		public override void OnEnableAction(Player player, ActionInstance instance, float delta)
-		{
-		}
+		public override void OnEnableAction(Player player, ActionDefinitionData instance, float delta) { }
 	}
 }

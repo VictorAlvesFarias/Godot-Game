@@ -46,11 +46,10 @@ namespace Jogo25D.Systems
             if (PlayerRef == null)
             {
                 Clear();
+
                 return;
             }
 
-            // Só o dono do Player deve ler teclado/mouse.
-            // No servidor, os Players remotos recebem input via RPC (ServerSet*).
             if (!PlayerRef.IsOwner())
             {
                 return;
@@ -59,109 +58,95 @@ namespace Jogo25D.Systems
             if (IsBlocked())
             {
                 Clear();
+
                 return;
             }
+            var moveX = Input.GetAxis("move_left", "move_right");
+            var moveY = Input.GetAxis("move_up", "move_down");
+            var jump = Input.IsActionJustPressed("move_up");
+            var dash = Input.IsActionJustPressed("dash");
+            var attack = Input.IsActionPressed("shoot");
+            var reload = Input.IsActionJustPressed("reload");
+            var ability = Input.IsActionJustPressed("ability");
+            var ability2Held = Input.IsActionPressed("ability_2");
+            var ability2JustReleased = PrevAbility2Held && !ability2Held;
+            var scrollNext = Input.IsActionJustPressed("weapon_next");
+            var varScrollPrev = Input.IsActionJustPressed("weapon_prev");
+            var pause = Input.IsActionJustPressed("pause");
+            var toggleInventory = Input.IsActionJustPressed("toggle_inventory");
+            var mousePosition = PlayerRef.GetGlobalMousePosition();
 
-            var oldMoveX = MoveX;
-            var oldMoveY = MoveY;
-            var oldJump = Jump;
-            var oldDash = Dash;
-            var oldAttack = Attack;
-            var oldReload = Reload;
-            var oldAbility = Ability;
-            var oldAbility2Held = Ability2Held;
-            var oldAbility2Released = Ability2JustReleased;
-            var oldScrollNext = ScrollNext;
-            var oldScrollPrev = ScrollPrev;
-            var oldPause = Pause;
-            var oldToggleInventory = ToggleInventory;
-            var oldMouse = MousePosition;
-
-            MoveX = Input.GetAxis("move_left", "move_right");
-            MoveY = Input.GetAxis("move_up", "move_down");
-            Jump = Input.IsActionJustPressed("move_up");
-            Dash = Input.IsActionJustPressed("dash");
-            Attack = Input.IsActionPressed("shoot");
-            Reload = Input.IsActionJustPressed("reload");
-            Ability = Input.IsActionJustPressed("ability");
-            Ability2Held = Input.IsActionPressed("ability_2");
-            Ability2JustReleased = PrevAbility2Held && !Ability2Held;
-            PrevAbility2Held = Ability2Held;
-            ScrollNext = Input.IsActionJustPressed("weapon_next");
-            ScrollPrev = Input.IsActionJustPressed("weapon_prev");
-            Pause = Input.IsActionJustPressed("pause");
-            ToggleInventory = Input.IsActionJustPressed("toggle_inventory");
-            MousePosition = PlayerRef.GetGlobalMousePosition();
-
-            if (oldMoveX != MoveX)
+            if (MoveX != moveX)
             {
-                Rpc(nameof(ServerSetMoveX), MoveX);
+                Rpc(nameof(ServerSetMoveX), moveX);
             }
 
-            if (oldMoveY != MoveY)
+            if (MoveY != moveY)
             {
-                Rpc(nameof(ServerSetMoveY), MoveY);
+                Rpc(nameof(ServerSetMoveY), moveY);
             }
 
-            if (oldJump != Jump)
+            if (Jump != jump)
             {
-                Rpc(nameof(ServerSetJump), Jump);
+                Rpc(nameof(ServerSetJump), jump);
             }
 
-            if (oldDash != Dash)
+            if (Dash != dash)
             {
-                Rpc(nameof(ServerSetDash), Dash);
+                Rpc(nameof(ServerSetDash), dash);
             }
 
-            if (oldAttack != Attack)
+            if (Attack != attack)
             {
-                Rpc(nameof(ServerSetAttack), Attack);
+                Rpc(nameof(ServerSetAttack), attack);
             }
 
-            if (oldReload != Reload)
+            if (Reload != reload)
             {
-                Rpc(nameof(ServerSetReload), Reload);
+                Rpc(nameof(ServerSetReload), reload);
             }
 
-            if (oldAbility != Ability)
+            if (Ability != ability)
             {
-                Rpc(nameof(ServerSetAbility), Ability);
+                Rpc(nameof(ServerSetAbility), ability);
             }
 
-            if (oldAbility2Held != Ability2Held)
+            if (Ability2Held != ability2Held)
             {
-                Rpc(nameof(ServerSetAbility2Held), Ability2Held);
+                Rpc(nameof(ServerSetAbility2Held), ability2Held);
             }
 
-            if (oldAbility2Released != Ability2JustReleased)
+            if (Ability2JustReleased != ability2JustReleased)
             {
-                Rpc(nameof(ServerSetAbility2Released), Ability2JustReleased);
+                Rpc(nameof(ServerSetAbility2Released), ability2JustReleased);
             }
 
-            if (oldScrollNext != ScrollNext)
+            if (ScrollNext != scrollNext)
             {
-                Rpc(nameof(ServerSetScrollNext), ScrollNext);
+                Rpc(nameof(ServerSetScrollNext), scrollNext);
             }
 
-            if (oldScrollPrev != ScrollPrev)
+            if (ScrollPrev != varScrollPrev)
             {
-                Rpc(nameof(ServerSetScrollPrev), ScrollPrev);
+                Rpc(nameof(ServerSetScrollPrev), varScrollPrev);
             }
 
-            if (oldPause != Pause)
+            if (Pause != pause)
             {
-                Rpc(nameof(ServerSetPause), Pause);
+                Rpc(nameof(ServerSetPause), pause);
             }
 
-            if (oldToggleInventory != ToggleInventory)
+            if (ToggleInventory != toggleInventory)
             {
-                Rpc(nameof(ServerSetToggleInventory), ToggleInventory);
+                Rpc(nameof(ServerSetToggleInventory), toggleInventory);
             }
 
-            if (oldMouse != MousePosition)
+            if (MousePosition != mousePosition)
             {
-                Rpc(nameof(ServerSetMousePosition), MousePosition);
+                Rpc(nameof(ServerSetMousePosition), mousePosition);
             }
+
+            PrevAbility2Held = ability2Held;
         }
 
         public void Clear()
@@ -192,85 +177,85 @@ namespace Jogo25D.Systems
             Blockers.Remove(id);
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetMoveX(float value)
         {
             MoveX = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetMoveY(float value)
         {
             MoveY = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetJump(bool value)
         {
             Jump = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetDash(bool value)
         {
             Dash = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetAttack(bool value)
         {
             Attack = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetReload(bool value)
         {
             Reload = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetAbility(bool value)
         {
             Ability = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetAbility2Held(bool value)
         {
             Ability2Held = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetAbility2Released(bool value)
         {
             Ability2JustReleased = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetScrollNext(bool value)
         {
             ScrollNext = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetScrollPrev(bool value)
         {
             ScrollPrev = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetPause(bool value)
         {
             Pause = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetToggleInventory(bool value)
         {
             ToggleInventory = value;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetMousePosition(Vector2 value)
         {
             MousePosition = value;

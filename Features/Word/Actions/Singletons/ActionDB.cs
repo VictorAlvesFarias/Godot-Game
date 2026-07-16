@@ -29,9 +29,9 @@ namespace Jogo25D.Actions
                 Duration = 0.2f,
                 MaxCharges = 2,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_10),
-                Properties = new List<BaseProperty>
+                Properties = new Godot.Collections.Array<BasePropertyData>
                 { 
-                    new DashProperty { DashSpeed = 800f, MovementInfluence = 0.4f }
+                    new DashPropertyData { DashSpeed = 800f, MovementInfluence = 0.4f }
                 }
             });
             Register(new FireballDefinition
@@ -42,10 +42,10 @@ namespace Jogo25D.Actions
                 Duration = 0.2f,
                 MaxCharges = 2,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_4),
-                Properties = new List<BaseProperty>
+                Properties = new Godot.Collections.Array<BasePropertyData>
                 {
-                    new DamageProperty { DamageAmount = 15, DamageType = DamageType.Physical } ,
-                    new AttackProperty { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 75f },
+                    new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical } ,
+                    new AttackPropertyData { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 75f },
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn")
             });
@@ -57,10 +57,10 @@ namespace Jogo25D.Actions
                 Duration = 0.1f,
                 MaxCharges = 1,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_7),
-                Properties = new List<BaseProperty>
+                Properties = new Godot.Collections.Array<BasePropertyData>
                 {
-                    new DamageProperty { DamageAmount = 20, DamageType = DamageType.Physical },
-                    new AttackProperty  { AttackArea = 20f, AttackRange = 1000f },
+                    new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.Physical },
+                    new AttackPropertyData  { AttackArea = 20f, AttackRange = 1000f },
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/GroundStrike.tscn")
             });
@@ -80,6 +80,12 @@ namespace Jogo25D.Actions
             {
                 Initialize();
             }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+
             Actions.TryGetValue(id, out var def);
             return def;
         }
@@ -93,7 +99,7 @@ namespace Jogo25D.Actions
             return Actions.TryGetValue(id, out definition);
         }
 
-        public static ActionInstance CreateInstance(string id, Player player)
+        public static ActionDefinitionData CreateInstance(string id, Player player)
         {
             if (!Initialized)
             {
@@ -101,7 +107,9 @@ namespace Jogo25D.Actions
             }
 
             var def = Get(id) ?? throw new System.Exception($"[ActionDB] AÃ§Ã£o '{id}' nÃ£o encontrada.");
-            var instance = new ActionInstance(def, player);
+            var instance = new ActionDefinitionData();
+
+            instance.Id = id;
 
             def.OnCreate(player, instance);
             
