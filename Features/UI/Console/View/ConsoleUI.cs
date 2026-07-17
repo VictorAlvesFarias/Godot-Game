@@ -69,6 +69,13 @@ namespace Jogo25D.UI
 
 			if (key.Keycode == Key.Apostrophe)
 			{
+				RefreshLocalPlayer();
+
+				if (!IsOpen && (LocalPlayer?.Input?.IsBlockedByOther("console") ?? false))
+				{
+					return;
+				}
+
 				Toggle();
 				GetViewport().SetInputAsHandled();
 				return;
@@ -116,6 +123,8 @@ namespace Jogo25D.UI
 
 		public void Toggle()
 		{
+			RefreshLocalPlayer();
+
 			IsOpen = !IsOpen;
 			Visible = IsOpen;
 
@@ -127,6 +136,14 @@ namespace Jogo25D.UI
 			else
 			{
 				LocalPlayer?.Input?.RemoveBlocker("console");
+			}
+		}
+
+		public void RefreshLocalPlayer()
+		{
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				LocalPlayer = WorldManager?.GetLocalPlayer();
 			}
 		}
 
@@ -417,15 +434,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					// Garante que temos a referência correta do player local,
-					// mesmo se ele tiver sido spawnado depois do _Ready.
-					if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
-					{
-						if (WorldManager != null)
-						{
-							LocalPlayer = WorldManager.GetLocalPlayer();
-						}
-					}
+					RefreshLocalPlayer();
 
 					if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 					{
@@ -461,6 +470,46 @@ namespace Jogo25D.UI
 						var def = ItemDB.Get(id);
 						console.PrintNormal($"  {id,-25} {def?.Name}");
 					}
+				},
+				getCompletions: _ => new List<string>()
+			);
+
+			Register(
+				name: "reset",
+				usage: "reset",
+				description: "Reseta a posiÃ§Ã£o e a vida do jogador local",
+				execute: (_, console) =>
+				{
+					if (WorldManager == null)
+					{
+						console.PrintError("WorldManager nÃ£o encontrado.");
+
+						return;
+					}
+
+					WorldManager.ResetPlayerClientRequest();
+
+					console.PrintSuccess("Jogador resetado.");
+				},
+				getCompletions: _ => new List<string>()
+			);
+
+			Register(
+				name: "dimension",
+				usage: "dimension",
+				description: "Troca o jogador local para a prÃ³xima dimensÃ£o",
+				execute: (_, console) =>
+				{
+					if (WorldManager == null)
+					{
+						console.PrintError("WorldManager nÃ£o encontrado.");
+
+						return;
+					}
+
+					WorldManager.TradeDimensionClientRequest();
+
+					console.PrintSuccess("Trocando de dimensÃ£o.");
 				},
 				getCompletions: _ => new List<string>()
 			);

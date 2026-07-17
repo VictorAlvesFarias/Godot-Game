@@ -154,7 +154,12 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (PlayerInput != null && PlayerInput.IsBlocked())
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				FindLocalPlayerInventorySystem();
+			}
+
+			if (PlayerInput != null && PlayerInput.IsBlockedByOther("inventory"))
 			{
 				return;
 			}
@@ -639,8 +644,14 @@ namespace Jogo25D.UI
 
 			if (Visible)
 			{
+				PlayerInput?.AddBlocker("inventory");
+
 				OnInventoryChanged();
 				UpdateBuffsList();
+			}
+			else
+			{
+				PlayerInput?.RemoveBlocker("inventory");
 			}
 		}
 

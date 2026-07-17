@@ -11,7 +11,6 @@ namespace Jogo25D.UI
 		public Button HostButton { get; set; }
 		public Button ConnectButton { get; set; }
 		public LineEdit PortInput { get; set; }
-		public Player PlayerNode { get; set; }
 		public WorldManager NetworkManager { get; set; }
 
 		public override void _Ready()
@@ -29,14 +28,19 @@ namespace Jogo25D.UI
 			ExitButton.Pressed += OnExitPressed;
 			HostButton.Pressed += OnHostPressed;
 			ConnectButton.Pressed += OnConnectPressed;
-
-			PlayerNode = GetTree().Root.FindChild("Player", true, false) as Player;
 		}
 
 		public override void _Input(InputEvent @event)
 		{
 			if (@event.IsActionPressed("pause") && !@event.IsEcho())
 			{
+				var input = NetworkManager?.GetLocalPlayer()?.Input;
+
+				if (!Visible && (input?.IsBlockedByOther("pause") ?? false))
+				{
+					return;
+				}
+
 				TogglePause();
 			}
 		}
@@ -52,7 +56,27 @@ namespace Jogo25D.UI
 		public void TogglePause()
 		{
 			Visible = !Visible;
-			GetTree().Paused = Visible;
+
+			if (!IsMultiplayerActive())
+			{
+				GetTree().Paused = Visible;
+			}
+
+			var input = NetworkManager?.GetLocalPlayer()?.Input;
+
+			if (Visible)
+			{
+				input?.AddBlocker("pause");
+			}
+			else
+			{
+				input?.RemoveBlocker("pause");
+			}
+		}
+
+		public bool IsMultiplayerActive()
+		{
+			return Multiplayer != null && Multiplayer.HasMultiplayerPeer();
 		}
 
 		public void OnExitPressed()
@@ -64,6 +88,8 @@ namespace Jogo25D.UI
 		{
 			Visible = false;
 			GetTree().Paused = false;
+
+			NetworkManager?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
 		}
 
 		public void OnHostPressed()

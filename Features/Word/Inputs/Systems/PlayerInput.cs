@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Jogo25D.Systems
 {
@@ -39,6 +40,11 @@ namespace Jogo25D.Systems
         public bool IsBlocked()
         {
             return Blockers.Count > 0;
+        }
+
+        public bool IsBlockedByOther(string excludeId)
+        {
+            return Blockers.Any(id => id != excludeId);
         }
 
         public void Poll()
