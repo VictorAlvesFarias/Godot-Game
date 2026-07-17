@@ -198,7 +198,7 @@ namespace Jogo25D.UI
 				var btn = new Button();
 				btn.Text = s;
 				btn.Flat = true;
-				btn.AddThemeColorOverride("font_color", new Color(0.6f, 0.85f, 1f));
+				btn.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f));
 				btn.AddThemeFontSizeOverride("font_size", 13);
 
 				string captured = s;
@@ -229,7 +229,7 @@ namespace Jogo25D.UI
 			{
 				bool selected = i == SuggestionIndex;
 				buttons[i].AddThemeColorOverride("font_color",
-					selected ? new Color(1f, 1f, 0.5f) : new Color(0.6f, 0.85f, 1f));
+					selected ? new Color(0.62f, 0.36f, 0.92f) : new Color(1f, 1f, 1f));
 				buttons[i].AddThemeStyleboxOverride("normal",
 					selected ? MakeHighlightStylebox() : new StyleBoxEmpty());
 			}
@@ -238,7 +238,7 @@ namespace Jogo25D.UI
 		public static StyleBoxFlat MakeHighlightStylebox()
 		{
 			var sb = new StyleBoxFlat();
-			sb.BgColor = new Color(0.2f, 0.4f, 0.6f, 0.6f);
+			sb.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.25f);
 			sb.SetCornerRadiusAll(3);
 			return sb;
 		}
