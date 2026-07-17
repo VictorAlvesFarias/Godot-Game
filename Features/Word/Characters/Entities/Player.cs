@@ -860,6 +860,85 @@ namespace Jogo25D.Characters
 
 		#endregion
 
+		#region Core - Rpc - Item drop and pickup
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void DropItemReceive(long instanceId, int quantity)
+		{
+			if (!IsAuthoritative())
+			{
+				return;
+			}
+
+			var item = Inventory.FindItem(Data.Inventory, instanceId);
+
+			if (item == null || quantity <= 0)
+			{
+				return;
+			}
+
+			var dropQuantity = Mathf.Min(quantity, item.Quantity);
+			var dropData = (ItemDefinitionData)item.Duplicate(true);
+
+			dropData.InstanceId = ItemDB.NextInstanceId();
+			dropData.Quantity = dropQuantity;
+
+			RemoveItemRequest(instanceId, dropQuantity);
+
+			var dropOffset = new Vector2(Sprite.FlipH ? -40f : 40f, 0f);
+
+			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset);
+		}
+
+		public void DropItemRequest(long instanceId, int quantity)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				DropItemReceive(instanceId, quantity);
+
+				return;
+			}
+
+			RpcId(1, nameof(DropItemReceive), instanceId, quantity);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void PickupItemReceive(long worldItemId)
+		{
+			if (!IsAuthoritative())
+			{
+				return;
+			}
+
+			var worldItem = NetworkManager.FindWorldItem(worldItemId);
+
+			if (worldItem == null)
+			{
+				return;
+			}
+
+			if (Inventory.AddItem(Data.Inventory, worldItem.Data))
+			{
+				EmitSignal(SignalName.InventoryChanged);
+			}
+
+			NetworkManager.RemoveWorldItemRequest(worldItemId);
+		}
+
+		public void PickupItemRequest(long worldItemId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				PickupItemReceive(worldItemId);
+
+				return;
+			}
+
+			RpcId(1, nameof(PickupItemReceive), worldItemId);
+		}
+
+		#endregion
+
 		#region Core - Rpc - Item charges
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

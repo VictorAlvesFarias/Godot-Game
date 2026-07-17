@@ -20,6 +20,7 @@ namespace Jogo25D.UI
 		public PlayerInput PlayerInput => LocalPlayer?.Input;
 		public GridContainer GridContainer { get; set; }
 		public HBoxContainer HotbarRow { get; set; }
+		public Panel DropSlot { get; set; }
 		public Panel ContextMenu { get; set; }
 		public VBoxContainer ContextMenuContainer { get; set; }
 		public Panel[] SlotPanels { get; set; } = new Panel[TotalSlots];
@@ -80,6 +81,7 @@ namespace Jogo25D.UI
 
 			var mainRow = MainControl.GetNode<HBoxContainer>("MainPanel/MarginContainer/MainRow");
 
+			DropSlot = MainControl.FindChild("DropSlot", true, false) as Panel;
 			HotbarRow = mainRow.GetNode<HBoxContainer>("InventoryColumn/HotbarRow");
 			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridContainer");
 			GridContainer.Columns = HotbarSlots;
@@ -131,6 +133,10 @@ namespace Jogo25D.UI
 				if (targetSlot >= 0)
 				{
 					EndDrag(targetSlot);
+				}
+				else if (DropSlot != null && DropSlot.GetGlobalRect().HasPoint(mouseEvent.GlobalPosition))
+				{
+					DropDraggedItem();
 				}
 				else
 				{
@@ -413,6 +419,38 @@ namespace Jogo25D.UI
 			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < TotalSlots && IconRects[DraggedSlotIndex] != null)
 			{
 				IconRects[DraggedSlotIndex].Modulate = Colors.White;
+			}
+
+			IsDragging = false;
+			DraggedSlotIndex = -1;
+			DraggedInstanceId = 0;
+		}
+
+		public void DropDraggedItem()
+		{
+			if (!IsDragging || DraggedInstanceId <= 0 || LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				CancelDrag();
+
+				return;
+			}
+
+			var slot = Inventory?.FindItem(LocalPlayer.Data.Inventory, DraggedInstanceId);
+			var quantity = slot?.Quantity ?? 0;
+
+			if (DragPreview != null)
+			{
+				DragPreview.Visible = false;
+			}
+
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < TotalSlots && IconRects[DraggedSlotIndex] != null)
+			{
+				IconRects[DraggedSlotIndex].Modulate = Colors.White;
+			}
+
+			if (quantity > 0)
+			{
+				LocalPlayer.DropItemRequest(DraggedInstanceId, quantity);
 			}
 
 			IsDragging = false;

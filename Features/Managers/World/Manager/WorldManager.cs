@@ -2,6 +2,7 @@ using Godot;
 using System;
 using Jogo25D.Characters;
 using Jogo25D.Features.Word.Characters.Resources;
+using Jogo25D.Features.Word.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -359,6 +360,92 @@ namespace Jogo25D.Systems
 			RpcId(targetPeerId, nameof(SpawnNpcReceive), position);
 		}
 
+		#endregion
+
+		#region Core - Rpc - World items
+
+		public void SpawnWorldItem(WorldItem item)
+		{
+			if (OverwordParent != null)
+			{
+				OverwordParent.AddChild(item);
+			}
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position)
+		{
+			GD.Print($"[WorldManager.SpawnWorldItemReceive] worldItemId={worldItemId} position={position}");
+
+			if (OverwordParent == null || FindWorldItem(worldItemId) != null)
+			{
+				return;
+			}
+
+			var worldItem = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
+
+			worldItem.Name = $"WorldItem{worldItemId}";
+			worldItem.WorldItemId = worldItemId;
+			worldItem.Data = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
+			worldItem.Position = position;
+
+			SpawnWorldItem(worldItem);
+		}
+
+		public long SpawnWorldItemRequest(ItemDefinitionData item, Vector2 position)
+		{
+			var worldItemId = ItemDB.NextInstanceId();
+
+			var worldItem = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
+
+			worldItem.Name = $"WorldItem{worldItemId}";
+			worldItem.WorldItemId = worldItemId;
+			worldItem.Data = item;
+			worldItem.Position = position;
+
+			SpawnWorldItem(worldItem);
+
+			var data = GodotDictionaryParser.ToDictionary(item);
+
+			Rpc(nameof(SpawnWorldItemReceive), worldItemId, data, position);
+
+			return worldItemId;
+		}
+
+		public void SpawnWorldItemRequest(WorldItem item, long targetPeerId)
+		{
+			var data = GodotDictionaryParser.ToDictionary(item.Data);
+
+			RpcId(targetPeerId, nameof(SpawnWorldItemReceive), item.WorldItemId, data, item.Position);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void RemoveWorldItemReceive(long worldItemId)
+		{
+			FindWorldItem(worldItemId)?.QueueFree();
+		}
+
+		public void RemoveWorldItemRequest(long worldItemId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				RemoveWorldItemReceive(worldItemId);
+
+				return;
+			}
+
+			Rpc(nameof(RemoveWorldItemReceive), worldItemId);
+		}
+
+		public WorldItem FindWorldItem(long worldItemId)
+		{
+			return OverwordParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+		}
+
+		#endregion
+
+		#region Core - Player lookup
+
 		public Player GetLocalPlayer()
 		{
 			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
@@ -564,6 +651,15 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager.OnPeerConnected] informing {id} about NPC_Dummy");
 
 				SpawnNpcRequest(npc.Position, id);
+			}
+
+			var worldItems = OverwordParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
+
+			foreach (var worldItem in worldItems)
+			{
+				GD.Print($"[WorldManager.OnPeerConnected] informing {id} about {worldItem.Name}");
+
+				SpawnWorldItemRequest(worldItem, id);
 			}
 		}
 

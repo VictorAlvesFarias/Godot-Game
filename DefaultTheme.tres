@@ -1,6 +1,7 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://bldlhhbwpstkv"]
 
-[ext_resource type="FontFile" path="res://Assets/Fonts/Planes_ValMore.ttf" id="1"]
+[ext_resource type="FontFile" uid="uid://dlsm4tbof7u0k" path="res://Assets/Fonts/Planes_ValMore.ttf" id="1"]
 
 [resource]
 default_font = ExtResource("1")
+Button/icons/icon = null
