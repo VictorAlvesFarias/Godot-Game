@@ -11,6 +11,8 @@ namespace Jogo25D.Characters
         {
             PeerId = -999;
 
+            Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
+
             AddToGroup("players");
 
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
@@ -19,10 +21,18 @@ namespace Jogo25D.Characters
             DisplayName = "NPC";
         }
 
-        // Sobrescreve sem chamar base: evita o loop de input/movimento/itens do
-        // Player, que dependem de nos (PlayerInput, Data.Inventory) irrelevantes para o dummy.
         public override void _PhysicsProcess(double delta)
         {
+            var v = Velocity;
+
+            if (!IsOnFloor())
+            {
+                v.Y += Gravity * (float)delta;
+            }
+
+            Velocity = v;
+
+            MoveAndSlide();
         }
 
         #endregion

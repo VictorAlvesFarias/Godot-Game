@@ -38,7 +38,7 @@ public class Program
                 var p = Process.Start(new ProcessStartInfo
                 {
                     FileName = godotExe,
-                    Arguments = $"--path \"{projectPath}\"",
+                    Arguments = $"--path \"{projectPath}\" --maximized",
                     WorkingDirectory = projectPath,
                     UseShellExecute = false
                 });

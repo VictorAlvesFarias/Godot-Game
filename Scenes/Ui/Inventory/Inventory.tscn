@@ -34,6 +34,7 @@ corner_radius_bottom_left = 6
 
 [node name="InventoryMenu" type="CanvasLayer" unique_id=935566537]
 layer = 10
+visible = false
 script = ExtResource("1")
 
 [node name="Root" type="Control" parent="." unique_id=787192819]
