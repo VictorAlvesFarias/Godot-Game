@@ -7,14 +7,12 @@ namespace Jogo25D.Actions
 {
 	public class DashDefinition : ActionDefinition
 	{
-        public CpuParticles2D DashParticles { get; set; }
-
         public override void OnCreate(Player player, ActionDefinitionData instance)
 		{
 			var particles = new CpuParticles2D();
 
 			player.AddChild(particles);
-            DashParticles = particles;
+            player.DashParticles = particles;
 		}
 
 		public override void OnStartAction(Player player, ActionDefinitionData instance, float delta)
@@ -54,9 +52,9 @@ namespace Jogo25D.Actions
 				}
 			}
 
-			if (DashParticles != null)
+			if (GodotObject.IsInstanceValid(player.DashParticles))
 			{
-				DashParticles.Emitting = true;
+				player.DashParticles.Emitting = true;
 			}
 
 			player.Velocity = dir * dash.DashSpeed;
@@ -99,9 +97,9 @@ namespace Jogo25D.Actions
 			player.Data.CanUpdateMovement = true;
 			instance.DashDirection = Vector2.Zero;
 
-			if (DashParticles != null)
+			if (GodotObject.IsInstanceValid(player.DashParticles))
 			{
-				DashParticles.Emitting = false;
+				player.DashParticles.Emitting = false;
 			}
 		}
 

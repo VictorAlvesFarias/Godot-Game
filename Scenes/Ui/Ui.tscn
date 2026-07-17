@@ -1,18 +1,16 @@
 [gd_scene format=3 uid="uid://bongjw55be786"]
 
-[ext_resource type="PackedScene" path="res://Scenes/Ui/Pause/Pause.tscn" id="1_0nsdw"]
-[ext_resource type="Script" uid="uid://df36dx2muwh1n" path="res://Features/UI/Pause/View/PauseUI.cs" id="2_ebkin"]
+[ext_resource type="PackedScene" uid="uid://bwv7458yi4ofu" path="res://Scenes/Ui/Pause/Pause.tscn" id="1_0nsdw"]
 [ext_resource type="PackedScene" uid="uid://ckhxte1bcg3a6" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
 [ext_resource type="PackedScene" uid="uid://du2rl5uua1bga" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
+[ext_resource type="PackedScene" uid="uid://b3on12lgpr7t0" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
 [ext_resource type="Script" uid="uid://bp4njl6lxbnwl" path="res://Features/UI/Nameplates/View/NameplateOverlayUI.cs" id="5_nameplate"]
-[ext_resource type="Script" path="res://Features/UI/DamagePopups/View/DamagePopupOverlayUI.cs" id="6_damagepopup"]
+[ext_resource type="Script" uid="uid://162kd1fax7v0" path="res://Features/UI/DamagePopups/View/DamagePopupOverlayUI.cs" id="6_damagepopup"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
 [node name="PauseUI" parent="." unique_id=512637494 instance=ExtResource("1_0nsdw")]
 layer = 8
-script = ExtResource("2_ebkin")
 
 [node name="HudUI" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
 
@@ -23,6 +21,6 @@ script = ExtResource("5_nameplate")
 script = ExtResource("6_damagepopup")
 
 [node name="InventoryUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
-layer = 10
 
 [node name="ConsoleUI" parent="." unique_id=1263919536 instance=ExtResource("4_console")]
+visible = false

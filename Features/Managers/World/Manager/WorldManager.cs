@@ -278,8 +278,24 @@ namespace Jogo25D.Systems
 			{
 				player.QueueFree();
 			}
-			
+
 			GD.Print($"[WorldManager.Disconnect] freed {players.Count} player nodes");
+
+			CallDeferred(nameof(RespawnLocalSoloPlayer));
+		}
+
+		private void RespawnLocalSoloPlayer()
+		{
+			var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+
+			localPlayer.Name = "Player";
+			localPlayer.PeerId = 1;
+
+			SpawnPlayer(localPlayer);
+
+			SpawnTestNPC();
+
+			GD.Print("[WorldManager.Disconnect] respawned local solo player");
 		}
 
         #endregion
@@ -664,20 +680,20 @@ namespace Jogo25D.Systems
 		}
 
 		public void OnPeerDisconnected(long id)
-		{	
+		{
 			GD.Print($"[WorldManager.OnPeerDisconnected] OnPeerDisconnected(id={id})");
-			
-			var playerNode = UpsidedownParent.GetNodeOrNull($"Player{id}");
+
+			var playerNode = FindPlayerByPeerId(id);
 
 			if (playerNode == null)
 			{
-				GD.Print($"[WorldManager.OnPeerDisconnected] Player{id} not found in UpsidedownParent");
+				GD.Print($"[WorldManager.OnPeerDisconnected] Player{id} not found");
 			}
 
 			if (playerNode != null)
 			{
 				playerNode.QueueFree();
-				
+
 				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
 			}
 		}

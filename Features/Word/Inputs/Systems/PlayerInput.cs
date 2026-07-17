@@ -23,6 +23,7 @@ namespace Jogo25D.Systems
         public int ScrollDirection => ScrollNext ? 1 : (ScrollPrev ? -1 : 0);
         public bool Pause { get; private set; }
         public bool ToggleInventory { get; private set; }
+        public bool DropItem { get; private set; }
         public Vector2 MousePosition { get; private set; }
 
         public Player PlayerRef {get;set;}
@@ -80,6 +81,7 @@ namespace Jogo25D.Systems
             var varScrollPrev = Input.IsActionJustPressed("weapon_prev");
             var pause = Input.IsActionJustPressed("pause");
             var toggleInventory = Input.IsActionJustPressed("toggle_inventory");
+            var dropItem = Input.IsActionJustPressed("drop_item");
             var mousePosition = PlayerRef.GetGlobalMousePosition();
 
             if (MoveX != moveX)
@@ -147,6 +149,11 @@ namespace Jogo25D.Systems
                 Rpc(nameof(ServerSetToggleInventory), toggleInventory);
             }
 
+            if (DropItem != dropItem)
+            {
+                Rpc(nameof(ServerSetDropItem), dropItem);
+            }
+
             if (MousePosition != mousePosition)
             {
                 Rpc(nameof(ServerSetMousePosition), mousePosition);
@@ -170,6 +177,7 @@ namespace Jogo25D.Systems
             ScrollPrev = false;
             Pause = false;
             ToggleInventory = false;
+            DropItem = false;
             MousePosition = Vector2.Zero;
         }
 
@@ -259,6 +267,12 @@ namespace Jogo25D.Systems
         private void ServerSetToggleInventory(bool value)
         {
             ToggleInventory = value;
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        private void ServerSetDropItem(bool value)
+        {
+            DropItem = value;
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

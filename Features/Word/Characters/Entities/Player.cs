@@ -60,6 +60,7 @@ namespace Jogo25D.Characters
 		public GroundIndicator GroundMarker { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
+		public CpuParticles2D DashParticles { get; set; }
 
 		#endregion
 
@@ -190,6 +191,7 @@ namespace Jogo25D.Characters
 			if (IsOwner())
 			{
 				HandleHotbarScroll();
+				HandleDropItem();
 			}
 
 			TestPositionRequest(Position);
@@ -344,9 +346,19 @@ namespace Jogo25D.Characters
 			}
 		}
 
+		public void HandleDropItem()
+		{
+			if (!Input.DropItem || Data.EquippedItemId <= 0)
+			{
+				return;
+			}
+
+			DropItemRequest(Data.EquippedItemId, 1);
+		}
+
 		#endregion
 
-		#region Core - Items system 
+		#region Core - Items system
 
 		public int CountAmmoByChargeType(string chargeType)
 		{
@@ -1000,7 +1012,10 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
 		public void TestPositionReceive(Vector2 pos)
 		{
-			var maxTolerance = 50.0f;
+			// Precisa cobrir a distância percorrida em uma rajada rápida (ex: dash a
+			// 800u/s) mais a latência de replicação do Input até o servidor começar
+			// a simular a mesma ação, senão o servidor corrige/cancela o movimento.
+			var maxTolerance = 250.0f;
 			var distance = GlobalPosition.DistanceTo(pos);
 			var sendToOwner = false;
 
@@ -1021,6 +1036,16 @@ namespace Jogo25D.Characters
 
 		public void TestPositionRequest(Vector2 pos)
 		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				return;
+			}
+
+			if (Multiplayer.MultiplayerPeer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected)
+			{
+				return;
+			}
+
 			if (Multiplayer.IsServer())
 			{
 				return;
