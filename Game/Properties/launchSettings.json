@@ -1,11 +1,10 @@
 {
   "profiles": {
-    "Jogo25D": {
-      "commandName": "Project"
-    },
-    "WSL": {
-      "commandName": "WSL2",
-      "distributionName": ""
+    "Game": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Tools\\Godot\\godot.exe",
+      "commandLineArgs": "--path . --maximized",
+      "workingDirectory": "."
     }
   }
 }
