@@ -3,7 +3,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Jogo25D</RootNamespace>
-    <DebugType>none</DebugType>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
