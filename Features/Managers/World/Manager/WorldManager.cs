@@ -202,23 +202,19 @@ namespace Jogo25D.Systems
             {
                 var parts = textAddress.Split(':');
 
-                if (!string.IsNullOrWhiteSpace(parts[0]))
+                if (parts.Length > 1)
                 {
+                    if (string.IsNullOrWhiteSpace(parts[0]) || !int.TryParse(parts[1], out port))
+                    {
+                        return "";
+                    }
+
                     ip = parts[0];
                 }
-				else
-				{
-					return "";
-				}
-
-				if (parts.Length > 1 && int.TryParse(parts[1], out var parsedPort))
-				{
-					port = parsedPort;
-				}
-				else
-				{
-					return "";
-				}
+                else if (!int.TryParse(parts[0], out port))
+                {
+                    return "";
+                }
             }
 
             GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");

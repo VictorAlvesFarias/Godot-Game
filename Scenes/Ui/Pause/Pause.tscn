@@ -92,7 +92,7 @@ theme_override_colors/font_placeholder_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("Style_Empty")
 theme_override_styles/focus = SubResource("Style_Empty")
-placeholder_text = "Port"
+placeholder_text = "Port or IP:Port"
 
 [node name="ExitButton" type="Button" parent="MarginContainer/Root/MenuColumn" unique_id=377191876]
 layout_mode = 2

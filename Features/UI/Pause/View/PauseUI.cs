@@ -126,10 +126,7 @@ namespace Jogo25D.UI
 			}
 			else
 			{
-				var portText = PortInput.Text.Trim();
-				var address = string.IsNullOrEmpty(portText) ? "" : $"{WorldManager.DEFAULT_ADDRESS}:{portText}";
-
-				NetworkManager.JoinServer(address);
+				NetworkManager.JoinServer(PortInput.Text.Trim());
 			}
 
 			UpdateNetworkStatus();

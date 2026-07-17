@@ -10,7 +10,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var quantidadeInstancias = 2;
+        var quantidadeInstancias = 1;
         var processos = new List<Process>();
 
         var executionPath = AppContext.BaseDirectory;
