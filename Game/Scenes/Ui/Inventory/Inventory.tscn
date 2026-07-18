@@ -4,7 +4,7 @@
 [ext_resource type="SpriteFrames" uid="uid://cj34f3k1r6xgd" path="res://Assets/Sprites/Character/CharacterFrames.tres" id="2_frames"]
 
 [sub_resource type="StyleBoxFlat" id="Style_PanelBackground"]
-bg_color = Color(0.12, 0.12, 0.12, 0.97)
+bg_color = Color(0.12, 0.12, 0.12, 0.85)
 
 [sub_resource type="StyleBoxFlat" id="Style_MainPanelBorder"]
 bg_color = Color(0, 0, 0, 0)

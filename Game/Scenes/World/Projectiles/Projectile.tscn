@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ca876543210"]
 
-[ext_resource type="Script" uid="uid://biq18d45wk5ii" path="res://Features/Word/Hitboxes/Definitions/ProjectileHitbox.cs" id="1"]
+[ext_resource type="Script" uid="uid://biq18d45wk5ii" path="res://Features/World/Hitboxes/Definitions/ProjectileHitbox.cs" id="1"]
 [ext_resource type="Texture2D" uid="uid://nvavictoj4t8" path="res://Assets/Sprites/Speels/4.png" id="2_jqjcv"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1nt3c"]

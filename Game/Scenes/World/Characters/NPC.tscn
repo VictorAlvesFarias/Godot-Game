@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" uid="uid://db2c5m47jt7cb" path="res://Scenes/World/Characters/Player.tscn" id="1"]
-[ext_resource type="Script" path="res://Features/Word/Characters/Entities/NPC.cs" id="2"]
+[ext_resource type="Script" path="res://Features/World/Characters/Entities/NPC.cs" id="2"]
 
 [node name="NPC" instance=ExtResource("1")]
 script = ExtResource("2")

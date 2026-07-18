@@ -9,7 +9,6 @@ namespace Jogo25D.UI
 		public Button ResumeButton { get; set; }
 		public Button ExitButton { get; set; }
 		public Button HostButton { get; set; }
-		public Button ConnectButton { get; set; }
 		public LineEdit PortInput { get; set; }
 		public WorldManager NetworkManager { get; set; }
 
@@ -20,14 +19,12 @@ namespace Jogo25D.UI
 			ResumeButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ResumeButton");
 			ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
 			HostButton = GetNode<Button>("MarginContainer/Root/MenuColumn/HostButton");
-			ConnectButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ConnectButton");
 			PortInput = GetNode<LineEdit>("MarginContainer/Root/MenuColumn/PortInput");
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
 			ResumeButton.Pressed += OnResumePressed;
 			ExitButton.Pressed += OnExitPressed;
 			HostButton.Pressed += OnHostPressed;
-			ConnectButton.Pressed += OnConnectPressed;
 		}
 
 		public override void _Input(InputEvent @event)
@@ -113,25 +110,6 @@ namespace Jogo25D.UI
 			UpdateNetworkStatus();
 		}
 
-		public void OnConnectPressed()
-		{
-			if (NetworkManager == null)
-			{
-				return;
-			}
-
-			if (NetworkManager.IsConnected())
-			{
-				NetworkManager.Disconnect();
-			}
-			else
-			{
-				NetworkManager.JoinServer(PortInput.Text.Trim());
-			}
-
-			UpdateNetworkStatus();
-		}
-
 		public void UpdateNetworkStatus()
 		{
 			if (NetworkManager == null)
@@ -142,7 +120,6 @@ namespace Jogo25D.UI
 			bool connected = NetworkManager.IsConnected();
 
 			HostButton.Text = connected && Multiplayer.IsServer() ? "Stop server" : "Host";
-			ConnectButton.Text = connected && !Multiplayer.IsServer() ? "Disconnect" : "Connect";
 		}
 	}
 }

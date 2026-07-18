@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://7fnjlehfsmoj"]
 
 [ext_resource type="PackedScene" uid="uid://eaamifcetyfn" path="res://Scenes/World/Levels/Upsidedown.tscn" id="1_xf6vi"]
-[ext_resource type="PackedScene" uid="uid://bfdarejodvd8o" path="res://Scenes/World/Levels/Overword.tscn" id="2_ouhkt"]
+[ext_resource type="PackedScene" uid="uid://bfdarejodvd8o" path="res://Scenes/World/Levels/Overworld.tscn" id="2_ouhkt"]
 [ext_resource type="PackedScene" uid="uid://7csql0pm5brt" path="res://Scenes/World/Levels/Procedural.tscn" id="3_ouhkt"]
 
 [node name="World" type="Node2D" unique_id=336690079]
@@ -31,7 +31,7 @@ render_target_update_mode = 0
 
 [node name="Upsidedown" parent="Levels/UpsidedownViewportContainer/UpsidedownViewport" unique_id=726539886 instance=ExtResource("1_xf6vi")]
 
-[node name="OverwordViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=1097242325]
+[node name="OverworldViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=1097242325]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -40,13 +40,13 @@ grow_vertical = 2
 stretch = true
 metadata/_edit_use_anchors_ = true
 
-[node name="OverwordViewport" type="SubViewport" parent="Levels/OverwordViewportContainer" unique_id=1388105198]
+[node name="OverworldViewport" type="SubViewport" parent="Levels/OverworldViewportContainer" unique_id=1388105198]
 transparent_bg = true
 handle_input_locally = false
 size = Vector2i(1920, 1080)
 render_target_update_mode = 4
 
-[node name="Overword" parent="Levels/OverwordViewportContainer/OverwordViewport" unique_id=1584147225 instance=ExtResource("2_ouhkt")]
+[node name="Overworld" parent="Levels/OverworldViewportContainer/OverworldViewport" unique_id=1584147225 instance=ExtResource("2_ouhkt")]
 
 [node name="ProceduralViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=2061780964]
 visible = false

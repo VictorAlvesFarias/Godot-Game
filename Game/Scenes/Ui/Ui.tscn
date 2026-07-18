@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://b3on12lgpr7t0" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
 [ext_resource type="Script" uid="uid://bp4njl6lxbnwl" path="res://Features/UI/Nameplates/View/NameplateOverlayUI.cs" id="5_nameplate"]
 [ext_resource type="Script" uid="uid://162kd1fax7v0" path="res://Features/UI/DamagePopups/View/DamagePopupOverlayUI.cs" id="6_damagepopup"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Start/Start.tscn" id="7_start"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/WorldSelect/WorldSelect.tscn" id="8_worldselect"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Multiplayer/Multiplayer.tscn" id="9_multiplayer"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
@@ -24,3 +27,9 @@ script = ExtResource("6_damagepopup")
 
 [node name="ConsoleUI" parent="." unique_id=1263919536 instance=ExtResource("4_console")]
 visible = false
+
+[node name="StartUI" parent="." unique_id=1015168659 instance=ExtResource("7_start")]
+
+[node name="WorldSelectUI" parent="." unique_id=857368935 instance=ExtResource("8_worldselect")]
+
+[node name="MultiplayerUI" parent="." unique_id=2144691780 instance=ExtResource("9_multiplayer")]

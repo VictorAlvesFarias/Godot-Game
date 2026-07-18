@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://Features/Word/Items/Entities/WorldItem.cs" id="1"]
+[ext_resource type="Script" path="res://Features/World/Items/Entities/WorldItem.cs" id="1"]
 
 [node name="WorldItem" type="CharacterBody2D"]
 collision_layer = 4

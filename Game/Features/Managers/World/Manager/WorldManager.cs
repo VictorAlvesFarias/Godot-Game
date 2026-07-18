@@ -1,8 +1,8 @@
 using Godot;
 using System;
 using Jogo25D.Characters;
-using Jogo25D.Features.Word.Characters.Resources;
-using Jogo25D.Features.Word.Items.Resources;
+using Jogo25D.Features.World.Characters.Resources;
+using Jogo25D.Features.World.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -19,7 +19,7 @@ namespace Jogo25D.Systems
 		public static string DEFAULT_NODE_PATH = "/root/Main/Managers/WorldManager";
 
 		public ENetMultiplayerPeer Peer { get; set; }
-		public Node2D OverwordParent { get; set; }
+		public Node2D OverworldParent { get; set; }
 		public Node2D UpsidedownParent { get; set; }
 		public SubViewportContainer OverContainer { get; set; }
 		public SubViewportContainer UpContainer { get; set; }
@@ -46,17 +46,28 @@ namespace Jogo25D.Systems
 			Multiplayer.ConnectionFailed += OnConnectionFailed;
 			Multiplayer.ServerDisconnected += OnServerDisconnected;
 
-			var overwordParentPath = "Main/World/Levels/OverwordViewportContainer/OverwordViewport/Overword";
+			// A cena World não faz mais parte de Main.tscn por padrão — ela só
+			// existe depois que o jogador escolhe "Criar Mundo"/"Conectar" na
+			// tela de seleção. Por isso não resolvemos os paths aqui.
+		}
 
-			OverwordParent = GetTree().Root.GetNodeOrNull<Node2D>(overwordParentPath);
+        #endregion
 
-			if (OverwordParent == null)
+        #region Core - World spawning
+
+		private void ResolveWorldReferences()
+		{
+			var overworldParentPath = "Main/World/Levels/OverworldViewportContainer/OverworldViewport/Overworld";
+
+			OverworldParent = GetTree().Root.GetNodeOrNull<Node2D>(overworldParentPath);
+
+			if (OverworldParent == null)
 			{
-				GD.Print($"[WorldManager._Ready] GetNodeOrNull: OverwordParent not found at path {overwordParentPath}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: OverworldParent not found at path {overworldParentPath}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager._Ready] OverwordParent found: {OverwordParent.Name}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] OverworldParent found: {OverworldParent.Name}");
 			}
 
 			var upsidedownParentPath = "Main/World/Levels/UpsidedownViewportContainer/UpsidedownViewport/Upsidedown";
@@ -65,11 +76,11 @@ namespace Jogo25D.Systems
 
 			if (UpsidedownParent == null)
 			{
-				GD.Print($"[WorldManager._Ready] GetNodeOrNull: UpsidedownParent not found at path {upsidedownParentPath}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: UpsidedownParent not found at path {upsidedownParentPath}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager._Ready] UpsidedownParent found: {UpsidedownParent.Name}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] UpsidedownParent found: {UpsidedownParent.Name}");
 			}
 
             var proceduralParentPath = "Main/World/Levels/ProceduralViewportContainer/ProceduralViewport/Procedural";
@@ -78,24 +89,24 @@ namespace Jogo25D.Systems
 
             if (ProceduralParent == null)
             {
-                GD.Print($"[WorldManager._Ready] GetNodeOrNull: ProceduralParent not found at path {proceduralParentPath}");
+                GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: ProceduralParent not found at path {proceduralParentPath}");
             }
             else
             {
-                GD.Print($"[WorldManager._Ready] ProceduralParent found: {ProceduralParent.Name}");
+                GD.Print($"[WorldManager.ResolveWorldReferences] ProceduralParent found: {ProceduralParent.Name}");
             }
 
-            var overContainerPath = "Main/World/Levels/OverwordViewportContainer";
+            var overContainerPath = "Main/World/Levels/OverworldViewportContainer";
 
 			OverContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(overContainerPath);
 
 			if (OverContainer == null)
 			{
-				GD.Print($"[WorldManager._Ready] GetNodeOrNull: OverContainer not found at path {overContainerPath}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: OverContainer not found at path {overContainerPath}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager._Ready] OverContainer found: {OverContainer.Name}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] OverContainer found: {OverContainer.Name}");
 			}
 
             var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
@@ -104,11 +115,11 @@ namespace Jogo25D.Systems
 
 			if (UpContainer == null)
 			{
-				GD.Print($"[WorldManager._Ready] GetNodeOrNull: UpContainer not found at path {upContainerPath}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: UpContainer not found at path {upContainerPath}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager._Ready] UpContainer found: {UpContainer.Name}");
+				GD.Print($"[WorldManager.ResolveWorldReferences] UpContainer found: {UpContainer.Name}");
 			}
 
             var proceduralContainerPath = "Main/World/Levels/ProceduralViewportContainer";
@@ -117,19 +128,56 @@ namespace Jogo25D.Systems
 
             if (ProceduralContainer == null)
             {
-                GD.Print($"[WorldManager._Ready] GetNodeOrNull: ProceduralContainer not found at path {proceduralContainerPath}");
+                GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: ProceduralContainer not found at path {proceduralContainerPath}");
             }
             else
             {
-                GD.Print($"[WorldManager._Ready] UpContainer found: {ProceduralContainer.Name}");
+                GD.Print($"[WorldManager.ResolveWorldReferences] UpContainer found: {ProceduralContainer.Name}");
             }
+		}
 
-            SpawnTestNPC();
-        }
+		public void SpawnWorld()
+		{
+			if (OverworldParent != null)
+			{
+				return;
+			}
+
+			var main = GetTree().Root.GetNodeOrNull<Node>("Main");
+
+			if (main == null || main.HasNode("World"))
+			{
+				ResolveWorldReferences();
+
+				return;
+			}
+
+			var world = GD.Load<PackedScene>("res://Scenes/World/World.tscn").Instantiate<Node2D>();
+
+			main.AddChild(world);
+
+			ResolveWorldReferences();
+
+			GD.Print("[WorldManager.SpawnWorld] world instantiated");
+		}
+
+		public void SpawnLocalWorldAndPlayer()
+		{
+			SpawnWorld();
+
+			RespawnLocalSoloPlayer();
+		}
+
+		public string SpawnWorldAndJoin(string textAddress)
+		{
+			SpawnWorld();
+
+			return JoinServer(textAddress);
+		}
 
         private void SpawnTestNPC()
         {
-            if (OverwordParent == null || OverwordParent.GetNodeOrNull("NPC_Dummy") != null)
+            if (OverworldParent == null || OverworldParent.GetNodeOrNull("NPC_Dummy") != null)
             {
                 return;
             }
@@ -141,7 +189,7 @@ namespace Jogo25D.Systems
 
             npc.SetMultiplayerAuthority(1);
 
-            OverwordParent.AddChild(npc);
+            OverworldParent.AddChild(npc);
         }
 
         #endregion
@@ -173,7 +221,7 @@ namespace Jogo25D.Systems
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var player = OverwordParent?.GetNodeOrNull<Player>("Player");
+			var player = OverworldParent?.GetNodeOrNull<Player>("Player");
 
 			if (player == null)
 			{
@@ -230,7 +278,7 @@ namespace Jogo25D.Systems
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var localPlayer = OverwordParent?.GetNodeOrNull<Player>("Player");
+			var localPlayer = OverworldParent?.GetNodeOrNull<Player>("Player");
 
 			if (localPlayer != null)
 			{
@@ -243,7 +291,7 @@ namespace Jogo25D.Systems
 				GD.Print("[WorldManager.JoinServer] no local player to remove");
 			}
 
-			var localNpc = OverwordParent?.GetNodeOrNull("NPC_Dummy");
+			var localNpc = OverworldParent?.GetNodeOrNull("NPC_Dummy");
 
 			if (localNpc != null)
 			{
@@ -305,15 +353,15 @@ namespace Jogo25D.Systems
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
 
-			if (OverwordParent != null)
+			if (OverworldParent != null)
 			{
-				OverwordParent.AddChild(player);
+				OverworldParent.AddChild(player);
 
 				GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager.SpawnPlayer] WARNING: OverwordParent is null, cannot add {player.Name}");
+				GD.Print($"[WorldManager.SpawnPlayer] WARNING: OverworldParent is null, cannot add {player.Name}");
 			}
 		}
 
@@ -351,7 +399,7 @@ namespace Jogo25D.Systems
 		{
 			GD.Print($"[WorldManager.SpawnNpcReceive] position={position}");
 
-			if (OverwordParent == null || OverwordParent.GetNodeOrNull("NPC_Dummy") != null)
+			if (OverworldParent == null || OverworldParent.GetNodeOrNull("NPC_Dummy") != null)
 			{
 				return;
 			}
@@ -364,7 +412,7 @@ namespace Jogo25D.Systems
 			npc.AddToGroup("players");
 			npc.SetMultiplayerAuthority(1);
 
-			OverwordParent.AddChild(npc);
+			OverworldParent.AddChild(npc);
 		}
 
 		public void SpawnNpcRequest(Vector2 position, long targetPeerId)
@@ -378,9 +426,9 @@ namespace Jogo25D.Systems
 
 		public void SpawnWorldItem(WorldItem item)
 		{
-			if (OverwordParent != null)
+			if (OverworldParent != null)
 			{
-				OverwordParent.AddChild(item);
+				OverworldParent.AddChild(item);
 			}
 		}
 
@@ -389,7 +437,7 @@ namespace Jogo25D.Systems
 		{
 			GD.Print($"[WorldManager.SpawnWorldItemReceive] worldItemId={worldItemId} position={position}");
 
-			if (OverwordParent == null || FindWorldItem(worldItemId) != null)
+			if (OverworldParent == null || FindWorldItem(worldItemId) != null)
 			{
 				return;
 			}
@@ -451,7 +499,7 @@ namespace Jogo25D.Systems
 
 		public WorldItem FindWorldItem(long worldItemId)
 		{
-			return OverwordParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+			return OverworldParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
 		}
 
 		#endregion
@@ -551,7 +599,7 @@ namespace Jogo25D.Systems
             Node2D currentParent = playerNode.GetParent<Node2D>();
             Node2D nextParent;
 
-            if (currentParent == OverwordParent)
+            if (currentParent == OverworldParent)
             {
                 nextParent = UpsidedownParent;
             }
@@ -561,7 +609,7 @@ namespace Jogo25D.Systems
             }
             else
             {
-                nextParent = OverwordParent;
+                nextParent = OverworldParent;
             }
 
             GD.Print($"[WorldManager] Moving player from {currentParent.Name} to {nextParent.Name}");
@@ -577,7 +625,7 @@ namespace Jogo25D.Systems
 
             if (targetPeerId == Multiplayer.GetUniqueId())
             {
-                OverContainer.Visible = (nextParent == OverwordParent);
+                OverContainer.Visible = (nextParent == OverworldParent);
                 UpContainer.Visible = (nextParent == UpsidedownParent);
                 ProceduralContainer.Visible = (nextParent == ProceduralParent);
             }
@@ -656,7 +704,7 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			var npc = OverwordParent?.GetNodeOrNull<Player>("NPC_Dummy");
+			var npc = OverworldParent?.GetNodeOrNull<Player>("NPC_Dummy");
 
 			if (npc != null)
 			{
@@ -665,7 +713,7 @@ namespace Jogo25D.Systems
 				SpawnNpcRequest(npc.Position, id);
 			}
 
-			var worldItems = OverwordParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
+			var worldItems = OverworldParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
 
 			foreach (var worldItem in worldItems)
 			{
@@ -735,7 +783,7 @@ namespace Jogo25D.Systems
 
 		public SubViewportContainer GetContainerForParent(Node2D parent)
 		{
-			if (parent == OverwordParent)
+			if (parent == OverworldParent)
 			{
 				return OverContainer;
 			}

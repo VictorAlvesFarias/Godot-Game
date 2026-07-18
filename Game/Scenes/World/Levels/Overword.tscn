@@ -1,15 +1,14 @@
-[gd_scene format=4 uid="uid://bfdarejodvd8o"]
+[gd_scene format=4 uid="uid://b0xcdahysq0nt"]
 
-[ext_resource type="PackedScene" uid="uid://db2c5m47jt7cb" path="res://Scenes/World/Characters/Player.tscn" id="1_gk6ay"]
 [ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/1.png" id="1_y8qed"]
 [ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/4.png" id="2_danr7"]
-[ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/Word/Camera/Entities/CameraController.cs" id="2_vlsnn"]
+[ext_resource type="Script" path="res://Features/Word/Camera/Entities/CameraController.cs" id="2_vlsnn"]
 [ext_resource type="Texture2D" uid="uid://civ5j30ibc0oi" path="res://Assets/Tiles/TX Tileset Ground.png" id="3_wcluf"]
 [ext_resource type="Texture2D" uid="uid://beivbfj6e8rtt" path="res://Assets/Tiles/TX Village Props.png" id="4_y8qed"]
 [ext_resource type="Texture2D" uid="uid://c5wutnvn5ke2r" path="res://Assets/Textures/2.png" id="5_bg2tx"]
 [ext_resource type="Texture2D" uid="uid://ckrj4lovpeiwe" path="res://Assets/Textures/3.png" id="6_bg3tx"]
 [ext_resource type="Texture2D" uid="uid://dvthj1kjtge87" path="res://Assets/Textures/6.png" id="7_bg6tx"]
-[ext_resource type="Script" uid="uid://cy7x23du6g0sc" path="res://Features/Word/Background/Entities/BackgroundController.cs" id="8_bgscr"]
+[ext_resource type="Script" path="res://Features/Word/Background/Entities/BackgroundController.cs" id="8_bgscr"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kjd5s"]
 texture = ExtResource("3_wcluf")
@@ -987,6 +986,8 @@ sources/8 = SubResource("TileSetAtlasSource_p7pgw")
 
 [node name="Background" type="Node2D" parent="." unique_id=920441478]
 script = ExtResource("8_bgscr")
+SwapDistance = null
+FadeRange = null
 metadata/SwapDistance = 1000.0
 
 [node name="Sky" type="Parallax2D" parent="Background" unique_id=1287173883]
@@ -1068,8 +1069,6 @@ texture = ExtResource("7_bg6tx")
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
 script = ExtResource("2_vlsnn")
-
-[node name="Player" parent="." unique_id=678460707 instance=ExtResource("1_gk6ay")]
 
 [node name="Overword-Tiles" type="TileMapLayer" parent="." unique_id=1174357862]
 texture_filter = 1

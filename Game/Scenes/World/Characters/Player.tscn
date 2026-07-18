@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://db2c5m47jt7cb"]
 
-[ext_resource type="Script" uid="uid://dfscur07q2ggs" path="res://Features/Word/Characters/Entities/Player.cs" id="1"]
-[ext_resource type="Script" uid="uid://co3gj1gu87pml" path="res://Features/Word/Characters/Systems/AimIndicator.cs" id="4"]
-[ext_resource type="Script" uid="uid://di4apf3sm0mdx" path="res://Features/Word/Characters/Systems/GroundIndicator.cs" id="5"]
+[ext_resource type="Script" uid="uid://dfscur07q2ggs" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
+[ext_resource type="Script" uid="uid://co3gj1gu87pml" path="res://Features/World/Characters/Systems/AimIndicator.cs" id="4"]
+[ext_resource type="Script" uid="uid://di4apf3sm0mdx" path="res://Features/World/Characters/Systems/GroundIndicator.cs" id="5"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Sprites/Character/charater.png" id="5_47fxu"]
-[ext_resource type="Script" uid="uid://3iq1o6fjlcb4" path="res://Features/Word/Inputs/Systems/PlayerInput.cs" id="6"]
+[ext_resource type="Script" uid="uid://3iq1o6fjlcb4" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
 atlas = ExtResource("5_47fxu")

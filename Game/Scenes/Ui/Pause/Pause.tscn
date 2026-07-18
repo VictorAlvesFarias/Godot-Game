@@ -19,7 +19,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.12, 0.12, 0.12, 0.97)
+color = Color(0.12, 0.12, 0.12, 0.85)
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1774879070]
 anchors_preset = 15
@@ -71,19 +71,6 @@ text = "Host"
 flat = true
 alignment = 0
 
-[node name="ConnectButton" type="Button" parent="MarginContainer/Root/MenuColumn" unique_id=623113039]
-layout_mode = 2
-focus_mode = 0
-mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_font_sizes/font_size = 20
-text = "Connect"
-flat = true
-alignment = 0
-
 [node name="PortInput" type="LineEdit" parent="MarginContainer/Root/MenuColumn" unique_id=989633329]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
@@ -92,7 +79,7 @@ theme_override_colors/font_placeholder_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("Style_Empty")
 theme_override_styles/focus = SubResource("Style_Empty")
-placeholder_text = "Port or IP:Port"
+placeholder_text = "Port"
 
 [node name="ExitButton" type="Button" parent="MarginContainer/Root/MenuColumn" unique_id=377191876]
 layout_mode = 2

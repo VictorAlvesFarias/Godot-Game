@@ -1,7 +1,7 @@
 [gd_scene format=4 uid="uid://7csql0pm5brt"]
 
-[ext_resource type="Script" uid="uid://ciqdvhoory1it" path="res://Features/Word/WorldGeneration/Systems/WorldGeneration.cs" id="1_n8a66"]
-[ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/Word/Camera/Entities/CameraController.cs" id="2_vlsnn"]
+[ext_resource type="Script" uid="uid://ciqdvhoory1it" path="res://Features/World/WorldGeneration/Systems/WorldGeneration.cs" id="1_n8a66"]
+[ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_calfg"]
 load_path = "res://.godot/imported/TX Tileset Ground.png-c434de4f2f37ac9df9c44990f1091a2f.ctex"
