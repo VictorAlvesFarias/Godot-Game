@@ -241,8 +241,12 @@ namespace Jogo25D.Systems
 			return port.ToString();
 		}
 
+		public string LastJoinError { get; private set; } = "";
+
 		public string JoinServer(string textAddress)
 		{
+			LastJoinError = "";
+
             var ip = DEFAULT_ADDRESS;
             var port = DEFAULT_PORT;
 
@@ -254,6 +258,8 @@ namespace Jogo25D.Systems
                 {
                     if (string.IsNullOrWhiteSpace(parts[0]) || !int.TryParse(parts[1], out port))
                     {
+                        LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
+
                         return "";
                     }
 
@@ -261,18 +267,24 @@ namespace Jogo25D.Systems
                 }
                 else if (!int.TryParse(parts[0], out port))
                 {
+                    LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
+
                     return "";
                 }
             }
 
             GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
-			
+
 			Peer = new ENetMultiplayerPeer();
 
-			if (Peer.CreateClient(ip, port) != Error.Ok)
+			var createError = Peer.CreateClient(ip, port);
+
+			if (createError != Error.Ok)
 			{
-				GD.Print("[WorldManager.JoinServer] failed to create client");
-				
+				LastJoinError = $"ENetMultiplayerPeer.CreateClient retornou: {createError}";
+
+				GD.Print($"[WorldManager.JoinServer] failed to create client: {createError}");
+
 				return "";
 			}
 

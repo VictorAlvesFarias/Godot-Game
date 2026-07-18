@@ -144,7 +144,11 @@ namespace Jogo25D.UI
 
 			if (string.IsNullOrEmpty(address))
 			{
-				ErrorModal?.ShowError("Não foi possível conectar. Verifique o IP:Porta.");
+				var reason = string.IsNullOrEmpty(NetworkManager.LastJoinError)
+					? "Não foi possível conectar."
+					: NetworkManager.LastJoinError;
+
+				ErrorModal?.ShowError(reason);
 
 				return;
 			}
