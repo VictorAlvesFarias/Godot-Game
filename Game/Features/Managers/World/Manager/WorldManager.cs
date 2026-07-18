@@ -742,18 +742,25 @@ namespace Jogo25D.Systems
 			}
 		}
 
+		public event Action ConnectionSucceeded;
+		public event Action ConnectionAttemptFailed;
+
 		public void OnConnectedToServer()
 		{
-			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");	
+			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");
+
+			ConnectionSucceeded?.Invoke();
 		}
 
 		public void OnConnectionFailed()
-		{	
+		{
 			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
-			
+
 			Peer = null;
-			
-			GD.Print("[WorldManager.OnConnectionFailed] peer reset");	
+
+			GD.Print("[WorldManager.OnConnectionFailed] peer reset");
+
+			ConnectionAttemptFailed?.Invoke();
 		}
 
 		public void OnServerDisconnected()

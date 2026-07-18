@@ -29,6 +29,14 @@ namespace Jogo25D.UI
 		public Button BackButton { get; set; }
 		public Label StatusLabel { get; set; }
 		public WorldManager NetworkManager { get; set; }
+		public ErrorModalUI ErrorModal { get; set; }
+
+		#endregion
+
+		#region Systems
+
+		private Timer _connectTimeoutTimer;
+		private const float ConnectTimeoutSeconds = 8f;
 
 		#endregion
 
@@ -47,10 +55,17 @@ namespace Jogo25D.UI
 			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
 			StatusLabel = GetNode<Label>("MarginContainer/Root/StatusLabel");
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			ErrorModal = GetTree().Root.GetNodeOrNull<ErrorModalUI>("Main/Ui/ErrorModalUI");
 
 			ConnectButton.Pressed += OnConnectPressed;
 			WorldsButton.Pressed += OnWorldsPressed;
 			BackButton.Pressed += OnBackPressed;
+
+			_connectTimeoutTimer = new Timer();
+			_connectTimeoutTimer.OneShot = true;
+			_connectTimeoutTimer.WaitTime = ConnectTimeoutSeconds;
+			_connectTimeoutTimer.Timeout += OnConnectTimeout;
+			AddChild(_connectTimeoutTimer);
 
 			PopulateMockList();
 		}
@@ -101,6 +116,8 @@ namespace Jogo25D.UI
 		{
 			Visible = true;
 
+			StopWaitingForConnection();
+
 			if (StatusLabel != null)
 			{
 				StatusLabel.Text = "";
@@ -127,12 +144,58 @@ namespace Jogo25D.UI
 
 			if (string.IsNullOrEmpty(address))
 			{
-				StatusLabel.Text = "Não foi possível conectar. Verifique o IP:Porta.";
+				ErrorModal?.ShowError("Não foi possível conectar. Verifique o IP:Porta.");
 
 				return;
 			}
 
+			ConnectButton.Disabled = true;
+			StatusLabel.Text = "Conectando...";
+
+			NetworkManager.ConnectionSucceeded += OnConnectionSucceeded;
+			NetworkManager.ConnectionAttemptFailed += OnConnectionAttemptFailed;
+
+			_connectTimeoutTimer.Start();
+		}
+
+		private void OnConnectionSucceeded()
+		{
+			StopWaitingForConnection();
+
 			Close();
+		}
+
+		private void OnConnectionAttemptFailed()
+		{
+			StopWaitingForConnection();
+
+			StatusLabel.Text = "";
+
+			ErrorModal?.ShowError("Falha ao conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
+		}
+
+		private void OnConnectTimeout()
+		{
+			NetworkManager?.Disconnect();
+
+			StopWaitingForConnection();
+
+			StatusLabel.Text = "";
+
+			ErrorModal?.ShowError("Tempo esgotado tentando conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
+		}
+
+		private void StopWaitingForConnection()
+		{
+			_connectTimeoutTimer.Stop();
+
+			if (NetworkManager != null)
+			{
+				NetworkManager.ConnectionSucceeded -= OnConnectionSucceeded;
+				NetworkManager.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
+			}
+
+			ConnectButton.Disabled = false;
 		}
 
 		public void OnWorldsPressed()
