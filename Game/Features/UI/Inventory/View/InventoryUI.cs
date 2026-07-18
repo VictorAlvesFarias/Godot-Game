@@ -79,14 +79,14 @@ namespace Jogo25D.UI
 			ContextMenu = GetNode<Panel>("ContextMenu");
 			ContextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
 
-			var mainRow = MainControl.GetNode<HBoxContainer>("MainPanel/MarginContainer/MainRow");
+			var mainRow = MainControl.GetNode<HBoxContainer>("Panel/MainPanel/MarginContainer/MainRow");
 
 			DropSlot = MainControl.FindChild("DropSlot", true, false) as Panel;
 			HotbarRow = mainRow.GetNode<HBoxContainer>("InventoryColumn/HotbarRow");
 			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridContainer");
 			GridContainer.Columns = HotbarSlots;
 
-			CharacterSprite = mainRow.GetNode<AnimatedSprite2D>("MiddleColumn/SpriteBox/VBoxContainer/CenterContainer/CharacterSprite");
+			CharacterSprite = mainRow.GetNode<AnimatedSprite2D>("StatsColumn/SpriteBox2/VBoxContainer/CenterContainer/CharacterSprite");
 			CharacterNameLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterNameLabel");
 			CharacterHealthLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterHealthLabel");
 			BuffsListContainer = mainRow.GetNode<VBoxContainer>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/BuffsScroll/BuffsListContainer");

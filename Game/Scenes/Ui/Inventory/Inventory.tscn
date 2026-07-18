@@ -3,10 +3,16 @@
 [ext_resource type="Script" uid="uid://drku4vkvh81p2" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
 [ext_resource type="SpriteFrames" uid="uid://cj34f3k1r6xgd" path="res://Assets/Sprites/Character/CharacterFrames.tres" id="2_frames"]
 
-[sub_resource type="StyleBoxFlat" id="Style_Inventory"]
+[sub_resource type="StyleBoxFlat" id="Style_PanelBackground"]
 bg_color = Color(0.12, 0.12, 0.12, 0.97)
-border_color = Color(1, 1, 1, 1)
-corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="Style_MainPanelBorder"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_Box"]
 content_margin_left = 0.0
@@ -56,53 +62,68 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="MainPanel" type="PanelContainer" parent="Root" unique_id=576007769]
+[node name="Panel" type="Panel" parent="Root" unique_id=839946882]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_Inventory")
+theme_override_styles/panel = SubResource("Style_PanelBackground")
 
-[node name="MarginContainer" type="MarginContainer" parent="Root/MainPanel" unique_id=117584007]
+[node name="MainPanel" type="PanelContainer" parent="Root/Panel" unique_id=576007769]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -459.5
+offset_top = -459.5
+offset_right = 459.5
+offset_bottom = 459.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_MainPanelBorder")
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel" unique_id=117584007]
 layout_mode = 2
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="MainRow" type="HBoxContainer" parent="Root/MainPanel/MarginContainer" unique_id=523216229]
+[node name="MainRow" type="HBoxContainer" parent="Root/Panel/MainPanel/MarginContainer" unique_id=523216229]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="InventoryColumn" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow" unique_id=1168932794]
+[node name="InventoryColumn" type="VBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow" unique_id=1168932794]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="Header" type="HBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1524486462]
+[node name="Header" type="HBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1524486462]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/Header" unique_id=2024350275]
+[node name="Title" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/Header" unique_id=2024350275]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 22
 text = "INVENTÁRIO"
 horizontal_alignment = 1
 
-[node name="HotbarRow" type="HBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=862252863]
+[node name="HotbarRow" type="HBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=862252863]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SlotTemplate" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow" unique_id=2016884483]
+[node name="SlotTemplate" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow" unique_id=2016884483]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_Box")
 
-[node name="MarginContainer" type="MarginContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=202160455]
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=202160455]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -114,23 +135,23 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer" unique_id=678099740]
+[node name="CenterContainer" type="CenterContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer" unique_id=678099740]
 layout_mode = 2
 
-[node name="Icon" type="TextureRect" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer/CenterContainer" unique_id=500319184]
+[node name="Icon" type="TextureRect" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer/CenterContainer" unique_id=500319184]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer/CenterContainer" unique_id=1797444897]
+[node name="NameLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate/MarginContainer/CenterContainer" unique_id=1797444897]
 visible = false
 layout_mode = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="QuantityLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=605443463]
+[node name="QuantityLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=605443463]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -150,7 +171,7 @@ theme_override_font_sizes/font_size = 10
 horizontal_alignment = 2
 vertical_alignment = 2
 
-[node name="NumLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=1097673622]
+[node name="NumLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow/SlotTemplate" unique_id=1097673622]
 layout_mode = 1
 offset_left = 3.0
 offset_top = 2.0
@@ -160,7 +181,7 @@ theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
 theme_override_font_sizes/font_size = 9
 text = "1"
 
-[node name="GridContainer" type="GridContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1673080079]
+[node name="GridContainer" type="GridContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1673080079]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -168,12 +189,12 @@ theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 8
 
-[node name="SlotTemplate" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer" unique_id=1006682894]
+[node name="SlotTemplate" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer" unique_id=1006682894]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_Box")
 
-[node name="MarginContainer" type="MarginContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1152293594]
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1152293594]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -185,23 +206,23 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer" unique_id=1475735532]
+[node name="CenterContainer" type="CenterContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer" unique_id=1475735532]
 layout_mode = 2
 
-[node name="Icon" type="TextureRect" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1463575002]
+[node name="Icon" type="TextureRect" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1463575002]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=2129170788]
+[node name="NameLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=2129170788]
 visible = false
 layout_mode = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="QuantityLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=933847145]
+[node name="QuantityLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=933847145]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -221,7 +242,7 @@ theme_override_font_sizes/font_size = 10
 horizontal_alignment = 2
 vertical_alignment = 2
 
-[node name="NumLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1758290995]
+[node name="NumLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1758290995]
 layout_mode = 1
 offset_left = 3.0
 offset_top = 2.0
@@ -231,12 +252,12 @@ theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
 theme_override_font_sizes/font_size = 9
 text = "1"
 
-[node name="DropSlot" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1513354406]
+[node name="DropSlot" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1513354406]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fkjyr")
 
-[node name="Label" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/InventoryColumn/DropSlot" unique_id=1909235930]
+[node name="Label" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/DropSlot" unique_id=1909235930]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -251,24 +272,24 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="MiddleColumn" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow" unique_id=1645611953]
-custom_minimum_size = Vector2(350, 0)
+[node name="StatsColumn" type="VBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow" unique_id=929201877]
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="Title" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn" unique_id=1402939236]
+[node name="Title2" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=1084388271]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Player"
 horizontal_alignment = 1
 
-[node name="SpriteBox" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn" unique_id=541176007]
+[node name="SpriteBox2" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=593412803]
 custom_minimum_size = Vector2(190.055, 220)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("Style_Box")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn/SpriteBox" unique_id=2032853122]
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox2" unique_id=2127374918]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -279,55 +300,28 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn/SpriteBox/VBoxContainer" unique_id=622620242]
+[node name="CenterContainer" type="CenterContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox2/VBoxContainer" unique_id=2083162682]
 layout_mode = 2
 
-[node name="CharacterSprite" type="AnimatedSprite2D" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn/SpriteBox/VBoxContainer/CenterContainer" unique_id=1320159638]
+[node name="CharacterSprite" type="AnimatedSprite2D" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox2/VBoxContainer/CenterContainer" unique_id=946950328]
 texture_filter = 1
 scale = Vector2(8, 8)
 sprite_frames = ExtResource("2_frames")
 animation = &"idle"
 
-[node name="ReservedBox" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn" unique_id=737773313]
-custom_minimum_size = Vector2(190, 220)
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("Style_Box")
-
-[node name="CenterContainer" type="CenterContainer" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn/ReservedBox" unique_id=1135694445]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Caption" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/MiddleColumn/ReservedBox/CenterContainer" unique_id=1716790286]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
-theme_override_font_sizes/font_size = 11
-text = "Espaço reservado
-(em breve)"
-horizontal_alignment = 1
-
-[node name="StatsColumn" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow" unique_id=929201877]
-custom_minimum_size = Vector2(350, 0)
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Title" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=1139390173]
+[node name="Title" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=1139390173]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Stats"
 horizontal_alignment = 1
 
-[node name="SpriteBox" type="Panel" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=771337200]
+[node name="SpriteBox" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn" unique_id=771337200]
 custom_minimum_size = Vector2(190.055, 220)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("Style_Box")
 
-[node name="MarginContainer" type="MarginContainer" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox" unique_id=938724258]
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox" unique_id=938724258]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -339,36 +333,36 @@ theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer" unique_id=1278508304]
+[node name="VBoxContainer" type="VBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer" unique_id=1278508304]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CharacterNameLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1224207570]
+[node name="CharacterNameLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1224207570]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Jogador #0"
 autowrap_mode = 2
 
-[node name="CharacterHealthLabel" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=603992441]
+[node name="CharacterHealthLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=603992441]
 layout_mode = 2
 theme_override_font_sizes/font_size = 13
 text = "Vida: 0/0"
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1790965792]
+[node name="HSeparator" type="HSeparator" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1790965792]
 layout_mode = 2
 
-[node name="BuffsTitle" type="Label" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1769467788]
+[node name="BuffsTitle" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=1769467788]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Buffs"
 
-[node name="BuffsScroll" type="ScrollContainer" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=314463777]
+[node name="BuffsScroll" type="ScrollContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer" unique_id=314463777]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="BuffsListContainer" type="VBoxContainer" parent="Root/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer/BuffsScroll" unique_id=443753746]
+[node name="BuffsListContainer" type="VBoxContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox/MarginContainer/VBoxContainer/BuffsScroll" unique_id=443753746]
 layout_mode = 2
 size_flags_horizontal = 3
 
