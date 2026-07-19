@@ -1,3 +1,4 @@
+using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using System;
@@ -21,40 +22,14 @@ namespace Jogo25D.Features.World.Resolver.Singletons
                     if (existing != null)
                     {
                         existing.DamageAmount += prop.DamageAmount;
+                        existing.DamageMultiplier *= prop.DamageMultiplier;
                     }
                     else
                     {
                         result.Add(new DamagePropertyData
                         {
                             DamageType = prop.DamageType,
-                            DamageAmount = prop.DamageAmount
-                        });
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        public static List<DamageMultiplierPropertyData> Resolve(params List<DamageMultiplierPropertyData>[] lists)
-        {
-            var result = new List<DamageMultiplierPropertyData>();
-
-            foreach (var list in lists)
-            {
-                foreach (var prop in list)
-                {
-                    var existing = result.FirstOrDefault(p => p.DamageType == prop.DamageType);
-
-                    if (existing != null)
-                    {
-                        existing.DamageMultiplier *= prop.DamageMultiplier;
-                    }
-                    else
-                    {
-                        result.Add(new DamageMultiplierPropertyData
-                        {
-                            DamageType = prop.DamageType,
+                            DamageAmount = prop.DamageAmount,
                             DamageMultiplier = prop.DamageMultiplier
                         });
                     }
@@ -166,6 +141,53 @@ namespace Jogo25D.Features.World.Resolver.Singletons
             }
 
             result.CritChance = Math.Clamp(result.CritChance, 0f, 1f);
+
+            return result;
+        }
+
+        public static MovementPropertyData Resolve(params List<MovementPropertyData>[] lists)
+        {
+            var result = new MovementPropertyData { Speed = 0f, JumpVelocity = 0f };
+
+            foreach (var list in lists)
+            {
+                foreach (var prop in list)
+                {
+                    result.Speed += prop.Speed;
+                    result.JumpVelocity += prop.JumpVelocity;
+                }
+            }
+
+            return result;
+        }
+
+        public static HealthPropertyData Resolve(params List<HealthPropertyData>[] lists)
+        {
+            var result = new HealthPropertyData { MaxHealth = 0 };
+
+            foreach (var list in lists)
+            {
+                foreach (var prop in list)
+                {
+                    result.MaxHealth += prop.MaxHealth;
+                }
+            }
+
+            return result;
+        }
+
+        public static DashPropertyData Resolve(params List<DashPropertyData>[] lists)
+        {
+            var result = new DashPropertyData { DashSpeed = 0f, MovementInfluence = 0f };
+
+            foreach (var list in lists)
+            {
+                foreach (var prop in list)
+                {
+                    result.DashSpeed = Math.Max(result.DashSpeed, prop.DashSpeed);
+                    result.MovementInfluence = Math.Max(result.MovementInfluence, prop.MovementInfluence);
+                }
+            }
 
             return result;
         }

@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Properties;
 using Jogo25D.Systems;
@@ -44,16 +45,17 @@ namespace Jogo25D.Items
             if (damageProps.Count == 0 || HitboxScene == null)
             {
                 GD.Print($"[Attack] Bloqueado - damageProps={damageProps.Count} HitboxScene={HitboxScene != null}");
-                
+
                 return;
             }
 
-            var weapon = instance.Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
-            var charges = instance.Properties.OfType<ChargesPropertyData>().DefaultIfEmpty(new ChargesPropertyData()).First();
-            var crit = instance.Properties.OfType<CritPropertyData>().DefaultIfEmpty(new CritPropertyData()).First();
-            var damages = damageProps.ConvertAll(d => new DamageInfo
+            var resolvedDamages = Resolver.Resolve(damageProps);
+            var weapon = Resolver.Resolve(instance.Properties.OfType<AttackPropertyData>().ToList());
+            var charges = Resolver.Resolve(instance.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault() ?? new ChargesPropertyData();
+            var crit = Resolver.Resolve(instance.Properties.OfType<CritPropertyData>().ToList());
+            var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
-                Amount = d.DamageAmount,
+                Amount = (int)(d.DamageAmount * d.DamageMultiplier),
                 Type = d.DamageType,
                 SourcePeerId = (int)player.PeerId,
                 CritChance = crit.CritChance,
@@ -67,7 +69,9 @@ namespace Jogo25D.Items
                 return;
             }
 
-            hitbox.Initialize(damages, instance.OnHitEffects, player);
+            var hitEffects = new Godot.Collections.Array<EffectDefinitionData>(instance.Effects.Where(e => e.Type == EffectTriggerType.OnHit));
+
+            hitbox.Initialize(damages, hitEffects, player, weapon.KnockbackForce);
 
             var rawDir = player.Input.MousePosition - player.GlobalPosition;
             var dir = rawDir.LengthSquared() > 0.001f ? rawDir.Normalized() : Vector2.Right;

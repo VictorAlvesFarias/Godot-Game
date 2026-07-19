@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
@@ -37,19 +38,19 @@ namespace Jogo25D.Actions
 
             var direction = (player.Input.MousePosition - player.GlobalPosition).Normalized();
             var hitbox = HitboxScene.Instantiate<ProjectileHitbox>();
-            var weapon = Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
-            var charges = Properties.OfType<ChargesPropertyData>().DefaultIfEmpty(new ChargesPropertyData()).First();
-            var crit = Properties.OfType<CritPropertyData>().DefaultIfEmpty(new CritPropertyData()).First();
-            var damages = damageProps.ConvertAll(d => new DamageInfo
+            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList());
+            var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList());
+            var resolvedDamages = Resolver.Resolve(damageProps);
+            var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
-                Amount = d.DamageAmount,
+                Amount = (int)(d.DamageAmount * d.DamageMultiplier),
                 Type = d.DamageType,
                 SourcePeerId = (int)player.PeerId,
                 CritChance = crit.CritChance,
                 CritDamage = crit.CritDamage
             }).ToGodotArray();
 
-            hitbox.Initialize(damages, CreateHitEffects(), player);
+            hitbox.Initialize(damages, CreateEffects(EffectTriggerType.OnHit), player, weapon.KnockbackForce);
 
             hitbox.Direction = direction;
             hitbox.Speed = weapon.ProjectileSpeed;

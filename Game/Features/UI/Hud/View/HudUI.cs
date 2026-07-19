@@ -8,6 +8,7 @@ using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.Actions;
 using Jogo25D.Effects;
+using Jogo25D.Features.World.Resolver.Singletons;
 
 namespace Jogo25D.UI
 {
@@ -260,7 +261,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var instance = localPlayer.EquippedInstance;
+			var instance = localPlayer.EquippedInstance();
 
 			if (instance == null)
 			{
@@ -278,7 +279,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var chargesProp = instance.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+			var chargesProp = Resolver.Resolve(instance.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 			var reloadPrefix = def.IsReloading(instance) ? $"{def.GetRemainingReloadTime(instance):F1}s " : "";
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
@@ -657,7 +658,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var effects = localPlayer.Data.Effects;
+			var effects = localPlayer.Data.CurrentEffects;
 
 			while (effectSlots.Count < effects.Count)
 			{

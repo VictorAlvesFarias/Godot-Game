@@ -4,6 +4,8 @@ using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
@@ -46,6 +48,13 @@ namespace Jogo25D.Characters
 		public string DisplayName { get; set; } = "";
 
 		#endregion
+
+		#region Knockback
+
+		private const float KnockbackDuration = 0.2f;
+		private float _knockbackTimer = 0f;
+
+		#endregion'
 
 		#region Systems
 
@@ -145,25 +154,32 @@ namespace Jogo25D.Characters
 		{
 			var dt = (float)delta;
 
-			for (int i = Data.Effects.Count - 1; i >= 0; i--)
+			for (int i = Data.CurrentEffects.Count - 1; i >= 0; i--)
 			{
-				var effect = Data.Effects[i];
+				var effect = Data.CurrentEffects[i];
 
 				if (effect == null)
 				{
-					Data.Effects.RemoveAt(i);
+					Data.CurrentEffects.RemoveAt(i);
 
 					continue;
 				}
 
-				if (effect.ApplyToOwner)
-				{
-					EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+				EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
 
-					if (effect.Expired)
-					{
-						Data.Effects.RemoveAt(i);
-					}
+				if (effect.Expired)
+				{
+					Data.CurrentEffects.RemoveAt(i);
+				}
+			}
+
+			if (_knockbackTimer > 0f)
+			{
+				_knockbackTimer -= dt;
+
+				if (_knockbackTimer <= 0f)
+				{
+					Data.CanUpdateMovement = true;
 				}
 			}
 
@@ -211,16 +227,14 @@ namespace Jogo25D.Characters
 
 			if (IsAuthoritative())
 			{
-				foreach (var buff in Data.Buffs)
-				{
-					if (buff is DamageResistencePropertyData r && r.DamageType == damage.Type)
-					{
-						resistanceFactor = System.Math.Max(resistanceFactor, r.ResistanceFactor);
-					}
-				}
+				var resolvedResistances = Resolver.Resolve(Data.Buffs.OfType<DamageResistencePropertyData>().ToList());
+				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList());
 
+				resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
+
+				var resistanceMultiplier = resolvedResistanceMultipliers.FirstOrDefault(m => m.DamageType == damage.Type)?.Multiplier ?? 1f;
 				var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
-				var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor));
+				var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor) * resistanceMultiplier);
 
 				if (Data.CurrentHealth > 0 || finalDamage >= 0)
 				{
@@ -232,6 +246,18 @@ namespace Jogo25D.Characters
 			{
 				Sprite.Play("dead");
 			}
+		}
+
+		public void ApplyKnockback(Vector2 direction, float force)
+		{
+			if (force <= 0f || direction == Vector2.Zero || !IsAuthoritative())
+			{
+				return;
+			}
+
+			Velocity = direction.Normalized() * force;
+			_knockbackTimer = KnockbackDuration;
+			Data.CanUpdateMovement = false;
 		}
 
 		#endregion
@@ -283,7 +309,7 @@ namespace Jogo25D.Characters
 			}
 
 			var def = ItemDB.Get(data.Id);
-			var chargesProp = data.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+			var chargesProp = Resolver.Resolve(data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
 			{
@@ -378,7 +404,7 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var chargesProp = slot.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+				var chargesProp = Resolver.Resolve(slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
 				{
@@ -406,7 +432,7 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var chargesProp = slot.Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+				var chargesProp = Resolver.Resolve(slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
 				{
@@ -454,7 +480,10 @@ namespace Jogo25D.Characters
 			return Inventory.GetSlot(Data?.Inventory, index);
 		}
 
-		public ItemDefinitionData EquippedInstance => Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
+		public ItemDefinitionData EquippedInstance()
+		{
+			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
+		}
 
 		public void GiveItem(ItemDefinitionData item)
 		{
@@ -536,32 +565,14 @@ namespace Jogo25D.Characters
 
 		public void GiveEffect(string effectId)
 		{
-			if (string.IsNullOrEmpty(effectId) || Data?.Effects == null)
+			if (string.IsNullOrEmpty(effectId) || Data?.CurrentEffects == null)
 			{
 				return;
 			}
 
-			Data.Effects.Add(EffectDB.CreateInstance(effectId));
+			Data.CurrentEffects.Add(EffectDB.CreateInstance(effectId));
 
 			EmitSignal(SignalName.EffectsChanged);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void AddEffectReceive(string effectId)
-		{
-			GiveEffect(effectId);
-		}
-
-		public void AddEffectRequest(string effectId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				AddEffectReceive(effectId);
-
-				return;
-			}
-
-			RpcId(1, nameof(AddEffectReceive), effectId);
 		}
 
 		#endregion
@@ -605,44 +616,6 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void AddBuffReceive(Godot.Collections.Dictionary data)
-		{
-			GiveBuff(GodotDictionaryParser.ToResource<BasePropertyData>(data));
-		}
-
-		public void AddBuffRequest(BasePropertyData buff)
-		{
-			var data = GodotDictionaryParser.ToDictionary(buff);
-
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				AddBuffReceive(data);
-
-				return;
-			}
-
-			Rpc(nameof(AddBuffReceive), data);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void RemoveBuffReceive(long instanceId)
-		{
-			RemoveBuff(instanceId);
-		}
-
-		public void RemoveBuffRequest(long instanceId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				RemoveBuffReceive(instanceId);
-
-				return;
-			}
-
-			Rpc(nameof(RemoveBuffReceive), instanceId);
-		}
-
 		#endregion
 
 		#region Core - Abilities system
@@ -659,30 +632,14 @@ namespace Jogo25D.Characters
 			EmitSignal(SignalName.AbilitiesChanged);
 		}
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void UnlockAbilityReceive(string actionId)
-		{
-			GiveAbility(actionId);
-		}
-
-		public void UnlockAbilityRequest(string actionId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				UnlockAbilityReceive(actionId);
-
-				return;
-			}
-
-			RpcId(1, nameof(UnlockAbilityReceive), actionId);
-		}
-
 		#endregion
 
 		#region Core - Movement handlers
 
 		public void HandleMovement(float delta)
 		{
+			var movementProperties = Resolver.Resolve(Data.Properties.OfType<MovementPropertyData>().ToList(), Data.Buffs.OfType<MovementPropertyData>().ToList());
+
 			if (!Data.CanUpdateMovement)
 			{
 				MoveAndSlide();
@@ -699,18 +656,18 @@ namespace Jogo25D.Characters
 
 			if (Input.Jump && IsOnFloor())
 			{
-				v.Y = Data.JumpVelocity;
+				v.Y = movementProperties.JumpVelocity;
 
 				GD.Print("[HandleMovement] Pulando");
 			}
 
 			if (Input.MoveX != 0)
 			{
-				v.X = Input.MoveX * Data.Speed;
+				v.X = Input.MoveX * movementProperties.Speed;
 			}
 			else
 			{
-				v.X = Mathf.MoveToward(v.X, 0, Data.Speed);
+				v.X = Mathf.MoveToward(v.X, 0, movementProperties.Speed);
 			}
 
 			Velocity = v;
@@ -737,12 +694,98 @@ namespace Jogo25D.Characters
 			return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
 		}
 
-		#endregion
+        #endregion
 
-		#region Core - Rpc - Stats
+        #region Core - Rpc - Effects
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void AddEffectReceive(string effectId)
+        {
+            GiveEffect(effectId);
+        }
+
+        public void AddEffectRequest(string effectId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                AddEffectReceive(effectId);
+
+                return;
+            }
+
+            RpcId(1, nameof(AddEffectReceive), effectId);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Abilioties 
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void UnlockAbilityReceive(string actionId)
+        {
+            GiveAbility(actionId);
+        }
+
+        public void UnlockAbilityRequest(string actionId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                UnlockAbilityReceive(actionId);
+
+                return;
+            }
+
+            RpcId(1, nameof(UnlockAbilityReceive), actionId);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Buffs
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void AddBuffReceive(Godot.Collections.Dictionary data)
+        {
+            GiveBuff(GodotDictionaryParser.ToResource<BasePropertyData>(data));
+        }
+
+        public void AddBuffRequest(BasePropertyData buff)
+        {
+            var data = GodotDictionaryParser.ToDictionary(buff);
+
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                AddBuffReceive(data);
+
+                return;
+            }
+
+            Rpc(nameof(AddBuffReceive), data);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void RemoveBuffReceive(long instanceId)
+        {
+            RemoveBuff(instanceId);
+        }
+
+        public void RemoveBuffRequest(long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                RemoveBuffReceive(instanceId);
+
+                return;
+            }
+
+            Rpc(nameof(RemoveBuffReceive), instanceId);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Stats
 
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void EquipItemReceive(long instanceId)
 		{
 			this.EquipItem(instanceId);

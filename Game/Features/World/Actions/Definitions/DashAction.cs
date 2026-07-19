@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Properties;
 using System.Linq;
 
@@ -19,7 +20,7 @@ namespace Jogo25D.Actions
 		{
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
 			var dir = Vector2.Zero;
-			var dash = Properties.OfType<DashPropertyData>().DefaultIfEmpty(new DashPropertyData()).First();
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f)
 			{
@@ -65,7 +66,7 @@ namespace Jogo25D.Actions
 		{
 			var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
-			var dash = Properties.OfType<DashPropertyData>().DefaultIfEmpty(new DashPropertyData()).First();
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f && dash.MovementInfluence > 0f)
 			{

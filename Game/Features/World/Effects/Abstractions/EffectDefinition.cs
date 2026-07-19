@@ -14,9 +14,8 @@ namespace Jogo25D.Effects
 
         public float Duration { get; init; } = 0f;
         public bool Infinite { get; init; } = false;
-        public bool ApplyToOwner { get; init; } = true;
-        public bool ApplyToTarget { get; init; } = false;
-        public bool RemoveInOnUnequip { get; init; } = false;
+        public EffectTriggerType Type { get; init; } = EffectTriggerType.OnUse;
+        public EffectApply ApplyTo { get; init; } = EffectApply.ToOwner;
 
         #endregion
 

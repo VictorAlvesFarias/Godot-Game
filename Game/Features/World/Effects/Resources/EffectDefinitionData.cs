@@ -41,16 +41,13 @@ namespace Jogo25D.Effects
         public bool Expired { get; set; }
 
         [Export, GodotDictionaryField]
-        public bool RemoveInOnUnequip { get; set; }
-
-        [Export, GodotDictionaryField]
         public bool Infinite { get; set; }
 
         [Export, GodotDictionaryField]
-        public bool ApplyToOwner { get; set; }
+        public EffectTriggerType Type { get; set; }
 
         [Export, GodotDictionaryField]
-        public bool ApplyToTarget { get; set; }
+        public EffectApply ApplyTo { get; set; }
 
         #endregion
     }

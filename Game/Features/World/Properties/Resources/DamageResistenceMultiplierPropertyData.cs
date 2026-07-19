@@ -10,6 +10,6 @@ namespace Jogo25D.Properties
         public DamageType DamageType { get; set; }
 
         [Export, GodotDictionaryField]
-        public float Multiplier { get; set; }
+        public float Multiplier { get; set; } = 1f;
     }
 }

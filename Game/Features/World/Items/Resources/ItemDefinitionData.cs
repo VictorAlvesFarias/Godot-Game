@@ -34,10 +34,7 @@ namespace Jogo25D.Features.World.Items.Resources
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinitionData> OnHitEffects { get; set; } = new();
-
-        [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinitionData> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public int CurrentCharges { get; set; }

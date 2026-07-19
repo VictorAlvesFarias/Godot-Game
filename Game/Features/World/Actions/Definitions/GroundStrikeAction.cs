@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
@@ -28,7 +29,7 @@ namespace Jogo25D.Actions
             if (HitboxScene == null)
                 return;
 
-            var weapon = Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
+            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList());
 
             var preview = HitboxScene.Instantiate<GroundHitbox>();
 
@@ -75,7 +76,7 @@ namespace Jogo25D.Actions
             if (HitboxScene == null)
                 return;
 
-            var weapon = Properties.OfType<AttackPropertyData>().DefaultIfEmpty(new AttackPropertyData()).First();
+            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList());
 
             float horizontalRange = weapon.AttackRange;
             float maxVerticalDrop = weapon.AttackRange;
@@ -89,11 +90,12 @@ namespace Jogo25D.Actions
             if (damageProps.Count == 0)
                 return;
 
-            var crit = Properties.OfType<CritPropertyData>().DefaultIfEmpty(new CritPropertyData()).First();
+            var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList());
+            var resolvedDamages = Resolver.Resolve(damageProps);
 
-            var damages = damageProps.ConvertAll(d => new DamageInfo
+            var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
-                Amount = d.DamageAmount,
+                Amount = (int)(d.DamageAmount * d.DamageMultiplier),
                 Type = d.DamageType,
                 SourcePeerId = (int)player.PeerId,
                 CritChance = crit.CritChance,
@@ -102,7 +104,7 @@ namespace Jogo25D.Actions
 
             var hitbox = HitboxScene.Instantiate<GroundHitbox>();
 
-            hitbox.Initialize(damages, CreateHitEffects(), player);
+            hitbox.Initialize(damages, CreateEffects(EffectTriggerType.OnHit), player, weapon.KnockbackForce);
 
             float scale = weapon.AttackArea / 25f;
             hitbox.Scale = Vector2.One * scale;

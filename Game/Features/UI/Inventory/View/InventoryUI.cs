@@ -745,7 +745,7 @@ namespace Jogo25D.UI
 			{
 				DamageResistencePropertyData r => $"Resistência a {r.DamageType}: {r.ResistanceFactor:P0}",
 				DamageResistenceMultiplierPropertyData m => $"Mult. resistência a {m.DamageType}: x{m.Multiplier:F2}",
-				DamageMultiplierPropertyData m => $"Mult. dano {m.DamageType}: x{m.DamageMultiplier:F2}",
+				DamagePropertyData d => $"+{d.DamageAmount} dano {d.DamageType} (x{d.DamageMultiplier:F2})",
 				CritPropertyData c => $"Crítico: +{c.CritChance:P0} chance, +{c.CritDamage:P0} dano",
 				AttackPropertyData => "Bônus de ataque",
 				DashPropertyData => "Bônus de dash",

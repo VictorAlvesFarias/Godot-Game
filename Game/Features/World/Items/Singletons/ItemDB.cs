@@ -4,6 +4,7 @@ using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Properties;
 using System.Collections.Generic;
 
@@ -129,7 +130,7 @@ namespace Jogo25D.Items
                 Stackable = true,
                 MaxStackSize = 10,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_1),
-                OnUseEffects = new Godot.Collections.Array<string>
+                Effects = new Godot.Collections.Array<string>
                 {
                     "poison_damage"
                 }
@@ -225,14 +226,9 @@ namespace Jogo25D.Items
                 instance.Properties.Add(CloneProperty(property));
             }
 
-            foreach (var effectId in def.OnHitEffects)
+            foreach (var effectId in def.Effects)
             {
-                instance.OnHitEffects.Add(EffectDB.CreateInstance(effectId));
-            }
-
-            foreach (var effectId in def.OnUseEffects)
-            {
-                instance.OnUseEffects.Add(EffectDB.CreateInstance(effectId));
+                instance.Effects.Add(EffectDB.CreateInstance(effectId));
             }
 
             return instance;
@@ -242,14 +238,15 @@ namespace Jogo25D.Items
         {
             return property switch
             {
-                DamagePropertyData p => new DamagePropertyData { DamageAmount = p.DamageAmount, DamageType = p.DamageType, Transmit = p.Transmit },
-                AttackPropertyData p => new AttackPropertyData { AttackRange = p.AttackRange, AttackArea = p.AttackArea, KnockbackForce = p.KnockbackForce, ProjectileSpeed = p.ProjectileSpeed, Transmit = p.Transmit },
-                ChargesPropertyData p => new ChargesPropertyData { MaxCharges = p.MaxCharges, ChargeItemId = p.ChargeItemId, InfiniteCharges = p.InfiniteCharges, ReloadCooldown = p.ReloadCooldown, Transmit = p.Transmit },
-                CritPropertyData p => new CritPropertyData { CritChance = p.CritChance, CritDamage = p.CritDamage, Transmit = p.Transmit },
-                DamageMultiplierPropertyData p => new DamageMultiplierPropertyData { DamageType = p.DamageType, DamageMultiplier = p.DamageMultiplier, Transmit = p.Transmit },
-                DamageResistencePropertyData p => new DamageResistencePropertyData { DamageType = p.DamageType, ResistanceFactor = p.ResistanceFactor, Transmit = p.Transmit },
-                DamageResistenceMultiplierPropertyData p => new DamageResistenceMultiplierPropertyData { DamageType = p.DamageType, Multiplier = p.Multiplier, Transmit = p.Transmit },
-                DashPropertyData p => new DashPropertyData { DashSpeed = p.DashSpeed, MovementInfluence = p.MovementInfluence, Transmit = p.Transmit },
+                DamagePropertyData p => new DamagePropertyData { DamageAmount = p.DamageAmount, DamageType = p.DamageType, DamageMultiplier = p.DamageMultiplier },
+                AttackPropertyData p => new AttackPropertyData { AttackRange = p.AttackRange, AttackArea = p.AttackArea, KnockbackForce = p.KnockbackForce, ProjectileSpeed = p.ProjectileSpeed },
+                ChargesPropertyData p => new ChargesPropertyData { MaxCharges = p.MaxCharges, ChargeItemId = p.ChargeItemId, InfiniteCharges = p.InfiniteCharges, ReloadCooldown = p.ReloadCooldown },
+                CritPropertyData p => new CritPropertyData { CritChance = p.CritChance, CritDamage = p.CritDamage },
+                DamageResistencePropertyData p => new DamageResistencePropertyData { DamageType = p.DamageType, ResistanceFactor = p.ResistanceFactor },
+                DamageResistenceMultiplierPropertyData p => new DamageResistenceMultiplierPropertyData { DamageType = p.DamageType, Multiplier = p.Multiplier },
+                DashPropertyData p => new DashPropertyData { DashSpeed = p.DashSpeed, MovementInfluence = p.MovementInfluence },
+                MovementPropertyData p => new MovementPropertyData { Speed = p.Speed, JumpVelocity = p.JumpVelocity },
+                HealthPropertyData p => new HealthPropertyData { MaxHealth = p.MaxHealth },
                 _ => property
             };
         }

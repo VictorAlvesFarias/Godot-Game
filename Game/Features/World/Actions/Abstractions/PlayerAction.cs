@@ -19,8 +19,7 @@ namespace Jogo25D.Actions
         public float Duration { get; init; } = 0f;
         public int MaxCharges { get; init; } = 1;
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
-        public Godot.Collections.Array<string> OnHitEffects { get; set; } = new();
-        public Godot.Collections.Array<string> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<string> Effects { get; set; } = new();
 
         #endregion
 
@@ -116,15 +115,6 @@ namespace Jogo25D.Actions
             return 0f;
         }
 
-        public float GetDurationProgress(ActionDefinitionData data)
-        {
-            if (Duration > 0f && data.IsActive)
-            {
-                return Mathf.Clamp(data.DurationTimer / Duration, 0f, 1f);
-            }
-            return 0f;
-        }
-
         public float GetRemainingDuration(ActionDefinitionData data)
         {
             if (data.IsActive && Duration > 0f)
@@ -147,13 +137,16 @@ namespace Jogo25D.Actions
 
         #region Core - Effects
 
-        protected Godot.Collections.Array<EffectDefinitionData> CreateHitEffects()
+        protected Godot.Collections.Array<EffectDefinitionData> CreateEffects(EffectTriggerType type)
         {
             var effects = new Godot.Collections.Array<EffectDefinitionData>();
 
-            foreach (var effectId in OnHitEffects)
+            foreach (var effectId in Effects)
             {
-                effects.Add(EffectDB.CreateInstance(effectId));
+                if (EffectDB.Get(effectId)?.Type == type)
+                {
+                    effects.Add(EffectDB.CreateInstance(effectId));
+                }
             }
 
             return effects;

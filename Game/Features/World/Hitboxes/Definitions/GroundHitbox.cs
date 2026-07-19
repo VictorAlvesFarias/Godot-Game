@@ -49,9 +49,22 @@ namespace Jogo25D.Hitboxes
                     target.ReceiveDamage(damage);
                 }
 
+                if (KnockbackForce > 0f)
+                {
+                    target.ApplyKnockback(target.GlobalPosition - GlobalPosition, KnockbackForce);
+                }
+
                 foreach (var effect in Effects)
                 {
-                    target.GiveEffect(effect.Id);
+                    if (effect.ApplyTo == EffectApply.ToTarget || effect.ApplyTo == EffectApply.ToAll)
+                    {
+                        target.GiveEffect(effect.Id);
+                    }
+
+                    if (effect.ApplyTo == EffectApply.ToOwner || effect.ApplyTo == EffectApply.ToAll)
+                    {
+                        Owner?.GiveEffect(effect.Id);
+                    }
                 }
             }
         }

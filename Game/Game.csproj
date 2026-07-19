@@ -6,9 +6,11 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Features\Word\**" />
     <Compile Remove="Scenes\Characters\**" />
     <Compile Remove="Scenes\Entities\**" />
     <Compile Remove="Scenes\Levels\**" />
+    <EmbeddedResource Remove="Features\Word\**" />
     <EmbeddedResource Remove="Scenes\Characters\**" />
     <EmbeddedResource Remove="Scenes\Entities\**" />
     <EmbeddedResource Remove="Scenes\Levels\**" />
@@ -728,8 +730,5 @@
     <None Include="Scenes\World\Projectiles\Projectile.tscn" />
     <None Include="Scenes\World\Projectiles\Sword.tscn" />
     <None Include="Scenes\World\World.tscn" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Features\Word\Actions\Resources\" />
   </ItemGroup>
 </Project>

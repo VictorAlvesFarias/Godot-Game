@@ -31,7 +31,8 @@ namespace Jogo25D.Effects
                 Description = "Causa dano ao longo do tempo",
                 Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_1),
                 Duration = 5f,
-                ApplyToOwner = true,
+                Type = EffectTriggerType.OnUse,
+                ApplyTo = EffectApply.ToOwner,
                 Damages = new Godot.Collections.Array<Items.DamageInfo>
                 {
                     new Items.DamageInfo
@@ -121,9 +122,8 @@ namespace Jogo25D.Effects
             instance.InstanceId = NextInstanceId();
             instance.Duration = def.Duration;
             instance.Infinite = def.Infinite;
-            instance.ApplyToOwner = def.ApplyToOwner;
-            instance.ApplyToTarget = def.ApplyToTarget;
-            instance.RemoveInOnUnequip = def.RemoveInOnUnequip;
+            instance.Type = def.Type;
+            instance.ApplyTo = def.ApplyTo;
 
             return instance;
         }

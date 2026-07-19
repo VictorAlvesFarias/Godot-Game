@@ -11,5 +11,8 @@ namespace Jogo25D.Properties
 
         [Export, GodotDictionaryField]
         public int DamageAmount { get; set; }
+
+        [Export, GodotDictionaryField]
+        public float DamageMultiplier { get; set; } = 1f;
     }
 }

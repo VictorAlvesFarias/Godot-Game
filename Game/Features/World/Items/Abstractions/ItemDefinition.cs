@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Properties;
 using System;
 using System.Collections.Generic;
@@ -20,12 +21,10 @@ namespace Jogo25D.Items
         public ItemType Type { get; init; }
         public bool Stackable { get; init; } = false;
         public int MaxStackSize { get; init; } = 99;
-        public bool Rechargeable { get; set; }
         public float Cooldown { get; init; } = 0.5f;
 
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
-        public Godot.Collections.Array<string> OnHitEffects { get; set; } = new();
-        public Godot.Collections.Array<string> OnUseEffects { get; set; } = new();
+        public Godot.Collections.Array<string> Effects { get; set; } = new();
 
         #endregion
 
@@ -54,7 +53,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var chargesProp = Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
             if (chargesProp != null)
             {
@@ -88,7 +87,7 @@ namespace Jogo25D.Items
 
         public float GetReloadProgress(ItemDefinitionData data)
         {
-            var chargesProp = Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var reloadCooldown = chargesProp != null ? chargesProp.ReloadCooldown : 1f;
 
             if (reloadCooldown <= 0f)
@@ -101,7 +100,7 @@ namespace Jogo25D.Items
 
         public bool CanReload(ItemDefinitionData data)
         {
-            var chargesProp = Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
             if (chargesProp == null || chargesProp.InfiniteCharges)
             {
@@ -123,16 +122,11 @@ namespace Jogo25D.Items
 
         public void FinishReload(int chargesAdded, ItemDefinitionData data)
         {
-            var chargesProp = Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var maxCharges = chargesProp != null ? chargesProp.MaxCharges : chargesAdded;
 
             data.ReloadTimer = 0f;
             data.CurrentCharges = Math.Min(data.CurrentCharges + chargesAdded, maxCharges);
-        }
-
-        public bool CanAddMore(ItemDefinitionData data)
-        {
-            return Stackable && data.Quantity < MaxStackSize;
         }
 
         #endregion
@@ -141,7 +135,7 @@ namespace Jogo25D.Items
 
         public virtual bool CanUse(ItemDefinitionData data)
         {
-            var chargesProp = Properties.OfType<ChargesPropertyData>().FirstOrDefault();
+            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var infiniteCharges = chargesProp != null ? chargesProp.InfiniteCharges : true;
             var hasCharges = infiniteCharges || data.CurrentCharges > 0;
 
