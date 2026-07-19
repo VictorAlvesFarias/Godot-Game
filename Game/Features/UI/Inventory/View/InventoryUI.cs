@@ -667,7 +667,7 @@ namespace Jogo25D.UI
 			}
 
 			CharacterNameLabel.Text = $"Jogador #{LocalPlayer.PeerId}";
-			CharacterHealthLabel.Text = $"Vida: {LocalPlayer.Data.CurrentHealth}/{LocalPlayer.Data.MaxHealth}";
+			CharacterHealthLabel.Text = $"Vida: {LocalPlayer.Data.CurrentHealth}/{LocalPlayer.GetMaxHealth()}";
 		}
 
 		public void UpdateCharacterSprite()

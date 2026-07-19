@@ -340,6 +340,37 @@ namespace Jogo25D.Systems
 			CallDeferred(nameof(RespawnLocalSoloPlayer));
 		}
 
+		public void LeaveWorld()
+		{
+			GD.Print("[WorldManager.LeaveWorld] LeaveWorld()");
+
+			if (Peer != null)
+			{
+				Peer.Close();
+
+				Peer = null;
+
+				GD.Print("[WorldManager.LeaveWorld] peer closed");
+			}
+
+			var main = GetTree().Root.GetNodeOrNull<Node>("Main");
+			var world = main?.GetNodeOrNull("World");
+
+			if (world != null)
+			{
+				world.QueueFree();
+
+				GD.Print("[WorldManager.LeaveWorld] world queued for free");
+			}
+
+			OverworldParent = null;
+			UpsidedownParent = null;
+			ProceduralParent = null;
+			OverContainer = null;
+			UpContainer = null;
+			ProceduralContainer = null;
+		}
+
 		private void RespawnLocalSoloPlayer()
 		{
 			var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
@@ -565,7 +596,7 @@ namespace Jogo25D.Systems
 
 			player.GlobalPosition = Vector2.Zero;
 			player.Velocity = Vector2.Zero;
-			player.Data.CurrentHealth = player.Data.MaxHealth;
+			player.Data.CurrentHealth = player.GetMaxHealth();
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

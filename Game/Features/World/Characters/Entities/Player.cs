@@ -44,6 +44,7 @@ namespace Jogo25D.Characters
 		public long PeerId { get; set; } = 1;
 		public float Gravity { get; set; }
 		public PlayerData Data { get; set; } = new PlayerData();
+		public DinamicPlayerData DinamicData { get; set; } = new DinamicPlayerData();
 		public bool Loaded { get; set;  }
 		public string DisplayName { get; set; } = "";
 
@@ -54,7 +55,7 @@ namespace Jogo25D.Characters
 		private const float KnockbackDuration = 0.2f;
 		private float _knockbackTimer = 0f;
 
-		#endregion'
+		#endregion
 
 		#region Systems
 
@@ -154,24 +155,8 @@ namespace Jogo25D.Characters
 		{
 			var dt = (float)delta;
 
-			for (int i = Data.CurrentEffects.Count - 1; i >= 0; i--)
-			{
-				var effect = Data.CurrentEffects[i];
-
-				if (effect == null)
-				{
-					Data.CurrentEffects.RemoveAt(i);
-
-					continue;
-				}
-
-				EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
-
-				if (effect.Expired)
-				{
-					Data.CurrentEffects.RemoveAt(i);
-				}
-			}
+			TickEffects(Data.CurrentEffects, dt);
+			TickEffects(DinamicData.CurrentEffects, dt);
 
 			if (_knockbackTimer > 0f)
 			{
@@ -184,15 +169,8 @@ namespace Jogo25D.Characters
 			}
 
 			//Action process
-			foreach (var action in Data.UnlockedAbilities)
-			{
-				if (action == null)
-				{
-					continue;
-				}
-
-				ActionDB.Get(action.Id)?.Update(dt, this, action);
-			}
+			UpdateAbilities(Data.UnlockedAbilities, dt);
+			UpdateAbilities(DinamicData.UnlockedAbilities, dt);
 
 			foreach(var item in Data.Inventory.Items)
 			{
@@ -217,9 +195,88 @@ namespace Jogo25D.Characters
 			UpdateAnimation();
 		}
 
+		private void TickEffects(Godot.Collections.Array<EffectDefinitionData> effects, float dt)
+		{
+			for (int i = effects.Count - 1; i >= 0; i--)
+			{
+				var effect = effects[i];
+
+				if (effect == null)
+				{
+					effects.RemoveAt(i);
+
+					continue;
+				}
+
+				EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+
+				if (effect.Expired)
+				{
+					effects.RemoveAt(i);
+				}
+			}
+		}
+
+		private void UpdateAbilities(Godot.Collections.Array<ActionDefinitionData> abilities, float dt)
+		{
+			foreach (var action in abilities)
+			{
+				if (action == null)
+				{
+					continue;
+				}
+
+				ActionDB.Get(action.Id)?.Update(dt, this, action);
+			}
+		}
+
 		#endregion
 
 		#region Core - Damage system
+
+		public int GetMaxHealth()
+		{
+			return Resolver.Resolve(
+				Data.Properties.OfType<HealthPropertyData>().ToList(),
+				Data.Buffs.OfType<HealthPropertyData>().ToList(),
+				DinamicData.Properties.OfType<HealthPropertyData>().ToList(),
+				DinamicData.Buffs.OfType<HealthPropertyData>().ToList()
+			).MaxHealth;
+		}
+
+		public Godot.Collections.Array<ActionDefinitionData> GetAllUnlockedAbilities()
+		{
+			var result = new Godot.Collections.Array<ActionDefinitionData>();
+
+			foreach (var action in Data.UnlockedAbilities)
+			{
+				result.Add(action);
+			}
+
+			foreach (var action in DinamicData.UnlockedAbilities)
+			{
+				result.Add(action);
+			}
+
+			return result;
+		}
+
+		public Godot.Collections.Array<EffectDefinitionData> GetAllCurrentEffects()
+		{
+			var result = new Godot.Collections.Array<EffectDefinitionData>();
+
+			foreach (var effect in Data.CurrentEffects)
+			{
+				result.Add(effect);
+			}
+
+			foreach (var effect in DinamicData.CurrentEffects)
+			{
+				result.Add(effect);
+			}
+
+			return result;
+		}
 
 		public virtual void ReceiveDamage(DamageInfo damage)
 		{
@@ -227,8 +284,8 @@ namespace Jogo25D.Characters
 
 			if (IsAuthoritative())
 			{
-				var resolvedResistances = Resolver.Resolve(Data.Buffs.OfType<DamageResistencePropertyData>().ToList());
-				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList());
+				var resolvedResistances = Resolver.Resolve(Data.Buffs.OfType<DamageResistencePropertyData>().ToList(), DinamicData.Buffs.OfType<DamageResistencePropertyData>().ToList());
+				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList(), DinamicData.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList());
 
 				resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
 
@@ -638,7 +695,12 @@ namespace Jogo25D.Characters
 
 		public void HandleMovement(float delta)
 		{
-			var movementProperties = Resolver.Resolve(Data.Properties.OfType<MovementPropertyData>().ToList(), Data.Buffs.OfType<MovementPropertyData>().ToList());
+			var movementProperties = Resolver.Resolve(
+				Data.Properties.OfType<MovementPropertyData>().ToList(),
+				Data.Buffs.OfType<MovementPropertyData>().ToList(),
+				DinamicData.Properties.OfType<MovementPropertyData>().ToList(),
+				DinamicData.Buffs.OfType<MovementPropertyData>().ToList()
+			);
 
 			if (!Data.CanUpdateMovement)
 			{

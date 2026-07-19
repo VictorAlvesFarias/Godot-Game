@@ -197,11 +197,13 @@ namespace Jogo25D.UI
 
 			if (localPlayer != null && IsInstanceValid(localPlayer))
 			{
-				healthBar.MaxValue = localPlayer.Data.MaxHealth;
-				healthBar.Value = localPlayer.Data.CurrentHealth;
-				healthBarLabel.Text = $"{localPlayer.Data.CurrentHealth}/{localPlayer.Data.MaxHealth}";
+				var maxHealth = localPlayer.GetMaxHealth();
 
-				var barWidth = localPlayer.Data.MaxHealth * 10f;
+				healthBar.MaxValue = maxHealth;
+				healthBar.Value = localPlayer.Data.CurrentHealth;
+				healthBarLabel.Text = $"{localPlayer.Data.CurrentHealth}/{maxHealth}";
+
+				var barWidth = maxHealth * 10f;
 
 				healthBar.CustomMinimumSize = new Vector2(barWidth, 30);
 			}
@@ -305,7 +307,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = localPlayer.Data.UnlockedAbilities;
+			var list = localPlayer.GetAllUnlockedAbilities();
 
 			if (list == null || list.Count == 0)
 			{
@@ -516,7 +518,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = localPlayer.Data.UnlockedAbilities;
+			var list = localPlayer.GetAllUnlockedAbilities();
 
 			if (list == null || abilityFillBars.Count != list.Count)
 			{
@@ -658,7 +660,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var effects = localPlayer.Data.CurrentEffects;
+			var effects = localPlayer.GetAllCurrentEffects();
 
 			while (effectSlots.Count < effects.Count)
 			{

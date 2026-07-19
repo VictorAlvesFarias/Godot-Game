@@ -160,7 +160,7 @@ namespace Jogo25D.UI
             NameLabel.Position = screenPos + new Vector2(-45, -58);
 
             HealthLabel.Visible = true;
-            HealthLabel.Text = $"{player.Data.CurrentHealth}/{player.Data.MaxHealth}";
+            HealthLabel.Text = $"{player.Data.CurrentHealth}/{player.GetMaxHealth()}";
             HealthLabel.Position = screenPos + new Vector2(-45, hasName ? -42 : -50);
         }
 

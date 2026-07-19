@@ -9,6 +9,7 @@ namespace Jogo25D.UI
 		public Button ResumeButton { get; set; }
 		public Button ExitButton { get; set; }
 		public Button HostButton { get; set; }
+		public Button MenuButton { get; set; }
 		public LineEdit PortInput { get; set; }
 		public WorldManager NetworkManager { get; set; }
 
@@ -19,12 +20,14 @@ namespace Jogo25D.UI
 			ResumeButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ResumeButton");
 			ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
 			HostButton = GetNode<Button>("MarginContainer/Root/MenuColumn/HostButton");
+			MenuButton = GetNode<Button>("MarginContainer/Root/MenuColumn/MenuButton");
 			PortInput = GetNode<LineEdit>("MarginContainer/Root/MenuColumn/PortInput");
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
 
 			ResumeButton.Pressed += OnResumePressed;
 			ExitButton.Pressed += OnExitPressed;
 			HostButton.Pressed += OnHostPressed;
+			MenuButton.Pressed += OnMenuPressed;
 		}
 
 		public override void _Input(InputEvent @event)
@@ -87,6 +90,22 @@ namespace Jogo25D.UI
 			GetTree().Paused = false;
 
 			NetworkManager?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+		}
+
+		public void OnMenuPressed()
+		{
+			Visible = false;
+			GetTree().Paused = false;
+
+			NetworkManager?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+			NetworkManager?.LeaveWorld();
+
+			var startUi = GetTree().Root.GetNodeOrNull<StartUI>("Main/Ui/StartUI");
+
+			if (startUi != null)
+			{
+				startUi.Visible = true;
+			}
 		}
 
 		public void OnHostPressed()

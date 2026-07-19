@@ -53,7 +53,7 @@ namespace Jogo25D.Characters
 
             if (newHealth <= 0)
             {
-                SetHealthRequest(Data.MaxHealth);
+                SetHealthRequest(GetMaxHealth());
             }
         }
 

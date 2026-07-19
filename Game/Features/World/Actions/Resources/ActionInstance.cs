@@ -1,6 +1,8 @@
 using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Effects;
 using Jogo25D.Items;
+using Jogo25D.Properties;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Actions
@@ -29,6 +31,12 @@ namespace Jogo25D.Actions
 
         [Export, GodotDictionaryField]
         public float DurationTimer { get; set; } = 0f;
+
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public Vector2 DashDirection { get; set; } = Vector2.Zero;
