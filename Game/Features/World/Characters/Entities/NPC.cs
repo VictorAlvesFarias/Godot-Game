@@ -23,11 +23,22 @@ namespace Jogo25D.Characters
 
         public override void _PhysicsProcess(double delta)
         {
+            var dt = (float)delta;
+
+            TickKnockback(dt);
+
+            if (!Data.CanUpdateMovement)
+            {
+                MoveAndSlide();
+
+                return;
+            }
+
             var v = Velocity;
 
             if (!IsOnFloor())
             {
-                v.Y += Gravity * (float)delta;
+                v.Y += Gravity * dt;
             }
 
             Velocity = v;

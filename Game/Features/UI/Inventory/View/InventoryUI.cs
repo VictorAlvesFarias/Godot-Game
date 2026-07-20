@@ -1,9 +1,12 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jogo25D.Characters;
 using Jogo25D.Systems;
 using Jogo25D.Items;
+using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Properties;
 
 namespace Jogo25D.UI
@@ -105,7 +108,6 @@ namespace Jogo25D.UI
 			if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 			{
 				LocalPlayer.InventoryChanged -= OnInventoryChanged;
-				LocalPlayer.BuffsChanged -= UpdateBuffsList;
 			}
 		}
 
@@ -217,7 +219,6 @@ namespace Jogo25D.UI
 			if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 			{
 				LocalPlayer.InventoryChanged -= OnInventoryChanged;
-				LocalPlayer.BuffsChanged -= UpdateBuffsList;
 			}
 			LocalPlayer = null;
 
@@ -230,7 +231,6 @@ namespace Jogo25D.UI
 				if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
 				{
 					LocalPlayer.InventoryChanged += OnInventoryChanged;
-					LocalPlayer.BuffsChanged += UpdateBuffsList;
 
 					if (SlotPanels[0] == null)
 					{
@@ -241,7 +241,7 @@ namespace Jogo25D.UI
 						OnInventoryChanged();
 					}
 
-					UpdateBuffsList();
+					UpdatePropertiesList();
 				}
 			}
 		}
@@ -647,7 +647,7 @@ namespace Jogo25D.UI
 				PlayerInput?.AddBlocker("inventory");
 
 				OnInventoryChanged();
-				UpdateBuffsList();
+				UpdatePropertiesList();
 			}
 			else
 			{
@@ -688,7 +688,7 @@ namespace Jogo25D.UI
 			CharacterSprite.FlipH = LocalPlayer.Sprite.FlipH;
 		}
 
-		public void UpdateBuffsList()
+		public void UpdatePropertiesList()
 		{
 			if (BuffsListContainer == null)
 			{
@@ -698,12 +698,95 @@ namespace Jogo25D.UI
 			foreach (Node child in BuffsListContainer.GetChildren())
 			{
 				BuffsListContainer.RemoveChild(child);
+
 				child.QueueFree();
 			}
 
-			var buffs = LocalPlayer?.Data?.Buffs;
+			Godot.Collections.Array<BasePropertyData> properties = null;
 
-			if (buffs == null || buffs.Count == 0)
+			if (LocalPlayer != null)
+			{
+				properties = new Godot.Collections.Array<BasePropertyData>();
+
+				foreach (var property in LocalPlayer.Data.Properties)
+				{
+					properties.Add(property);
+				}
+
+				foreach (var property in LocalPlayer.Properties)
+				{
+					properties.Add(property);
+				}
+
+				var equippedInstance = LocalPlayer.EquippedInstance();
+
+				if (equippedInstance != null)
+				{
+					foreach (var property in equippedInstance.Properties)
+					{
+						properties.Add(property);
+					}
+				}
+			}
+
+			var lines = new List<string>();
+
+			if (properties != null)
+			{
+				foreach (var damage in Resolver.Resolve(properties.OfType<DamagePropertyData>().ToList()))
+				{
+					lines.Add(DescribeProperty(damage));
+				}
+
+				foreach (var resistance in Resolver.Resolve(properties.OfType<DamageResistencePropertyData>().ToList()))
+				{
+					lines.Add(DescribeProperty(resistance));
+				}
+
+				foreach (var multiplier in Resolver.Resolve(properties.OfType<DamageResistenceMultiplierPropertyData>().ToList()))
+				{
+					lines.Add(DescribeProperty(multiplier));
+				}
+
+				var critList = properties.OfType<CritPropertyData>().ToList();
+
+				if (critList.Count > 0)
+				{
+					lines.Add(DescribeProperty(Resolver.Resolve(critList)));
+				}
+
+				var movementList = properties.OfType<MovementPropertyData>().ToList();
+
+				if (movementList.Count > 0)
+				{
+					lines.Add(DescribeProperty(Resolver.Resolve(movementList)));
+				}
+
+				var healthList = properties.OfType<HealthPropertyData>().ToList();
+
+				if (healthList.Count > 0)
+				{
+					lines.Add(DescribeProperty(Resolver.Resolve(healthList)));
+				}
+
+				var attackList = properties.OfType<AttackPropertyData>().ToList();
+
+				if (attackList.Count > 0)
+				{
+					lines.Add(DescribeProperty(Resolver.Resolve(attackList)));
+				}
+
+				var dashList = properties.OfType<DashPropertyData>().ToList();
+
+				if (dashList.Count > 0)
+				{
+					lines.Add(DescribeProperty(Resolver.Resolve(dashList)));
+				}
+			}
+
+			lines.RemoveAll(string.IsNullOrEmpty);
+
+			if (lines.Count == 0)
 			{
 				var empty = new Label();
 
@@ -716,32 +799,24 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			foreach (var buff in buffs)
+			foreach (var text in lines)
 			{
-				var row = new HBoxContainer();
-
 				var label = new Label();
-				label.Text = DescribeBuff(buff);
+
+				label.Text = text;
+
 				label.AddThemeFontSizeOverride("font_size", 11);
+
 				label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 				label.AutowrapMode = TextServer.AutowrapMode.Word;
-				row.AddChild(label);
 
-				var removeButton = new Button();
-				removeButton.Text = "x";
-				removeButton.TooltipText = "Remover buff";
-				removeButton.CustomMinimumSize = new Vector2(22, 0);
-				var buffInstanceId = buff.InstanceId;
-				removeButton.Pressed += () => LocalPlayer?.RemoveBuffRequest(buffInstanceId);
-				row.AddChild(removeButton);
-
-				BuffsListContainer.AddChild(row);
+				BuffsListContainer.AddChild(label);
 			}
 		}
 
-		public string DescribeBuff(BasePropertyData buff)
+		public string DescribeProperty(BasePropertyData property)
 		{
-			return buff switch
+			return property switch
 			{
 				DamageResistencePropertyData r => $"Resistência a {r.DamageType}: {r.ResistanceFactor:P0}",
 				DamageResistenceMultiplierPropertyData m => $"Mult. resistência a {m.DamageType}: x{m.Multiplier:F2}",
@@ -749,8 +824,10 @@ namespace Jogo25D.UI
 				CritPropertyData c => $"Crítico: +{c.CritChance:P0} chance, +{c.CritDamage:P0} dano",
 				AttackPropertyData => "Bônus de ataque",
 				DashPropertyData => "Bônus de dash",
+				MovementPropertyData mv => $"+{mv.Speed:F0} velocidade de movimento",
+				HealthPropertyData h => $"+{h.MaxHealth} vida máxima",
 				null => "",
-				_ => buff.GetType().Name
+				_ => property.GetType().Name
 			};
 		}
 

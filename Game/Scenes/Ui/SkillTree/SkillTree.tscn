@@ -1,0 +1,170 @@
+[gd_scene format=3 uid="uid://bli0n422x5i74"]
+
+[ext_resource type="Script" uid="uid://cytly8gocsxrm" path="res://Features/UI/SkillTree/View/SkillTreeUI.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://dqi4c4xrpvi2s" path="res://Assets/Icons/Effects/icon_effect_1.png" id="2_placeholder"]
+
+[sub_resource type="StyleBoxFlat" id="Style_ScreenBackground"]
+bg_color = Color(0.05, 0.05, 0.05, 0.92)
+
+[sub_resource type="StyleBoxEmpty" id="Style_Empty_MainPanel"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kvl7p"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SlotNormal"]
+bg_color = Color(0.16, 0.16, 0.16, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+
+[sub_resource type="StyleBoxFlat" id="Style_SlotLocked"]
+bg_color = Color(0.08, 0.08, 0.08, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.25, 0.25, 0.25, 1)
+
+[node name="SkillTreeUI" type="CanvasLayer" unique_id=253909130]
+script = ExtResource("1")
+
+[node name="Background" type="Panel" parent="." unique_id=1172448277]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_ScreenBackground")
+
+[node name="MainPanel" type="PanelContainer" parent="Background" unique_id=877619220]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -459.5
+offset_top = -459.5
+offset_right = 459.5
+offset_bottom = 459.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_Empty_MainPanel")
+
+[node name="MarginContainer" type="MarginContainer" parent="Background/MainPanel" unique_id=1587443857]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Root" type="VBoxContainer" parent="Background/MainPanel/MarginContainer" unique_id=421870986]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Background/MainPanel/MarginContainer/Root" unique_id=2054268960]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "ÁRVORE DE HABILIDADES"
+horizontal_alignment = 1
+
+[node name="PointsLabel" type="Label" parent="Background/MainPanel/MarginContainer/Root" unique_id=792892712]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+
+[node name="Toolbar" type="HBoxContainer" parent="Background/MainPanel/MarginContainer/Root" unique_id=820935936]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SearchInput" type="LineEdit" parent="Background/MainPanel/MarginContainer/Root/Toolbar" unique_id=1646747063]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_placeholder_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_kvl7p")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_kvl7p")
+placeholder_text = "Port"
+
+[node name="ResetButton" type="Button" parent="Background/MainPanel/MarginContainer/Root/Toolbar" unique_id=1761242456]
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+text = "Resetar pontos"
+
+[node name="Scroll" type="ScrollContainer" parent="Background/MainPanel/MarginContainer/Root" unique_id=453297590]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="GridContainer" type="GridContainer" parent="Background/MainPanel/MarginContainer/Root/Scroll" unique_id=1626226352]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 6
+
+[node name="SlotTemplate" type="Button" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer" unique_id=181878155]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("Style_SlotNormal")
+theme_override_styles/hover = SubResource("Style_SlotNormal")
+theme_override_styles/pressed = SubResource("Style_SlotNormal")
+theme_override_styles/disabled = SubResource("Style_SlotLocked")
+clip_text = true
+
+[node name="MarginContainer" type="MarginContainer" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate" unique_id=328485224]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Box" type="VBoxContainer" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer" unique_id=1138719355]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="CenterBox" type="VBoxContainer" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer/Box" unique_id=1989684938]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer/Box/CenterBox" unique_id=1989684937]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_placeholder")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer/Box/CenterBox" unique_id=1168304046]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Nome da Habilidade"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LevelLabel" type="Label" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer/Box" unique_id=1644978797]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.3, 1)
+theme_override_font_sizes/font_size = 11
+text = "0/0"
+horizontal_alignment = 1

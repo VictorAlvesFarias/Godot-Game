@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Features.World.Resolver.Singletons;
 using System.Collections.Generic;
 
 namespace Jogo25D.Effects
@@ -124,6 +125,7 @@ namespace Jogo25D.Effects
             instance.Infinite = def.Infinite;
             instance.Type = def.Type;
             instance.ApplyTo = def.ApplyTo;
+            instance.Properties = Resolver.CloneProperties(def.Properties);
 
             return instance;
         }

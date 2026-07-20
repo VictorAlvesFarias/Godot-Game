@@ -5,6 +5,7 @@ using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Properties;
 using System.Collections.Generic;
 
@@ -220,11 +221,7 @@ namespace Jogo25D.Items
 
             instance.InstanceId = NextInstanceId();
             instance.Quantity = 1;
-
-            foreach (var property in def.Properties)
-            {
-                instance.Properties.Add(CloneProperty(property));
-            }
+            instance.Properties = Resolver.CloneProperties(def.Properties);
 
             foreach (var effectId in def.Effects)
             {
@@ -232,23 +229,6 @@ namespace Jogo25D.Items
             }
 
             return instance;
-        }
-
-        private static BasePropertyData CloneProperty(BasePropertyData property)
-        {
-            return property switch
-            {
-                DamagePropertyData p => new DamagePropertyData { DamageAmount = p.DamageAmount, DamageType = p.DamageType, DamageMultiplier = p.DamageMultiplier },
-                AttackPropertyData p => new AttackPropertyData { AttackRange = p.AttackRange, AttackArea = p.AttackArea, KnockbackForce = p.KnockbackForce, ProjectileSpeed = p.ProjectileSpeed },
-                ChargesPropertyData p => new ChargesPropertyData { MaxCharges = p.MaxCharges, ChargeItemId = p.ChargeItemId, InfiniteCharges = p.InfiniteCharges, ReloadCooldown = p.ReloadCooldown },
-                CritPropertyData p => new CritPropertyData { CritChance = p.CritChance, CritDamage = p.CritDamage },
-                DamageResistencePropertyData p => new DamageResistencePropertyData { DamageType = p.DamageType, ResistanceFactor = p.ResistanceFactor },
-                DamageResistenceMultiplierPropertyData p => new DamageResistenceMultiplierPropertyData { DamageType = p.DamageType, Multiplier = p.Multiplier },
-                DashPropertyData p => new DashPropertyData { DashSpeed = p.DashSpeed, MovementInfluence = p.MovementInfluence },
-                MovementPropertyData p => new MovementPropertyData { Speed = p.Speed, JumpVelocity = p.JumpVelocity },
-                HealthPropertyData p => new HealthPropertyData { MaxHealth = p.MaxHealth },
-                _ => property
-            };
         }
 
         #endregion

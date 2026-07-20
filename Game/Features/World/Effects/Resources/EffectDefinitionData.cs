@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Properties;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Effects
@@ -19,6 +20,9 @@ namespace Jogo25D.Effects
 
         [Export, GodotDictionaryField]
         public long InstanceId { get; set; }
+
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         #endregion
 

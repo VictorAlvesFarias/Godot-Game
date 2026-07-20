@@ -49,10 +49,13 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var resolvedDamages = Resolver.Resolve(damageProps);
-            var weapon = Resolver.Resolve(instance.Properties.OfType<AttackPropertyData>().ToList());
+            // O item usa suas proprias Properties + as do player (base +
+            // skill tree) - nao inclui EquippedInstance().Properties de novo
+            // aqui, pra nao contar o proprio item em dobro.
+            var resolvedDamages = Resolver.Resolve(damageProps, player.Data.Properties.OfType<DamagePropertyData>().ToList(), player.Properties.OfType<DamagePropertyData>().ToList());
+            var weapon = Resolver.Resolve(instance.Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
             var charges = Resolver.Resolve(instance.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault() ?? new ChargesPropertyData();
-            var crit = Resolver.Resolve(instance.Properties.OfType<CritPropertyData>().ToList());
+            var crit = Resolver.Resolve(instance.Properties.OfType<CritPropertyData>().ToList(), player.Data.Properties.OfType<CritPropertyData>().ToList(), player.Properties.OfType<CritPropertyData>().ToList());
             var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
                 Amount = (int)(d.DamageAmount * d.DamageMultiplier),

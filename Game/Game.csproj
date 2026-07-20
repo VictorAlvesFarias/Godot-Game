@@ -731,4 +731,7 @@
     <None Include="Scenes\World\Projectiles\Sword.tscn" />
     <None Include="Scenes\World\World.tscn" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Features\World\SkillTree\" />
+  </ItemGroup>
 </Project>

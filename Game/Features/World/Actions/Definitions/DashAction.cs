@@ -20,7 +20,7 @@ namespace Jogo25D.Actions
 		{
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
 			var dir = Vector2.Zero;
-			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList());
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.Data.Properties.OfType<DashPropertyData>().ToList(), player.Properties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f)
 			{
@@ -66,7 +66,7 @@ namespace Jogo25D.Actions
 		{
 			var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
-			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList());
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.Data.Properties.OfType<DashPropertyData>().ToList(), player.Properties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f && dash.MovementInfluence > 0f)
 			{

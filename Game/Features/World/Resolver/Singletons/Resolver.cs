@@ -215,5 +215,34 @@ namespace Jogo25D.Features.World.Resolver.Singletons
 
             return result;
         }
+
+        public static BasePropertyData CloneProperty(BasePropertyData property)
+        {
+            return property switch
+            {
+                DamagePropertyData p => new DamagePropertyData { DamageAmount = p.DamageAmount, DamageType = p.DamageType, DamageMultiplier = p.DamageMultiplier },
+                AttackPropertyData p => new AttackPropertyData { AttackRange = p.AttackRange, AttackArea = p.AttackArea, KnockbackForce = p.KnockbackForce, ProjectileSpeed = p.ProjectileSpeed },
+                ChargesPropertyData p => new ChargesPropertyData { MaxCharges = p.MaxCharges, ChargeItemId = p.ChargeItemId, InfiniteCharges = p.InfiniteCharges, ReloadCooldown = p.ReloadCooldown },
+                CritPropertyData p => new CritPropertyData { CritChance = p.CritChance, CritDamage = p.CritDamage },
+                DamageResistencePropertyData p => new DamageResistencePropertyData { DamageType = p.DamageType, ResistanceFactor = p.ResistanceFactor },
+                DamageResistenceMultiplierPropertyData p => new DamageResistenceMultiplierPropertyData { DamageType = p.DamageType, Multiplier = p.Multiplier },
+                DashPropertyData p => new DashPropertyData { DashSpeed = p.DashSpeed, MovementInfluence = p.MovementInfluence },
+                MovementPropertyData p => new MovementPropertyData { Speed = p.Speed, JumpVelocity = p.JumpVelocity },
+                HealthPropertyData p => new HealthPropertyData { MaxHealth = p.MaxHealth },
+                _ => property
+            };
+        }
+
+        public static Godot.Collections.Array<BasePropertyData> CloneProperties(IEnumerable<BasePropertyData> properties)
+        {
+            var result = new Godot.Collections.Array<BasePropertyData>();
+
+            foreach (var property in properties)
+            {
+                result.Add(CloneProperty(property));
+            }
+
+            return result;
+        }
     }
 }

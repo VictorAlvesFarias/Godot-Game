@@ -1,11 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11925.98 stable
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "Game\Game.csproj", "{8C44F2DC-1234-5678-9ABC-DEF012345678}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launcher", "Launcher\Launcher.csproj", "{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}"
-	ProjectSection(ProjectDependencies) = postProject
-		{8C44F2DC-1234-5678-9ABC-DEF012345678} = {8C44F2DC-1234-5678-9ABC-DEF012345678}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,11 +17,11 @@ Global
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
-		{1A2B3C4D-5E6F-7890-ABCD-EF0123456789}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {31D51EB1-0653-4402-8FA8-890639B02187}
 	EndGlobalSection
 EndGlobal

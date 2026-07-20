@@ -1,5 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Properties;
+using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Effects
 {
@@ -16,6 +18,8 @@ namespace Jogo25D.Effects
         public bool Infinite { get; init; } = false;
         public EffectTriggerType Type { get; init; } = EffectTriggerType.OnUse;
         public EffectApply ApplyTo { get; init; } = EffectApply.ToOwner;
+
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         #endregion
 

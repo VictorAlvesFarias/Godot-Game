@@ -2,6 +2,8 @@ using Godot;
 using System.Collections.Generic;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Effects;
+using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 
@@ -110,6 +112,13 @@ namespace Jogo25D.Actions
             var instance = new ActionDefinitionData();
 
             instance.Id = id;
+            instance.CurrentCharges = def.MaxCharges;
+            instance.Properties = Resolver.CloneProperties(def.Properties);
+
+            foreach (var effectId in def.Effects)
+            {
+                instance.Effects.Add(EffectDB.CreateInstance(effectId));
+            }
 
             def.OnCreate(player, instance);
             

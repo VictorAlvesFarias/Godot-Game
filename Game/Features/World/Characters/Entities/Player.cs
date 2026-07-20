@@ -9,6 +9,7 @@ using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Items;
 using Jogo25D.Properties;
+using Jogo25D.SkillTree;
 using Jogo25D.Systems;
 using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -32,28 +33,27 @@ namespace Jogo25D.Characters
 		public delegate void EffectsChangedEventHandler();
 
 		[Signal]
-		public delegate void BuffsChangedEventHandler();
-
-		[Signal]
 		public delegate void AbilitiesChangedEventHandler();
 
 		#endregion
 
-		#region Properties
+		#region Dinamic properties
 
 		public long PeerId { get; set; } = 1;
 		public float Gravity { get; set; }
-		public PlayerData Data { get; set; } = new PlayerData();
-		public DinamicPlayerData DinamicData { get; set; } = new DinamicPlayerData();
-		public bool Loaded { get; set;  }
+        public bool Loaded { get; set;  }
 		public string DisplayName { get; set; } = "";
+		public PlayerData Data { get; set; } = new PlayerData();
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
+        public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 
 		#endregion
 
 		#region Knockback
 
-		private const float KnockbackDuration = 0.2f;
-		private float _knockbackTimer = 0f;
+		protected const float KnockbackDuration = 0.2f;
+		protected float _knockbackTimer = 0f;
 
 		#endregion
 
@@ -141,6 +141,8 @@ namespace Jogo25D.Characters
 				}
 			}
 
+			ApplySkillTree();
+
 			Inventory.EnsureSize(Data.Inventory);
 
 			if (Data.EquippedItemId > 0 && Inventory.FindItem(Data.Inventory, Data.EquippedItemId) != null)
@@ -156,21 +158,10 @@ namespace Jogo25D.Characters
 			var dt = (float)delta;
 
 			TickEffects(Data.CurrentEffects, dt);
-			TickEffects(DinamicData.CurrentEffects, dt);
-
-			if (_knockbackTimer > 0f)
-			{
-				_knockbackTimer -= dt;
-
-				if (_knockbackTimer <= 0f)
-				{
-					Data.CanUpdateMovement = true;
-				}
-			}
-
-			//Action process
+			TickEffects(CurrentEffects, dt);
+			TickKnockback(dt);
 			UpdateAbilities(Data.UnlockedAbilities, dt);
-			UpdateAbilities(DinamicData.UnlockedAbilities, dt);
+			UpdateAbilities(UnlockedAbilities, dt);
 
 			foreach(var item in Data.Inventory.Items)
 			{
@@ -236,12 +227,9 @@ namespace Jogo25D.Characters
 
 		public int GetMaxHealth()
 		{
-			return Resolver.Resolve(
-				Data.Properties.OfType<HealthPropertyData>().ToList(),
-				Data.Buffs.OfType<HealthPropertyData>().ToList(),
-				DinamicData.Properties.OfType<HealthPropertyData>().ToList(),
-				DinamicData.Buffs.OfType<HealthPropertyData>().ToList()
-			).MaxHealth;
+			var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
+
+			return Resolver.Resolve(Data.Properties.OfType<HealthPropertyData>().ToList(), Properties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
 		}
 
 		public Godot.Collections.Array<ActionDefinitionData> GetAllUnlockedAbilities()
@@ -253,7 +241,7 @@ namespace Jogo25D.Characters
 				result.Add(action);
 			}
 
-			foreach (var action in DinamicData.UnlockedAbilities)
+			foreach (var action in UnlockedAbilities)
 			{
 				result.Add(action);
 			}
@@ -270,7 +258,7 @@ namespace Jogo25D.Characters
 				result.Add(effect);
 			}
 
-			foreach (var effect in DinamicData.CurrentEffects)
+			foreach (var effect in CurrentEffects)
 			{
 				result.Add(effect);
 			}
@@ -284,8 +272,11 @@ namespace Jogo25D.Characters
 
 			if (IsAuthoritative())
 			{
-				var resolvedResistances = Resolver.Resolve(Data.Buffs.OfType<DamageResistencePropertyData>().ToList(), DinamicData.Buffs.OfType<DamageResistencePropertyData>().ToList());
-				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList(), DinamicData.Buffs.OfType<DamageResistenceMultiplierPropertyData>().ToList());
+				var equippedInstance = EquippedInstance();
+				var equippedResistances = equippedInstance?.Properties.OfType<DamageResistencePropertyData>().ToList() ?? new List<DamageResistencePropertyData>();
+				var equippedResistanceMultipliers = equippedInstance?.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList() ?? new List<DamageResistenceMultiplierPropertyData>();
+				var resolvedResistances = Resolver.Resolve(Data.Properties.OfType<DamageResistencePropertyData>().ToList(), Properties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
+				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
 
 				resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
 
@@ -312,9 +303,43 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			Velocity = direction.Normalized() * force;
+			ApplyKnockbackRequest(direction.Normalized() * force);
+		}
+
+		public void ApplyKnockbackRequest(Vector2 velocity)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				ApplyKnockbackReceive(velocity);
+
+				return;
+			}
+
+			Rpc(nameof(ApplyKnockbackReceive), velocity);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void ApplyKnockbackReceive(Vector2 velocity)
+		{
+			Velocity = velocity;
 			_knockbackTimer = KnockbackDuration;
 			Data.CanUpdateMovement = false;
+		}
+
+		protected void TickKnockback(float dt)
+		{
+			if (_knockbackTimer <= 0f)
+			{
+				return;
+			}
+
+			_knockbackTimer -= dt;
+
+			if (_knockbackTimer <= 0f)
+			{
+				Data.CanUpdateMovement = true;
+				Velocity = Vector2.Zero;
+			}
 		}
 
 		#endregion
@@ -634,47 +659,6 @@ namespace Jogo25D.Characters
 
 		#endregion
 
-		#region Core - Buffs system
-
-		public void GiveBuff(BasePropertyData buff)
-		{
-			if (buff == null || Data?.Buffs == null)
-			{
-				return;
-			}
-
-			if (buff.InstanceId <= 0)
-			{
-				buff.InstanceId = BasePropertyData.NextInstanceId();
-			}
-
-			Data.Buffs.Add(buff);
-
-			EmitSignal(SignalName.BuffsChanged);
-		}
-
-		public void RemoveBuff(long instanceId)
-		{
-			if (Data?.Buffs == null || instanceId <= 0)
-			{
-				return;
-			}
-
-			for (int i = 0; i < Data.Buffs.Count; i++)
-			{
-				if (Data.Buffs[i]?.InstanceId == instanceId)
-				{
-					Data.Buffs.RemoveAt(i);
-
-					EmitSignal(SignalName.BuffsChanged);
-
-					return;
-				}
-			}
-		}
-
-		#endregion
-
 		#region Core - Abilities system
 
 		public void GiveAbility(string actionId)
@@ -691,15 +675,155 @@ namespace Jogo25D.Characters
 
 		#endregion
 
+		#region Core - Skill tree system
+
+		public void ApplySkillTree()
+		{
+			Properties.Clear();
+
+			var grantedAbilityIds = new HashSet<string>();
+			var grantedEffectIds = new HashSet<string>();
+
+			foreach (var progress in Data.SkillTree)
+			{
+				if (progress == null || progress.CurrentLevel <= 0)
+				{
+					continue;
+				}
+
+				var node = SkillTreeDB.Get(progress.NodeId);
+
+				if (node == null)
+				{
+					continue;
+				}
+
+				for (int level = 0; level < progress.CurrentLevel; level++)
+				{
+					foreach (var property in node.Properties)
+					{
+						Properties.Add(Resolver.CloneProperty(property));
+					}
+				}
+
+				foreach (var abilityId in node.UnlockedAbilities)
+				{
+					grantedAbilityIds.Add(abilityId);
+
+					if (!HasUnlockedAbility(abilityId))
+					{
+						UnlockedAbilities.Add(ActionDB.CreateInstance(abilityId, this));
+					}
+				}
+
+				foreach (var effectId in node.Effects)
+				{
+					grantedEffectIds.Add(effectId);
+
+					if (!HasCurrentEffect(effectId))
+					{
+						CurrentEffects.Add(EffectDB.CreateInstance(effectId));
+					}
+				}
+			}
+
+			for (int i = UnlockedAbilities.Count - 1; i >= 0; i--)
+			{
+				if (UnlockedAbilities[i] == null || !grantedAbilityIds.Contains(UnlockedAbilities[i].Id))
+				{
+					UnlockedAbilities.RemoveAt(i);
+				}
+			}
+
+			for (int i = CurrentEffects.Count - 1; i >= 0; i--)
+			{
+				if (CurrentEffects[i] == null || !grantedEffectIds.Contains(CurrentEffects[i].Id))
+				{
+					CurrentEffects.RemoveAt(i);
+				}
+			}
+		}
+
+		private bool HasUnlockedAbility(string actionId)
+		{
+			foreach (var action in UnlockedAbilities)
+			{
+				if (action != null && action.Id == actionId)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private bool HasCurrentEffect(string effectId)
+		{
+			foreach (var effect in CurrentEffects)
+			{
+				if (effect != null && effect.Id == effectId)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private SkillTreeNodeData FindSkillNodeProgress(string nodeId)
+		{
+			foreach (var entry in Data.SkillTree)
+			{
+				if (entry != null && entry.NodeId == nodeId)
+				{
+					return entry;
+				}
+			}
+
+			return null;
+		}
+
+		public bool LevelUpSkillNode(string nodeId)
+		{
+			if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(Data.SkillTree, nodeId))
+			{
+				return false;
+			}
+
+			var progress = FindSkillNodeProgress(nodeId);
+
+			if (progress == null)
+			{
+				progress = new SkillTreeNodeData { NodeId = nodeId };
+
+				Data.SkillTree.Add(progress);
+			}
+
+			progress.CurrentLevel++;
+
+			ApplySkillTree();
+
+			return true;
+		}
+
+		public void ResetSkillTree()
+		{
+			Data.SkillTree.Clear();
+
+			ApplySkillTree();
+		}
+
+		#endregion
+
 		#region Core - Movement handlers
 
 		public void HandleMovement(float delta)
 		{
+			var equippedProperties = EquippedInstance()?.Properties.OfType<MovementPropertyData>().ToList() ?? new List<MovementPropertyData>();
 			var movementProperties = Resolver.Resolve(
 				Data.Properties.OfType<MovementPropertyData>().ToList(),
-				Data.Buffs.OfType<MovementPropertyData>().ToList(),
-				DinamicData.Properties.OfType<MovementPropertyData>().ToList(),
-				DinamicData.Buffs.OfType<MovementPropertyData>().ToList()
+				Properties.OfType<MovementPropertyData>().ToList(),
+				equippedProperties
 			);
 
 			if (!Data.CanUpdateMovement)
@@ -802,44 +926,88 @@ namespace Jogo25D.Characters
 
         #endregion
 
-        #region Core - Rpc - Buffs
+        #region Core - Rpc - Skill tree
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void AddBuffReceive(Godot.Collections.Dictionary data)
+        public void LevelUpSkillNodeReceive(string nodeId)
         {
-            GiveBuff(GodotDictionaryParser.ToResource<BasePropertyData>(data));
+            LevelUpSkillNode(nodeId);
+
+            SyncSkillTreeToOwner();
         }
 
-        public void AddBuffRequest(BasePropertyData buff)
+        public void LevelUpSkillNodeRequest(string nodeId)
         {
-            var data = GodotDictionaryParser.ToDictionary(buff);
-
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
             {
-                AddBuffReceive(data);
+                LevelUpSkillNodeReceive(nodeId);
 
                 return;
             }
 
-            Rpc(nameof(AddBuffReceive), data);
+            RpcId(1, nameof(LevelUpSkillNodeReceive), nodeId);
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void RemoveBuffReceive(long instanceId)
+        public void ResetSkillTreeReceive()
         {
-            RemoveBuff(instanceId);
+            ResetSkillTree();
+
+            SyncSkillTreeToOwner();
         }
 
-        public void RemoveBuffRequest(long instanceId)
+        public void ResetSkillTreeRequest()
         {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
             {
-                RemoveBuffReceive(instanceId);
+                ResetSkillTreeReceive();
 
                 return;
             }
 
-            Rpc(nameof(RemoveBuffReceive), instanceId);
+            RpcId(1, nameof(ResetSkillTreeReceive));
+        }
+
+        // RpcId(1, ...) so executa localmente pra quem chama quando o alvo e
+        // o proprio peer - como o cliente manda pro servidor (peer 1, que nao
+        // e ele mesmo), o CallLocal nao dispara do lado do cliente e o
+        // Data.SkillTree dele nunca fica sabendo do novo nivel. Por isso o
+        // servidor, apos aplicar, reenvia o SkillTree atualizado de volta so
+        // pro peer dono do player (nao precisa fazer nada se quem processou
+        // for o proprio dono, ex: servidor jogando localmente).
+        private void SyncSkillTreeToOwner()
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
+            {
+                return;
+            }
+
+            var skillTree = new Godot.Collections.Array();
+
+            foreach (var entry in Data.SkillTree)
+            {
+                skillTree.Add(GodotDictionaryParser.ToDictionary(entry));
+            }
+
+            RpcId(PeerId, nameof(SyncSkillTreeReceive), skillTree);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SyncSkillTreeReceive(Godot.Collections.Array skillTree)
+        {
+            Data.SkillTree = new Godot.Collections.Array<SkillTreeNodeData>();
+
+            foreach (var entry in skillTree)
+            {
+                var node = GodotDictionaryParser.ToResource<SkillTreeNodeData>(entry.AsGodotDictionary());
+
+                if (node != null)
+                {
+                    Data.SkillTree.Add(node);
+                }
+            }
+
+            ApplySkillTree();
         }
 
         #endregion

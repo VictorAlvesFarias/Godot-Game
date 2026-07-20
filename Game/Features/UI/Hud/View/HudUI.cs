@@ -67,14 +67,16 @@ namespace Jogo25D.UI
 			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
 			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
 
-			_hotbarNormalStyle = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
+			_hotbarNormalStyle = UISlotStyle.CreateDefault();
+
+			slot0.AddThemeStyleboxOverride("panel", _hotbarNormalStyle);
+
 			_hotbarSelectedStyle = new StyleBoxFlat
 			{
 				BgColor = new Color(0.12f, 0.12f, 0.18f, 0.96f),
 				BorderWidthLeft = 3, BorderWidthTop = 3, BorderWidthRight = 3, BorderWidthBottom = 3,
 				BorderColor = new Color(1f, 0.85f, 0.1f, 1f),
 			};
-			_hotbarSelectedStyle.SetCornerRadiusAll(3);
 
 			for (int i = 0; i < HotbarSize; i++)
 			{
@@ -374,14 +376,7 @@ namespace Jogo25D.UI
 			panel.Name = "AbilityPanel";
 			panel.CustomMinimumSize = new Vector2(48, 48);
 
-			var styleBg = new StyleBoxFlat();
-
-			styleBg.BgColor = new Color(0.15f, 0.15f, 0.2f, 0.95f);
-			styleBg.BorderWidthLeft = styleBg.BorderWidthTop = styleBg.BorderWidthRight = styleBg.BorderWidthBottom = 2;
-			styleBg.BorderColor = new Color(0.4f, 0.4f, 0.5f);
-
-			styleBg.SetCornerRadiusAll(4);
-			panel.AddThemeStyleboxOverride("panel", styleBg);
+			panel.AddThemeStyleboxOverride("panel", UISlotStyle.CreateDefault());
 
 			var margin = new MarginContainer();
 
@@ -624,6 +619,8 @@ namespace Jogo25D.UI
 			var panel = new Panel();
 
 			panel.CustomMinimumSize = new Vector2(32, 32);
+
+			panel.AddThemeStyleboxOverride("panel", UISlotStyle.CreateDefault());
 
 			var iconRect = new TextureRect();
 

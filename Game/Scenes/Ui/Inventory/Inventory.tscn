@@ -3,16 +3,10 @@
 [ext_resource type="Script" uid="uid://drku4vkvh81p2" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
 [ext_resource type="SpriteFrames" uid="uid://cj34f3k1r6xgd" path="res://Assets/Sprites/Character/CharacterFrames.tres" id="2_frames"]
 
-[sub_resource type="StyleBoxFlat" id="Style_PanelBackground"]
-bg_color = Color(0.12, 0.12, 0.12, 0.85)
+[sub_resource type="StyleBoxFlat" id="Style_ScreenBackground"]
+bg_color = Color(0.05, 0.05, 0.05, 0.92)
 
-[sub_resource type="StyleBoxFlat" id="Style_MainPanelBorder"]
-bg_color = Color(0, 0, 0, 0)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.4, 0.4, 0.4, 1)
+[sub_resource type="StyleBoxEmpty" id="Style_Empty_MainPanel"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Box"]
 content_margin_left = 0.0
@@ -25,6 +19,7 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.4, 0.4, 0.4, 1)
+corner_detail = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fkjyr"]
 bg_color = Color(0.6784314, 0.18431373, 0.27058825, 0.16078432)
@@ -69,7 +64,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_PanelBackground")
+theme_override_styles/panel = SubResource("Style_ScreenBackground")
 
 [node name="MainPanel" type="PanelContainer" parent="Root/Panel" unique_id=576007769]
 layout_mode = 1
@@ -84,7 +79,7 @@ offset_right = 459.5
 offset_bottom = 459.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_MainPanelBorder")
+theme_override_styles/panel = SubResource("Style_Empty_MainPanel")
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel" unique_id=117584007]
 layout_mode = 2
@@ -196,7 +191,7 @@ theme_override_styles/panel = SubResource("Style_Box")
 
 [node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1152293594]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2

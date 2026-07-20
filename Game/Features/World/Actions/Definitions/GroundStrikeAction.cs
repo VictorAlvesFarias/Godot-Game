@@ -27,13 +27,14 @@ namespace Jogo25D.Actions
         public override void OnCreate(Player player, ActionDefinitionData instance)
         {
             if (HitboxScene == null)
+            {
                 return;
+            }
 
-            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList());
-
+            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
             var preview = HitboxScene.Instantiate<GroundHitbox>();
+            var scale = weapon.AttackArea / 25f;
 
-            float scale = weapon.AttackArea / 25f;
             preview.Scale = Vector2.One * scale;
 
             var sprite = preview.GetNode<AnimatedSprite2D>("Sprite");
@@ -59,7 +60,9 @@ namespace Jogo25D.Actions
         public override void OnPassiveUpdate(Player player, ActionDefinitionData instance, float delta)
         {
             if (player.GroundMarker != null)
+            {
                 player.GroundMarker.IsActive = player.Input.Ability2Held && instance.CanUse;
+            }
         }
 
         #endregion
@@ -74,25 +77,29 @@ namespace Jogo25D.Actions
         public override void OnStartAction(Player player, ActionDefinitionData instance, float delta)
         {
             if (HitboxScene == null)
+            {
                 return;
+            }
 
-            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList());
-
-            float horizontalRange = weapon.AttackRange;
-            float maxVerticalDrop = weapon.AttackRange;
-
-            Vector2? ground = CalculateGroundPosition(player, horizontalRange, maxVerticalDrop);
+            var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
+            var horizontalRange = weapon.AttackRange;
+            var maxVerticalDrop = weapon.AttackRange;
+            var ground = CalculateGroundPosition(player, horizontalRange, maxVerticalDrop);
 
             if (ground == null)
+            {
                 return;
+            }
 
             var damageProps = Properties.OfType<DamagePropertyData>().ToList();
+            
             if (damageProps.Count == 0)
+            {
                 return;
+            }
 
-            var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList());
-            var resolvedDamages = Resolver.Resolve(damageProps);
-
+            var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList(), player.Data.Properties.OfType<CritPropertyData>().ToList(), player.Properties.OfType<CritPropertyData>().ToList());
+            var resolvedDamages = Resolver.Resolve(damageProps, player.Data.Properties.OfType<DamagePropertyData>().ToList(), player.Properties.OfType<DamagePropertyData>().ToList());
             var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
                 Amount = (int)(d.DamageAmount * d.DamageMultiplier),
@@ -106,7 +113,8 @@ namespace Jogo25D.Actions
 
             hitbox.Initialize(damages, CreateEffects(EffectTriggerType.OnHit), player, weapon.KnockbackForce);
 
-            float scale = weapon.AttackArea / 25f;
+            var scale = weapon.AttackArea / 25f;
+
             hitbox.Scale = Vector2.One * scale;
 
             player.GetParent().AddChild(hitbox);
@@ -121,11 +129,12 @@ namespace Jogo25D.Actions
         private Vector2? CalculateGroundPosition(Player player, float horizontalRange, float maxVerticalDrop)
         {
             var mouse = player.Input.MousePosition;
-            float targetX = mouse.X;
+            var targetX = mouse.X;
 
             if (horizontalRange > 0f)
             {
-                float offset = mouse.X - player.GlobalPosition.X;
+                var offset = mouse.X - player.GlobalPosition.X;
+                
                 targetX = player.GlobalPosition.X + Mathf.Clamp(offset, -horizontalRange, horizontalRange);
             }
 
@@ -133,6 +142,7 @@ namespace Jogo25D.Actions
             var to = new Vector2(targetX, player.GlobalPosition.Y + 2000f);
 
             var query = PhysicsRayQueryParameters2D.Create(from, to, RayMask);
+            
             query.Exclude = new Godot.Collections.Array<Rid> { player.GetRid() };
 
             var hit = player.GetWorld2D().DirectSpaceState.IntersectRay(query);
@@ -140,10 +150,12 @@ namespace Jogo25D.Actions
             if (hit != null && hit.Count > 0)
             {
                 var pos = hit["position"].AsVector2();
-                float drop = pos.Y - player.GlobalPosition.Y;
+                var drop = pos.Y - player.GlobalPosition.Y;
 
                 if (maxVerticalDrop > 0f && drop > maxVerticalDrop)
+                {
                     return null;
+                }
 
                 return pos;
             }
