@@ -1023,14 +1023,14 @@ namespace Jogo25D.Characters
 
 		public void EquipItemRequest(long instanceId)
 		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
 			{
 				EquipItemReceive(instanceId);
 
 				return;
 			}
 
-			RpcId(1, nameof(EquipItemReceive), instanceId);
+			Rpc(nameof(EquipItemReceive), instanceId);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
