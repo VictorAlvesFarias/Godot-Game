@@ -43,7 +43,13 @@ namespace Jogo25D.UI
                 return;
             }
 
-            Visible = LocalPlayer.Data.CurrentHealth <= 0;
+            // So aparece quando a animacao "dead" realmente terminou de
+            // tocar (nao loop, para sozinha no ultimo frame) - nao junto com
+            // a vida chegando a zero, pra nao cobrir a animacao de morte.
+            Visible = LocalPlayer.Data.CurrentHealth <= 0
+                && LocalPlayer.Sprite != null
+                && LocalPlayer.Sprite.Animation == "dead"
+                && !LocalPlayer.Sprite.IsPlaying();
         }
 
         #endregion

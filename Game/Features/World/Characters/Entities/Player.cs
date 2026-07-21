@@ -102,16 +102,12 @@ namespace Jogo25D.Characters
 
 			GD.Print("[Player._Ready] Adding animation events");
 
-			Sprite.AnimationFinished += () =>
-			{
-				// Nao loop (loop=false no SpriteFrames) - so segura no ultimo
-				// frame. O reset agora so acontece quando o jogador aperta
-				// "Reviver" na DeathScreenUI, nao mais automatico.
-				if (Sprite.Animation == "dead")
-				{
-					Sprite.Stop();
-				}
-			};
+			// Nao precisa de handler pro "dead" aqui: como loop=false no
+			// SpriteFrames, o AnimatedSprite2D ja para sozinho no ultimo
+			// frame quando termina (IsPlaying() vira false). Chamar
+			// Sprite.Stop() manualmente reseta o frame pra 0 (primeiro frame
+			// da animacao), fazendo o personagem "voltar" visualmente pra
+			// pose inicial - por isso foi removido daqui.
 
 			GD.Print("[Player._Ready] Seting starter slot");
 
@@ -605,6 +601,15 @@ namespace Jogo25D.Characters
 				Sprite.FlipH = Velocity.X < 0;
 			}
 
+			// Diferente de melee/taking_damage, "dead" trava independente de
+			// IsPlaying() - a animacao nao tem loop e para sozinha no ultimo
+			// frame, mas o personagem so deve sair desse estado quando
+			// reviver (SetHealthReceive volta pra "idle" explicitamente).
+			if (Sprite.Animation == "dead")
+			{
+				return;
+			}
+
 			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
 			{
 				return;
@@ -1073,6 +1078,15 @@ namespace Jogo25D.Characters
 			{
 				Sprite.Play("dead");
 				Input?.AddBlocker("dead");
+			}
+
+			// Reviver (ex: botao "Reviver" no player, auto-respawn no NPC)
+			// sempre passa por aqui com health>0 vindo de <=0 - centraliza a
+			// volta pra "idle" e a remocao do bloqueio num unico lugar.
+			if (health > 0 && previousHealth <= 0)
+			{
+				Sprite.Play("idle");
+				Input?.RemoveBlocker("dead");
 			}
 		}
 

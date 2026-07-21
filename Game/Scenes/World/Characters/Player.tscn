@@ -415,16 +415,16 @@ animations = [{
 "speed": 4.0
 }, {
 "frames": [{
-"duration": 1.0,
+"duration": 0.2,
 "texture": SubResource("AtlasTexture_rsecb")
 }, {
-"duration": 1.0,
+"duration": 0.2,
 "texture": SubResource("AtlasTexture_sh1ku")
 }, {
-"duration": 1.0,
+"duration": 0.2,
 "texture": SubResource("AtlasTexture_s3ptq")
 }, {
-"duration": 1.0,
+"duration": 0.2,
 "texture": SubResource("AtlasTexture_i8ycs")
 }],
 "loop": false,
@@ -444,6 +444,8 @@ texture_repeat = 1
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_dslm6")
 animation = &"taking_damage"
+frame = 3
+frame_progress = 1.0
 
 [node name="Systems" type="Node2D" parent="." unique_id=312828525]
 

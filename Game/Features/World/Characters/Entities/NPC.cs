@@ -18,6 +18,11 @@ namespace Jogo25D.Characters
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
             Sprite?.Play("idle");
 
+            if (Sprite != null)
+            {
+                Sprite.AnimationFinished += OnAnimationFinished;
+            }
+
             DisplayName = "NPC";
         }
 
@@ -30,6 +35,8 @@ namespace Jogo25D.Characters
             if (!Data.CanUpdateMovement)
             {
                 MoveAndSlide();
+
+                UpdateAnimation();
 
                 return;
             }
@@ -44,6 +51,8 @@ namespace Jogo25D.Characters
             Velocity = v;
 
             MoveAndSlide();
+
+            UpdateAnimation();
         }
 
         #endregion
@@ -61,8 +70,14 @@ namespace Jogo25D.Characters
             var newHealth = Mathf.Max(0, Data.CurrentHealth - finalDamage);
 
             SetHealthRequest(newHealth);
+        }
 
-            if (newHealth <= 0)
+        // Renasce sozinho assim que a animacao "dead" termina de tocar -
+        // dispara so no peer autoritativo (servidor) pra nao mandar o RPC de
+        // cura em dobro, os outros peers so recebem via SetHealthReceive.
+        private void OnAnimationFinished()
+        {
+            if (Sprite.Animation == "dead" && IsAuthoritative())
             {
                 SetHealthRequest(GetMaxHealth());
             }
