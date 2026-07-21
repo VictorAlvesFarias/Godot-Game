@@ -597,6 +597,8 @@ namespace Jogo25D.Systems
 			player.GlobalPosition = Vector2.Zero;
 			player.Velocity = Vector2.Zero;
 			player.Data.CurrentHealth = player.GetMaxHealth();
+			player.Sprite?.Play("idle");
+			player.Input?.RemoveBlocker("dead");
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

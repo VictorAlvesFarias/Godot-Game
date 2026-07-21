@@ -104,11 +104,12 @@ namespace Jogo25D.Characters
 
 			Sprite.AnimationFinished += () =>
 			{
+				// Nao loop (loop=false no SpriteFrames) - so segura no ultimo
+				// frame. O reset agora so acontece quando o jogador aperta
+				// "Reviver" na DeathScreenUI, nao mais automatico.
 				if (Sprite.Animation == "dead")
 				{
 					Sprite.Stop();
-
-					NetworkManager.ResetPlayerClientRequest();
 				}
 			};
 
@@ -290,10 +291,10 @@ namespace Jogo25D.Characters
 				}
 			}
 
-			if (Data.CurrentHealth <= 0)
-			{
-				Sprite.Play("dead");
-			}
+			// A animacao "dead" e o bloqueio de input agora sao disparados em
+			// SetHealthReceive (roda em todo peer via RPC assim que a vida
+			// realmente muda) - aqui em ReceiveDamage o valor de
+			// Data.CurrentHealth ainda pode ser o antigo em clientes remotos.
 		}
 
 		public void ApplyKnockback(Vector2 direction, float force)
@@ -605,6 +606,11 @@ namespace Jogo25D.Characters
 			}
 
 			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
+			{
+				return;
+			}
+
+			if (Sprite.Animation == "taking_damage" && Sprite.IsPlaying())
 			{
 				return;
 			}
@@ -1056,6 +1062,17 @@ namespace Jogo25D.Characters
 			if (health < previousHealth)
 			{
 				ShowDamagePopup(previousHealth - health);
+
+				if (health > 0 && Sprite.Animation != "dead")
+				{
+					Sprite.Play("taking_damage");
+				}
+			}
+
+			if (health <= 0 && previousHealth > 0)
+			{
+				Sprite.Play("dead");
+				Input?.AddBlocker("dead");
 			}
 		}
 

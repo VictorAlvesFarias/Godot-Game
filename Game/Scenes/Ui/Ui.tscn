@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Multiplayer/Multiplayer.tscn" id="9_multiplayer"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Common/ErrorModal.tscn" id="10_errormodal"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/SkillTree/SkillTree.tscn" id="11_skilltree"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/DeathScreen/DeathScreen.tscn" id="12_deathscreen"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
@@ -39,3 +40,5 @@ visible = false
 [node name="ErrorModalUI" parent="." instance=ExtResource("10_errormodal")]
 
 [node name="SkillTreeUI" parent="." instance=ExtResource("11_skilltree")]
+
+[node name="DeathScreenUI" parent="." instance=ExtResource("12_deathscreen")]

@@ -15,7 +15,7 @@ namespace Jogo25D.UI
 	{
 		#region Properties
 
-		public const int TotalSlots = 16;
+		public const int TotalSlots = 128;
 		public const int HotbarSlots = 8;
 
 		public Player LocalPlayer { get; set; }
@@ -86,7 +86,7 @@ namespace Jogo25D.UI
 
 			DropSlot = MainControl.FindChild("DropSlot", true, false) as Panel;
 			HotbarRow = mainRow.GetNode<HBoxContainer>("InventoryColumn/HotbarRow");
-			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridContainer");
+			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridScroll/GridContainer");
 			GridContainer.Columns = HotbarSlots;
 
 			CharacterSprite = mainRow.GetNode<AnimatedSprite2D>("StatsColumn/SpriteBox2/VBoxContainer/CenterContainer/CharacterSprite");

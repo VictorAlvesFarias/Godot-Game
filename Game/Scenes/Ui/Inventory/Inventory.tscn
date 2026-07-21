@@ -176,20 +176,25 @@ theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
 theme_override_font_sizes/font_size = 9
 text = "1"
 
-[node name="GridContainer" type="GridContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1673080079]
+[node name="GridScroll" type="ScrollContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1673080078]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridContainer" type="GridContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll" unique_id=1673080079]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 8
 
-[node name="SlotTemplate" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer" unique_id=1006682894]
+[node name="SlotTemplate" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer" unique_id=1006682894]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_Box")
 
-[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1152293594]
+[node name="MarginContainer" type="MarginContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate" unique_id=1152293594]
 layout_mode = 1
 anchors_preset = -1
 anchor_right = 1.0
@@ -201,23 +206,23 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer" unique_id=1475735532]
+[node name="CenterContainer" type="CenterContainer" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate/MarginContainer" unique_id=1475735532]
 layout_mode = 2
 
-[node name="Icon" type="TextureRect" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1463575002]
+[node name="Icon" type="TextureRect" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=1463575002]
 custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=2129170788]
+[node name="NameLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate/MarginContainer/CenterContainer" unique_id=2129170788]
 visible = false
 layout_mode = 2
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="QuantityLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=933847145]
+[node name="QuantityLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate" unique_id=933847145]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -237,7 +242,7 @@ theme_override_font_sizes/font_size = 10
 horizontal_alignment = 2
 vertical_alignment = 2
 
-[node name="NumLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridContainer/SlotTemplate" unique_id=1758290995]
+[node name="NumLabel" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer/SlotTemplate" unique_id=1758290995]
 layout_mode = 1
 offset_left = 3.0
 offset_top = 2.0
