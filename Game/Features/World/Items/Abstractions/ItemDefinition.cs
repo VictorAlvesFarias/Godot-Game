@@ -22,8 +22,8 @@ namespace Jogo25D.Items
         public bool Stackable { get; init; } = false;
         public int MaxStackSize { get; init; } = 99;
         public float Cooldown { get; init; } = 0.5f;
-
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
         public Godot.Collections.Array<string> Effects { get; set; } = new();
 
         #endregion
@@ -38,9 +38,31 @@ namespace Jogo25D.Items
 
         public abstract void Use(Player player, ItemDefinitionData data);
 
-        public virtual void OnEquip(Player player, ItemDefinitionData data) { }
+        public virtual void OnEquip(Player player, ItemDefinitionData data)
+        {
+            foreach (var modifier in Modifiers)
+            {
+                player.Properties.Add(modifier);
+            }
 
-        public virtual void OnUnequip(Player player, ItemDefinitionData data) { }
+            foreach (var modifier in data.Modifiers)
+            {
+                player.Properties.Add(modifier);
+            }
+        }
+
+        public virtual void OnUnequip(Player player, ItemDefinitionData data)
+        {
+            foreach (var modifier in Modifiers)
+            {
+                player.Properties.Remove(modifier);
+            }
+
+            foreach (var modifier in data.Modifiers)
+            {
+                player.Properties.Remove(modifier);
+            }
+        }
 
         #endregion
 

@@ -35,6 +35,9 @@ namespace Jogo25D.Features.World.Items.Resources
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         [Export, GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
+
+        [Export, GodotDictionaryField]
         public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
 
         [Export, GodotDictionaryField]

@@ -113,7 +113,6 @@ namespace Jogo25D.Actions
 
             instance.Id = id;
             instance.CurrentCharges = def.MaxCharges;
-            instance.Properties = Resolver.CloneProperties(def.Properties);
 
             foreach (var effectId in def.Effects)
             {

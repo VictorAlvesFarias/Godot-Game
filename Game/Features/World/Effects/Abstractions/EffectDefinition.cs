@@ -13,13 +13,12 @@ namespace Jogo25D.Effects
         public string Name { get; init; } = "";
         public string Description { get; init; } = "";
         public Texture2D Icon { get; set; }
-
         public float Duration { get; init; } = 0f;
         public bool Infinite { get; init; } = false;
         public EffectTriggerType Type { get; init; } = EffectTriggerType.OnUse;
         public EffectApply ApplyTo { get; init; } = EffectApply.ToOwner;
-
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
 
         #endregion
 

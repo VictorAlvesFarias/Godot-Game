@@ -221,7 +221,6 @@ namespace Jogo25D.Items
 
             instance.InstanceId = NextInstanceId();
             instance.Quantity = 1;
-            instance.Properties = Resolver.CloneProperties(def.Properties);
 
             foreach (var effectId in def.Effects)
             {

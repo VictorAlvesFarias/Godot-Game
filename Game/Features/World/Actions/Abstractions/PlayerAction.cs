@@ -19,6 +19,7 @@ namespace Jogo25D.Actions
         public float Duration { get; init; } = 0f;
         public int MaxCharges { get; init; } = 1;
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
         public Godot.Collections.Array<string> Effects { get; set; } = new();
 
         #endregion

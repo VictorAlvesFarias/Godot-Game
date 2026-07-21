@@ -36,6 +36,9 @@ namespace Jogo25D.Actions
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
         [Export, GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
+
+        [Export, GodotDictionaryField]
         public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
 
         [Export, GodotDictionaryField]

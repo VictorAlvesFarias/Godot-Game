@@ -20,6 +20,8 @@ namespace Jogo25D.Items
 
         public override void OnEquip(Player player, ItemDefinitionData data)
         {
+            base.OnEquip(player, data);
+
             if (player.AimIndicator != null)
             {
                 player.AimIndicator.IsActive = true;
@@ -28,6 +30,8 @@ namespace Jogo25D.Items
 
         public override void OnUnequip(Player player, ItemDefinitionData data)
         {
+            base.OnUnequip(player, data);
+
             player.AimIndicator?.Hide();
         }
 
@@ -40,22 +44,28 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var damageProps = instance.Properties.OfType<DamagePropertyData>().ToList();
-
-            if (damageProps.Count == 0 || HitboxScene == null)
-            {
-                GD.Print($"[Attack] Bloqueado - damageProps={damageProps.Count} HitboxScene={HitboxScene != null}");
-
-                return;
-            }
-
-            // O item usa suas proprias Properties + as do player (base +
-            // skill tree) - nao inclui EquippedInstance().Properties de novo
-            // aqui, pra nao contar o proprio item em dobro.
-            var resolvedDamages = Resolver.Resolve(damageProps, player.Data.Properties.OfType<DamagePropertyData>().ToList(), player.Properties.OfType<DamagePropertyData>().ToList());
-            var weapon = Resolver.Resolve(instance.Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
-            var charges = Resolver.Resolve(instance.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault() ?? new ChargesPropertyData();
-            var crit = Resolver.Resolve(instance.Properties.OfType<CritPropertyData>().ToList(), player.Data.Properties.OfType<CritPropertyData>().ToList(), player.Properties.OfType<CritPropertyData>().ToList());
+            var resolvedDamages = Resolver.Resolve(
+                Properties.OfType<DamagePropertyData>().ToList(),
+                instance.Properties.OfType<DamagePropertyData>().ToList(),
+                player.Data.Properties.OfType<DamagePropertyData>().ToList(), 
+                player.Properties.OfType<DamagePropertyData>().ToList()
+            );
+            var weapon = Resolver.Resolve(
+                Properties.OfType<AttackPropertyData>().ToList(), 
+                instance.Properties.OfType<AttackPropertyData>().ToList(), 
+                player.Data.Properties.OfType<AttackPropertyData>().ToList(), 
+                player.Properties.OfType<AttackPropertyData>().ToList()
+            );
+            var charges = Resolver.Resolve(
+                Properties.OfType<ChargesPropertyData>().ToList(),
+                instance.Properties.OfType<ChargesPropertyData>().ToList()
+            ).FirstOrDefault();
+            var crit = Resolver.Resolve(
+                Properties.OfType<CritPropertyData>().ToList(), 
+                instance.Properties.OfType<CritPropertyData>().ToList(), 
+                player.Data.Properties.OfType<CritPropertyData>().ToList(), 
+                player.Properties.OfType<CritPropertyData>().ToList()
+            );
             var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {
                 Amount = (int)(d.DamageAmount * d.DamageMultiplier),

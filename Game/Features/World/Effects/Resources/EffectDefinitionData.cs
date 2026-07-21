@@ -24,6 +24,9 @@ namespace Jogo25D.Effects
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
+
         #endregion
 
         #region Timers

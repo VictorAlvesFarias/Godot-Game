@@ -125,7 +125,6 @@ namespace Jogo25D.Effects
             instance.Infinite = def.Infinite;
             instance.Type = def.Type;
             instance.ApplyTo = def.ApplyTo;
-            instance.Properties = Resolver.CloneProperties(def.Properties);
 
             return instance;
         }

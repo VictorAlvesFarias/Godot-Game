@@ -391,7 +391,7 @@ namespace Jogo25D.Characters
 			}
 
 			var def = ItemDB.Get(data.Id);
-			var chargesProp = Resolver.Resolve(data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
+			var chargesProp = Resolver.Resolve(def.Properties.OfType<ChargesPropertyData>().ToList(), data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
 			{
@@ -486,7 +486,8 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var chargesProp = Resolver.Resolve(slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
+				var slotDef = ItemDB.Get(slot.Id);
+				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
 				{
@@ -514,7 +515,8 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var chargesProp = Resolver.Resolve(slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
+				var slotDef = ItemDB.Get(slot.Id);
+				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
 				{
@@ -550,7 +552,16 @@ namespace Jogo25D.Characters
 				return;
 			}
 
+			var previousItem = EquippedInstance();
+
+			if (previousItem != null && previousItem.InstanceId != instanceId)
+			{
+				ItemDB.Get(previousItem.Id)?.OnUnequip(this, previousItem);
+			}
+
 			Data.EquippedItemId = instanceId;
+
+			ItemDB.Get(item.Id)?.OnEquip(this, item);
 
 			EmitSignal(SignalName.ItemEquipped, instanceId);
 		}
