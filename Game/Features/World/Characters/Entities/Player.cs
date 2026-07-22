@@ -129,6 +129,37 @@ namespace Jogo25D.Characters
 
 				GiveItem(startingPoisonFlask);
 
+				var startingFireDamagePotion = ItemDB.CreateInstance("fire_damage_potion");
+
+				startingFireDamagePotion.Quantity = 20;
+
+				GiveItem(startingFireDamagePotion);
+
+				var startingHealthRegenPotion = ItemDB.CreateInstance("health_regen_potion");
+
+				startingHealthRegenPotion.Quantity = 20;
+
+				GiveItem(startingHealthRegenPotion);
+
+				var startingSpeedPotion = ItemDB.CreateInstance("speed_potion");
+
+				startingSpeedPotion.Quantity = 20;
+
+				GiveItem(startingSpeedPotion);
+
+				var startingInstantHealPotion = ItemDB.CreateInstance("instant_heal_potion");
+
+				startingInstantHealPotion.Quantity = 20;
+
+				GiveItem(startingInstantHealPotion);
+
+				GiveItem(ItemDB.CreateInstance("fire_slash_sword"));
+				GiveItem(ItemDB.CreateInstance("blue_fire_sword"));
+				GiveItem(ItemDB.CreateInstance("blue_fire_sword_alt"));
+				GiveItem(ItemDB.CreateInstance("dark_slash_sword"));
+				GiveItem(ItemDB.CreateInstance("whip"));
+				GiveItem(ItemDB.CreateInstance("green_blow_sword"));
+
 				Data.EquippedItemId = startingWeapon.InstanceId;
 
 				foreach (var actionId in ActionDB.GetAllIds())

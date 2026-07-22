@@ -1,7 +1,6 @@
 [gd_scene format=4 uid="uid://7csql0pm5brt"]
 
-[ext_resource type="Script" uid="uid://ciqdvhoory1it" path="res://Features/World/WorldGeneration/Systems/WorldGeneration.cs" id="1_n8a66"]
-[ext_resource type="Script" uid="uid://w0yh3yopch4l" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
+[ext_resource type="Script" uid="uid://d0tnew43mcbjb" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_calfg"]
 load_path = "res://.godot/imported/TX Tileset Ground.png-c434de4f2f37ac9df9c44990f1091a2f.ctex"
@@ -1035,7 +1034,6 @@ tile_map_data = PackedByteArray("AAABAAEAAAAAAAAAAAABAAIAAAAAAAEAAAABAAMAAAAAAAI
 tile_set = SubResource("TileSet_rj83g")
 rendering_quadrant_size = 32
 physics_quadrant_size = 32
-script = ExtResource("1_n8a66")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 position = Vector2(575, 324)

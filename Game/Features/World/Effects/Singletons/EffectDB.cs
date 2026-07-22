@@ -1,6 +1,8 @@
 using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
+using Jogo25D.Properties;
 using System.Collections.Generic;
 
 namespace Jogo25D.Effects
@@ -47,7 +49,87 @@ namespace Jogo25D.Effects
                 }
             };
 
+            var fireDamage = new DamageEffectDefinition
+            {
+                Id = "fire_damage",
+                Name = "Queimadura",
+                Description = "Causa dano de fogo ao longo do tempo",
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_22),
+                Duration = 4f,
+                Type = EffectTriggerType.OnUse,
+                ApplyTo = EffectApply.ToOwner,
+                Damages = new Godot.Collections.Array<Items.DamageInfo>
+                {
+                    new Items.DamageInfo
+                    {
+                        Type = Items.DamageType.Fire,
+                        Amount = 8,
+                        SourcePeerId = -1,
+                        CritChance = 0f,
+                        CritDamage = 0f
+                    }
+                }
+            };
+
+            // Mesma infraestrutura do dano ao longo do tempo, so com Amount
+            // negativo - ReceiveDamage/SetHealthReceive ja tratam isso como
+            // cura (CurrentHealth - (negativo) = CurrentHealth + algo), sem
+            // precisar de um caminho de codigo separado pra curar.
+            var healthRegen = new DamageEffectDefinition
+            {
+                Id = "health_regen",
+                Name = "Regeneração",
+                Description = "Recupera vida ao longo do tempo",
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_44),
+                Duration = 5f,
+                Type = EffectTriggerType.OnUse,
+                ApplyTo = EffectApply.ToOwner,
+                Damages = new Godot.Collections.Array<Items.DamageInfo>
+                {
+                    new Items.DamageInfo
+                    {
+                        Type = Items.DamageType.Physical,
+                        Amount = -6,
+                        SourcePeerId = -1,
+                        CritChance = 0f,
+                        CritDamage = 0f
+                    }
+                }
+            };
+
+            var instantHeal = new InstantHealEffectDefinition
+            {
+                Id = "instant_heal",
+                Name = "Cura Instantânea",
+                Description = "Recupera vida na hora",
+                // Vermelho - cor padrao de cura instantanea.
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_13),
+                Duration = 0f,
+                Type = EffectTriggerType.OnUse,
+                ApplyTo = EffectApply.ToOwner,
+                HealAmount = 30
+            };
+
+            var speedBoost = new StatBoostEffectDefinition
+            {
+                Id = "speed_boost",
+                Name = "Velocidade",
+                Description = "Aumenta a velocidade de movimento temporariamente",
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_15),
+                Duration = 6f,
+                Type = EffectTriggerType.OnUse,
+                ApplyTo = EffectApply.ToOwner,
+                Modifiers = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new MovementPropertyData { Speed = 120f }
+                }
+            };
+
             Register(poisonDamage);
+            Register(fireDamage);
+            Register(healthRegen);
+            Register(instantHeal);
+            Register(speedBoost);
 
             Initialized = true;
         }

@@ -443,9 +443,8 @@ texture_filter = 1
 texture_repeat = 1
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_dslm6")
-animation = &"taking_damage"
-frame = 3
-frame_progress = 1.0
+animation = &"idle"
+frame_progress = 0.97152567
 
 [node name="Systems" type="Node2D" parent="." unique_id=312828525]
 

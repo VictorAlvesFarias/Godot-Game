@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://w72jwj3o4cyx"]
+
+[ext_resource type="Script" uid="uid://b65g5ah3fu2vl" path="res://Features/World/Hitboxes/Definitions/MeleeHitbox.cs" id="1_p0oee"]
+[ext_resource type="Texture2D" uid="uid://cl62gmnk30mlx" path="res://Assets/Sprites/Slashs/39cf9aa1-2380-49af-aaa1-a8197b7ed795.png" id="2_gvh3y"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h15my"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(0, 0, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sltdh"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(128, 0, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7t226"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(0, 128, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n5gy6"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(128, 128, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_16jr4"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(0, 256, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vhwh8"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(128, 256, 128, 128)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ss3ce"]
+atlas = ExtResource("2_gvh3y")
+region = Rect2(0, 384, 128, 128)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_whxhn"]
+animations = [{
+"frames": [{
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_h15my")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_sltdh")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_7t226")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_n5gy6")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_16jr4")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_vhwh8")
+}, {
+"duration": 0.3,
+"texture": SubResource("AtlasTexture_ss3ce")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 4.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_k0yoy"]
+size = Vector2(293, 238)
+
+[node name="Projectile" type="Area2D" unique_id=926702127]
+collision_layer = 2
+script = ExtResource("1_p0oee")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1177883649]
+texture_filter = 1
+position = Vector2(3, 17)
+scale = Vector2(1.0850573, 2.0499008)
+sprite_frames = SubResource("SpriteFrames_whxhn")
+animation = &"idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=907904506]
+shape = SubResource("RectangleShape2D_k0yoy")

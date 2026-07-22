@@ -38,7 +38,7 @@ namespace Jogo25D.Items
                 Description = "Uma espada bÃ¡sica para combate corpo a corpo",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_17),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {   
                     new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -99,12 +99,108 @@ namespace Jogo25D.Items
                 Type = ItemType.WeaponMelee,
                 Cooldown = 0.6f,
                 Icon = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_1) : null,
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Sword.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
                     new AttackPropertyData { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 250f },
                     new CritPropertyData { CritChance = 0.1f, CritDamage = 0.5f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var fireSlashSword = new WeaponDefinition {
+                Id = "fire_slash_sword",
+                Name = "Espada Flamejante",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada envolta em chamas",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_19),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash_Variation_2.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 16, DamageType = DamageType.Fire },
+                    new AttackPropertyData { AttackRange = 85f, AttackArea = 30f, KnockbackForce = 200f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var blueFireSword = new WeaponDefinition {
+                Id = "blue_fire_sword",
+                Name = "Espada Congelante",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada envolta em chamas geladas",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_43),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/BlueFireSlash.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
+                    new AttackPropertyData { AttackRange = 85f, AttackArea = 30f, KnockbackForce = 180f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var blueFireSwordAlt = new WeaponDefinition {
+                Id = "blue_fire_sword_alt",
+                Name = "Espada Congelante II",
+                Type = ItemType.WeaponMelee,
+                Description = "Variação da espada congelante",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_47),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/BlueFireSlash_Variation_2.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
+                    new AttackPropertyData { AttackRange = 85f, AttackArea = 30f, KnockbackForce = 180f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var darkSlashSword = new WeaponDefinition {
+                Id = "dark_slash_sword",
+                Name = "Espada Sombria",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada envolta em energia sombria - o dano ignora resistências",
+                Cooldown = 0.65f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_25),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/DarkFireSlash.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.True },
+                    new AttackPropertyData { AttackRange = 90f, AttackArea = 35f, KnockbackForce = 220f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var whip = new WeaponDefinition {
+                Id = "whip",
+                Name = "Chicote",
+                Type = ItemType.WeaponMelee,
+                Description = "Alcance maior, dano menor",
+                Cooldown = 0.4f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_56),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Whipe.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Physical },
+                    new AttackPropertyData { AttackRange = 140f, AttackArea = 25f, KnockbackForce = 100f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var greenBlowSword = new WeaponDefinition {
+                Id = "green_blow_sword",
+                Name = "Lâmina Venenosa",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma lâmina impregnada de veneno",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_21),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/GreenBlow.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Poison },
+                    new AttackPropertyData { AttackRange = 85f, AttackArea = 30f, KnockbackForce = 150f },
                     new ChargesPropertyData { InfiniteCharges = true }
                 }
             };
@@ -130,10 +226,65 @@ namespace Jogo25D.Items
                 Type = ItemType.Consumable,
                 Stackable = true,
                 MaxStackSize = 10,
-                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_1),
+                // Verde - cor padrao de veneno.
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_19),
                 Effects = new Godot.Collections.Array<string>
                 {
                     "poison_damage"
+                }
+            };
+
+            var fireDamagePotion = new ConsumableDefinition {
+                Id = "fire_damage_potion",
+                Name = "Poção de Dano de Fogo",
+                Type = ItemType.Consumable,
+                Stackable = true,
+                MaxStackSize = 10,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_22),
+                Effects = new Godot.Collections.Array<string>
+                {
+                    "fire_damage"
+                }
+            };
+
+            var healthRegenPotion = new ConsumableDefinition {
+                Id = "health_regen_potion",
+                Name = "Poção de Regeneração",
+                Type = ItemType.Consumable,
+                Stackable = true,
+                MaxStackSize = 10,
+                // Rosa - cor padrao de regeneracao.
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_44),
+                Effects = new Godot.Collections.Array<string>
+                {
+                    "health_regen"
+                }
+            };
+
+            var speedPotion = new ConsumableDefinition {
+                Id = "speed_potion",
+                Name = "Poção de Velocidade",
+                Type = ItemType.Consumable,
+                Stackable = true,
+                MaxStackSize = 10,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_15),
+                Effects = new Godot.Collections.Array<string>
+                {
+                    "speed_boost"
+                }
+            };
+
+            var instantHealPotion = new ConsumableDefinition {
+                Id = "instant_heal_potion",
+                Name = "Poção de Cura Instantânea",
+                Type = ItemType.Consumable,
+                Stackable = true,
+                MaxStackSize = 10,
+                // Vermelho - cor padrao de cura instantanea.
+                Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_13),
+                Effects = new Godot.Collections.Array<string>
+                {
+                    "instant_heal"
                 }
             };
 
@@ -144,6 +295,16 @@ namespace Jogo25D.Items
             Register(swordBasic);
             Register(bowBasic);
             Register(poisonFlask);
+            Register(fireDamagePotion);
+            Register(healthRegenPotion);
+            Register(speedPotion);
+            Register(instantHealPotion);
+            Register(fireSlashSword);
+            Register(blueFireSword);
+            Register(blueFireSwordAlt);
+            Register(darkSlashSword);
+            Register(whip);
+            Register(greenBlowSword);
 
             Initialized = true;
         }
