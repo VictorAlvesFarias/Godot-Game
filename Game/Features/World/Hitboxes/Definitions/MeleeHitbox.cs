@@ -31,12 +31,14 @@ namespace Jogo25D.Hitboxes
 		{
 			base._Ready();
 
-			if (Sprite is not null)
-			{
-				GD.Print(Rotation >= -1.5f && Rotation <= 1.5f, Rotation);
+            if (Sprite is not null)
+            {
+                GD.Print(Rotation >= -1.5f && Rotation <= 1.5f, Rotation);
 
-				Sprite.FlipV = !(Rotation >= -1.5f && Rotation <= 1.5f);
-			}
+                var facingLeft = !(Rotation >= -1.5f && Rotation <= 1.5f);
+
+                Scale = new Vector2(1f, facingLeft ? -1f : 1f);
+            }
 		}
 	}
 }

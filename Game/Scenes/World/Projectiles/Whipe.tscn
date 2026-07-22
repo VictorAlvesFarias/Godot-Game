@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dx4dd8ec3hbhh"]
 
-[ext_resource type="Script" uid="uid://b65g5ah3fu2vl" path="res://Features/World/Hitboxes/Definitions/MeleeHitbox.cs" id="1_3lgfx"]
+[ext_resource type="Script" uid="uid://c8sfo6c08rhs6" path="res://Features/World/Hitboxes/Definitions/MeleeHitbox.cs" id="1_3lgfx"]
 [ext_resource type="Texture2D" uid="uid://dsdhh33gtwww4" path="res://Assets/Sprites/Slashs/2f2a083e-af1a-48f1-8d73-0aaffb11c33e.png" id="2_n7b2t"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_pkhgp"]
@@ -82,7 +82,7 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_k0yoy"]
-size = Vector2(109, 198)
+size = Vector2(89.5, 165)
 
 [node name="Projectile" type="Area2D" unique_id=926702127]
 collision_layer = 2
@@ -90,12 +90,12 @@ script = ExtResource("1_3lgfx")
 
 [node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1177883649]
 texture_filter = 1
-position = Vector2(-6, 21)
-rotation = 3.1415927
+position = Vector2(-2, 0)
+rotation = -0.7452556
 scale = Vector2(1.0850573, 2.0499008)
 sprite_frames = SubResource("SpriteFrames_whxhn")
 animation = &"idle"
-frame_progress = 0.24741405
+frame_progress = 0.86747634
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=907904506]
 shape = SubResource("RectangleShape2D_k0yoy")

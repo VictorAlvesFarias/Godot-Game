@@ -115,9 +115,13 @@ namespace Jogo25D.Characters
 				Data ??= new PlayerData();
 				Data.Inventory ??= new InventoryData();
 
-				var startingWeapon = ItemDB.CreateInstance("bow_starting2");
-
-				GiveItem(startingWeapon);
+                GiveItem(ItemDB.CreateInstance("fire_slash_sword"));
+                GiveItem(ItemDB.CreateInstance("blue_fire_sword"));
+                GiveItem(ItemDB.CreateInstance("blue_fire_sword_alt"));
+                GiveItem(ItemDB.CreateInstance("dark_slash_sword"));
+                GiveItem(ItemDB.CreateInstance("whip"));
+                GiveItem(ItemDB.CreateInstance("green_blow_sword"));
+				GiveItem(ItemDB.CreateInstance("bow_starting2"));
 
 				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
 
@@ -152,15 +156,6 @@ namespace Jogo25D.Characters
 				startingInstantHealPotion.Quantity = 20;
 
 				GiveItem(startingInstantHealPotion);
-
-				GiveItem(ItemDB.CreateInstance("fire_slash_sword"));
-				GiveItem(ItemDB.CreateInstance("blue_fire_sword"));
-				GiveItem(ItemDB.CreateInstance("blue_fire_sword_alt"));
-				GiveItem(ItemDB.CreateInstance("dark_slash_sword"));
-				GiveItem(ItemDB.CreateInstance("whip"));
-				GiveItem(ItemDB.CreateInstance("green_blow_sword"));
-
-				Data.EquippedItemId = startingWeapon.InstanceId;
 
 				foreach (var actionId in ActionDB.GetAllIds())
 				{

@@ -101,19 +101,21 @@ namespace Jogo25D.Items
                 proj.Lifetime = weapon.AttackRange / Mathf.Max(weapon.ProjectileSpeed, 1f);
                 hitbox.GlobalPosition = player.GlobalPosition + dir * 60f;
                 hitbox.Scale = Vector2.One * (weapon.AttackArea / 25f);
-                hitbox.Rotation = angle;
+                hitbox.DirectionAngle = angle;
+                hitbox.StopDamageOnMaxPerfuracao = true;
             }
             else if (hitbox is MeleeHitbox melee)
             {
                 melee.Offset = dir * weapon.AttackRange * 0.7f;
                 hitbox.GlobalPosition = player.GlobalPosition + melee.Offset;
-                hitbox.Rotation = angle;
+                hitbox.DirectionAngle = angle;
                 hitbox.DestroyInAllBodies = false;
             }
             else
             {
                 hitbox.GlobalPosition = player.GlobalPosition;
-                hitbox.Rotation = angle;
+                hitbox.DirectionAngle = angle;
+                hitbox.DestroyInAllBodies = false;
             }
 
             player.GetParent().AddChild(hitbox);

@@ -18,9 +18,10 @@ namespace Jogo25D.Hitboxes
         public AnimatedSprite2D Sprite { get; set; }
         public int Perfuracao { get; set; } = 0;
         public bool DestroyInAllBodies { get; set; } = true;
-        public bool Destroy { get; set; } = true;
+        public bool HitCountInAllBodies { get; set; } = true;
         public bool StopDamageOnMaxPerfuracao { get; set; } = false;
         public int HitCount { get; set; } = 0;
+        public float DirectionAngle { get; set; }
 
         #endregion
 
@@ -29,6 +30,14 @@ namespace Jogo25D.Hitboxes
         public override void _Ready()
         {
             base._Ready();
+
+            // DirectionAngle e setado por WeaponDefinition.Use antes do
+            // AddChild (ja disponivel aqui) - antes o proprio WeaponDefinition
+            // aplicava direto em hitbox.Rotation, mas isso girava a arvore
+            // toda junto (Sprite incluido), atrapalhando um Sprite com
+            // rotacao propria (ver MeleeHitbox). Agora quem aplica a rotacao
+            // real e o proprio hitbox, aqui no Ready.
+            Rotation = DirectionAngle;
 
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
 
@@ -58,20 +67,45 @@ namespace Jogo25D.Hitboxes
 
             if (body is Player target)
             {
-                if (Destroy && CanApplyImpact())
+                if (CanApplyImpact())
                 {
                     ApplyImpact(target);
                 }
 
-                if (Destroy || DestroyInAllBodies)
+                if (StopDamageOnMaxPerfuracao)
                 {
-                    HandleDestruction(true);
+                    if (HitCount >= Perfuracao)
+                    {
+                        QueueFree();
+                    }
+                }
+                else
+                {
+                    HitCount++;
                 }
             }
-            else if (DestroyInAllBodies)
+            else if(DestroyInAllBodies)
             {
-                HandleDestruction(false);
+                if (HitCountInAllBodies)
+                {
+                    if (StopDamageOnMaxPerfuracao)
+                    {
+                        if (HitCount >= Perfuracao)
+                        {
+                            QueueFree();
+                        }
+                    }
+                    else
+                    {
+                        HitCount++;
+                    }
+                }
+                else
+                {
+                    QueueFree();
+                }
             }
+
         }
 
         #endregion
@@ -111,32 +145,6 @@ namespace Jogo25D.Hitboxes
                 {
                     Owner?.GiveEffect(effect.Id);
                 }
-            }
-        }
-
-        protected void HandleDestruction(bool hitTarget)
-        {
-            if (hitTarget)
-            {
-                if (HitCount >= Perfuracao)
-                {
-                    if (StopDamageOnMaxPerfuracao)
-                    {
-                        Destroy = false;
-                    }
-                    else
-                    {
-                        QueueFree();
-                    }
-                }
-                else
-                {
-                    HitCount++;
-                }
-            }
-            else
-            {
-                QueueFree();
             }
         }
 
