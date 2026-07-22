@@ -1,14 +1,55 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://buj6v73wis75l"]
 
-[ext_resource type="Script" path="res://Features/World/Hitboxes/Definitions/ProjectileHitbox.cs" id="1_e8o5y"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Screenshot 2026-02-21 014440.png" id="2_mlmde"]
+[ext_resource type="Script" uid="uid://dik2gmovmhpqb" path="res://Features/World/Hitboxes/Definitions/ProjectileHitbox.cs" id="1_e8o5y"]
+[ext_resource type="Texture2D" uid="uid://nvavictoj4t8" path="res://Assets/Sprites/Speels/4.png" id="2_mlmde"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jbwqm"]
+atlas = ExtResource("2_mlmde")
+region = Rect2(0, 0, 72, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vk02t"]
+atlas = ExtResource("2_mlmde")
+region = Rect2(72, 0, 72, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_havjf"]
+atlas = ExtResource("2_mlmde")
+region = Rect2(144, 0, 72, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_k45yk"]
+atlas = ExtResource("2_mlmde")
+region = Rect2(216, 0, 72, 72)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_8b0qa"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jbwqm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vk02t")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_havjf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_k45yk")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}]
 
 [node name="Projectile" type="Area2D" unique_id=926702127]
 collision_layer = 2
 script = ExtResource("1_e8o5y")
 
-[node name="Texture" type="Sprite2D" parent="." unique_id=1014865911]
-texture = ExtResource("2_mlmde")
-
 [node name="Collision" type="CollisionPolygon2D" parent="." unique_id=114124310]
 polygon = PackedVector2Array(-10.5, -10, -10.5, 10, 10.5, 10, 10.5, -10)
+
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=1990961284]
+texture_filter = 1
+position = Vector2(3, 0)
+scale = Vector2(2.8510199, 4.6283636)
+sprite_frames = SubResource("SpriteFrames_8b0qa")
+animation = &"idle"
+frame_progress = 0.6234

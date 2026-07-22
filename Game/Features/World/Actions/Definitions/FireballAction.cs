@@ -57,6 +57,7 @@ namespace Jogo25D.Actions
             hitbox.Lifetime = weapon.AttackRange / weapon.ProjectileSpeed;
             hitbox.GlobalPosition = player.GlobalPosition + direction * 60f;
             hitbox.Scale = Vector2.One * (weapon.AttackArea / 25f);
+            hitbox.Rotation = direction.Angle();
 
             player.GetParent().AddChild(hitbox);
         }

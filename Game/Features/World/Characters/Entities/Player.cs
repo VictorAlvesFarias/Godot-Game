@@ -70,7 +70,6 @@ namespace Jogo25D.Characters
 		public GroundIndicator GroundMarker { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
-		public CpuParticles2D DashParticles { get; set; }
 
 		#endregion
 

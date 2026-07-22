@@ -47,7 +47,7 @@ namespace Jogo25D.Actions
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical } ,
-                    new AttackPropertyData { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 75f },
+                    new AttackPropertyData { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 800f },
                 },
                 HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn")
             });
