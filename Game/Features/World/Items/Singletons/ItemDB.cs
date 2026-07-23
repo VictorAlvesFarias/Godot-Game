@@ -38,9 +38,9 @@ namespace Jogo25D.Items
                 Description = "Uma espada bÃ¡sica para combate corpo a corpo",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_17),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordStarting.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
-                {   
+                {
                     new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
                     new AttackPropertyData { AttackRange = 80f, KnockbackForce = 200f },
                     new ChargesPropertyData { InfiniteCharges = true }
@@ -99,7 +99,7 @@ namespace Jogo25D.Items
                 Type = ItemType.WeaponMelee,
                 Cooldown = 0.6f,
                 Icon = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_1) : null,
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordBasic.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -116,7 +116,7 @@ namespace Jogo25D.Items
                 Description = "Uma espada envolta em chamas",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_19),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/FireSlash_Variation_2.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/FireSword.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 16, DamageType = DamageType.Fire },
@@ -132,7 +132,7 @@ namespace Jogo25D.Items
                 Description = "Uma espada envolta em chamas geladas",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_43),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/BlueFireSlash.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSword.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
@@ -148,7 +148,7 @@ namespace Jogo25D.Items
                 Description = "Variação da espada congelante",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_47),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/BlueFireSlash_Variation_2.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSwordAlt.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
@@ -164,7 +164,7 @@ namespace Jogo25D.Items
                 Description = "Uma espada envolta em energia sombria - o dano ignora resistências",
                 Cooldown = 0.65f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_25),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/DarkFireSlash.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/DarkSword.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.True },
@@ -180,11 +180,27 @@ namespace Jogo25D.Items
                 Description = "Alcance maior, dano menor",
                 Cooldown = 0.4f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_56),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Whipe.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/WhipSword.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Physical },
                     new AttackPropertyData { AttackRange = 140f, AttackArea = 25f, KnockbackForce = 100f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var realSword = new WeaponDefinition {
+                Id = "real_sword",
+                Name = "Espada Real",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada de verdade",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_2),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/RealSword.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
+                    new AttackPropertyData { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 200f },
                     new ChargesPropertyData { InfiniteCharges = true }
                 }
             };
@@ -196,11 +212,43 @@ namespace Jogo25D.Items
                 Description = "Uma lâmina impregnada de veneno",
                 Cooldown = 0.5f,
                 Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_21),
-                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/GreenBlow.tscn"),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/PoisonSword.tscn"),
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
                     new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Poison },
                     new AttackPropertyData { AttackRange = 85f, AttackArea = 30f, KnockbackForce = 150f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var goldSword = new WeaponDefinition {
+                Id = "gold_sword",
+                Name = "Espada Dourada",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada de ouro",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_10),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/GoldSword.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
+                    new AttackPropertyData { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 200f },
+                    new ChargesPropertyData { InfiniteCharges = true }
+                }
+            };
+
+            var silverSword = new WeaponDefinition {
+                Id = "silver_sword",
+                Name = "Espada de Prata",
+                Type = ItemType.WeaponMelee,
+                Description = "Uma espada de prata",
+                Cooldown = 0.5f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_14),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SilverSword.tscn"),
+                Properties = new Godot.Collections.Array<BasePropertyData>
+                {
+                    new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
+                    new AttackPropertyData { AttackRange = 80f, AttackArea = 30f, KnockbackForce = 200f },
                     new ChargesPropertyData { InfiniteCharges = true }
                 }
             };
@@ -305,6 +353,9 @@ namespace Jogo25D.Items
             Register(darkSlashSword);
             Register(whip);
             Register(greenBlowSword);
+            Register(realSword);
+            Register(goldSword);
+            Register(silverSword);
 
             Initialized = true;
         }

@@ -66,10 +66,44 @@ namespace Jogo25D.Characters
 		#region Node references
 
 		private WorldManager NetworkManager { get; set; }
+		public Node2D Visuals { get; set; }
 		public AnimatedSprite2D Sprite { get; set; }
+		public CollisionShape2D Shape { get; set; }
 		public GroundIndicator GroundMarker { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
+
+		#endregion
+
+		#region Core - Facing
+
+		// Offset X original do Shape (fora do Visuals de proposito - o
+		// motor de fisica so reconhece CollisionShape2D como filho DIRETO do
+		// CharacterBody2D; dentro do Visuals ele parava de colidir). O
+		// espelhamento desse offset entao e feito na mao aqui, nao por
+		// aninhamento/Scale.
+		private float _shapeOffsetX;
+
+		// Le a partir do Visuals (nao mais do Sprite.FlipH) - flipar so o
+		// Sprite deixava qualquer outro visual anexado ao player (ex: algo
+		// preso na mao) sem acompanhar a virada.
+		public bool FacingLeft => Visuals != null && Visuals.Scale.X < 0f;
+
+		public void SetFacing(bool faceLeft)
+		{
+			if (Visuals != null)
+			{
+				Visuals.Scale = new Vector2(faceLeft ? -1f : 1f, 1f);
+			}
+
+			if (Shape != null)
+			{
+				var position = Shape.Position;
+
+				position.X = faceLeft ? -_shapeOffsetX : _shapeOffsetX;
+				Shape.Position = position;
+			}
+		}
 
 		#endregion
 
@@ -90,7 +124,10 @@ namespace Jogo25D.Characters
 
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-			Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
+			Visuals = GetNodeOrNull<Node2D>("Visuals");
+			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
+			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
+			_shapeOffsetX = Shape != null ? Mathf.Abs(Shape.Position.X) : 0f;
 			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
 			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
 			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
@@ -121,6 +158,7 @@ namespace Jogo25D.Characters
                 GiveItem(ItemDB.CreateInstance("dark_slash_sword"));
                 GiveItem(ItemDB.CreateInstance("whip"));
                 GiveItem(ItemDB.CreateInstance("green_blow_sword"));
+                GiveItem(ItemDB.CreateInstance("real_sword"));
 				GiveItem(ItemDB.CreateInstance("bow_starting2"));
 
 				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
@@ -623,7 +661,7 @@ namespace Jogo25D.Characters
 		{
 			if (Velocity.X != 0)
 			{
-				Sprite.FlipH = Velocity.X < 0;
+				SetFacing(Velocity.X < 0);
 			}
 
 			// Diferente de melee/taking_damage, "dead" trava independente de
@@ -1237,7 +1275,7 @@ namespace Jogo25D.Characters
 
 			RemoveItemRequest(instanceId, dropQuantity);
 
-			var dropOffset = new Vector2(Sprite.FlipH ? -40f : 40f, 0f);
+			var dropOffset = new Vector2(FacingLeft ? -40f : 40f, 0f);
 
 			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset);
 		}

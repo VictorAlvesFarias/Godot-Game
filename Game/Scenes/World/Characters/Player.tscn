@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://db2c5m47jt7cb"]
 
-[ext_resource type="Script" uid="uid://dfscur07q2ggs" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
-[ext_resource type="Script" uid="uid://co3gj1gu87pml" path="res://Features/World/Characters/Systems/AimIndicator.cs" id="4"]
-[ext_resource type="Script" uid="uid://di4apf3sm0mdx" path="res://Features/World/Characters/Systems/GroundIndicator.cs" id="5"]
+[ext_resource type="Script" uid="uid://dmaaechtewda7" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
+[ext_resource type="Script" uid="uid://cxjbycmjsmwvg" path="res://Features/World/Characters/Systems/AimIndicator.cs" id="4"]
+[ext_resource type="Script" uid="uid://cr0oguyk6neue" path="res://Features/World/Characters/Systems/GroundIndicator.cs" id="5"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Sprites/Character/charater.png" id="5_47fxu"]
-[ext_resource type="Script" uid="uid://3iq1o6fjlcb4" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
+[ext_resource type="Script" uid="uid://dxincvsbk6g3p" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
 atlas = ExtResource("5_47fxu")
@@ -438,13 +438,18 @@ size = Vector2(23, 29.925568)
 [node name="Player" type="CharacterBody2D" unique_id=678460707]
 script = ExtResource("1")
 
-[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=496822046]
+[node name="Visuals" type="Node2D" parent="." unique_id=496822047]
+
+[node name="Sprite" type="AnimatedSprite2D" parent="Visuals" unique_id=496822046]
 texture_filter = 1
 texture_repeat = 1
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_dslm6")
 animation = &"idle"
 frame_progress = 0.97152567
+
+[node name="AttackOrigin" type="Marker2D" parent="Visuals" unique_id=857000655]
+position = Vector2(4, 12)
 
 [node name="Systems" type="Node2D" parent="." unique_id=312828525]
 

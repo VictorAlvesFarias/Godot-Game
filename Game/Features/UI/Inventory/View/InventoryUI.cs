@@ -685,7 +685,7 @@ namespace Jogo25D.UI
 			}
 
 			CharacterSprite.Frame = LocalPlayer.Sprite.Frame;
-			CharacterSprite.FlipH = LocalPlayer.Sprite.FlipH;
+			CharacterSprite.FlipH = LocalPlayer.FacingLeft;
 		}
 
 		public void UpdatePropertiesList()

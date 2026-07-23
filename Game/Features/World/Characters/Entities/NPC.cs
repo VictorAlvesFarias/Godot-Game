@@ -15,7 +15,8 @@ namespace Jogo25D.Characters
 
             AddToGroup("players");
 
-            Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
+            Visuals = GetNodeOrNull<Node2D>("Visuals");
+            Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
             Sprite?.Play("idle");
 
             if (Sprite != null)

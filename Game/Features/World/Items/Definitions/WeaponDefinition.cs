@@ -90,7 +90,7 @@ namespace Jogo25D.Items
             var dir = rawDir.LengthSquared() > 0.001f ? rawDir.Normalized() : Vector2.Right;
             var angle = dir.Angle();
 
-            player.Sprite.FlipH = !(angle >= -1.5f && angle <= 1.5f);
+            player.SetFacing(!(angle >= -1.5f && angle <= 1.5f));
 
             player.Sprite.Play("melee");
 

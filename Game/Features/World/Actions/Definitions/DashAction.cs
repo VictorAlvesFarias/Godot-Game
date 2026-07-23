@@ -40,7 +40,7 @@ namespace Jogo25D.Actions
 
 					if (dir.X != 0)
 					{
-						player.Sprite.FlipH = dir.X < 0;
+						player.SetFacing(dir.X < 0);
 					}
 				}
 			}
@@ -66,7 +66,7 @@ namespace Jogo25D.Actions
 					player.Velocity = finalDir * dash.DashSpeed;
 
 					if (player.Sprite != null && finalDir.X != 0)
-						player.Sprite.FlipH = finalDir.X < 0;
+						player.SetFacing(finalDir.X < 0);
 
 					return;
 				}
@@ -76,7 +76,7 @@ namespace Jogo25D.Actions
 
 			if (player.Sprite != null && dir.X != 0)
 			{
-				player.Sprite.FlipH = dir.X < 0;
+				player.SetFacing(dir.X < 0);
 			}
 		}
 
