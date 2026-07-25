@@ -17,6 +17,9 @@ namespace Jogo25D.Characters
 
             Visuals = GetNodeOrNull<Node2D>("Visuals");
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
+            Labels = GetNodeOrNull<Node2D>("Labels");
+            NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
+            HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
             Sprite?.Play("idle");
 
             if (Sprite != null)

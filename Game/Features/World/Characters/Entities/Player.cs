@@ -65,13 +65,12 @@ namespace Jogo25D.Characters
 		public Node2D Visuals { get; set; }
 		public AnimatedSprite2D Sprite { get; set; }
 		public CollisionShape2D Shape { get; set; }
-		public GroundIndicator GroundMarker { get; set; }
-		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
 		public Node2D Labels { get; set; }
 		public Label NameLabel { get; set; }
 		public Label HealthLabel { get; set; }
 		public Label InteractPromptLabel { get; set; }
+		private float _healthLabelBaseY;
 
 		#endregion
 
@@ -121,12 +120,16 @@ namespace Jogo25D.Characters
 			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
 			_shapeOffsetX = Shape != null ? Mathf.Abs(Shape.Position.X) : 0f;
 			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
-			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
-			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
 			Labels = GetNodeOrNull<Node2D>("Labels");
 			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
 			InteractPromptLabel = GetNodeOrNull<Label>("Labels/InteractPromptLabel");
+
+			// Posicao Y autoral (a que estiver salva na cena) - o codigo so
+			// aplica um deslocamento RELATIVO a partir daqui quando o nome
+			// esta escondido, em vez de sobrescrever com um valor fixo (o
+			// que descartava qualquer ajuste feito no editor).
+			_healthLabelBaseY = HealthLabel?.Position.Y ?? 0f;
 
 			GD.Print("[Player._Ready] Setting default states");
 
@@ -216,6 +219,7 @@ namespace Jogo25D.Characters
 			TickEffects(Data.CurrentEffects, dt);
 			TickEffects(CurrentEffects, dt);
 			TickKnockback(dt);
+			UpdateItemIndicator(dt);
 			UpdateAbilities(Data.UnlockedAbilities, dt);
 			UpdateAbilities(UnlockedAbilities, dt);
 
@@ -300,7 +304,6 @@ namespace Jogo25D.Characters
 
 			HealthLabel.Visible = true;
 			HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
-			HealthLabel.Position = new Vector2(-45, hasName ? -42 : -50);
 		}
 
 		// So o dono ve o proprio prompt de interagir (feedback local sobre a
@@ -363,8 +366,109 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				ActionDB.Get(action.Id)?.Update(dt, this, action);
+				var def = ActionDB.Get(action.Id);
+
+				def?.Update(dt, this, action);
+
+				if (def != null)
+				{
+					GetActionIndicator(def)?.Update(this, def, action, dt);
+				}
 			}
+		}
+
+		// So chama pro item EQUIPADO no momento (nao pra todo o inventario,
+		// diferente do loop de Update la em cima) - nao faz sentido
+		// desenhar indicador de item que nem esta na mao.
+		private void UpdateItemIndicator(float dt)
+		{
+			var equipped = EquippedInstance();
+
+			if (equipped == null)
+			{
+				return;
+			}
+
+			var def = ItemDB.Get(equipped.Id);
+
+			if (def != null)
+			{
+				GetItemIndicator(def)?.Update(this, def, equipped, dt);
+			}
+		}
+
+		// ItemDefinition/ActionDefinition sao instancias COMPARTILHADAS
+		// entre players (ver ItemDB/ActionDB) - por isso os indicadores em
+		// si nunca moram la. Quem instancia um indicador NOVO e uma factory
+		// sem estado (ItemIndicatorFactory/ActionIndicatorFactory, so sabe
+		// "qual classe construir pra qual tipo de definicao"); quem GUARDA
+		// essa instancia (uma por tipo, por PLAYER) e aqui - assim cada
+		// player tem seu proprio objeto de indicador, sem risco de dois
+		// players (ou dois itens da mesma classe) pisarem no estado um do
+		// outro.
+		private readonly Dictionary<Type, IItemIndicator> _itemIndicators = new();
+		private readonly Dictionary<Type, IActionIndicator> _actionIndicators = new();
+		private readonly Dictionary<string, Node2D> _indicatorNodes = new();
+
+		private IItemIndicator GetItemIndicator(ItemDefinition definition)
+		{
+			var type = definition.GetType();
+
+			if (!_itemIndicators.TryGetValue(type, out var indicator))
+			{
+				indicator = ItemIndicatorFactory.Create(definition);
+
+				if (indicator != null)
+				{
+					_itemIndicators[type] = indicator;
+				}
+			}
+
+			return indicator;
+		}
+
+		private IActionIndicator GetActionIndicator(ActionDefinition definition)
+		{
+			var type = definition.GetType();
+
+			if (!_actionIndicators.TryGetValue(type, out var indicator))
+			{
+				indicator = ActionIndicatorFactory.Create(definition);
+
+				if (indicator != null)
+				{
+					_actionIndicators[type] = indicator;
+				}
+			}
+
+			return indicator;
+		}
+
+		// Node visual de um indicador (Line2D, Polygon2D etc.) - continua
+		// morando aqui (filho direto do Player, NAO do Visuals, pra nao
+		// herdar o flip horizontal), independente da instancia do
+		// indicador que o desenha ser por-tipo-por-player agora.
+		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null) where T : Node2D, new()
+		{
+			if (_indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing))
+			{
+				return typed;
+			}
+
+			if (existing != null && IsInstanceValid(existing))
+			{
+				existing.QueueFree();
+			}
+
+			var node = new T();
+
+			configure?.Invoke(node);
+
+			AddChild(node);
+
+			_indicatorNodes[key] = node;
+
+			return node;
 		}
 
 		#endregion
@@ -725,7 +829,14 @@ namespace Jogo25D.Characters
 
 			if (previousItem != null && previousItem.InstanceId != instanceId)
 			{
-				ItemDB.Get(previousItem.Id)?.OnUnequip(this, previousItem);
+				var previousDef = ItemDB.Get(previousItem.Id);
+
+				previousDef?.OnUnequip(this, previousItem);
+
+				if (previousDef != null)
+				{
+					GetItemIndicator(previousDef)?.Hide(this);
+				}
 			}
 
 			Data.EquippedItemId = instanceId;

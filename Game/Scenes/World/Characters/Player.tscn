@@ -1,8 +1,6 @@
 [gd_scene format=3 uid="uid://db2c5m47jt7cb"]
 
 [ext_resource type="Script" uid="uid://dmaaechtewda7" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
-[ext_resource type="Script" uid="uid://cxjbycmjsmwvg" path="res://Features/World/Characters/Systems/AimIndicator.cs" id="4"]
-[ext_resource type="Script" uid="uid://cr0oguyk6neue" path="res://Features/World/Characters/Systems/GroundIndicator.cs" id="5"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Sprites/Character/charater.png" id="5_47fxu"]
 [ext_resource type="Script" uid="uid://dxincvsbk6g3p" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
 
@@ -442,11 +440,10 @@ script = ExtResource("1")
 scale = Vector2(0.5, 0.5)
 
 [node name="NameLabel" type="Label" parent="Labels" unique_id=1847926497]
-visible = false
 offset_left = -44.0
-offset_top = -58.0
+offset_top = -68.0
 offset_right = 46.0
-offset_bottom = -35.0
+offset_bottom = -45.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
@@ -455,11 +452,10 @@ text = "Name"
 horizontal_alignment = 1
 
 [node name="HealthLabel" type="Label" parent="Labels" unique_id=1847926498]
-visible = false
-offset_left = -46.0
-offset_top = -78.0
-offset_right = 44.0
-offset_bottom = -55.0
+offset_left = -44.0
+offset_top = -88.0
+offset_right = 46.0
+offset_bottom = -65.0
 theme_override_colors/font_color = Color(0.3, 1, 0.3, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
@@ -468,7 +464,6 @@ text = "50/50"
 horizontal_alignment = 1
 
 [node name="InteractPromptLabel" type="Label" parent="Labels" unique_id=1847926499]
-visible = false
 offset_left = -94.0
 offset_top = 38.0
 offset_right = 106.0
@@ -490,7 +485,7 @@ position = Vector2(-4, -7)
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_dslm6")
 animation = &"idle"
-frame_progress = 0.97152567
+frame_progress = 0.3399123
 
 [node name="AttackOrigin" type="Marker2D" parent="Visuals" unique_id=857000655]
 position = Vector2(-1, 6)
@@ -499,12 +494,6 @@ position = Vector2(-1, 6)
 
 [node name="PlayerInput" type="Node" parent="Systems" unique_id=1094665518]
 script = ExtResource("6")
-
-[node name="AimIndicator" type="Node2D" parent="Systems" unique_id=111111111]
-script = ExtResource("4")
-
-[node name="GroundMarker" type="Node2D" parent="Systems" unique_id=222222222]
-script = ExtResource("5")
 
 [node name="Shape" type="CollisionShape2D" parent="." unique_id=857000654]
 shape = SubResource("RectangleShape2D_1")

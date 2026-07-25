@@ -18,23 +18,6 @@ namespace Jogo25D.Items
     {
         #region Core - Virtuals
 
-        public override void OnEquip(Player player, ItemDefinitionData data)
-        {
-            base.OnEquip(player, data);
-
-            if (player.AimIndicator != null)
-            {
-                player.AimIndicator.IsActive = true;
-            }
-        }
-
-        public override void OnUnequip(Player player, ItemDefinitionData data)
-        {
-            base.OnUnequip(player, data);
-
-            player.AimIndicator?.Hide();
-        }
-
         public override void Use(Player player, ItemDefinitionData instance)
         {
             if (!CanUse(instance))

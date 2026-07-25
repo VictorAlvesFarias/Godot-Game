@@ -131,7 +131,7 @@ namespace Jogo25D.TileEntities
                 }
 
                 var cellPosition = _world.ToLocal(_tileMapLayer.ToGlobal(_tileMapLayer.MapToLocal(cell)));
-                var entity = TileEntityDB.CreateInstance(typeId, cell, _world, cellPosition);
+                var entity = TileEntityFactory.CreateInstance(typeId, cell, _world, cellPosition);
 
                 if (entity == null)
                 {

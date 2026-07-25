@@ -44,25 +44,7 @@ namespace Jogo25D.Actions
             _halfHeight = texture.GetHeight() * scale * 0.5f;
             _halfWidth = texture.GetWidth() * scale * 0.5f;
 
-            if (player.GroundMarker != null)
-            {
-                player.GroundMarker.AreaRadiusX = _halfWidth;
-                player.GroundMarker.AreaRadiusY = _halfHeight;
-                player.GroundMarker.HorizontalRange = weapon.AttackRange;
-                player.GroundMarker.MaxVerticalDrop = weapon.AttackRange;
-                player.GroundMarker.UpdateIndicatorShape();
-                player.GroundMarker.Hide();
-            }
-
             preview.QueueFree();
-        }
-
-        public override void OnPassiveUpdate(Player player, ActionDefinitionData instance, float delta)
-        {
-            if (player.GroundMarker != null)
-            {
-                player.GroundMarker.IsActive = player.Input.Ability2Held && instance.CanUse;
-            }
         }
 
         #endregion
