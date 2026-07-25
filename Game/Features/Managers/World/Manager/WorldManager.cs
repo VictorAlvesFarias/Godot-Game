@@ -23,8 +23,6 @@ namespace Jogo25D.Systems
 		public Node2D UpsidedownParent { get; set; }
 		public SubViewportContainer OverContainer { get; set; }
 		public SubViewportContainer UpContainer { get; set; }
-		private Node2D ProceduralParent { get; set; }
-        private SubViewportContainer ProceduralContainer { get; set; }
 
         #endregion
 
@@ -83,19 +81,6 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager.ResolveWorldReferences] UpsidedownParent found: {UpsidedownParent.Name}");
 			}
 
-            var proceduralParentPath = "Main/World/Levels/ProceduralViewportContainer/ProceduralViewport/Procedural";
-
-            ProceduralParent = GetTree().Root.GetNodeOrNull<Node2D>(proceduralParentPath);
-
-            if (ProceduralParent == null)
-            {
-                GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: ProceduralParent not found at path {proceduralParentPath}");
-            }
-            else
-            {
-                GD.Print($"[WorldManager.ResolveWorldReferences] ProceduralParent found: {ProceduralParent.Name}");
-            }
-
             var overContainerPath = "Main/World/Levels/OverworldViewportContainer";
 
 			OverContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(overContainerPath);
@@ -121,19 +106,6 @@ namespace Jogo25D.Systems
 			{
 				GD.Print($"[WorldManager.ResolveWorldReferences] UpContainer found: {UpContainer.Name}");
 			}
-
-            var proceduralContainerPath = "Main/World/Levels/ProceduralViewportContainer";
-
-			ProceduralContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(proceduralContainerPath);
-
-            if (ProceduralContainer == null)
-            {
-                GD.Print($"[WorldManager.ResolveWorldReferences] GetNodeOrNull: ProceduralContainer not found at path {proceduralContainerPath}");
-            }
-            else
-            {
-                GD.Print($"[WorldManager.ResolveWorldReferences] UpContainer found: {ProceduralContainer.Name}");
-            }
 		}
 
 		public void SpawnWorld()
@@ -177,7 +149,7 @@ namespace Jogo25D.Systems
 
         private void SpawnTestNPC()
         {
-            if (OverworldParent == null || OverworldParent.GetNodeOrNull("NPC_Dummy") != null)
+            if (UpsidedownParent == null || UpsidedownParent.GetNodeOrNull("NPC_Dummy") != null)
             {
                 return;
             }
@@ -189,7 +161,7 @@ namespace Jogo25D.Systems
 
             npc.SetMultiplayerAuthority(1);
 
-            OverworldParent.AddChild(npc);
+            UpsidedownParent.AddChild(npc);
         }
 
         #endregion
@@ -221,11 +193,11 @@ namespace Jogo25D.Systems
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var player = OverworldParent?.GetNodeOrNull<Player>("Player");
+			var player = UpsidedownParent?.GetNodeOrNull<Player>("Player");
 
 			if (player == null)
 			{
-				GD.Print("[WorldManager.CreateServer] local player not found");	
+				GD.Print("[WorldManager.CreateServer] local player not found");
 			}
 			else
 			{
@@ -290,7 +262,7 @@ namespace Jogo25D.Systems
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var localPlayer = OverworldParent?.GetNodeOrNull<Player>("Player");
+			var localPlayer = UpsidedownParent?.GetNodeOrNull<Player>("Player");
 
 			if (localPlayer != null)
 			{
@@ -303,7 +275,7 @@ namespace Jogo25D.Systems
 				GD.Print("[WorldManager.JoinServer] no local player to remove");
 			}
 
-			var localNpc = OverworldParent?.GetNodeOrNull("NPC_Dummy");
+			var localNpc = UpsidedownParent?.GetNodeOrNull("NPC_Dummy");
 
 			if (localNpc != null)
 			{
@@ -365,10 +337,36 @@ namespace Jogo25D.Systems
 
 			OverworldParent = null;
 			UpsidedownParent = null;
-			ProceduralParent = null;
 			OverContainer = null;
 			UpContainer = null;
-			ProceduralContainer = null;
+		}
+
+		// Usado quando QUEM SOFREU a desconexao foi um cliente (o host caiu
+		// ou parou de hospedar) - diferente de Disconnect(), que e o proprio
+		// host saindo do multiplayer e continuando sozinho no mesmo mundo,
+		// aqui o cliente nao tem mundo nenhum pra continuar e deve voltar
+		// pro menu principal.
+		public void ReturnToMainMenu()
+		{
+			GD.Print("[WorldManager.ReturnToMainMenu] ReturnToMainMenu()");
+
+			GetTree().Paused = false;
+
+			var pauseUi = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/Ui/PauseUI");
+
+			if (pauseUi != null)
+			{
+				pauseUi.Visible = false;
+			}
+
+			LeaveWorld();
+
+			var startUi = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/Ui/StartUI");
+
+			if (startUi != null)
+			{
+				startUi.Visible = true;
+			}
 		}
 
 		private void RespawnLocalSoloPlayer()
@@ -396,15 +394,18 @@ namespace Jogo25D.Systems
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
 
-			if (OverworldParent != null)
+			// Mundo padrao de spawn e o Upsidedown (nao o Overworld) - troque
+			// aqui e no resto dos usos de "mundo local" neste arquivo se isso
+			// mudar de novo.
+			if (UpsidedownParent != null)
 			{
-				OverworldParent.AddChild(player);
+				UpsidedownParent.AddChild(player);
 
 				GD.Print($"[WorldManager.SpawnPlayer] spawned {player.Name}");
 			}
 			else
 			{
-				GD.Print($"[WorldManager.SpawnPlayer] WARNING: OverworldParent is null, cannot add {player.Name}");
+				GD.Print($"[WorldManager.SpawnPlayer] WARNING: UpsidedownParent is null, cannot add {player.Name}");
 			}
 		}
 
@@ -442,7 +443,7 @@ namespace Jogo25D.Systems
 		{
 			GD.Print($"[WorldManager.SpawnNpcReceive] position={position}");
 
-			if (OverworldParent == null || OverworldParent.GetNodeOrNull("NPC_Dummy") != null)
+			if (UpsidedownParent == null || UpsidedownParent.GetNodeOrNull("NPC_Dummy") != null)
 			{
 				return;
 			}
@@ -455,7 +456,7 @@ namespace Jogo25D.Systems
 			npc.AddToGroup("players");
 			npc.SetMultiplayerAuthority(1);
 
-			OverworldParent.AddChild(npc);
+			UpsidedownParent.AddChild(npc);
 		}
 
 		public void SpawnNpcRequest(Vector2 position, long targetPeerId)
@@ -469,9 +470,9 @@ namespace Jogo25D.Systems
 
 		public void SpawnWorldItem(WorldItem item)
 		{
-			if (OverworldParent != null)
+			if (UpsidedownParent != null)
 			{
-				OverworldParent.AddChild(item);
+				UpsidedownParent.AddChild(item);
 			}
 		}
 
@@ -480,7 +481,7 @@ namespace Jogo25D.Systems
 		{
 			GD.Print($"[WorldManager.SpawnWorldItemReceive] worldItemId={worldItemId} position={position}");
 
-			if (OverworldParent == null || FindWorldItem(worldItemId) != null)
+			if (UpsidedownParent == null || FindWorldItem(worldItemId) != null)
 			{
 				return;
 			}
@@ -542,7 +543,7 @@ namespace Jogo25D.Systems
 
 		public WorldItem FindWorldItem(long worldItemId)
 		{
-			return OverworldParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+			return UpsidedownParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
 		}
 
 		#endregion
@@ -594,11 +595,32 @@ namespace Jogo25D.Systems
 				return;
 			}
 
+			// Reviver sempre manda o player pro Upsidedown, nao importa em
+			// que mundo ele morreu - mesmo padrao de reparent/reequip/
+			// visibilidade do TradeDimension.
+			if (player.GetParent<Node2D>() != UpsidedownParent)
+			{
+				player.Reparent(UpsidedownParent, true);
+
+				var equippedItemId = player.Data.EquippedItemId;
+
+				if (equippedItemId > 0)
+				{
+					player.EquipItemRequest(equippedItemId);
+				}
+			}
+
 			player.GlobalPosition = Vector2.Zero;
 			player.Velocity = Vector2.Zero;
 			player.Data.CurrentHealth = player.GetMaxHealth();
 			player.Sprite?.Play("idle");
 			player.Input?.RemoveBlocker("dead");
+
+			if (peerId == Multiplayer.GetUniqueId())
+			{
+				OverContainer.Visible = false;
+				UpContainer.Visible = true;
+			}
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -648,10 +670,6 @@ namespace Jogo25D.Systems
             {
                 nextParent = UpsidedownParent;
             }
-            else if (currentParent == UpsidedownParent)
-            {
-                nextParent = ProceduralParent;
-            }
             else
             {
                 nextParent = OverworldParent;
@@ -660,6 +678,8 @@ namespace Jogo25D.Systems
             GD.Print($"[WorldManager] Moving player from {currentParent.Name} to {nextParent.Name}");
 
             playerNode.Reparent(nextParent, true);
+
+            playerNode.LastDimensionTradeMsec = Time.GetTicksMsec();
 
 			var equippedItemId = playerNode.Data.EquippedItemId;
 
@@ -672,7 +692,6 @@ namespace Jogo25D.Systems
             {
                 OverContainer.Visible = (nextParent == OverworldParent);
                 UpContainer.Visible = (nextParent == UpsidedownParent);
-                ProceduralContainer.Visible = (nextParent == ProceduralParent);
             }
         }
 
@@ -749,7 +768,7 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			var npc = OverworldParent?.GetNodeOrNull<Player>("NPC_Dummy");
+			var npc = UpsidedownParent?.GetNodeOrNull<Player>("NPC_Dummy");
 
 			if (npc != null)
 			{
@@ -758,7 +777,7 @@ namespace Jogo25D.Systems
 				SpawnNpcRequest(npc.Position, id);
 			}
 
-			var worldItems = OverworldParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
+			var worldItems = UpsidedownParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
 
 			foreach (var worldItem in worldItems)
 			{
@@ -811,8 +830,8 @@ namespace Jogo25D.Systems
 		public void OnServerDisconnected()
 		{
 			GD.Print("[WorldManager.OnServerDisconnected] OnServerDisconnected()");
-			
-			Disconnect();
+
+			ReturnToMainMenu();
 		}
 
         #endregion
@@ -831,26 +850,6 @@ namespace Jogo25D.Systems
 			var isServer = Multiplayer.IsServer();
 
 			return isServer;
-		}
-
-		public SubViewportContainer GetContainerForParent(Node2D parent)
-		{
-			if (parent == OverworldParent)
-			{
-				return OverContainer;
-			}
-
-			if (parent == UpsidedownParent)
-			{
-				return UpContainer;
-			}
-
-			if (parent == ProceduralParent)
-			{
-				return ProceduralContainer;
-			}
-
-			return null;
 		}
 
         #endregion

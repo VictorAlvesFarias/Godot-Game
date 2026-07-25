@@ -14,6 +14,7 @@ namespace Jogo25D.Systems
         public bool Dash { get; private set; }
         public bool Attack { get; private set; }
         public bool Reload { get; private set; }
+        public bool Interact { get; private set; }
         public bool Ability { get; private set; }
         public bool PrevAbility2Held { get; private set; }
         public bool Ability2Held { get; private set; }
@@ -74,6 +75,7 @@ namespace Jogo25D.Systems
             var dash = Input.IsActionJustPressed("dash");
             var attack = Input.IsActionPressed("shoot");
             var reload = Input.IsActionJustPressed("reload");
+            var interact = Input.IsActionJustPressed("interact");
             var ability = Input.IsActionJustPressed("ability");
             var ability2Held = Input.IsActionPressed("ability_2");
             var ability2JustReleased = PrevAbility2Held && !ability2Held;
@@ -112,6 +114,11 @@ namespace Jogo25D.Systems
             if (Reload != reload)
             {
                 Rpc(nameof(ServerSetReload), reload);
+            }
+
+            if (Interact != interact)
+            {
+                Rpc(nameof(ServerSetInteract), interact);
             }
 
             if (Ability != ability)
@@ -170,6 +177,7 @@ namespace Jogo25D.Systems
             Dash = false;
             Attack = false;
             Reload = false;
+            Interact = false;
             Ability = false;
             Ability2Held = false;
             Ability2JustReleased = false;
@@ -225,6 +233,12 @@ namespace Jogo25D.Systems
         private void ServerSetReload(bool value)
         {
             Reload = value;
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        private void ServerSetInteract(bool value)
+        {
+            Interact = value;
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

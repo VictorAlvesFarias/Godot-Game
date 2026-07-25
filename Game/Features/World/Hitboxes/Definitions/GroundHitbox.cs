@@ -42,6 +42,11 @@ namespace Jogo25D.Hitboxes
 
             if (body is Player target && !_alreadyHit.Contains(target))
             {
+                if (IsPvpBlocked(target))
+                {
+                    return;
+                }
+
                 _alreadyHit.Add(target);
 
                 foreach (var damage in Damages)

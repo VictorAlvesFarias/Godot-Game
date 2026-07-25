@@ -71,6 +71,19 @@ text = "Host"
 flat = true
 alignment = 0
 
+[node name="PvpButton" type="Button" parent="MarginContainer/Root/MenuColumn" unique_id=999614091]
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
+theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
+theme_override_font_sizes/font_size = 20
+text = "PvE"
+flat = true
+alignment = 0
+
 [node name="PortInput" type="LineEdit" parent="MarginContainer/Root/MenuColumn" unique_id=989633329]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2

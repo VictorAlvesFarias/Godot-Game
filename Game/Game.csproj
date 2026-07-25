@@ -361,6 +361,7 @@
     <Content Include="Assets\Tiles\TX FX Torch Flame.png" />
     <Content Include="Assets\Tiles\TX Tileset Ground.png" />
     <Content Include="Assets\Tiles\TX Village Props.png" />
+    <Content Include="Properties\launchSettings.json" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Audio\Music\.gitkeep" />
@@ -721,14 +722,26 @@
     <None Include="Scenes\UI\Inventory\Inventory.tscn" />
     <None Include="Scenes\UI\Pause\Pause.tscn" />
     <None Include="Scenes\UI\Ui.tscn" />
+    <None Include="Scenes\World\Characters\NPC.tscn" />
     <None Include="Scenes\World\Characters\Player.tscn" />
+    <None Include="Scenes\World\Items\WorldItem.tscn" />
     <None Include="Scenes\World\Levels\Overworld.tscn" />
-    <None Include="Scenes\World\Levels\Procedural.tscn" />
     <None Include="Scenes\World\Levels\Upsidedown.tscn" />
     <None Include="Scenes\World\Projectiles\Fireball.tscn" />
     <None Include="Scenes\World\Projectiles\GroundStrike.tscn" />
     <None Include="Scenes\World\Projectiles\Projectile.tscn" />
-    <None Include="Scenes\World\Projectiles\Sword.tscn" />
+    <None Include="Scenes\World\Swords\DarkSword.tscn" />
+    <None Include="Scenes\World\Swords\FireSword.tscn" />
+    <None Include="Scenes\World\Swords\GoldSword.tscn" />
+    <None Include="Scenes\World\Swords\IceSword.tscn" />
+    <None Include="Scenes\World\Swords\IceSwordAlt.tscn" />
+    <None Include="Scenes\World\Swords\PoisonSword.tscn" />
+    <None Include="Scenes\World\Swords\RealSword.tscn" />
+    <None Include="Scenes\World\Swords\SilverSword.tscn" />
+    <None Include="Scenes\World\Swords\SwordBase.tscn" />
+    <None Include="Scenes\World\Swords\SwordBasic.tscn" />
+    <None Include="Scenes\World\Swords\SwordStarting.tscn" />
+    <None Include="Scenes\World\Swords\WhipSword.tscn" />
     <None Include="Scenes\World\World.tscn" />
   </ItemGroup>
   <ItemGroup>

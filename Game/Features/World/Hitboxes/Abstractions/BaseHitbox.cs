@@ -67,6 +67,11 @@ namespace Jogo25D.Hitboxes
 
             if (body is Player target)
             {
+                if (IsPvpBlocked(target))
+                {
+                    return;
+                }
+
                 if (CanApplyImpact())
                 {
                     ApplyImpact(target);
@@ -111,6 +116,20 @@ namespace Jogo25D.Hitboxes
         #endregion
 
         #region Core - Utils
+
+        // NPC/inimigo nao entra na regra de pvp (sempre pode causar/receber
+        // dano normalmente) - so bloqueia dano quando os DOIS lados sao
+        // players reais e pelo menos um deles esta com Data.PvpEnabled
+        // desligado.
+        protected bool IsPvpBlocked(Player target)
+        {
+            if (Owner is null or NPC || target is NPC)
+            {
+                return false;
+            }
+
+            return !Owner.Data.PvpEnabled || !target.Data.PvpEnabled;
+        }
 
         protected bool CanApplyImpact()
         {

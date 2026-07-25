@@ -438,18 +438,62 @@ size = Vector2(23, 29.925568)
 [node name="Player" type="CharacterBody2D" unique_id=678460707]
 script = ExtResource("1")
 
+[node name="Labels" type="Node2D" parent="." unique_id=1847926496]
+scale = Vector2(0.5, 0.5)
+
+[node name="NameLabel" type="Label" parent="Labels" unique_id=1847926497]
+visible = false
+offset_left = -44.0
+offset_top = -58.0
+offset_right = 46.0
+offset_bottom = -35.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 13
+text = "Name"
+horizontal_alignment = 1
+
+[node name="HealthLabel" type="Label" parent="Labels" unique_id=1847926498]
+visible = false
+offset_left = -46.0
+offset_top = -78.0
+offset_right = 44.0
+offset_bottom = -55.0
+theme_override_colors/font_color = Color(0.3, 1, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 12
+text = "50/50"
+horizontal_alignment = 1
+
+[node name="InteractPromptLabel" type="Label" parent="Labels" unique_id=1847926499]
+visible = false
+offset_left = -94.0
+offset_top = 38.0
+offset_right = 106.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = "Pressione [E]"
+horizontal_alignment = 1
+
 [node name="Visuals" type="Node2D" parent="." unique_id=496822047]
+z_index = 1
 
 [node name="Sprite" type="AnimatedSprite2D" parent="Visuals" unique_id=496822046]
 texture_filter = 1
 texture_repeat = 1
+position = Vector2(-4, -7)
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_dslm6")
 animation = &"idle"
 frame_progress = 0.97152567
 
 [node name="AttackOrigin" type="Marker2D" parent="Visuals" unique_id=857000655]
-position = Vector2(4, 12)
+position = Vector2(-1, 6)
 
 [node name="Systems" type="Node2D" parent="." unique_id=312828525]
 
@@ -463,5 +507,4 @@ script = ExtResource("4")
 script = ExtResource("5")
 
 [node name="Shape" type="CollisionShape2D" parent="." unique_id=857000654]
-position = Vector2(2.5, 6.962784)
 shape = SubResource("RectangleShape2D_1")

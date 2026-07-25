@@ -4,8 +4,6 @@
 [ext_resource type="PackedScene" uid="uid://ckhxte1bcg3a6" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
 [ext_resource type="PackedScene" uid="uid://du2rl5uua1bga" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
 [ext_resource type="PackedScene" uid="uid://b3on12lgpr7t0" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
-[ext_resource type="Script" uid="uid://bp4njl6lxbnwl" path="res://Features/UI/Nameplates/View/NameplateOverlayUI.cs" id="5_nameplate"]
-[ext_resource type="Script" uid="uid://162kd1fax7v0" path="res://Features/UI/DamagePopups/View/DamagePopupOverlayUI.cs" id="6_damagepopup"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Start/Start.tscn" id="7_start"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/WorldSelect/WorldSelect.tscn" id="8_worldselect"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Multiplayer/Multiplayer.tscn" id="9_multiplayer"]
@@ -19,12 +17,6 @@
 layer = 8
 
 [node name="HudUI" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
-
-[node name="NameplateOverlayUI" type="CanvasLayer" parent="." unique_id=1450598594]
-script = ExtResource("5_nameplate")
-
-[node name="DamagePopupOverlayUI" type="CanvasLayer" parent="." unique_id=1450598595]
-script = ExtResource("6_damagepopup")
 
 [node name="InventoryUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
 

@@ -11,7 +11,7 @@ using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
-using Jogo25D.UI;
+using Jogo25D.TileEntities;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
@@ -41,6 +41,13 @@ namespace Jogo25D.Characters
 
 		public long PeerId { get; set; } = 1;
 		public float Gravity { get; set; }
+
+		// Timestamp (Time.GetTicksMsec) da ultima vez que o player trocou de
+		// dimensao - usado pelo PortalTileEntity pra nao teleportar de volta
+		// na hora, ja que o portal do mundo de destino fica exatamente na
+		// mesma celula relativa do portal de origem (o player chega bem em
+		// cima dele).
+		public ulong LastDimensionTradeMsec { get; set; }
         public bool Loaded { get; set;  }
 		public string DisplayName { get; set; } = "";
 		public PlayerData Data { get; set; } = new PlayerData();
@@ -72,6 +79,18 @@ namespace Jogo25D.Characters
 		public GroundIndicator GroundMarker { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
+
+		// Labels que ficam presos no player (nao no Visuals - de proposito,
+		// pra nao herdar o flip horizontal do SetFacing). Renderizam dentro
+		// da SubViewport do mundo, por isso o node "Labels" usa Scale 0.5
+		// pra cancelar o Camera2D.Zoom=2 de Overworld/Upsidedown - com isso
+		// os mesmos font_size/offsets que a UI em tela usava antes (quando
+		// isso vivia num CanvasLayer projetando mundo->tela) continuam
+		// valendo aqui sem reajuste.
+		public Node2D Labels { get; set; }
+		public Label NameLabel { get; set; }
+		public Label HealthLabel { get; set; }
+		public Label InteractPromptLabel { get; set; }
 
 		#endregion
 
@@ -131,6 +150,10 @@ namespace Jogo25D.Characters
 			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
 			AimIndicator = GetNodeOrNull<AimIndicator>("Systems/AimIndicator");
 			GroundMarker = GetNodeOrNull<GroundIndicator>("Systems/GroundMarker");
+			Labels = GetNodeOrNull<Node2D>("Labels");
+			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
+			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
+			InteractPromptLabel = GetNodeOrNull<Label>("Labels/InteractPromptLabel");
 
 			GD.Print("[Player._Ready] Setting default states");
 
@@ -244,6 +267,96 @@ namespace Jogo25D.Characters
 			HandleUseItem(dt);
 			HandleReload(dt);
 			UpdateAnimation();
+			UpdatePvpCollisionExceptions();
+		}
+
+		// Sem pvp mutuo os players nao colidem fisicamente entre si (so com
+		// cenario/inimigos). Recalculado toda fisica porque e barato (no
+		// maximo 4 players) e se auto-corrige com entra/sai de jogador e com
+		// troca de Data.PvpEnabled sem precisar de um evento dedicado pra
+		// isso - cada peer roda essa fisica localmente pros players que tem
+		// na sua propria arvore.
+		private void UpdatePvpCollisionExceptions()
+		{
+			foreach (var other in GetTree().GetNodesInGroup("players").OfType<Player>())
+			{
+				if (other == this)
+				{
+					continue;
+				}
+
+				if (Data.PvpEnabled && other.Data.PvpEnabled)
+				{
+					RemoveCollisionExceptionWith(other);
+				}
+				else
+				{
+					AddCollisionExceptionWith(other);
+				}
+			}
+		}
+
+		public override void _Process(double delta)
+		{
+			UpdateNameplate();
+			UpdateInteractPrompt();
+		}
+
+		// So mostra nome/vida pra jogadores QUE NAO SOU EU - eu ja tenho a
+		// barra de vida do HUD, duplicar acima da propria cabeca seria
+		// redundante.
+		private void UpdateNameplate()
+		{
+			if (NameLabel == null || HealthLabel == null)
+			{
+				return;
+			}
+
+			if (IsOwner())
+			{
+				NameLabel.Visible = false;
+				HealthLabel.Visible = false;
+
+				return;
+			}
+
+			var hasName = !string.IsNullOrEmpty(DisplayName);
+
+			NameLabel.Visible = hasName;
+			NameLabel.Text = DisplayName;
+
+			HealthLabel.Visible = true;
+			HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
+			HealthLabel.Position = new Vector2(-45, hasName ? -42 : -50);
+		}
+
+		// So o dono ve o proprio prompt de interagir (feedback local sobre a
+		// celula onde ele esta parado).
+		private void UpdateInteractPrompt()
+		{
+			if (InteractPromptLabel == null)
+			{
+				return;
+			}
+
+			if (!IsOwner())
+			{
+				InteractPromptLabel.Visible = false;
+
+				return;
+			}
+
+			var manager = GetParent()?.GetNodeOrNull<TileEntityManager>("TileEntityManager");
+
+			if (manager == null || !manager.TryGetPromptFor(this, out var prompt))
+			{
+				InteractPromptLabel.Visible = false;
+
+				return;
+			}
+
+			InteractPromptLabel.Text = prompt;
+			InteractPromptLabel.Visible = true;
 		}
 
 		private void TickEffects(Godot.Collections.Array<EffectDefinitionData> effects, float dt)
@@ -406,14 +519,37 @@ namespace Jogo25D.Characters
 
 		#region Core - Damage popup
 
+		private const float DamagePopupDuration = 0.8f;
+		private const float DamagePopupRiseDistance = 26f;
+
 		public void ShowDamagePopup(int amount)
 		{
-			if (amount <= 0)
+			if (amount <= 0 || Labels == null)
 			{
 				return;
 			}
 
-			DamagePopupOverlayUI.Instance?.ShowDamagePopup(this, amount);
+			var label = new Label();
+
+			label.Text = $"-{amount}";
+			label.HorizontalAlignment = HorizontalAlignment.Center;
+			label.Size = new Vector2(60, 20);
+			label.AddThemeFontSizeOverride("font_size", 16);
+			label.AddThemeColorOverride("font_color", new Color(1f, 0.25f, 0.25f, 1f));
+			label.AddThemeColorOverride("font_outline_color", Colors.Black);
+			label.AddThemeConstantOverride("outline_size", 3);
+
+			var offset = new Vector2(-30f + (float)GD.RandRange(-8, 8), -70f);
+
+			label.Position = offset;
+
+			Labels.AddChild(label);
+
+			var tween = CreateTween();
+
+			tween.TweenProperty(label, "position", offset + Vector2.Up * DamagePopupRiseDistance, DamagePopupDuration);
+			tween.Parallel().TweenProperty(label, "modulate:a", 0f, DamagePopupDuration);
+			tween.TweenCallback(Callable.From(label.QueueFree));
 		}
 
 		#endregion
@@ -1116,6 +1252,29 @@ namespace Jogo25D.Characters
 			}
 
 			Rpc(nameof(EquipItemReceive), instanceId);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void SetPvpEnabledReceive(bool enabled)
+		{
+			Data.PvpEnabled = enabled;
+		}
+
+		public void SetPvpEnabledRequest(bool enabled)
+		{
+			if (!IsOwner())
+			{
+				return;
+			}
+
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+			{
+				SetPvpEnabledReceive(enabled);
+
+				return;
+			}
+
+			Rpc(nameof(SetPvpEnabledReceive), enabled);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

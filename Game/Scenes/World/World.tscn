@@ -2,7 +2,6 @@
 
 [ext_resource type="PackedScene" uid="uid://eaamifcetyfn" path="res://Scenes/World/Levels/Upsidedown.tscn" id="1_xf6vi"]
 [ext_resource type="PackedScene" uid="uid://bfdarejodvd8o" path="res://Scenes/World/Levels/Overworld.tscn" id="2_ouhkt"]
-[ext_resource type="PackedScene" uid="uid://7csql0pm5brt" path="res://Scenes/World/Levels/Procedural.tscn" id="3_ouhkt"]
 
 [node name="World" type="Node2D" unique_id=336690079]
 
@@ -10,7 +9,6 @@
 follow_viewport_enabled = true
 
 [node name="UpsidedownViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=1875616661]
-visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -20,6 +18,7 @@ offset_right = -2.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 2
+texture_filter = 1
 stretch = true
 metadata/_edit_use_anchors_ = true
 
@@ -32,11 +31,13 @@ render_target_update_mode = 0
 [node name="Upsidedown" parent="Levels/UpsidedownViewportContainer/UpsidedownViewport" unique_id=726539886 instance=ExtResource("1_xf6vi")]
 
 [node name="OverworldViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=1097242325]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture_filter = 1
 stretch = true
 metadata/_edit_use_anchors_ = true
 
@@ -47,20 +48,3 @@ size = Vector2i(1920, 1080)
 render_target_update_mode = 4
 
 [node name="Overworld" parent="Levels/OverworldViewportContainer/OverworldViewport" unique_id=1584147225 instance=ExtResource("2_ouhkt")]
-
-[node name="ProceduralViewportContainer" type="SubViewportContainer" parent="Levels" unique_id=2061780964]
-visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-stretch = true
-
-[node name="ProceduralViewport" type="SubViewport" parent="Levels/ProceduralViewportContainer" unique_id=1778611162]
-transparent_bg = true
-handle_input_locally = false
-size = Vector2i(1920, 1080)
-render_target_update_mode = 0
-
-[node name="Procedural" parent="Levels/ProceduralViewportContainer/ProceduralViewport" unique_id=601562872 instance=ExtResource("3_ouhkt")]

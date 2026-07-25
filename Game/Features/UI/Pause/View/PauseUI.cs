@@ -9,6 +9,7 @@ namespace Jogo25D.UI
 		public Button ResumeButton { get; set; }
 		public Button ExitButton { get; set; }
 		public Button HostButton { get; set; }
+		public Button PvpButton { get; set; }
 		public Button MenuButton { get; set; }
 		public LineEdit PortInput { get; set; }
 		public WorldManager NetworkManager { get; set; }
@@ -20,6 +21,7 @@ namespace Jogo25D.UI
 			ResumeButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ResumeButton");
 			ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
 			HostButton = GetNode<Button>("MarginContainer/Root/MenuColumn/HostButton");
+			PvpButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PvpButton");
 			MenuButton = GetNode<Button>("MarginContainer/Root/MenuColumn/MenuButton");
 			PortInput = GetNode<LineEdit>("MarginContainer/Root/MenuColumn/PortInput");
 			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
@@ -27,6 +29,7 @@ namespace Jogo25D.UI
 			ResumeButton.Pressed += OnResumePressed;
 			ExitButton.Pressed += OnExitPressed;
 			HostButton.Pressed += OnHostPressed;
+			PvpButton.Pressed += OnPvpPressed;
 			MenuButton.Pressed += OnMenuPressed;
 		}
 
@@ -50,6 +53,7 @@ namespace Jogo25D.UI
 			if (Visible)
 			{
 				UpdateNetworkStatus();
+				UpdatePvpStatus();
 			}
 		}
 
@@ -137,8 +141,36 @@ namespace Jogo25D.UI
 			}
 
 			bool connected = NetworkManager.IsConnected();
+			bool isServer = Multiplayer.IsServer();
 
-			HostButton.Text = connected && Multiplayer.IsServer() ? "Stop server" : "Host";
+			// Quem esta conectado como cliente no mundo de outro host nao
+			// pode virar host por cima dessa conexao - a opcao some pra
+			// ele, so volta quando ele sair (Menu) e estiver sozinho de novo.
+			HostButton.Visible = !connected || isServer;
+			PortInput.Visible = HostButton.Visible;
+
+			HostButton.Text = connected && isServer ? "Stop server" : "Host";
+		}
+
+		public void OnPvpPressed()
+		{
+			var localPlayer = NetworkManager?.GetLocalPlayer();
+
+			if (localPlayer == null)
+			{
+				return;
+			}
+
+			localPlayer.SetPvpEnabledRequest(!localPlayer.Data.PvpEnabled);
+
+			UpdatePvpStatus();
+		}
+
+		public void UpdatePvpStatus()
+		{
+			var localPlayer = NetworkManager?.GetLocalPlayer();
+
+			PvpButton.Text = localPlayer != null && localPlayer.Data.PvpEnabled ? "PvP" : "PvE";
 		}
 	}
 }

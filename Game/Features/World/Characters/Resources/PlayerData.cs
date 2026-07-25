@@ -31,6 +31,12 @@ namespace Jogo25D.Features.World.Characters.Resources
         [Export, GodotDictionaryField]
         public long EquippedItemId { get; set; } = 0;
 
+        // PvE por padrao - so causa/recebe dano de outro player e colide
+        // fisicamente com ele se AMBOS tiverem isso ligado (ver
+        // Player.UpdatePvpCollisionExceptions e BaseHitbox.IsPvpBlocked).
+        [Export, GodotDictionaryField]
+        public bool PvpEnabled { get; set; } = false;
+
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new()
         {
