@@ -319,7 +319,7 @@ namespace Jogo25D.UI
 
 		public void OnSlotInput(int slotIndex, InputEvent @event)
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (Inventory == null)
 			{
 				return;
 			}
@@ -343,7 +343,7 @@ namespace Jogo25D.UI
 
 		public void StartDrag(int slotIndex, Vector2 mousePos)
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (Inventory == null)
 			{
 				return;
 			}
@@ -483,7 +483,7 @@ namespace Jogo25D.UI
 
 		public void UpdateSlot(int index)
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (Inventory == null)
 			{
 				return;
 			}
@@ -540,7 +540,7 @@ namespace Jogo25D.UI
 
 		public void ShowContextMenuForSlot(int slotIndex, Vector2 position)
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (Inventory == null)
 			{
 				return;
 			}
@@ -591,7 +591,7 @@ namespace Jogo25D.UI
 
 		public void OnContextMenuOption(string option)
 		{
-			if (SelectedSlotIndex < 0 || Inventory == null || !IsInstanceValid(Inventory))
+			if (SelectedSlotIndex < 0 || Inventory == null)
 			{
 				return;
 			}
@@ -630,11 +630,11 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
-			if (Inventory == null || !IsInstanceValid(Inventory))
+			if (Inventory == null)
 			{
 				FindLocalPlayerInventorySystem();
 
-				if (Inventory == null || !IsInstanceValid(Inventory))
+				if (Inventory == null)
 				{
 					return;
 				}

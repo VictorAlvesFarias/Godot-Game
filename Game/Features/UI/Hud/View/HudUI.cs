@@ -20,8 +20,6 @@ namespace Jogo25D.UI
 
 		public Label fpsLabel;
 		public ProgressBar healthBar;
-		public Label healthBarLabel;
-		public Label weaponLabel;
 		public HBoxContainer abilitiesContainer;
 		public HBoxContainer effectsContainer;
 		public Player localPlayer;
@@ -55,8 +53,6 @@ namespace Jogo25D.UI
 		{
 			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
 			healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
-			healthBarLabel = GetNode<Label>("MarginContainer/VBoxContainer/HealthBar/HealthBarLabel");
-			weaponLabel = GetNode<Label>("MarginContainer/VBoxContainer/EquippedWeaponLabel");
 			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
 			minimap = GetNode<MinimapUI>("MarginContainer/MinimapPanel/Minimap");
 
@@ -111,7 +107,6 @@ namespace Jogo25D.UI
 		{
 			UpdateFpsDisplay(delta);
 			UpdateHealthDisplay();
-			UpdateWeaponDisplay();
 
 			if (localPlayer != null && IsInstanceValid(localPlayer) && abilitySlots.Count == 0)
 			{
@@ -203,7 +198,6 @@ namespace Jogo25D.UI
 
 				healthBar.MaxValue = maxHealth;
 				healthBar.Value = localPlayer.Data.CurrentHealth;
-				healthBarLabel.Text = $"{localPlayer.Data.CurrentHealth}/{maxHealth}";
 
 				var barWidth = maxHealth * 10f;
 
@@ -212,7 +206,6 @@ namespace Jogo25D.UI
 			else
 			{
 				healthBar.Value = 0;
-				healthBarLabel.Text = "0/0";
 				healthBar.CustomMinimumSize = new Vector2(100, 30);
 			}
 		}
@@ -242,60 +235,12 @@ namespace Jogo25D.UI
 			localPlayer.ItemEquipped += OnItemEquipped;
 			localPlayer.InventoryChanged += UpdateHotbar;
 
-			UpdateWeaponDisplay();
 			UpdateHotbar();
 		}
 
 		public void OnItemEquipped(long instanceId)
 		{
-			UpdateWeaponDisplay();
 			UpdateHotbar();
-		}
-
-		#endregion
-
-		#region Core - Weapon
-
-		public void UpdateWeaponDisplay()
-		{
-			if (localPlayer == null || !IsInstanceValid(localPlayer))
-			{
-				weaponLabel.Text = "Arma: Nenhuma";
-			
-				return;
-			}
-
-			var instance = localPlayer.EquippedInstance();
-
-			if (instance == null)
-			{
-				weaponLabel.Text = "Arma: Nenhuma";
-
-				return;
-			}
-
-			var def = ItemDB.Get(instance.Id);
-
-			if (def == null || def.IsEmpty(instance) || def is not WeaponDefinition)
-			{
-				weaponLabel.Text = "Arma: Nenhuma";
-
-				return;
-			}
-
-			var chargesProp = Resolver.Resolve(instance.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
-			var reloadPrefix = def.IsReloading(instance) ? $"{def.GetRemainingReloadTime(instance):F1}s " : "";
-
-			if (chargesProp == null || chargesProp.InfiniteCharges)
-			{
-				weaponLabel.Text = $"{reloadPrefix}{def.Name} âˆž";
-			}
-			else
-			{
-				var ammo = localPlayer.CountAmmoByChargeType(chargesProp.ChargeItemId);
-
-				weaponLabel.Text = $"{reloadPrefix}{def.Name} {instance.CurrentCharges}/{ammo}";
-			}
 		}
 
 		#endregion

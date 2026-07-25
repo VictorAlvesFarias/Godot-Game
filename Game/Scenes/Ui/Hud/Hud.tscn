@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ckhxte1bcg3a6"]
 
-[ext_resource type="Script" uid="uid://d3xqexltds78g" path="res://Features/UI/Hud/View/HudUI.cs" id="1"]
+[ext_resource type="Script" uid="uid://wms3g22u2756" path="res://Features/UI/Hud/View/HudUI.cs" id="1"]
 [ext_resource type="Script" uid="uid://outlrsu0iqmo" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Minimap"]
@@ -13,15 +13,15 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0, 0, 0, 1)
+border_color = Color(0.15487596, 0.154876, 0.15487596, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
-bg_color = Color(0.8, 0.1, 0.1, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.5, 0, 0, 1)
+bg_color = Color(0.9776198, 0.2554697, 0.22052264, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.11119685, 0.11119684, 0.11119684, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_AbilitySlot"]
 bg_color = Color(0.15, 0.15, 0.2, 0.95)
@@ -96,31 +96,6 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
 max_value = 5.0
 value = 5.0
 show_percentage = false
-
-[node name="HealthBarLabel" type="Label" parent="MarginContainer/VBoxContainer/HealthBar" unique_id=2078406455]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 18
-text = "5/5"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="EquippedWeaponLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1077594552]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 20
-text = "Nenhuma"
 
 [node name="AbilitiesContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=800000001]
 layout_mode = 2
