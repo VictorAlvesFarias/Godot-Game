@@ -10,7 +10,7 @@ using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Systems
 {
-    public partial class Inventory : Resource
+    public class Inventory
     {
         #region Core - Actions
 

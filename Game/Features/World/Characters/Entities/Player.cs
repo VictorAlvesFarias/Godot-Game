@@ -21,9 +21,9 @@ namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-		#region Events 
+        #region Events 
 
-		[Signal]
+        [Signal]
 		public delegate void InventoryChangedEventHandler();
 
 		[Signal]
@@ -41,26 +41,15 @@ namespace Jogo25D.Characters
 
 		public long PeerId { get; set; } = 1;
 		public float Gravity { get; set; }
-
-		// Timestamp (Time.GetTicksMsec) da ultima vez que o player trocou de
-		// dimensao - usado pelo PortalTileEntity pra nao teleportar de volta
-		// na hora, ja que o portal do mundo de destino fica exatamente na
-		// mesma celula relativa do portal de origem (o player chega bem em
-		// cima dele).
 		public ulong LastDimensionTradeMsec { get; set; }
         public bool Loaded { get; set;  }
 		public string DisplayName { get; set; } = "";
+		public float KnockbackTimer { get; set; }  = 0f;
+        public float KnockbackDuration { get; set; } = 0.2f;
 		public PlayerData Data { get; set; } = new PlayerData();
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
-
-		#endregion
-
-		#region Knockback
-
-		protected const float KnockbackDuration = 0.2f;
-		protected float _knockbackTimer = 0f;
 
 		#endregion
 
@@ -79,14 +68,6 @@ namespace Jogo25D.Characters
 		public GroundIndicator GroundMarker { get; set; }
 		public AimIndicator AimIndicator { get; set; }
 		public PlayerInput Input { get; set; }
-
-		// Labels que ficam presos no player (nao no Visuals - de proposito,
-		// pra nao herdar o flip horizontal do SetFacing). Renderizam dentro
-		// da SubViewport do mundo, por isso o node "Labels" usa Scale 0.5
-		// pra cancelar o Camera2D.Zoom=2 de Overworld/Upsidedown - com isso
-		// os mesmos font_size/offsets que a UI em tela usava antes (quando
-		// isso vivia num CanvasLayer projetando mundo->tela) continuam
-		// valendo aqui sem reajuste.
 		public Node2D Labels { get; set; }
 		public Label NameLabel { get; set; }
 		public Label HealthLabel { get; set; }
@@ -96,16 +77,8 @@ namespace Jogo25D.Characters
 
 		#region Core - Facing
 
-		// Offset X original do Shape (fora do Visuals de proposito - o
-		// motor de fisica so reconhece CollisionShape2D como filho DIRETO do
-		// CharacterBody2D; dentro do Visuals ele parava de colidir). O
-		// espelhamento desse offset entao e feito na mao aqui, nao por
-		// aninhamento/Scale.
 		private float _shapeOffsetX;
 
-		// Le a partir do Visuals (nao mais do Sprite.FlipH) - flipar so o
-		// Sprite deixava qualquer outro visual anexado ao player (ex: algo
-		// preso na mao) sem acompanhar a virada.
 		public bool FacingLeft => Visuals != null && Visuals.Scale.X < 0f;
 
 		public void SetFacing(bool faceLeft)
@@ -495,20 +468,20 @@ namespace Jogo25D.Characters
 		public void ApplyKnockbackReceive(Vector2 velocity)
 		{
 			Velocity = velocity;
-			_knockbackTimer = KnockbackDuration;
+			KnockbackTimer = KnockbackDuration;
 			Data.CanUpdateMovement = false;
 		}
 
 		protected void TickKnockback(float dt)
 		{
-			if (_knockbackTimer <= 0f)
+			if (KnockbackTimer <= 0f)
 			{
 				return;
 			}
 
-			_knockbackTimer -= dt;
+			KnockbackTimer -= dt;
 
-			if (_knockbackTimer <= 0f)
+			if (KnockbackTimer <= 0f)
 			{
 				Data.CanUpdateMovement = true;
 				Velocity = Vector2.Zero;
