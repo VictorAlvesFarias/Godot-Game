@@ -36,7 +36,6 @@ namespace Jogo25D.Systems
 
             GD.Print($"[Inventory.AddItem] Item received: {definition.Name} x{item.Quantity}");
 
-            //TODO: Verificar se os itens são exatamente iguais, funcionaliadde de munição encantada, ou talvez separa
             if (definition.Stackable)
             {
                 GD.Print($"[Inventory.AddItem] Item is stackable");

@@ -4,10 +4,6 @@ using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Items.Indicators
 {
-    // Porta de Features/World/Characters/Systems/AimIndicator.cs pro
-    // formato de indicador por factory - mesmo visual (Line2D apontando
-    // pro mouse), so que agora o node vive no Player (GetOrCreateIndicator)
-    // e essa classe e compartilhada por qualquer WeaponDefinition.
     public class WeaponAimIndicator : IItemIndicator
     {
         private const float Length = 25.0f;

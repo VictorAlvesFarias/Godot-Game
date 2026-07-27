@@ -125,10 +125,6 @@ namespace Jogo25D.Characters
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
 			InteractPromptLabel = GetNodeOrNull<Label>("Labels/InteractPromptLabel");
 
-			// Posicao Y autoral (a que estiver salva na cena) - o codigo so
-			// aplica um deslocamento RELATIVO a partir daqui quando o nome
-			// esta escondido, em vez de sobrescrever com um valor fixo (o
-			// que descartava qualquer ajuste feito no editor).
 			_healthLabelBaseY = HealthLabel?.Position.Y ?? 0f;
 
 			GD.Print("[Player._Ready] Setting default states");
@@ -136,13 +132,6 @@ namespace Jogo25D.Characters
 			Sprite.Play("idle");
 
 			GD.Print("[Player._Ready] Adding animation events");
-
-			// Nao precisa de handler pro "dead" aqui: como loop=false no
-			// SpriteFrames, o AnimatedSprite2D ja para sozinho no ultimo
-			// frame quando termina (IsPlaying() vira false). Chamar
-			// Sprite.Stop() manualmente reseta o frame pra 0 (primeiro frame
-			// da animacao), fazendo o personagem "voltar" visualmente pra
-			// pose inicial - por isso foi removido daqui.
 
 			GD.Print("[Player._Ready] Seting starter slot");
 
@@ -247,12 +236,6 @@ namespace Jogo25D.Characters
 			UpdatePvpCollisionExceptions();
 		}
 
-		// Sem pvp mutuo os players nao colidem fisicamente entre si (so com
-		// cenario/inimigos). Recalculado toda fisica porque e barato (no
-		// maximo 4 players) e se auto-corrige com entra/sai de jogador e com
-		// troca de Data.PvpEnabled sem precisar de um evento dedicado pra
-		// isso - cada peer roda essa fisica localmente pros players que tem
-		// na sua propria arvore.
 		private void UpdatePvpCollisionExceptions()
 		{
 			foreach (var other in GetTree().GetNodesInGroup("players").OfType<Player>())
@@ -279,9 +262,6 @@ namespace Jogo25D.Characters
 			UpdateInteractPrompt();
 		}
 
-		// So mostra nome/vida pra jogadores QUE NAO SOU EU - eu ja tenho a
-		// barra de vida do HUD, duplicar acima da propria cabeca seria
-		// redundante.
 		private void UpdateNameplate()
 		{
 			if (NameLabel == null || HealthLabel == null)
@@ -306,8 +286,6 @@ namespace Jogo25D.Characters
 			HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
 		}
 
-		// So o dono ve o proprio prompt de interagir (feedback local sobre a
-		// celula onde ele esta parado).
 		private void UpdateInteractPrompt()
 		{
 			if (InteractPromptLabel == null)
@@ -377,9 +355,6 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		// So chama pro item EQUIPADO no momento (nao pra todo o inventario,
-		// diferente do loop de Update la em cima) - nao faz sentido
-		// desenhar indicador de item que nem esta na mao.
 		private void UpdateItemIndicator(float dt)
 		{
 			var equipped = EquippedInstance();
@@ -397,15 +372,6 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		// ItemDefinition/ActionDefinition sao instancias COMPARTILHADAS
-		// entre players (ver ItemDB/ActionDB) - por isso os indicadores em
-		// si nunca moram la. Quem instancia um indicador NOVO e uma factory
-		// sem estado (ItemIndicatorFactory/ActionIndicatorFactory, so sabe
-		// "qual classe construir pra qual tipo de definicao"); quem GUARDA
-		// essa instancia (uma por tipo, por PLAYER) e aqui - assim cada
-		// player tem seu proprio objeto de indicador, sem risco de dois
-		// players (ou dois itens da mesma classe) pisarem no estado um do
-		// outro.
 		private readonly Dictionary<Type, IItemIndicator> _itemIndicators = new();
 		private readonly Dictionary<Type, IActionIndicator> _actionIndicators = new();
 		private readonly Dictionary<string, Node2D> _indicatorNodes = new();
@@ -444,10 +410,6 @@ namespace Jogo25D.Characters
 			return indicator;
 		}
 
-		// Node visual de um indicador (Line2D, Polygon2D etc.) - continua
-		// morando aqui (filho direto do Player, NAO do Visuals, pra nao
-		// herdar o flip horizontal), independente da instancia do
-		// indicador que o desenha ser por-tipo-por-player agora.
 		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null) where T : Node2D, new()
 		{
 			if (_indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing))
@@ -540,10 +502,6 @@ namespace Jogo25D.Characters
 				}
 			}
 
-			// A animacao "dead" e o bloqueio de input agora sao disparados em
-			// SetHealthReceive (roda em todo peer via RPC assim que a vida
-			// realmente muda) - aqui em ReceiveDamage o valor de
-			// Data.CurrentHealth ainda pode ser o antigo em clientes remotos.
 		}
 
 		public void ApplyKnockback(Vector2 direction, float force)
@@ -884,10 +842,6 @@ namespace Jogo25D.Characters
 				SetFacing(Velocity.X < 0);
 			}
 
-			// Diferente de melee/taking_damage, "dead" trava independente de
-			// IsPlaying() - a animacao nao tem loop e para sozinha no ultimo
-			// frame, mas o personagem so deve sair desse estado quando
-			// reviver (SetHealthReceive volta pra "idle" explicitamente).
 			if (Sprite.Animation == "dead")
 			{
 				return;
@@ -1273,13 +1227,6 @@ namespace Jogo25D.Characters
             RpcId(1, nameof(ResetSkillTreeReceive));
         }
 
-        // RpcId(1, ...) so executa localmente pra quem chama quando o alvo e
-        // o proprio peer - como o cliente manda pro servidor (peer 1, que nao
-        // e ele mesmo), o CallLocal nao dispara do lado do cliente e o
-        // Data.SkillTree dele nunca fica sabendo do novo nivel. Por isso o
-        // servidor, apos aplicar, reenvia o SkillTree atualizado de volta so
-        // pro peer dono do player (nao precisa fazer nada se quem processou
-        // for o proprio dono, ex: servidor jogando localmente).
         private void SyncSkillTreeToOwner()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
@@ -1318,7 +1265,6 @@ namespace Jogo25D.Characters
         #endregion
 
         #region Core - Rpc - Stats
-
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void EquipItemReceive(long instanceId)
@@ -1386,9 +1332,6 @@ namespace Jogo25D.Characters
 				Input?.AddBlocker("dead");
 			}
 
-			// Reviver (ex: botao "Reviver" no player, auto-respawn no NPC)
-			// sempre passa por aqui com health>0 vindo de <=0 - centraliza a
-			// volta pra "idle" e a remocao do bloqueio num unico lugar.
 			if (health > 0 && previousHealth <= 0)
 			{
 				Sprite.Play("idle");
@@ -1633,9 +1576,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
 		public void TestPositionReceive(Vector2 pos)
 		{
-			// Precisa cobrir a distância percorrida em uma rajada rápida (ex: dash a
-			// 800u/s) mais a latência de replicação do Input até o servidor começar
-			// a simular a mesma ação, senão o servidor corrige/cancela o movimento.
 			var maxTolerance = 250.0f;
 			var distance = GlobalPosition.DistanceTo(pos);
 			var sendToOwner = false;
@@ -1648,7 +1588,6 @@ namespace Jogo25D.Characters
 			}
 			else if (!IsServer())
 			{
-				// Opcional: Se a distância for aceitável, o servidor pode assumir a posição do cliente para ficar mais fluído
 				GlobalPosition = pos;
 			}
 
@@ -1677,14 +1616,12 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			// O cliente envia sua posição atual diretamente para o servidor (Peer ID 1)
 			RpcId(1, nameof(TestPositionReceive), pos);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SyncPositionReceive(Vector2 pos, bool sendToOwner)
 		{
-			// O cliente recebe a posição imposta pelo servidor e corrige sua localização
 			if (Multiplayer.IsServer())
 			{
 				return;
@@ -1700,10 +1637,7 @@ namespace Jogo25D.Characters
 
 		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
 		{
-			// Apenas o servidor executa isso: envia a posição oficial apenas para o dono deste Player
-			//RpcId((int)PeerId, nameof(SyncPositionReceive), pos);
 
-			// Nota: Se quiser que TODOS vejam a posição corrigida ao mesmo tempo, use:
 			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
 		}
 

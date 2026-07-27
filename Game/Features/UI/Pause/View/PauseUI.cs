@@ -143,9 +143,6 @@ namespace Jogo25D.UI
 			bool connected = NetworkManager.IsConnected();
 			bool isServer = Multiplayer.IsServer();
 
-			// Quem esta conectado como cliente no mundo de outro host nao
-			// pode virar host por cima dessa conexao - a opcao some pra
-			// ele, so volta quando ele sair (Menu) e estiver sozinho de novo.
 			HostButton.Visible = !connected || isServer;
 			PortInput.Visible = HostButton.Visible;
 

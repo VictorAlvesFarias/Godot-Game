@@ -31,12 +31,6 @@ namespace Jogo25D.Hitboxes
         {
             base._Ready();
 
-            // DirectionAngle e setado por WeaponDefinition.Use antes do
-            // AddChild (ja disponivel aqui) - antes o proprio WeaponDefinition
-            // aplicava direto em hitbox.Rotation, mas isso girava a arvore
-            // toda junto (Sprite incluido), atrapalhando um Sprite com
-            // rotacao propria (ver MeleeHitbox). Agora quem aplica a rotacao
-            // real e o proprio hitbox, aqui no Ready.
             Rotation = DirectionAngle;
 
             Sprite = GetNodeOrNull<AnimatedSprite2D>("Sprite");
@@ -117,10 +111,6 @@ namespace Jogo25D.Hitboxes
 
         #region Core - Utils
 
-        // NPC/inimigo nao entra na regra de pvp (sempre pode causar/receber
-        // dano normalmente) - so bloqueia dano quando os DOIS lados sao
-        // players reais e pelo menos um deles esta com Data.PvpEnabled
-        // desligado.
         protected bool IsPvpBlocked(Player target)
         {
             if (Owner is null or NPC || target is NPC)

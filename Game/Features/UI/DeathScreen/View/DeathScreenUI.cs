@@ -20,8 +20,6 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
-            // Acima de Inventory/SkillTree (10/20) - a tela de morte deve
-            // dominar mesmo se outra UI estiver aberta quando o player morre.
             Layer = 25;
             ProcessMode = ProcessModeEnum.Always;
             Visible = false;
@@ -43,9 +41,6 @@ namespace Jogo25D.UI
                 return;
             }
 
-            // So aparece quando a animacao "dead" realmente terminou de
-            // tocar (nao loop, para sozinha no ultimo frame) - nao junto com
-            // a vida chegando a zero, pra nao cobrir a animacao de morte.
             Visible = LocalPlayer.Data.CurrentHealth <= 0
                 && LocalPlayer.Sprite != null
                 && LocalPlayer.Sprite.Animation == "dead"

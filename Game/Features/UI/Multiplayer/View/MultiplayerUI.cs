@@ -8,8 +8,6 @@ namespace Jogo25D.UI
 	{
 		#region Properties
 
-		// Mock: mesma ideia da tela de seleção de mundo — só decoração por
-		// enquanto, não representa servidores reais.
 		private readonly List<string> _mockWorlds = new()
 		{
 			"Servidor da Guilda",

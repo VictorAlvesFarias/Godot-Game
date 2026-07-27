@@ -8,9 +8,6 @@ namespace Jogo25D.UI
 	{
 		#region Properties
 
-		// Mock: por enquanto não existe persistência de mundos salvos, essa
-		// lista só existe pra preencher a tela. Só "Criar Mundo" funciona de
-		// verdade.
 		private readonly List<string> _mockWorlds = new()
 		{
 			"Reino Perdido",

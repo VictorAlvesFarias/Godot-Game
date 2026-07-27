@@ -7,11 +7,6 @@ using System.Reflection;
 
 namespace Jogo25D.Utils.GodotDictionaryParser
 {
-    /// <summary>
-    /// Converte Resources (com propriedades [Export]) em Godot.Collections.Dictionary e vice-versa,
-    /// para que possam ser enviados como argumento de RPC (Dictionary/Array sao tipos Variant nativos,
-    /// diferente de Node/Resource, que dependem de EncodedObjectAsId e falham entre peers distintos).
-    /// </summary>
     public static class GodotDictionaryParser
     {
         private const string TypeKey = "$type";

@@ -115,7 +115,6 @@ namespace Jogo25D.UI
 
 			UpdateAbilitySlots();
 			UpdateEffectIcons();
-			//UpdateHotbar();
 		}
 
 		#endregion
@@ -662,7 +661,6 @@ namespace Jogo25D.UI
 				return;
 			}
 
-
 			for (int i = 0; i < HotbarSize; i++)
 			{
 				var panel = _hotbarSlotPanels[i];
@@ -674,7 +672,6 @@ namespace Jogo25D.UI
 				var slot = localPlayer.GetSlot(i);
 				var isSelected = slot != null && slot.InstanceId == localPlayer.Data.EquippedItemId;
 				var hotbarStyle = _hotbarNormalStyle;
-
 
                 if (isSelected)
 				{

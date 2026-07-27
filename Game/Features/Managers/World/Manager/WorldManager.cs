@@ -44,9 +44,6 @@ namespace Jogo25D.Systems
 			Multiplayer.ConnectionFailed += OnConnectionFailed;
 			Multiplayer.ServerDisconnected += OnServerDisconnected;
 
-			// A cena World não faz mais parte de Main.tscn por padrão — ela só
-			// existe depois que o jogador escolhe "Criar Mundo"/"Conectar" na
-			// tela de seleção. Por isso não resolvemos os paths aqui.
 		}
 
         #endregion
@@ -341,11 +338,6 @@ namespace Jogo25D.Systems
 			UpContainer = null;
 		}
 
-		// Usado quando QUEM SOFREU a desconexao foi um cliente (o host caiu
-		// ou parou de hospedar) - diferente de Disconnect(), que e o proprio
-		// host saindo do multiplayer e continuando sozinho no mesmo mundo,
-		// aqui o cliente nao tem mundo nenhum pra continuar e deve voltar
-		// pro menu principal.
 		public void ReturnToMainMenu()
 		{
 			GD.Print("[WorldManager.ReturnToMainMenu] ReturnToMainMenu()");
@@ -394,9 +386,6 @@ namespace Jogo25D.Systems
 			player.AddToGroup("players");
 			player.SetMultiplayerAuthority(1);
 
-			// Mundo padrao de spawn e o Upsidedown (nao o Overworld) - troque
-			// aqui e no resto dos usos de "mundo local" neste arquivo se isso
-			// mudar de novo.
 			if (UpsidedownParent != null)
 			{
 				UpsidedownParent.AddChild(player);
@@ -595,9 +584,6 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			// Reviver sempre manda o player pro Upsidedown, nao importa em
-			// que mundo ele morreu - mesmo padrao de reparent/reequip/
-			// visibilidade do TradeDimension.
 			if (player.GetParent<Node2D>() != UpsidedownParent)
 			{
 				player.Reparent(UpsidedownParent, true);

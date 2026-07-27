@@ -5,12 +5,6 @@ using Jogo25D.Characters;
 
 namespace Jogo25D.TileEntities
 {
-    // Escaneia o TileMapLayer irmao em busca de celulas marcadas (custom
-    // data "tile_entity_type") e instancia uma TileEntity pra cada uma,
-    // guardadas por celula - sem Area2D nem Node por objeto. Deteccao de
-    // jogador entrando/saindo de uma celula e feita comparando a celula
-    // atual de cada Player (grupo "players") a cada frame de fisica, custo
-    // que escala com numero de jogadores (max 4), nao com numero de tiles.
     public partial class TileEntityManager : Node
     {
         [Export] public NodePath TileMapLayerPath { get; set; }
@@ -71,10 +65,6 @@ namespace Jogo25D.TileEntities
                 _lastCell[player] = cell;
             }
 
-            // Tecla de interagir (E) - so dispara pra quem esta parado em
-            // cima de uma celula com entidade no momento do aperto, checado
-            // toda vez (nao so na troca de celula, ja que o player pode
-            // apertar E bem depois de ja estar parado ali).
             foreach (var player in GetTree().GetNodesInGroup("players").OfType<Player>())
             {
                 if (player.GetParent() != _world || player.Input == null || !player.Input.Interact)
@@ -99,9 +89,6 @@ namespace Jogo25D.TileEntities
             return _entities.TryGetValue(cell, out entity);
         }
 
-        // Usado pelo HUD pra saber se mostra um prompt tipo "Pressione [E]"
-        // pro player local - so retorna algo se a celula onde ele esta
-        // parado tiver uma entidade com InteractPrompt preenchido.
         public bool TryGetPromptFor(Player player, out string prompt)
         {
             prompt = null;
@@ -118,11 +105,6 @@ namespace Jogo25D.TileEntities
 
         private void ScanTiles()
         {
-            // Uma celula marcada = uma TileEntity. Objetos maiores que uma
-            // celula (ex: um bau 2x2 compartilhando uma unica TileEntity)
-            // nao sao resolvidos aqui de proposito - se um tipo precisar
-            // disso, a regra fica na propria implementacao daquele
-            // TileEntity, nao numa convencao generica do manager/TileSet.
             foreach (var cell in _tileMapLayer.GetUsedCells())
             {
                 if (!TryReadTag(cell, out var typeId))

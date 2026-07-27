@@ -71,10 +71,6 @@ namespace Jogo25D.Effects
                 }
             };
 
-            // Mesma infraestrutura do dano ao longo do tempo, so com Amount
-            // negativo - ReceiveDamage/SetHealthReceive ja tratam isso como
-            // cura (CurrentHealth - (negativo) = CurrentHealth + algo), sem
-            // precisar de um caminho de codigo separado pra curar.
             var healthRegen = new DamageEffectDefinition
             {
                 Id = "health_regen",
@@ -102,7 +98,6 @@ namespace Jogo25D.Effects
                 Id = "instant_heal",
                 Name = "Cura Instantânea",
                 Description = "Recupera vida na hora",
-                // Vermelho - cor padrao de cura instantanea.
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_13),
                 Duration = 0f,
                 Type = EffectTriggerType.OnUse,

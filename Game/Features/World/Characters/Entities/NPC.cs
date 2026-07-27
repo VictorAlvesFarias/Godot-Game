@@ -76,9 +76,6 @@ namespace Jogo25D.Characters
             SetHealthRequest(newHealth);
         }
 
-        // Renasce sozinho assim que a animacao "dead" termina de tocar -
-        // dispara so no peer autoritativo (servidor) pra nao mandar o RPC de
-        // cura em dobro, os outros peers so recebem via SetHealthReceive.
         private void OnAnimationFinished()
         {
             if (Sprite.Animation == "dead" && IsAuthoritative())

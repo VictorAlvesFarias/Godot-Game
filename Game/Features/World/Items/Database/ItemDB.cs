@@ -274,7 +274,6 @@ namespace Jogo25D.Items
                 Type = ItemType.Consumable,
                 Stackable = true,
                 MaxStackSize = 10,
-                // Verde - cor padrao de veneno.
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_19),
                 Effects = new Godot.Collections.Array<string>
                 {
@@ -301,7 +300,6 @@ namespace Jogo25D.Items
                 Type = ItemType.Consumable,
                 Stackable = true,
                 MaxStackSize = 10,
-                // Rosa - cor padrao de regeneracao.
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_44),
                 Effects = new Godot.Collections.Array<string>
                 {
@@ -328,7 +326,6 @@ namespace Jogo25D.Items
                 Type = ItemType.Consumable,
                 Stackable = true,
                 MaxStackSize = 10,
-                // Vermelho - cor padrao de cura instantanea.
                 Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_13),
                 Effects = new Godot.Collections.Array<string>
                 {

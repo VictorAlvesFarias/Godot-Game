@@ -7,21 +7,10 @@ using System.Linq;
 
 namespace Jogo25D.Actions.Indicators
 {
-    // Porta de Features/World/Characters/Systems/GroundIndicator.cs pro
-    // formato de indicador por factory - mesmo visual (retangulo + mira em
-    // cruz) e mesma logica de raycast pra achar o chao, so que agora o
-    // node vive no Player (GetOrCreateIndicator) e essa classe e
-    // compartilhada por qualquer player usando GroundStrikeDefinition.
     public class GroundStrikeIndicator : IActionIndicator
     {
         private const uint RayMask = 1;
 
-        // Tamanho em pixel da textura do hitbox de preview - depende so do
-        // HitboxScene (recurso compartilhado, igual pra qualquer player),
-        // entao e seguro cachear aqui uma unica vez. O que varia por
-        // jogador (weapon.AttackArea, resolvido a partir de Properties do
-        // player) e aplicado como escala em cima disso a cada frame, nunca
-        // cacheado.
         private float? _halfWidthPx;
         private float? _halfHeightPx;
 
