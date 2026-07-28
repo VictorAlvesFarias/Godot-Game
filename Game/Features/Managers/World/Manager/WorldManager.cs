@@ -176,6 +176,17 @@ namespace Jogo25D.Systems
 			UpsidedownParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
 		}
 
+		// So o host (CreateProceduralWorldAndPlayer) limpava o mapa a mao
+		// localmente - um peer que conecta depois recebe o World.tscn do
+		// zero, COM o mapa a mao ainda desenhado, e o streaming de chunks
+		// so pinta por cima (nunca limpa) - por isso o mundo procedural
+		// aparecia "junto" com Overworld/Upsidedown pro peer que entra.
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void ClearHandAuthoredTilesReceive()
+		{
+			ClearHandAuthoredTiles();
+		}
+
 		private void SetChunkStreamingEnabled(bool enabled)
 		{
 			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
@@ -1016,7 +1027,14 @@ namespace Jogo25D.Systems
 				SpawnWorldItemRequest(worldItem, id);
 			}
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.CatchUpPeer(id);
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
+			{
+				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
+			}
+
+			chunkStreamingManager?.CatchUpPeer(id);
 		}
 
 		public void OnPeerDisconnected(long id)

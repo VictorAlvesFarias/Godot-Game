@@ -10,6 +10,15 @@ namespace Jogo25D.Items.Indicators
 
         public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
         {
+            // So o dono mira/mostra o indicador - ver comentario
+            // equivalente em MiningIndicator.Update.
+            if (!player.IsOwner())
+            {
+                Hide(player);
+
+                return;
+            }
+
             if (definition is not BlockItemDefinition blockItem)
             {
                 Hide(player);
