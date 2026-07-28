@@ -188,6 +188,11 @@ namespace Jogo25D.Constants
                 public const string ICON_MATERIAL_48 = "res://Assets/Icons/Materials/icon_material_48.png";
             }
 
+            public static class Blocks
+            {
+                public const string ICON_GRASS_BLOCK = "res://Assets/Icons/Blocks/GrassBlock.tres";
+            }
+
             public static class Pickaxes
             {
                 public const string ICON_PICKAXE_1 = "res://Assets/Icons/Pickaxes/icon_pickaxe_1.png";

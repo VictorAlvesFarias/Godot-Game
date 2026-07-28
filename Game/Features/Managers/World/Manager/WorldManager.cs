@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Features.World.Characters.Resources;
@@ -518,8 +519,6 @@ namespace Jogo25D.Systems
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position)
 		{
-			GD.Print($"[WorldManager.SpawnWorldItemReceive] worldItemId={worldItemId} position={position}");
-
 			if (UpsidedownParent == null || FindWorldItem(worldItemId) != null)
 			{
 				return;
@@ -583,6 +582,183 @@ namespace Jogo25D.Systems
 		public WorldItem FindWorldItem(long worldItemId)
 		{
 			return UpsidedownParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+		}
+
+		#endregion
+
+		#region Core - Rpc - Blocks
+
+		// TileMapLayer ativo do Upsidedown - o procedural (ProceduralTiles)
+		// se existir, senao o mundo a mao (Upsidedown-Tiles). Quebrar/
+		// colocar bloco sempre mexe nesse layer (mesma dimensao de spawn
+		// de sempre, ver comentario em SpawnPlayer).
+		private TileMapLayer ResolveActiveUpsidedownLayer()
+		{
+			return UpsidedownParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+				?? UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+		}
+
+		public void BreakBlockClientRequest(Vector2I cell)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				BreakBlockReceive(cell);
+
+				return;
+			}
+
+			RpcId(1, nameof(BreakBlockServerReceive), cell);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakBlockServerReceive(Vector2I cell)
+		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			BreakBlockReceive(cell);
+		}
+
+		// So o servidor (ou o proprio processo solo) chega aqui - apaga a
+		// celula localmente, dropa o item de grama (reaproveita
+		// SpawnWorldItemRequest, que ja se auto-transmite) e avisa os
+		// outros peers pra apagar a mesma celula.
+		private void BreakBlockReceive(Vector2I cell)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || layer.GetCellSourceId(cell) == -1)
+			{
+				return;
+			}
+
+			EraseBlockAndReconnect(layer, cell);
+
+			if (BlockDB.TryGet("grass", out var grassBlock))
+			{
+				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
+
+				SpawnWorldItemRequest(ItemDB.CreateInstance(grassBlock.DropItemId), dropPosition);
+			}
+
+			Rpc(nameof(BreakBlockBroadcast), cell);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakBlockBroadcast(Vector2I cell)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer != null)
+			{
+				EraseBlockAndReconnect(layer, cell);
+			}
+		}
+
+		// Chamado so por quem ja e autoritativo (Player.PlaceBlockReceive,
+		// depois de validar o item no inventario) - pinta a celula
+		// localmente e transmite pros outros peers. Retorna false se a
+		// celula ja estava ocupada ou o blockId nao existe, pro chamador
+		// saber que nao deve consumir o item.
+		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || layer.GetCellSourceId(cell) != -1 || !BlockDB.TryGet(blockId, out var block))
+			{
+				return false;
+			}
+
+			PaintBlockAndReconnect(layer, cell, block);
+
+			Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
+
+			return true;
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void PlaceBlockBroadcast(Vector2I cell, string blockId)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || !BlockDB.TryGet(blockId, out var block))
+			{
+				return;
+			}
+
+			PaintBlockAndReconnect(layer, cell, block);
+		}
+
+		// Apaga a celula e recalcula o atlas dos vizinhos solidos - sem
+		// isso os vizinhos continuam mostrando a variante "tinha vizinho
+		// aqui" mesmo depois da celula sumir (mesma costura visivel que o
+		// ChunkGenerator ja resolvia entre chunks, so que agora entre uma
+		// celula quebrada e as ao redor dela).
+		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
+		{
+			layer.SetCell(cell, -1);
+
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			{
+				return;
+			}
+
+			var neighbors = GetSolidNeighborCells(layer, cell);
+
+			if (neighbors.Count > 0)
+			{
+				layer.SetCellsTerrainConnect(neighbors, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+			}
+		}
+
+		// Pinta a celula usando SetCellsTerrainConnect (igual o
+		// ChunkGenerator faz pros chunks) em vez de sempre a mesma tile
+		// fixa do BlockDB - assim o bloco colocado conecta com o que ja
+		// existe ao redor em vez de aparecer como um quadrado isolado com
+		// a cara do proprio icone. So cai pro SetCell fixo se o TileSet
+		// dessa layer nao tiver terreno configurado (Upsidedown-Tiles a
+		// mao, por exemplo).
+		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block)
+		{
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			{
+				layer.SetCell(cell, block.SourceId, block.AtlasCoord);
+
+				return;
+			}
+
+			var cells = GetSolidNeighborCells(layer, cell);
+
+			cells.Add(cell);
+
+			layer.SetCellsTerrainConnect(cells, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+		}
+
+		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell)
+		{
+			var result = new Godot.Collections.Array<Vector2I>();
+
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 1; dy++)
+				{
+					if (dx == 0 && dy == 0)
+					{
+						continue;
+					}
+
+					var neighbor = cell + new Vector2I(dx, dy);
+
+					if (layer.GetCellSourceId(neighbor) != -1)
+					{
+						result.Add(neighbor);
+					}
+				}
+			}
+
+			return result;
 		}
 
 		#endregion

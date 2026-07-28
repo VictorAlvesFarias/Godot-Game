@@ -27,6 +27,16 @@ namespace Jogo25D.Systems
         public bool DropItem { get; private set; }
         public Vector2 MousePosition { get; private set; }
 
+        // Modo de quebrar bloco - so importa localmente pra quem esta
+        // minerando (o servidor so recebe a celula ja resolvida via
+        // Player.BreakBlockClientRequest), entao NAO precisa ir por RPC/
+        // Poll como os outros inputs. Padrao = liberdade maxima (so
+        // limitado pelo alcance da picareta, sem se importar com o que
+        // esta no meio do caminho); "toggle_mining_mode" restringe pra so
+        // quebrar o que da pra alcancar de verdade (RaycastTiles). Colocar
+        // bloco NUNCA usa isso - colocar e sempre livre.
+        public bool RestrictMiningToAccessible { get; private set; }
+
         public Player PlayerRef {get;set;}
 
         public override void _Ready()
@@ -85,6 +95,11 @@ namespace Jogo25D.Systems
             var toggleInventory = Input.IsActionJustPressed("toggle_inventory");
             var dropItem = Input.IsActionJustPressed("drop_item");
             var mousePosition = PlayerRef.GetGlobalMousePosition();
+
+            if (Input.IsActionJustPressed("toggle_mining_mode"))
+            {
+                RestrictMiningToAccessible = !RestrictMiningToAccessible;
+            }
 
             if (MoveX != moveX)
             {

@@ -51,6 +51,19 @@ namespace Jogo25D.Characters
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 
+        // Progresso de quebra de bloco - efemero, vive so aqui (no player
+        // que esta minerando), nao numa TileEntity nem na celula (ver
+        // .docs/blocos-quebraveis.md). Resetado ao soltar o ataque, trocar
+        // de celula alvo, ou trocar de item equipado.
+        //
+        // Vector2I NAO-nulavel + flag separada (em vez de Vector2I?) - o
+        // sistema de Variant do Godot nao suporta Nullable<T>, entao uma
+        // propriedade Vector2I? simplesmente nao fica exposta pro GDScript
+        // (falha silenciosa: "Invalid access to property" em runtime).
+        public bool IsMining { get; set; }
+        public Vector2I MiningCell { get; set; }
+        public float MiningElapsed { get; set; }
+
 		#endregion
 
 		#region Systems
@@ -152,6 +165,14 @@ namespace Jogo25D.Characters
 				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
 
 				GiveItem(startingMeleeWeapon);
+
+				GiveItem(ItemDB.CreateInstance("pickaxe_starting"));
+
+				var startingGrassBlocks = ItemDB.CreateInstance("block_grass");
+
+				startingGrassBlocks.Quantity = 20;
+
+				GiveItem(startingGrassBlocks);
 
 				var startingPoisonFlask = ItemDB.CreateInstance("poison_flask");
 
@@ -410,7 +431,21 @@ namespace Jogo25D.Characters
 			return indicator;
 		}
 
-		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null) where T : Node2D, new()
+		// "parent" opcional (padrao null = filho do proprio player, como
+		// sempre foi pro WeaponAimIndicator) - indicadores baseados em
+		// celula de tile (MiningIndicator/PlacementIndicator) passam o
+		// TileMapLayer ativo aqui, senao ficariam filhos do Player, que e
+		// IRMAO do layer na arvore (Player e o layer sao ambos filhos de
+		// UpsidedownParent) - dependendo da ordem entre os dois, o layer
+		// podia desenhar por cima do indicador mesmo com ZIndex alto.
+		//
+		// "configure" so roda na CRIACAO do node - reinvocar em toda
+		// chamada (chegou a ser feito numa iteracao anterior) reatribuia
+		// Polygon2D.Polygon todo tick fisico, o que forca o motor a
+		// re-triangular o poligono a cada frame por nada (o formato nunca
+		// muda) - custo real e continuo, sentido como queda de FPS. Quem
+		// precisa de node ja existente sem recriar usa GetIndicatorOrNull.
+		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null, Node parent = null) where T : Node2D, new()
 		{
 			if (_indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing))
 			{
@@ -426,11 +461,24 @@ namespace Jogo25D.Characters
 
 			configure?.Invoke(node);
 
-			AddChild(node);
+			(parent ?? this).AddChild(node);
 
 			_indicatorNodes[key] = node;
 
 			return node;
+		}
+
+		// Igual GetOrCreateIndicator, mas NUNCA cria - devolve null se o
+		// node ainda nao existe. Usado por Hide() dos indicadores: chamar
+		// GetOrCreateIndicator dentro de Hide() criava o node em branco
+		// (sem configure nenhum) na primeira vez que Hide() rodava antes
+		// de qualquer Update() bem sucedido, e esse node ficava em cache
+		// pra sempre sem nunca ganhar o Polygon/config de verdade.
+		public T GetIndicatorOrNull<T>(string key) where T : Node2D
+		{
+			return _indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing)
+				? typed
+				: null;
 		}
 
 		#endregion
@@ -597,17 +645,19 @@ namespace Jogo25D.Characters
 
 			if (data == null)
 			{
+				ResetMining();
+
 				return;
 			}
 
 			if (!Input.Attack)
 			{
+				ResetMining();
+
 				return;
 			}
 
 			var def = ItemDB.Get(data.Id);
-
-			GD.Print($"[HandleAttack] cooldown={data.CooldownRemainingTimer:F2} reloading={def.IsReloading(data)} charges={data.CurrentCharges}");
 
 			def.Use(this, data);
 		}
@@ -693,6 +743,172 @@ namespace Jogo25D.Characters
 			}
 
 			DropItemRequest(Data.EquippedItemId, 1);
+		}
+
+		#endregion
+
+		#region Core - Blocks system
+
+		// TileMapLayer ativo da dimensao onde esse player esta - o
+		// procedural (ProceduralTiles, criado por ChunkStreamingManager)
+		// se existir, senao o mundo a mao (Upsidedown-Tiles). Os dois
+		// nunca coexistem na mesma sessao (ver WorldManager.
+		// CreateProceduralWorldAndPlayer).
+		public TileMapLayer GetActiveTileLayer()
+		{
+			var parent = GetParent();
+
+			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+				?? parent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+		}
+
+		public void UpdateMining(TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
+		{
+			if (layer.GetCellSourceId(targetCell) == -1)
+			{
+				ResetMining();
+
+				return;
+			}
+
+			if (!IsMining || MiningCell != targetCell)
+			{
+				IsMining = true;
+				MiningCell = targetCell;
+				MiningElapsed = 0f;
+			}
+
+			MiningElapsed += (float)GetPhysicsProcessDeltaTime();
+
+			if (MiningElapsed < breakTimeSeconds)
+			{
+				return;
+			}
+
+			ResetMining();
+
+			NetworkManager?.BreakBlockClientRequest(targetCell);
+		}
+
+		public void ResetMining()
+		{
+			IsMining = false;
+			MiningElapsed = 0f;
+		}
+
+		// Posicao do mouse limitada pelo alcance, sem se importar com o que
+		// esta no meio do caminho - "liberdade maxima", usado sempre por
+		// colocar bloco e por quebrar quando RestrictMiningToAccessible
+		// estiver desligado (padrao).
+		public Vector2I ResolveCellInRange(TileMapLayer layer, float reach)
+		{
+			var targetWorldPos = Input.MousePosition;
+			var toTarget = targetWorldPos - GlobalPosition;
+
+			if (toTarget.Length() > reach)
+			{
+				targetWorldPos = GlobalPosition + toTarget.Normalized() * reach;
+			}
+
+			return layer.LocalToMap(layer.ToLocal(targetWorldPos));
+		}
+
+		// Anda em passos de meio-tile do player ate o mouse (limitado por
+		// reach) parando na primeira celula solida encontrada - "o que da
+		// pra alcancar de verdade" (nunca um bloco "atras" de outro no
+		// caminho). Usado por ResolveMiningTargetCell quando o modo
+		// restrito de mineracao estiver ligado.
+		public (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, Vector2 origin, Vector2 aimPosition, float reach)
+		{
+			var toAim = aimPosition - origin;
+			var distance = Mathf.Min(toAim.Length(), reach);
+			var direction = toAim.LengthSquared() > 0.001f ? toAim.Normalized() : Vector2.Right;
+
+			var tileSize = Mathf.Max(1, layer.TileSet.TileSize.X);
+			var stepSize = tileSize * 0.5f;
+			var steps = Mathf.Max(1, Mathf.CeilToInt(distance / stepSize));
+
+			var lastEmptyCell = layer.LocalToMap(layer.ToLocal(origin));
+
+			for (int i = 1; i <= steps; i++)
+			{
+				var sampleDistance = Mathf.Min(distance, i * stepSize);
+				var samplePos = origin + direction * sampleDistance;
+				var cell = layer.LocalToMap(layer.ToLocal(samplePos));
+
+				if (layer.GetCellSourceId(cell) != -1)
+				{
+					return (true, cell, lastEmptyCell);
+				}
+
+				lastEmptyCell = cell;
+			}
+
+			return (false, default, lastEmptyCell);
+		}
+
+		// Celula que a picareta vai quebrar. Por padrao (liberdade maxima,
+		// RestrictMiningToAccessible=false) e so a posicao do mouse
+		// limitada pelo alcance, SEM se importar com o que esta no meio do
+		// caminho - precisa so que aquela celula exata seja solida.
+		// "toggle_mining_mode" liga o modo restrito (RaycastTiles - so
+		// alcanca o primeiro bloco solido no caminho).
+		public (bool Found, Vector2I Cell) ResolveMiningTargetCell(TileMapLayer layer, float reach)
+		{
+			if (Input.RestrictMiningToAccessible)
+			{
+				var hit = RaycastTiles(layer, GlobalPosition, Input.MousePosition, reach);
+
+				return (hit.FoundSolid, hit.SolidCell);
+			}
+
+			var cell = ResolveCellInRange(layer, reach);
+
+			return (layer.GetCellSourceId(cell) != -1, cell);
+		}
+
+		public void PlaceBlockRequest(Vector2I cell, long instanceId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				PlaceBlockReceive(cell, instanceId);
+
+				return;
+			}
+
+			RpcId(1, nameof(PlaceBlockReceive), cell, instanceId);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void PlaceBlockReceive(Vector2I cell, long instanceId)
+		{
+			if (!IsAuthoritative())
+			{
+				return;
+			}
+
+			var item = Inventory.FindItem(Data.Inventory, instanceId);
+
+			if (item == null || item.Quantity <= 0)
+			{
+				return;
+			}
+
+			// BlockId vem da definicao do item (autoritativo), nao de um
+			// parametro mandado pelo cliente - evita confiar em input nao
+			// validado e evita o bug de comparar item.Id (id do ITEM,
+			// "block_grass") com um id de BLOCO ("grass") que nunca bate.
+			if (ItemDB.Get(item.Id) is not BlockItemDefinition blockItemDef)
+			{
+				return;
+			}
+
+			if (NetworkManager == null || !NetworkManager.PlaceBlockAuthoritative(cell, blockItemDef.BlockId))
+			{
+				return;
+			}
+
+			RemoveItemRequest(instanceId, 1);
 		}
 
 		#endregion
@@ -848,6 +1064,17 @@ namespace Jogo25D.Characters
 			}
 
 			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
+			{
+				return;
+			}
+
+			// "mining" tem loop=true (ver SpriteFrames embutido em
+			// Scenes/World/Characters/Player.tscn - NAO o CharacterFrames.tres
+			// externo, que so alimenta o preview de personagem do
+			// inventario), entao Sprite.IsPlaying() fica true pra sempre
+			// sozinho - o que encerra o loop e soltar o ataque, nao a
+			// animacao terminar.
+			if (Sprite.Animation == "mining" && Input.Attack)
 			{
 				return;
 			}
@@ -1358,8 +1585,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void AddItemReceive(Godot.Collections.Dictionary data)
 		{
-			GD.Print("[Inventory.AddItemReceive] Starting method");
-
 			var item = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
 
 			if (Inventory.AddItem(Data.Inventory, item))
@@ -1370,8 +1595,6 @@ namespace Jogo25D.Characters
 
 		public void AddItemRequest(ItemDefinitionData item)
 		{
-			GD.Print("[Inventory.AddItemRequest] Starting method");
-
 			var data = GodotDictionaryParser.ToDictionary(item);
 
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
@@ -1387,8 +1610,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void MoveItemReceive(long instanceId, int toIndex)
 		{
-			GD.Print("[Inventory.MoveItemReceive] Starting method");
-
 			if (Inventory.MoveItem(Data.Inventory, instanceId, toIndex))
 			{
 				EmitSignal(SignalName.InventoryChanged);
@@ -1397,8 +1618,6 @@ namespace Jogo25D.Characters
 
 		public void MoveItemRequest(long instanceId, int toIndex)
 		{
-			GD.Print("[Inventory.MoveItemRequest] Starting method");
-
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
 			{
 				MoveItemReceive(instanceId, toIndex);
@@ -1412,8 +1631,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void RemoveItemReceive(long instanceId, int quantity)
 		{
-			GD.Print("[Inventory.RemoveItemReceive] Starting method");
-
 			if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
 			{
 				EmitSignal(SignalName.InventoryChanged);
@@ -1422,8 +1639,6 @@ namespace Jogo25D.Characters
 
 		public void RemoveItemRequest(long instanceId, int quantity)
 		{
-			GD.Print("[Inventory.RemoveItemRequest] Starting method");
-
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
 			{
 				RemoveItemReceive(instanceId, quantity);

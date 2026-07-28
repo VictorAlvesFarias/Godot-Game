@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://bwmybap05bpw"]
+
+[ext_resource type="Script" uid="uid://ctq3rgw7rbglf" path="res://Features/World/Hitboxes/Definitions/AngledMeleeHitbox.cs" id="1_hitbox"]
+[ext_resource type="Texture2D" uid="uid://8gwk8tay77ib" path="res://Assets/Icons/Pickaxes/icon_pickaxe_1.png" id="2_icon"]
+
+[sub_resource type="Animation" id="Animation_swing"]
+resource_name = "swing"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Blade:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.6981317007977318, 2.443460952792061]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CollisionPolygon2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [-0.8726646, 0.8726646]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_pickaxe"]
+_data = {
+&"swing": SubResource("Animation_swing")
+}
+
+[node name="PickaxeStarting" type="Area2D" unique_id=39886597]
+collision_layer = 2
+script = ExtResource("1_hitbox")
+
+[node name="Origin" type="Marker2D" parent="." unique_id=313547735]
+
+[node name="Blade" type="Polygon2D" parent="." unique_id=1585191990]
+texture_filter = 1
+rotation = 2.443461
+texture = ExtResource("2_icon")
+texture_scale = Vector2(0.5, 0.5)
+polygon = PackedVector2Array(-16.000006, -32.000004, 15.999998, -32.000004, 15.999998, -3.8146973e-06, -16.000006, -3.8146973e-06)
+uv = PackedVector2Array(0, 0, 32.000008, 0, 32, 32, 0, 32)
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="." unique_id=1144041261]
+rotation = 0.8726646
+polygon = PackedVector2Array(0, -16, 32, -16, 32, 16, 0, 16)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=383972110]
+libraries/ = SubResource("AnimationLibrary_pickaxe")
+autoplay = &"swing"

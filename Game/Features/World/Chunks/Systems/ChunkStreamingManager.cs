@@ -216,6 +216,8 @@ namespace Jogo25D.Chunks
                 return;
             }
 
+            state.Remove(chunkCoord);
+
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Erase(layer, chunkCoord, ChunkSize);

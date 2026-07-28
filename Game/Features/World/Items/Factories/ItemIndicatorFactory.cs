@@ -9,6 +9,8 @@ namespace Jogo25D.Items
         private static readonly Dictionary<Type, Func<IItemIndicator>> _factories = new()
         {
             { typeof(WeaponDefinition), () => new WeaponAimIndicator() },
+            { typeof(ToolDefinition), () => new MiningIndicator() },
+            { typeof(BlockItemDefinition), () => new PlacementIndicator() },
         };
 
         public static IItemIndicator Create(ItemDefinition definition)
