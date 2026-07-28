@@ -59,8 +59,15 @@ theme_override_font_sizes/font_size = 20
 text = "Erro"
 horizontal_alignment = 1
 
-[node name="MessageLabel" type="Label" parent="Background/CenterContainer/Panel/MarginContainer/Root"]
+[node name="MessageScroll" type="ScrollContainer" parent="Background/CenterContainer/Panel/MarginContainer/Root"]
+custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
+size_flags_vertical = 0
+horizontal_scroll_mode = 0
+
+[node name="MessageLabel" type="Label" parent="Background/CenterContainer/Panel/MarginContainer/Root/MessageScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 15
 text = ""
@@ -76,5 +83,5 @@ theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
 theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
 theme_override_font_sizes/font_size = 18
-text = "OK"
+text = "Voltar"
 flat = true

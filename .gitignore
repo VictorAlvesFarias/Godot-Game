@@ -29,3 +29,4 @@ mono_crash.*.json
 Microsoft.NET.Sdk.DefaultItems.targets
 _TargetFrameworkDirectories
 /.utils
+/.docs

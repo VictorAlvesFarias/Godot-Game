@@ -1,10 +1,13 @@
 using Godot;
 using System;
 using Jogo25D.Characters;
+using Jogo25D.Chunks;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
+using Jogo25D.TileEntities;
+using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Systems
@@ -134,7 +137,52 @@ namespace Jogo25D.Systems
 		{
 			SpawnWorld();
 
+			SetChunkStreamingEnabled(false);
+
 			RespawnLocalSoloPlayer();
+		}
+
+		public async void CreateProceduralWorldAndPlayer()
+		{
+			SpawnWorld();
+
+			ClearHandAuthoredTiles();
+
+			SetChunkStreamingEnabled(true);
+
+			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, Vector2.Zero);
+			}
+
+			RespawnLocalSoloPlayer();
+
+			loadingUi?.Close();
+		}
+
+		private void ClearHandAuthoredTiles()
+		{
+			OverworldParent?.GetNodeOrNull<TileMapLayer>("Overworld-Tiles")?.Clear();
+			UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles")?.Clear();
+
+			OverworldParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
+			UpsidedownParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
+		}
+
+		private void SetChunkStreamingEnabled(bool enabled)
+		{
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				chunkStreamingManager.Enabled = enabled;
+			}
 		}
 
 		public string SpawnWorldAndJoin(string textAddress)
@@ -336,6 +384,8 @@ namespace Jogo25D.Systems
 			UpsidedownParent = null;
 			OverContainer = null;
 			UpContainer = null;
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.ResetState();
 		}
 
 		public void ReturnToMainMenu()
@@ -573,13 +623,13 @@ namespace Jogo25D.Systems
         #region Core - Rpc - Player state
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ResetPlayer(long peerId, Vector2 position)
+		public void TeleportPlayer(long peerId, Vector2 position)
 		{
 			var player = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(e => e.PeerId == peerId);
 
 			if (player == null)
 			{
-				GD.Print("[WorldManager.ResetPlayer] player is null");
+				GD.Print("[WorldManager.TeleportPlayer] player is null");
 
 				return;
 			}
@@ -596,7 +646,7 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			player.GlobalPosition = Vector2.Zero;
+			player.GlobalPosition = position;
 			player.Velocity = Vector2.Zero;
 			player.Data.CurrentHealth = player.GetMaxHealth();
 			player.Sprite?.Play("idle");
@@ -610,30 +660,48 @@ namespace Jogo25D.Systems
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ResetPlayerServerReceive()
+		public void TeleportPlayerServerReceive(Vector2 position)
 		{
-			GD.Print("[WorldManager.ResetPlayerServerReceive] received trade request");
+			GD.Print($"[WorldManager.TeleportPlayerServerReceive] received teleport request to {position}");
 
 			if (!Multiplayer.IsServer())
 			{
 
-				GD.Print("[WorldManager.ResetPlayerServerReceive] not the server, ignoring request");
+				GD.Print("[WorldManager.TeleportPlayerServerReceive] not the server, ignoring request");
 
 				return;
 			}
 
 			long senderId = Multiplayer.GetRemoteSenderId();
 
-			GD.Print($"[WorldManager.ResetPlayerServerReceive] SenderId={senderId}, sending SyncDimensionTrade RPC");
+			GD.Print($"[WorldManager.TeleportPlayerServerReceive] SenderId={senderId}, sending TeleportPlayer RPC");
 
-			Rpc(nameof(ResetPlayer), senderId, Vector2.Zero);
+			Rpc(nameof(TeleportPlayer), senderId, position);
 		}
 
-		public void ResetPlayerClientRequest()
+		// So reposiciona o player DEPOIS que os chunks ao redor do destino
+		// ja existem (mesma logica de CreateProceduralWorldAndPlayer) -
+		// senao ele cairia num trecho de mundo ainda vazio/sem chao se o
+		// destino nunca tiver sido visitado. LoadingUI cobre a tela nesse
+		// meio-tempo.
+		public async void TeleportPlayerClientRequest(Vector2 position)
 		{
-			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
+			GD.Print($"[WorldManager.TeleportPlayerClientRequest] sending teleport request to {position} (Peer 1)");
 
-			RpcId(1, nameof(ResetPlayerServerReceive));
+			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, position);
+			}
+
+			RpcId(1, nameof(TeleportPlayerServerReceive), position);
+
+			loadingUi?.Close();
 		}
 
         #endregion
@@ -771,6 +839,8 @@ namespace Jogo25D.Systems
 
 				SpawnWorldItemRequest(worldItem, id);
 			}
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.CatchUpPeer(id);
 		}
 
 		public void OnPeerDisconnected(long id)

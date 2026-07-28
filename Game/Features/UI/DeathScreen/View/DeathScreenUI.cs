@@ -63,7 +63,7 @@ namespace Jogo25D.UI
 
         public void OnRevivePressed()
         {
-            NetworkManager?.ResetPlayerClientRequest();
+            NetworkManager?.TeleportPlayerClientRequest(Vector2.Zero);
         }
 
         #endregion

@@ -20,7 +20,7 @@ namespace Jogo25D.UI
 			Visible = false;
 
 			Background = GetNode<Panel>("Background");
-			MessageLabel = GetNode<Label>("Background/CenterContainer/Panel/MarginContainer/Root/MessageLabel");
+			MessageLabel = GetNode<Label>("Background/CenterContainer/Panel/MarginContainer/Root/MessageScroll/MessageLabel");
 			OkButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/OkButton");
 
 			OkButton.Pressed += OnOkPressed;

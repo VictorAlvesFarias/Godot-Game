@@ -16,6 +16,16 @@ namespace Jogo25D.UI
         public Node LocalPlayer { get; set; }
         public int LocalPeerId { get; set; } = 1;
 
+        // Deslocamento (em unidades de mundo) do centro da visao em relacao
+        // a posicao do player - alterado por quem arrasta o mapa (ver
+        // FullscreenMapUI). Zero = centralizado no player, como sempre foi.
+        public Vector2 PanOffset { get; set; } = Vector2.Zero;
+
+        // Escala calculada no ultimo _Draw() - exposta pra quem precisa
+        // converter um arrasto em tela (pixels) pra um deslocamento em
+        // unidades de mundo (FullscreenMapUI.PanDrag).
+        public float LastScale { get; private set; }
+
         public override void _Ready()
         {
             CustomMinimumSize = new Vector2(160, 160);
@@ -35,14 +45,17 @@ namespace Jogo25D.UI
 
         public override void _Draw()
         {
-            float mapSize = Mathf.Min(Size.X, Size.Y);
             float margin = 4f;
 
+            // Preenche o retangulo inteiro do Control (nao so um quadrado
+            // no canto) - importante pro mapa em tela cheia (FullscreenMapUI),
+            // que nao e quadrado. A escala usa o MENOR eixo pra ViewRadius
+            // continuar representando um circulo sem distorcer.
             Rect2 backgroundRect = new Rect2(
                 margin,
                 margin,
-                mapSize - margin * 2,
-                mapSize - margin * 2
+                Size.X - margin * 2,
+                Size.Y - margin * 2
             );
 
             DrawRect(backgroundRect, BackgroundColor);
@@ -53,17 +66,20 @@ namespace Jogo25D.UI
             }
 
             Vector2 playerPos = (LocalPlayer as Node2D)?.GlobalPosition ?? Vector2.Zero;
-            Vector2 center = new Vector2(mapSize / 2f, mapSize / 2f);
-            float innerSize = mapSize - margin * 2;
+            Vector2 viewCenterWorldPos = playerPos + PanOffset;
+            Vector2 center = new Vector2(Size.X / 2f, Size.Y / 2f);
+            float innerSize = Mathf.Min(Size.X, Size.Y) - margin * 2;
             float scale = innerSize / (ViewRadius * 2f);
+
+            LastScale = scale;
 
             if (scale <= 0f)
             {
                 return;
             }
 
-            ScanTree(GetTree().Root, playerPos, center, scale);
-            DrawPlayers(playerPos, center, scale);
+            ScanTree(GetTree().Root, viewCenterWorldPos, center, scale);
+            DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
         public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
@@ -84,16 +100,33 @@ namespace Jogo25D.UI
             var usedCells = layer.GetUsedCells();
 
             if (usedCells == null || usedCells.Count == 0 || !layer.Enabled)
-            { 
+            {
                 return;
             }
 
             var tileSize = layer.TileSet.TileSize;
 
+            // Raio um pouco maior que ViewRadius (a visao pode nao ser
+            // quadrada) - corta o trabalho por celula (transform + draw)
+            // pras que estao fora da area visivel. Sem isso, um mundo ja
+            // bastante explorado (dezenas de milhares de celulas geradas)
+            // fazia esse loop desenhar TUDO a cada frame, mesmo o que
+            // nunca aparece na tela - era a causa do FPS caindo muito ao
+            // abrir o mapa em tela cheia (2a instancia de MinimapUI
+            // rodando esse mesmo loop sem corte, em paralelo a do HUD).
+            var cullRadius = ViewRadius * 1.5f;
+            var cullRadiusSquared = cullRadius * cullRadius;
+
             foreach (Vector2I cell in usedCells)
             {
                 var localPos = layer.MapToLocal(cell);
                 var worldPos = layer.ToGlobal(localPos);
+
+                if (worldPos.DistanceSquaredTo(playerPos) > cullRadiusSquared)
+                {
+                    continue;
+                }
+
                 var mapPos = WorldToMap(worldPos, playerPos, center, scale);
                 var size = tileSize.X * scale;
                 var rect = new Rect2(
