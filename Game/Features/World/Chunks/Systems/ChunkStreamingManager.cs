@@ -49,6 +49,14 @@ namespace Jogo25D.Chunks
         private readonly Dictionary<Vector2I, HashSet<long>> _overworldLoadedPeers = new();
         private readonly Dictionary<Vector2I, HashSet<long>> _upsidedownLoadedPeers = new();
 
+        // Celulas ja vistas em algum momento NESTE cliente - ao contrario
+        // de "_loadedOverworld/_loadedUpsidedown" (o que esta carregado
+        // AGORA), isso nunca perde entrada quando um chunk descarrega, pra
+        // o minimapa continuar mostrando area ja explorada mesmo depois do
+        // streaming apagar a TileMapLayer daquele trecho.
+        private readonly HashSet<Vector2I> _discoveredOverworld = new();
+        private readonly HashSet<Vector2I> _discoveredUpsidedown = new();
+
         #region Godot implementation
 
         public override void _Ready()
@@ -221,6 +229,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Paint(layer, _worldSeed, dimensionId, chunkCoord, ChunkSize);
+            RecordDiscovered(dimensionId, layer, chunkCoord);
 
             loaded.Add(chunkCoord);
             loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
@@ -276,6 +285,44 @@ namespace Jogo25D.Chunks
 
                 loadedPeers.Remove(chunkCoord);
             }
+        }
+
+        private void RecordDiscovered(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
+        {
+            var discovered = dimensionId == OverworldId ? _discoveredOverworld : _discoveredUpsidedown;
+            var baseCellX = chunkCoord.X * ChunkSize;
+            var baseCellY = chunkCoord.Y * ChunkSize;
+
+            for (int localX = 0; localX < ChunkSize; localX++)
+            {
+                for (int localY = 0; localY < ChunkSize; localY++)
+                {
+                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
+
+                    if (layer.GetCellSourceId(cell) != -1)
+                    {
+                        discovered.Add(cell);
+                    }
+                }
+            }
+        }
+
+        // Usado pelo MinimapUI - se a celula nao esta mais carregada (foi
+        // descarregada pelo streaming) mas ja foi vista antes, o minimapa
+        // ainda desenha ela como area explorada.
+        public bool IsDiscovered(TileMapLayer layer, Vector2I cell)
+        {
+            if (layer == _overworldLayer)
+            {
+                return _discoveredOverworld.Contains(cell);
+            }
+
+            if (layer == _upsidedownLayer)
+            {
+                return _discoveredUpsidedown.Contains(cell);
+            }
+
+            return false;
         }
 
         private TileMapLayer GetOrCreateLayer(string dimensionId, Node2D dimensionParent)
@@ -352,6 +399,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Paint(layer, _worldSeed, dimensionId, chunkCoord, ChunkSize);
+            RecordDiscovered(dimensionId, layer, chunkCoord);
 
             loaded.Add(chunkCoord);
 
@@ -422,6 +470,8 @@ namespace Jogo25D.Chunks
             _upsidedownState.Clear();
             _overworldLoadedPeers.Clear();
             _upsidedownLoadedPeers.Clear();
+            _discoveredOverworld.Clear();
+            _discoveredUpsidedown.Clear();
             _overworldLayer = null;
             _upsidedownLayer = null;
             _evaluateTimer = 0f;
