@@ -1,7 +1,6 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
-using Jogo25D.Items.Indicators;
 
 namespace Jogo25D.Items
 {
@@ -120,10 +119,23 @@ namespace Jogo25D.Items
             {
                 ZIndex = 10,
                 Color = FillColor,
-                Polygon = TileQuad.Build(layer),
+                Polygon = BuildTileQuad(layer),
             };
 
             layer.AddChild(_indicator);
+        }
+
+        private static Vector2[] BuildTileQuad(TileMapLayer layer)
+        {
+            var half = (Vector2)layer.TileSet.TileSize / 2f;
+
+            return new[]
+            {
+                new Vector2(-half.X, -half.Y),
+                new Vector2(half.X, -half.Y),
+                new Vector2(half.X, half.Y),
+                new Vector2(-half.X, half.Y),
+            };
         }
     }
 }
