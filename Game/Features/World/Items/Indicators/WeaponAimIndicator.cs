@@ -11,35 +11,62 @@ namespace Jogo25D.Items.Indicators
         private const float Offset = 40.0f;
         private static readonly Color LineColor = new Color(1f, 1f, 1f, 0.7f);
 
-        public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
+        private Line2D _line;
+
+        public void Update(Player player, ItemDefinitionData data, float delta)
         {
-            var line = player.GetOrCreateIndicator<Line2D>(nameof(WeaponAimIndicator), l =>
-            {
-                l.Width = Width;
-                l.DefaultColor = LineColor;
-                l.ZIndex = 10;
-            });
+            EnsureLine(player);
 
             var dir = player.Input.MousePosition - player.GlobalPosition;
 
             if (dir.LengthSquared() < 0.01f)
             {
-                line.Visible = false;
+                _line.Visible = false;
 
                 return;
             }
 
             var d = dir.Normalized();
 
-            line.ClearPoints();
-            line.AddPoint(d * Offset);
-            line.AddPoint(d * (Offset + Length));
-            line.Visible = true;
+            _line.ClearPoints();
+            _line.AddPoint(d * Offset);
+            _line.AddPoint(d * (Offset + Length));
+            _line.Visible = true;
         }
 
         public void Hide(Player player)
         {
-            player.GetOrCreateIndicator<Line2D>(nameof(WeaponAimIndicator)).Visible = false;
+            if (_line != null && GodotObject.IsInstanceValid(_line))
+            {
+                _line.Visible = false;
+            }
+        }
+
+        public void Destroy()
+        {
+            if (_line != null && GodotObject.IsInstanceValid(_line))
+            {
+                _line.QueueFree();
+            }
+
+            _line = null;
+        }
+
+        private void EnsureLine(Player player)
+        {
+            if (_line != null && GodotObject.IsInstanceValid(_line))
+            {
+                return;
+            }
+
+            _line = new Line2D
+            {
+                Width = Width,
+                DefaultColor = LineColor,
+                ZIndex = 10,
+            };
+
+            player.AddChild(_line);
         }
     }
 }

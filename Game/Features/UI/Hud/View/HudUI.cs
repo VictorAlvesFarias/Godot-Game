@@ -1,14 +1,15 @@
 using Godot;
+using Jogo25D.Actions;
+using Jogo25D.Characters;
+using Jogo25D.Effects;
+using Jogo25D.Features.World.Resolver.Singletons;
+using Jogo25D.Items;
+using Jogo25D.Properties;
+using Jogo25D.Systems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jogo25D.Characters;
-using Jogo25D.Systems;
-using Jogo25D.Items;
-using Jogo25D.Properties;
-using Jogo25D.Actions;
-using Jogo25D.Effects;
-using Jogo25D.Features.World.Resolver.Singletons;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Jogo25D.UI
 {
@@ -253,7 +254,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = localPlayer.GetAllUnlockedAbilities();
+			var list = Resolver.Resolve(localPlayer.Data.UnlockedAbilities, localPlayer.UnlockedAbilities);
 
 			if (list == null || list.Count == 0)
 			{
@@ -457,9 +458,9 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = localPlayer.GetAllUnlockedAbilities();
+            var list = Resolver.Resolve(localPlayer.Data.UnlockedAbilities, localPlayer.UnlockedAbilities);
 
-			if (list == null || abilityFillBars.Count != list.Count)
+            if (list == null || abilityFillBars.Count != list.Count)
 			{
 				return;
 			}
@@ -601,9 +602,9 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var effects = localPlayer.GetAllCurrentEffects();
+            var effects = Resolver.Resolve(localPlayer.Data.CurrentEffects, localPlayer.CurrentEffects);
 
-			while (effectSlots.Count < effects.Count)
+            while (effectSlots.Count < effects.Count)
 			{
 				effectSlots.Add(CreateEffectSlot());
 			}

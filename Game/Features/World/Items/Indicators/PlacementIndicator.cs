@@ -8,16 +8,17 @@ namespace Jogo25D.Items.Indicators
     {
         private static readonly Color FillColor = new Color(0.3f, 1f, 0.4f, 0.3f);
 
-        public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
+        private readonly BlockItemDefinition _blockItem;
+        private Polygon2D _indicator;
+
+        public PlacementIndicator(BlockItemDefinition blockItem)
+        {
+            _blockItem = blockItem;
+        }
+
+        public void Update(Player player, ItemDefinitionData data, float delta)
         {
             if (!player.IsOwner())
-            {
-                Hide(player);
-
-                return;
-            }
-
-            if (definition is not BlockItemDefinition blockItem)
             {
                 Hide(player);
 
@@ -33,7 +34,7 @@ namespace Jogo25D.Items.Indicators
                 return;
             }
 
-            var cell = player.ResolveCellInRange(layer, blockItem.Reach);
+            var cell = player.ResolveCellInRange(layer, _blockItem.Reach);
 
             if (layer.GetCellSourceId(cell) != -1)
             {
@@ -42,25 +43,50 @@ namespace Jogo25D.Items.Indicators
                 return;
             }
 
-            var indicator = player.GetOrCreateIndicator<Polygon2D>(nameof(PlacementIndicator), p =>
-            {
-                p.ZIndex = 10;
-                p.Color = FillColor;
-                p.Polygon = TileQuad.Build(layer);
-            }, layer);
+            EnsureIndicator(layer);
 
-            indicator.Position = layer.MapToLocal(cell);
-            indicator.Visible = true;
+            _indicator.Position = layer.MapToLocal(cell);
+            _indicator.Visible = true;
         }
 
         public void Hide(Player player)
         {
-            var indicator = player.GetIndicatorOrNull<Polygon2D>(nameof(PlacementIndicator));
-
-            if (indicator != null)
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
             {
-                indicator.Visible = false;
+                _indicator.Visible = false;
             }
+        }
+
+        public void Destroy()
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                _indicator.QueueFree();
+            }
+
+            _indicator = null;
+        }
+
+        private void EnsureIndicator(TileMapLayer layer)
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator) && _indicator.GetParent() == layer)
+            {
+                return;
+            }
+
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                _indicator.QueueFree();
+            }
+
+            _indicator = new Polygon2D
+            {
+                ZIndex = 10,
+                Color = FillColor,
+                Polygon = TileQuad.Build(layer),
+            };
+
+            layer.AddChild(_indicator);
         }
     }
 }

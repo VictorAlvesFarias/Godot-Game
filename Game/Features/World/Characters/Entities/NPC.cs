@@ -34,7 +34,7 @@ namespace Jogo25D.Characters
         {
             var dt = (float)delta;
 
-            TickKnockback(dt);
+            UpdateKnockback(dt);
 
             if (!Data.CanUpdateMovement)
             {

@@ -9,16 +9,17 @@ namespace Jogo25D.Items.Indicators
         private const float AimingAlpha = 0.15f;
         private const float MiningAlpha = 0.45f;
 
-        public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
+        private readonly ToolDefinition _tool;
+        private Polygon2D _indicator;
+
+        public MiningIndicator(ToolDefinition tool)
+        {
+            _tool = tool;
+        }
+
+        public void Update(Player player, ItemDefinitionData data, float delta)
         {
             if (!player.IsOwner())
-            {
-                Hide(player);
-
-                return;
-            }
-
-            if (definition is not ToolDefinition tool)
             {
                 Hide(player);
 
@@ -34,7 +35,7 @@ namespace Jogo25D.Items.Indicators
                 return;
             }
 
-            var (found, cell) = player.ResolveMiningTargetCell(layer, tool.Reach);
+            var (found, cell) = player.ResolveMiningTargetCell(layer, _tool.Reach);
 
             if (!found)
             {
@@ -43,25 +44,50 @@ namespace Jogo25D.Items.Indicators
                 return;
             }
 
-            var indicator = player.GetOrCreateIndicator<Polygon2D>(nameof(MiningIndicator), p =>
-            {
-                p.ZIndex = 10;
-                p.Polygon = TileQuad.Build(layer);
-            }, layer);
+            EnsureIndicator(layer);
 
-            indicator.Color = new Color(1f, 1f, 1f, player.IsMining ? MiningAlpha : AimingAlpha);
-            indicator.Position = layer.MapToLocal(cell);
-            indicator.Visible = true;
+            _indicator.Color = new Color(1f, 1f, 1f, player.IsMining ? MiningAlpha : AimingAlpha);
+            _indicator.Position = layer.MapToLocal(cell);
+            _indicator.Visible = true;
         }
 
         public void Hide(Player player)
         {
-            var indicator = player.GetIndicatorOrNull<Polygon2D>(nameof(MiningIndicator));
-
-            if (indicator != null)
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
             {
-                indicator.Visible = false;
+                _indicator.Visible = false;
             }
+        }
+
+        public void Destroy()
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                _indicator.QueueFree();
+            }
+
+            _indicator = null;
+        }
+
+        private void EnsureIndicator(TileMapLayer layer)
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator) && _indicator.GetParent() == layer)
+            {
+                return;
+            }
+
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                _indicator.QueueFree();
+            }
+
+            _indicator = new Polygon2D
+            {
+                ZIndex = 10,
+                Polygon = TileQuad.Build(layer),
+            };
+
+            layer.AddChild(_indicator);
         }
     }
 }

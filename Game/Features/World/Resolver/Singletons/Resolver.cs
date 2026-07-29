@@ -1,3 +1,6 @@
+using Godot.Collections;
+using Jogo25D.Actions;
+using Jogo25D.Effects;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Items;
 using Jogo25D.Properties;
@@ -127,6 +130,36 @@ namespace Jogo25D.Features.World.Resolver.Singletons
             return result;
         }
 
+        public static Array<ActionDefinitionData> Resolve(params Array<ActionDefinitionData>[] lists)
+        {
+            var result = new Array<ActionDefinitionData>();
+
+            foreach (var list in lists)
+            {
+                foreach (var prop in list)
+                {
+                    result.Add(prop);
+                }
+            }
+
+            return result;
+        }
+
+        public static Array<EffectDefinitionData> Resolve(params Array<EffectDefinitionData>[] lists)
+        {
+            var result = new Array<EffectDefinitionData>();
+
+            foreach (var list in lists)
+            {
+                foreach (var prop in list)
+                {
+                    result.Add(prop);
+                }
+            }
+
+            return result;
+        }
+
         public static CritPropertyData Resolve(params List<CritPropertyData>[] lists)
         {
             var result = new CritPropertyData();
@@ -211,35 +244,6 @@ namespace Jogo25D.Features.World.Resolver.Singletons
                     result.KnockbackForce = Math.Max(result.KnockbackForce,  prop.KnockbackForce);
                     result.ProjectileSpeed = Math.Max(result.ProjectileSpeed, prop.ProjectileSpeed);
                 }
-            }
-
-            return result;
-        }
-
-        public static BasePropertyData CloneProperty(BasePropertyData property)
-        {
-            return property switch
-            {
-                DamagePropertyData p => new DamagePropertyData { DamageAmount = p.DamageAmount, DamageType = p.DamageType, DamageMultiplier = p.DamageMultiplier },
-                AttackPropertyData p => new AttackPropertyData { AttackRange = p.AttackRange, AttackArea = p.AttackArea, KnockbackForce = p.KnockbackForce, ProjectileSpeed = p.ProjectileSpeed },
-                ChargesPropertyData p => new ChargesPropertyData { MaxCharges = p.MaxCharges, ChargeItemId = p.ChargeItemId, InfiniteCharges = p.InfiniteCharges, ReloadCooldown = p.ReloadCooldown },
-                CritPropertyData p => new CritPropertyData { CritChance = p.CritChance, CritDamage = p.CritDamage },
-                DamageResistencePropertyData p => new DamageResistencePropertyData { DamageType = p.DamageType, ResistanceFactor = p.ResistanceFactor },
-                DamageResistenceMultiplierPropertyData p => new DamageResistenceMultiplierPropertyData { DamageType = p.DamageType, Multiplier = p.Multiplier },
-                DashPropertyData p => new DashPropertyData { DashSpeed = p.DashSpeed, MovementInfluence = p.MovementInfluence },
-                MovementPropertyData p => new MovementPropertyData { Speed = p.Speed, JumpVelocity = p.JumpVelocity },
-                HealthPropertyData p => new HealthPropertyData { MaxHealth = p.MaxHealth },
-                _ => property
-            };
-        }
-
-        public static Godot.Collections.Array<BasePropertyData> CloneProperties(IEnumerable<BasePropertyData> properties)
-        {
-            var result = new Godot.Collections.Array<BasePropertyData>();
-
-            foreach (var property in properties)
-            {
-                result.Add(CloneProperty(property));
             }
 
             return result;
