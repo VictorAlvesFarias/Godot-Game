@@ -219,18 +219,20 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Paint(layer, _worldSeed, dimensionId, chunkCoord, ChunkSize);
-            RecordDiscovered(dimensionId, layer, chunkCoord);
-
-            loaded.Add(chunkCoord);
-            loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
-
-            dimensionParent.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.RegisterChunk(layer, chunkCoord, ChunkSize);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
                 chunkState = new ChunkStateData();
                 state[chunkCoord] = chunkState;
             }
+
+            ApplyMutations(layer, chunkState);
+            RecordDiscovered(dimensionId, layer, chunkCoord);
+
+            loaded.Add(chunkCoord);
+            loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
+
+            dimensionParent.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.RegisterChunk(layer, chunkCoord, ChunkSize);
 
             var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
             var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
@@ -253,8 +255,12 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            state.Remove(chunkCoord);
-
+            // "state" (mutacoes de bloco quebrado/colocado) NAO e limpo
+            // aqui de proposito - precisa sobreviver ao descarregamento pra
+            // ser reaplicado da proxima vez que esse chunk carregar (seja
+            // pelo mesmo player voltando, seja por outro peer chegando
+            // perto), senao um buraco cavado sumia assim que o chunk saia
+            // de raio e voltava do jeito gerado original.
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Erase(layer, chunkCoord, ChunkSize);
@@ -275,6 +281,38 @@ namespace Jogo25D.Chunks
 
                 loadedPeers.Remove(chunkCoord);
             }
+        }
+
+        private void ApplyMutations(TileMapLayer layer, ChunkStateData chunkState)
+        {
+            foreach (var mutation in chunkState.Mutations)
+            {
+                _worldManager?.ApplyChunkMutation(layer, mutation);
+            }
+        }
+
+        // Chamado pelo WorldManager sempre que um bloco quebra/e colocado
+        // de verdade (autoritativo) - guarda a mutacao no ChunkStateData
+        // do chunk correspondente, pra ser reaplicada (ver ApplyMutations)
+        // toda vez que esse chunk for (re)pintado, incluindo pra peers que
+        // entram depois da mutacao ja ter acontecido.
+        public void RecordMutation(string dimensionId, Vector2I cell, string type, string extraData)
+        {
+            var state = ResolveState(dimensionId);
+            var chunkCoord = CellToChunk(cell);
+
+            if (!state.TryGetValue(chunkCoord, out var chunkState))
+            {
+                chunkState = new ChunkStateData();
+                state[chunkCoord] = chunkState;
+            }
+
+            chunkState.Mutations.Add(new ChunkMutationData
+            {
+                Type = type,
+                Position = new Vector2(cell.X, cell.Y),
+                ExtraData = extraData ?? "",
+            });
         }
 
         private void RecordDiscovered(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
@@ -415,11 +453,15 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Paint(layer, _worldSeed, dimensionId, chunkCoord, ChunkSize);
+
+            var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
+
+            ApplyMutations(layer, chunkState);
             RecordDiscovered(dimensionId, layer, chunkCoord);
 
             loaded.Add(chunkCoord);
 
-            ResolveState(dimensionId)[chunkCoord] = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
+            ResolveState(dimensionId)[chunkCoord] = chunkState;
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

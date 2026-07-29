@@ -4,6 +4,7 @@ using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Features.World.Characters.Resources;
+using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
@@ -633,6 +634,8 @@ namespace Jogo25D.Systems
 
 			EraseBlockAndReconnect(layer, cell);
 
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(ChunkStreamingManager.UpsidedownId, cell, "break", "");
+
 			if (BlockDB.TryGet("grass", out var grassBlock))
 			{
 				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
@@ -665,6 +668,8 @@ namespace Jogo25D.Systems
 
 			PaintBlockAndReconnect(layer, cell, block);
 
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(ChunkStreamingManager.UpsidedownId, cell, "place", blockId);
+
 			Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
 
 			return true;
@@ -681,6 +686,23 @@ namespace Jogo25D.Systems
 			}
 
 			PaintBlockAndReconnect(layer, cell, block);
+		}
+
+		public void ApplyChunkMutation(TileMapLayer layer, ChunkMutationData mutation)
+		{
+			var cell = new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y);
+
+			if (mutation.Type == "break")
+			{
+				EraseBlockAndReconnect(layer, cell);
+
+				return;
+			}
+
+			if (mutation.Type == "place" && BlockDB.TryGet(mutation.ExtraData, out var block))
+			{
+				PaintBlockAndReconnect(layer, cell, block);
+			}
 		}
 
 		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)

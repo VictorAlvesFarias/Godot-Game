@@ -382,8 +382,12 @@ namespace Jogo25D.Characters
 
 		protected void UpdateEffects(float dt)
 		{
-            var effects = Resolver.Resolve(Data.CurrentEffects, CurrentEffects);
+            TickEffects(Data.CurrentEffects, dt);
+            TickEffects(CurrentEffects, dt);
+        }
 
+        private void TickEffects(Godot.Collections.Array<EffectDefinitionData> effects, float dt)
+        {
             for (int i = effects.Count - 1; i >= 0; i--)
             {
                 var effect = effects[i];
