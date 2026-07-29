@@ -11,10 +11,6 @@ namespace Jogo25D.Items.Indicators
 
         public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
         {
-            // So o dono mira/mostra o indicador - senao cada cliente
-            // renderizaria o indicador de mineracao de TODOS os players
-            // remotos tambem (o _PhysicsProcess/Update roda localmente pra
-            // cada Player replicado na arvore, dono ou nao).
             if (!player.IsOwner())
             {
                 Hide(player);

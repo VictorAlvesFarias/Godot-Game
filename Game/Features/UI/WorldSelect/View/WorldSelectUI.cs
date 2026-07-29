@@ -55,11 +55,6 @@ namespace Jogo25D.UI
 
 		#region Core - Setup
 
-		// Mesmo visual (painel com borda) pras duas situacoes - "Mundo
-		// Padrao" e os mundos mock so diferem em serem clicaveis ou nao,
-		// nao em aparencia (era exatamente essa a inconsistencia
-		// reportada: "Mundo Padrao" aparecia como um botao separado, de
-		// estilo diferente do resto da lista).
 		private Button CreateWorldRow(string worldName, bool interactive)
 		{
 			var row = new Button();
@@ -99,9 +94,6 @@ namespace Jogo25D.UI
 			}
 			else
 			{
-				// Mock/decorativo - nao reage a mouse (sem hover, sem
-				// clique), pra nao parecer clicavel sem realmente fazer
-				// nada.
 				row.AddThemeStyleboxOverride("hover", normalStyle);
 				row.AddThemeStyleboxOverride("pressed", normalStyle);
 				row.MouseFilter = Control.MouseFilterEnum.Ignore;

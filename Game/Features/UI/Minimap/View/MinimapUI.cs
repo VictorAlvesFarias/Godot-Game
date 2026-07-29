@@ -11,11 +11,6 @@ namespace Jogo25D.UI
         public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
         public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
         public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
-
-        // Celula ja explorada mas fora do raio de streaming agora (o chunk
-        // descarregou) - um pouco mais escura/apagada que uma carregada de
-        // verdade, pra dar a sensacao de "memoria" do mapa (fog of war).
-        public Color DiscoveredTileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.45f);
         public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
         public float PlayerDotRadius { get; set; } = 4f;
 
@@ -24,14 +19,8 @@ namespace Jogo25D.UI
 
         private ChunkStreamingManager _chunkStreamingManager;
 
-        // Deslocamento (em unidades de mundo) do centro da visao em relacao
-        // a posicao do player - alterado por quem arrasta o mapa (ver
-        // FullscreenMapUI). Zero = centralizado no player, como sempre foi.
         public Vector2 PanOffset { get; set; } = Vector2.Zero;
 
-        // Escala calculada no ultimo _Draw() - exposta pra quem precisa
-        // converter um arrasto em tela (pixels) pra um deslocamento em
-        // unidades de mundo (FullscreenMapUI.PanDrag).
         public float LastScale { get; private set; }
 
         public override void _Ready()
@@ -57,10 +46,6 @@ namespace Jogo25D.UI
         {
             float margin = 4f;
 
-            // Preenche o retangulo inteiro do Control (nao so um quadrado
-            // no canto) - importante pro mapa em tela cheia (FullscreenMapUI),
-            // que nao e quadrado. A escala usa o MENOR eixo pra ViewRadius
-            // continuar representando um circulo sem distorcer.
             Rect2 backgroundRect = new Rect2(
                 margin,
                 margin,
@@ -112,18 +97,48 @@ namespace Jogo25D.UI
                 return;
             }
 
-            var tileSize = layer.TileSet.TileSize;
+            Texture2D texture = null;
+            var origin = Vector2I.Zero;
 
-            // Raio um pouco maior que ViewRadius (a visao pode nao ser
-            // quadrada). Antes isso so cortava o DESENHO depois de ja ter
-            // iterado layer.GetUsedCells() inteiro (transform+distancia
-            // pra CADA celula ja pintada no mundo, nao so a visivel) - num
-            // mundo com streaming de chunks isso cresce com a area total
-            // ja explorada por TODOS os players (nao so o proprio), entao
-            // quanto mais os players se espalhavam mais esse loop ficava
-            // caro TODO FRAME (era a causa real da queda de FPS). Agora o
-            // loop em si so percorre a caixa de celulas dentro do raio -
-            // custo fixo, nao cresce com o tamanho do mundo carregado.
+            if (_chunkStreamingManager != null)
+            {
+                texture = _chunkStreamingManager.GetDiscoveredTexture(layer, out origin);
+            }
+
+            if (texture != null)
+            {
+                DrawDiscoveredTexture(layer, texture, origin, playerPos, center, scale);
+
+                return;
+            }
+
+            DrawStaticLayerCells(layer, playerPos, center, scale);
+        }
+
+        private void DrawDiscoveredTexture(TileMapLayer layer, Texture2D texture, Vector2I origin, Vector2 playerPos, Vector2 center, float scale)
+        {
+            var cullRadius = ViewRadius * 1.5f;
+
+            var cellMin = layer.LocalToMap(layer.ToLocal(playerPos - new Vector2(cullRadius, cullRadius)));
+            var cellMax = layer.LocalToMap(layer.ToLocal(playerPos + new Vector2(cullRadius, cullRadius)));
+
+            var pixelMinX = Mathf.Min(cellMin.X, cellMax.X) - origin.X;
+            var pixelMinY = Mathf.Min(cellMin.Y, cellMax.Y) - origin.Y;
+            var pixelMaxX = Mathf.Max(cellMin.X, cellMax.X) - origin.X;
+            var pixelMaxY = Mathf.Max(cellMin.Y, cellMax.Y) - origin.Y;
+
+            var srcRegion = new Rect2(pixelMinX, pixelMinY, pixelMaxX - pixelMinX, pixelMaxY - pixelMinY);
+
+            var destRect = new Rect2(
+                center - new Vector2(cullRadius, cullRadius) * scale,
+                new Vector2(cullRadius, cullRadius) * scale * 2f);
+
+            DrawTextureRectRegion(texture, destRect, srcRegion);
+        }
+
+        private void DrawStaticLayerCells(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
+        {
+            var tileSize = layer.TileSet.TileSize;
             var cullRadius = ViewRadius * 1.5f;
             var cullRadiusSquared = cullRadius * cullRadius;
 
@@ -138,28 +153,19 @@ namespace Jogo25D.UI
             var minY = Mathf.Min(boxStart.Y, boxEnd.Y);
             var maxY = Mathf.Max(boxStart.Y, boxEnd.Y);
 
-            // O mapa em tela cheia usa um ViewRadius bem maior (ate 12000,
-            // contra ~1200 do minimapa do HUD) pra dar zoom-out - a caixa
-            // de celulas acima cresce em AREA (ao quadrado) com o raio, e
-            // com um raio grande isso virava centenas de milhares de
-            // celulas por frame (era a causa da queda de FPS ao abrir o
-            // mapa cheio). Sem stride, cada celula fica menor que 1 pixel
-            // na tela quando bem afastado, entao nao faz sentido processar
-            // uma por uma - passo (em celulas) escolhido pra amostrar
-            // aproximadamente 1 celula por pixel de tela, mantendo o custo
-            // do loop proporcional ao tamanho do painel, nao ao ViewRadius.
-            var worldUnitsPerPixel = scale > 0f ? 1f / scale : tileSize.X;
-            var strideCells = Mathf.Max(1, Mathf.RoundToInt(worldUnitsPerPixel / tileSize.X));
+            const int maxSamplesPerAxis = 160;
+            var boxWidthCells = maxX - minX + 1;
+            var boxHeightCells = maxY - minY + 1;
+            var boxCellsPerAxis = Mathf.Max(boxWidthCells, boxHeightCells);
+            var strideCells = Mathf.Max(1, Mathf.CeilToInt(boxCellsPerAxis / (float)maxSamplesPerAxis));
 
             for (int x = minX; x <= maxX; x += strideCells)
             {
                 for (int y = minY; y <= maxY; y += strideCells)
                 {
                     var cell = new Vector2I(x, y);
-                    var isLoaded = layer.GetCellSourceId(cell) != -1;
-                    var isDiscovered = isLoaded || (_chunkStreamingManager != null && _chunkStreamingManager.IsDiscovered(layer, cell));
 
-                    if (!isDiscovered)
+                    if (layer.GetCellSourceId(cell) == -1)
                     {
                         continue;
                     }
@@ -178,7 +184,7 @@ namespace Jogo25D.UI
                         new Vector2(size, size)
                     );
 
-                    DrawRect(rect, isLoaded ? TileColor : DiscoveredTileColor);
+                    DrawRect(rect, TileColor);
                 }
             }
         }

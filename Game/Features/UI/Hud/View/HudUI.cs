@@ -706,6 +706,5 @@ namespace Jogo25D.UI
 		}
 
 		#endregion
-
 	}
 }

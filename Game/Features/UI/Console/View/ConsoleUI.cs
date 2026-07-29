@@ -542,6 +542,5 @@ namespace Jogo25D.UI
 				GetCompletions = getCompletions
 			};
 		}
-
 	}
 }

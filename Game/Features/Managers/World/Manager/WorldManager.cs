@@ -47,7 +47,6 @@ namespace Jogo25D.Systems
 			Multiplayer.ConnectedToServer += OnConnectedToServer;
 			Multiplayer.ConnectionFailed += OnConnectionFailed;
 			Multiplayer.ServerDisconnected += OnServerDisconnected;
-
 		}
 
         #endregion
@@ -176,11 +175,6 @@ namespace Jogo25D.Systems
 			UpsidedownParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
 		}
 
-		// So o host (CreateProceduralWorldAndPlayer) limpava o mapa a mao
-		// localmente - um peer que conecta depois recebe o World.tscn do
-		// zero, COM o mapa a mao ainda desenhado, e o streaming de chunks
-		// so pinta por cima (nunca limpa) - por isso o mundo procedural
-		// aparecia "junto" com Overworld/Upsidedown pro peer que entra.
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ClearHandAuthoredTilesReceive()
 		{
@@ -599,10 +593,6 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - Blocks
 
-		// TileMapLayer ativo do Upsidedown - o procedural (ProceduralTiles)
-		// se existir, senao o mundo a mao (Upsidedown-Tiles). Quebrar/
-		// colocar bloco sempre mexe nesse layer (mesma dimensao de spawn
-		// de sempre, ver comentario em SpawnPlayer).
 		private TileMapLayer ResolveActiveUpsidedownLayer()
 		{
 			return UpsidedownParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
@@ -632,10 +622,6 @@ namespace Jogo25D.Systems
 			BreakBlockReceive(cell);
 		}
 
-		// So o servidor (ou o proprio processo solo) chega aqui - apaga a
-		// celula localmente, dropa o item de grama (reaproveita
-		// SpawnWorldItemRequest, que ja se auto-transmite) e avisa os
-		// outros peers pra apagar a mesma celula.
 		private void BreakBlockReceive(Vector2I cell)
 		{
 			var layer = ResolveActiveUpsidedownLayer();
@@ -668,11 +654,6 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		// Chamado so por quem ja e autoritativo (Player.PlaceBlockReceive,
-		// depois de validar o item no inventario) - pinta a celula
-		// localmente e transmite pros outros peers. Retorna false se a
-		// celula ja estava ocupada ou o blockId nao existe, pro chamador
-		// saber que nao deve consumir o item.
 		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
 		{
 			var layer = ResolveActiveUpsidedownLayer();
@@ -702,11 +683,6 @@ namespace Jogo25D.Systems
 			PaintBlockAndReconnect(layer, cell, block);
 		}
 
-		// Apaga a celula e recalcula o atlas dos vizinhos solidos - sem
-		// isso os vizinhos continuam mostrando a variante "tinha vizinho
-		// aqui" mesmo depois da celula sumir (mesma costura visivel que o
-		// ChunkGenerator ja resolvia entre chunks, so que agora entre uma
-		// celula quebrada e as ao redor dela).
 		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
 		{
 			layer.SetCell(cell, -1);
@@ -724,13 +700,6 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		// Pinta a celula usando SetCellsTerrainConnect (igual o
-		// ChunkGenerator faz pros chunks) em vez de sempre a mesma tile
-		// fixa do BlockDB - assim o bloco colocado conecta com o que ja
-		// existe ao redor em vez de aparecer como um quadrado isolado com
-		// a cara do proprio icone. So cai pro SetCell fixo se o TileSet
-		// dessa layer nao tiver terreno configurado (Upsidedown-Tiles a
-		// mao, por exemplo).
 		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block)
 		{
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
@@ -853,7 +822,6 @@ namespace Jogo25D.Systems
 
 			if (!Multiplayer.IsServer())
 			{
-
 				GD.Print("[WorldManager.TeleportPlayerServerReceive] not the server, ignoring request");
 
 				return;
@@ -866,11 +834,6 @@ namespace Jogo25D.Systems
 			Rpc(nameof(TeleportPlayer), senderId, position);
 		}
 
-		// So reposiciona o player DEPOIS que os chunks ao redor do destino
-		// ja existem (mesma logica de CreateProceduralWorldAndPlayer) -
-		// senao ele cairia num trecho de mundo ainda vazio/sem chao se o
-		// destino nunca tiver sido visitado. LoadingUI cobre a tela nesse
-		// meio-tempo.
 		public async void TeleportPlayerClientRequest(Vector2 position)
 		{
 			GD.Print($"[WorldManager.TeleportPlayerClientRequest] sending teleport request to {position} (Peer 1)");
@@ -943,7 +906,6 @@ namespace Jogo25D.Systems
 
 			if (!Multiplayer.IsServer())
 			{
-				
 				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
 				
 				return;
@@ -1054,6 +1016,8 @@ namespace Jogo25D.Systems
 
 				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
 			}
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RemovePeer(id);
 		}
 
 		public event Action ConnectionSucceeded;
@@ -1103,6 +1067,5 @@ namespace Jogo25D.Systems
 		}
 
         #endregion
-
 	}
 }

@@ -104,7 +104,6 @@ namespace Jogo25D.Hitboxes
                     QueueFree();
                 }
             }
-
         }
 
         #endregion

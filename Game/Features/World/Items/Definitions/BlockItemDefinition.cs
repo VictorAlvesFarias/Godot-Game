@@ -4,10 +4,6 @@ using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Items
 {
-    // Item de bloco colocavel - "Use" (segurar o botao de atacar) mira a
-    // celula sob o mouse e pede pro servidor colocar o bloco ali (throtled
-    // pelo Cooldown normal de ItemDefinition, igual uma arma). BlockId
-    // referencia BlockDB pra saber qual tile pintar e o que consumir.
     public class BlockItemDefinition : ItemDefinition
     {
         public string BlockId { get; init; }
@@ -32,9 +28,6 @@ namespace Jogo25D.Items
                 return;
             }
 
-            // Colocar e sempre livre - so limitado pelo Reach, sem se
-            // importar com o que esta no meio do caminho (diferente de
-            // quebrar, que pode ser restrito via "toggle_mining_mode").
             var targetCell = player.ResolveCellInRange(layer, Reach);
 
             TriggerCooldownTimer(instance);

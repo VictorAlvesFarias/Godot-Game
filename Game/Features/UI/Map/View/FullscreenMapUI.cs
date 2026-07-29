@@ -64,9 +64,6 @@ namespace Jogo25D.UI
 
             if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
             {
-                // Scroll pra cima aproxima (raio menor, mais detalhe); scroll
-                // pra baixo afasta - mesma convencao de zoom de mapa/camera
-                // usada em outros jogos.
                 if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
                 {
                     Zoom(-ZoomStep);
@@ -127,10 +124,6 @@ namespace Jogo25D.UI
 
                 PlayerInput?.AddBlocker("map");
 
-                // Evita rodar DUAS instancias de MinimapUI redesenhando
-                // (escaneando a arvore inteira + todas as celulas do
-                // TileMapLayer) ao mesmo tempo - era metade da causa do FPS
-                // caindo ao abrir o mapa em tela cheia.
                 if (HudMinimap != null)
                 {
                     HudMinimap.SetProcess(false);
@@ -156,9 +149,6 @@ namespace Jogo25D.UI
             MapView.ViewRadius = Mathf.Clamp(MapView.ViewRadius + delta, MinViewRadius, MaxViewRadius);
         }
 
-        // Arrasta o mapa com o botao do meio do mouse pressionado - move o
-        // CENTRO da visao na direcao OPOSTA ao arrasto, pra o conteudo sob
-        // o cursor acompanhe o cursor (like segurar e puxar um papel).
         public void PanDrag(Vector2 screenDelta)
         {
             if (MapView.LastScale <= 0f)

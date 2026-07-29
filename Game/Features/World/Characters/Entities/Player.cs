@@ -51,15 +51,6 @@ namespace Jogo25D.Characters
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 
-        // Progresso de quebra de bloco - efemero, vive so aqui (no player
-        // que esta minerando), nao numa TileEntity nem na celula (ver
-        // .docs/blocos-quebraveis.md). Resetado ao soltar o ataque, trocar
-        // de celula alvo, ou trocar de item equipado.
-        //
-        // Vector2I NAO-nulavel + flag separada (em vez de Vector2I?) - o
-        // sistema de Variant do Godot nao suporta Nullable<T>, entao uma
-        // propriedade Vector2I? simplesmente nao fica exposta pro GDScript
-        // (falha silenciosa: "Invalid access to property" em runtime).
         public bool IsMining { get; set; }
         public Vector2I MiningCell { get; set; }
         public float MiningElapsed { get; set; }
@@ -431,20 +422,6 @@ namespace Jogo25D.Characters
 			return indicator;
 		}
 
-		// "parent" opcional (padrao null = filho do proprio player, como
-		// sempre foi pro WeaponAimIndicator) - indicadores baseados em
-		// celula de tile (MiningIndicator/PlacementIndicator) passam o
-		// TileMapLayer ativo aqui, senao ficariam filhos do Player, que e
-		// IRMAO do layer na arvore (Player e o layer sao ambos filhos de
-		// UpsidedownParent) - dependendo da ordem entre os dois, o layer
-		// podia desenhar por cima do indicador mesmo com ZIndex alto.
-		//
-		// "configure" so roda na CRIACAO do node - reinvocar em toda
-		// chamada (chegou a ser feito numa iteracao anterior) reatribuia
-		// Polygon2D.Polygon todo tick fisico, o que forca o motor a
-		// re-triangular o poligono a cada frame por nada (o formato nunca
-		// muda) - custo real e continuo, sentido como queda de FPS. Quem
-		// precisa de node ja existente sem recriar usa GetIndicatorOrNull.
 		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null, Node parent = null) where T : Node2D, new()
 		{
 			if (_indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing))
@@ -468,12 +445,6 @@ namespace Jogo25D.Characters
 			return node;
 		}
 
-		// Igual GetOrCreateIndicator, mas NUNCA cria - devolve null se o
-		// node ainda nao existe. Usado por Hide() dos indicadores: chamar
-		// GetOrCreateIndicator dentro de Hide() criava o node em branco
-		// (sem configure nenhum) na primeira vez que Hide() rodava antes
-		// de qualquer Update() bem sucedido, e esse node ficava em cache
-		// pra sempre sem nunca ganhar o Polygon/config de verdade.
 		public T GetIndicatorOrNull<T>(string key) where T : Node2D
 		{
 			return _indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing)
@@ -549,7 +520,6 @@ namespace Jogo25D.Characters
 					SetHealthRequest(Mathf.Max(0, Data.CurrentHealth - finalDamage));
 				}
 			}
-
 		}
 
 		public void ApplyKnockback(Vector2 direction, float force)
@@ -749,11 +719,6 @@ namespace Jogo25D.Characters
 
 		#region Core - Blocks system
 
-		// TileMapLayer ativo da dimensao onde esse player esta - o
-		// procedural (ProceduralTiles, criado por ChunkStreamingManager)
-		// se existir, senao o mundo a mao (Upsidedown-Tiles). Os dois
-		// nunca coexistem na mesma sessao (ver WorldManager.
-		// CreateProceduralWorldAndPlayer).
 		public TileMapLayer GetActiveTileLayer()
 		{
 			var parent = GetParent();
@@ -796,10 +761,6 @@ namespace Jogo25D.Characters
 			MiningElapsed = 0f;
 		}
 
-		// Posicao do mouse limitada pelo alcance, sem se importar com o que
-		// esta no meio do caminho - "liberdade maxima", usado sempre por
-		// colocar bloco e por quebrar quando RestrictMiningToAccessible
-		// estiver desligado (padrao).
 		public Vector2I ResolveCellInRange(TileMapLayer layer, float reach)
 		{
 			var targetWorldPos = Input.MousePosition;
@@ -813,11 +774,6 @@ namespace Jogo25D.Characters
 			return layer.LocalToMap(layer.ToLocal(targetWorldPos));
 		}
 
-		// Anda em passos de meio-tile do player ate o mouse (limitado por
-		// reach) parando na primeira celula solida encontrada - "o que da
-		// pra alcancar de verdade" (nunca um bloco "atras" de outro no
-		// caminho). Usado por ResolveMiningTargetCell quando o modo
-		// restrito de mineracao estiver ligado.
 		public (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, Vector2 origin, Vector2 aimPosition, float reach)
 		{
 			var toAim = aimPosition - origin;
@@ -847,12 +803,6 @@ namespace Jogo25D.Characters
 			return (false, default, lastEmptyCell);
 		}
 
-		// Celula que a picareta vai quebrar. Por padrao (liberdade maxima,
-		// RestrictMiningToAccessible=false) e so a posicao do mouse
-		// limitada pelo alcance, SEM se importar com o que esta no meio do
-		// caminho - precisa so que aquela celula exata seja solida.
-		// "toggle_mining_mode" liga o modo restrito (RaycastTiles - so
-		// alcanca o primeiro bloco solido no caminho).
 		public (bool Found, Vector2I Cell) ResolveMiningTargetCell(TileMapLayer layer, float reach)
 		{
 			if (Input.RestrictMiningToAccessible)
@@ -894,10 +844,6 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			// BlockId vem da definicao do item (autoritativo), nao de um
-			// parametro mandado pelo cliente - evita confiar em input nao
-			// validado e evita o bug de comparar item.Id (id do ITEM,
-			// "block_grass") com um id de BLOCO ("grass") que nunca bate.
 			if (ItemDB.Get(item.Id) is not BlockItemDefinition blockItemDef)
 			{
 				return;
@@ -1068,12 +1014,6 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			// "mining" tem loop=true (ver SpriteFrames embutido em
-			// Scenes/World/Characters/Player.tscn - NAO o CharacterFrames.tres
-			// externo, que so alimenta o preview de personagem do
-			// inventario), entao Sprite.IsPlaying() fica true pra sempre
-			// sozinho - o que encerra o loop e soltar o ataque, nao a
-			// animacao terminar.
 			if (Sprite.Animation == "mining" && Input.Attack)
 			{
 				return;
@@ -1852,7 +1792,6 @@ namespace Jogo25D.Characters
 
 		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
 		{
-
 			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
 		}
 

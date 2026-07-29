@@ -40,22 +40,12 @@ namespace Jogo25D.Chunks
         private readonly Dictionary<Vector2I, ChunkStateData> _overworldState = new();
         private readonly Dictionary<Vector2I, ChunkStateData> _upsidedownState = new();
 
-        // Quais peers (clientes) ja receberam LoadChunkReceive de cada
-        // celula - sem isso, Load/Unload eram sempre um Rpc() de broadcast
-        // pra TODOS os peers, entao o cliente do player A tambem pintava
-        // (e processava fisica de) a regiao carregada so por causa do
-        // player B estar longe dele - o custo crescia com a area total
-        // explorada por TODOS, nao so a area relevante pra cada cliente.
         private readonly Dictionary<Vector2I, HashSet<long>> _overworldLoadedPeers = new();
         private readonly Dictionary<Vector2I, HashSet<long>> _upsidedownLoadedPeers = new();
 
-        // Celulas ja vistas em algum momento NESTE cliente - ao contrario
-        // de "_loadedOverworld/_loadedUpsidedown" (o que esta carregado
-        // AGORA), isso nunca perde entrada quando um chunk descarrega, pra
-        // o minimapa continuar mostrando area ja explorada mesmo depois do
-        // streaming apagar a TileMapLayer daquele trecho.
-        private readonly HashSet<Vector2I> _discoveredOverworld = new();
-        private readonly HashSet<Vector2I> _discoveredUpsidedown = new();
+        private readonly DiscoveredMapImage _discoveredOverworld = new();
+        private readonly DiscoveredMapImage _discoveredUpsidedown = new();
+        private static readonly Color DiscoveredCellColor = new Color(0.4f, 0.4f, 0.45f, 1f);
 
         #region Godot implementation
 
@@ -301,28 +291,31 @@ namespace Jogo25D.Chunks
 
                     if (layer.GetCellSourceId(cell) != -1)
                     {
-                        discovered.Add(cell);
+                        discovered.SetCell(cell, DiscoveredCellColor);
                     }
                 }
             }
         }
 
-        // Usado pelo MinimapUI - se a celula nao esta mais carregada (foi
-        // descarregada pelo streaming) mas ja foi vista antes, o minimapa
-        // ainda desenha ela como area explorada.
-        public bool IsDiscovered(TileMapLayer layer, Vector2I cell)
+        public Texture2D GetDiscoveredTexture(TileMapLayer layer, out Vector2I origin)
         {
             if (layer == _overworldLayer)
             {
-                return _discoveredOverworld.Contains(cell);
+                origin = _discoveredOverworld.Origin;
+
+                return _discoveredOverworld.GetTexture();
             }
 
             if (layer == _upsidedownLayer)
             {
-                return _discoveredUpsidedown.Contains(cell);
+                origin = _discoveredUpsidedown.Origin;
+
+                return _discoveredUpsidedown.GetTexture();
             }
 
-            return false;
+            origin = Vector2I.Zero;
+
+            return null;
         }
 
         private TileMapLayer GetOrCreateLayer(string dimensionId, Node2D dimensionParent)
@@ -357,7 +350,7 @@ namespace Jogo25D.Chunks
 
         private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
         {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            if (!IsPeerConnected(peerId))
             {
                 return;
             }
@@ -367,12 +360,35 @@ namespace Jogo25D.Chunks
 
         private void BroadcastUnloadChunk(long peerId, string dimensionId, Vector2I chunkCoord)
         {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            if (!IsPeerConnected(peerId))
             {
                 return;
             }
 
             RpcId(peerId, nameof(UnloadChunkReceive), dimensionId, chunkCoord);
+        }
+
+        private bool IsPeerConnected(long peerId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                return false;
+            }
+
+            if (peerId == Multiplayer.GetUniqueId())
+            {
+                return true;
+            }
+
+            foreach (var connectedId in Multiplayer.GetPeers())
+            {
+                if (connectedId == peerId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         #endregion
@@ -460,6 +476,24 @@ namespace Jogo25D.Chunks
 
         #endregion
 
+        #region Core - Peer disconnect
+
+        public void RemovePeer(long peerId)
+        {
+            RemovePeerFrom(_overworldLoadedPeers, peerId);
+            RemovePeerFrom(_upsidedownLoadedPeers, peerId);
+        }
+
+        private static void RemovePeerFrom(Dictionary<Vector2I, HashSet<long>> loadedPeers, long peerId)
+        {
+            foreach (var peers in loadedPeers.Values)
+            {
+                peers.Remove(peerId);
+            }
+        }
+
+        #endregion
+
         #region Core - Reset
 
         public void ResetState()
@@ -470,8 +504,8 @@ namespace Jogo25D.Chunks
             _upsidedownState.Clear();
             _overworldLoadedPeers.Clear();
             _upsidedownLoadedPeers.Clear();
-            _discoveredOverworld.Clear();
-            _discoveredUpsidedown.Clear();
+            _discoveredOverworld.Reset();
+            _discoveredUpsidedown.Reset();
             _overworldLayer = null;
             _upsidedownLayer = null;
             _evaluateTimer = 0f;

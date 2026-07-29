@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Overlay"]
-bg_color = Color(0.05, 0.05, 0.05, 0.85)
+bg_color = Color(0.05, 0.05, 0.05, 0.92)
 
 [sub_resource type="StyleBoxFlat" id="Style_MapPanel"]
 bg_color = Color(0.08, 0.1, 0.12, 0.95)
@@ -32,10 +32,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -400.0
-offset_top = -400.0
-offset_right = 400.0
-offset_bottom = 400.0
+offset_left = -459.5
+offset_top = -459.5
+offset_right = 459.5
+offset_bottom = 459.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_MapPanel")

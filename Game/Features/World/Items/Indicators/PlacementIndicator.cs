@@ -10,8 +10,6 @@ namespace Jogo25D.Items.Indicators
 
         public void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta)
         {
-            // So o dono mira/mostra o indicador - ver comentario
-            // equivalente em MiningIndicator.Update.
             if (!player.IsOwner())
             {
                 Hide(player);
@@ -35,8 +33,6 @@ namespace Jogo25D.Items.Indicators
                 return;
             }
 
-            // Colocar e sempre livre (so limitado pelo alcance) - sem
-            // checar RestrictMiningToAccessible, que so vale pra quebrar.
             var cell = player.ResolveCellInRange(layer, blockItem.Reach);
 
             if (layer.GetCellSourceId(cell) != -1)
