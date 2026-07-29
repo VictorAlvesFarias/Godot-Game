@@ -214,6 +214,28 @@ namespace Jogo25D.Characters
 
 			Inventory.EnsureSize(Data.Inventory);
 
+			// Reconstroi ItemDefinitions/ActionDefinitions a partir do que
+			// ja esta em Data - necessario mesmo pra quem nao e autoritativo,
+			// ja que pra esses clientes Data chega pronto via replicacao
+			// (SpawnPlayerReceive desserializa o Data inteiro direto, sem
+			// passar por GiveItem/GiveAbility) e os dois dicionarios sao
+			// cache local, nunca sincronizado pela rede.
+			foreach (var item in Data.Inventory.Items)
+			{
+				if (item != null)
+				{
+					EnsureItemDefinition(item);
+				}
+			}
+
+			foreach (var action in Data.UnlockedAbilities)
+			{
+				if (action != null)
+				{
+					EnsureActionDefinition(action.Id, action);
+				}
+			}
+
 			if (Data.EquippedItemId > 0 && Inventory.FindItem(Data.Inventory, Data.EquippedItemId) != null)
 			{
 				GD.Print("[Player._Ready] Running equip item");

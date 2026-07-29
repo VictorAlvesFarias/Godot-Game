@@ -30,9 +30,10 @@ namespace Jogo25D.Items
                 player.GiveEffect(effect.Id);
             }
 
-            instance.Quantity -= 1;
-
-            GD.Print($"[Use] '{Name}' consumido - {instance.Quantity} restante(s)");
+            if (player.IsOwner())
+            {
+                player.RemoveItemRequest(instance.InstanceId, 1);
+            }
         }
 
         #endregion

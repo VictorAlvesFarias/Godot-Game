@@ -929,10 +929,10 @@ namespace Jogo25D.Systems
 
         #region Core - Peer events
 
-		public void OnPeerConnected(long id)
+		public async void OnPeerConnected(long id)
 		{
 			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
-			
+
 			if (!Multiplayer.IsServer())
 			{
 				return;
@@ -949,6 +949,17 @@ namespace Jogo25D.Systems
 			player.GiveItem(startingWeapon);
 
             player.Data.EquippedItemId = startingWeapon.InstanceId;
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, player.Position);
+
+				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
+			}
+
+			chunkStreamingManager?.CatchUpPeer(id);
 
 			SpawnPlayer(player);
 
@@ -988,15 +999,6 @@ namespace Jogo25D.Systems
 
 				SpawnWorldItemRequest(worldItem, id);
 			}
-
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
-
-			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
-			{
-				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
-			}
-
-			chunkStreamingManager?.CatchUpPeer(id);
 		}
 
 		public void OnPeerDisconnected(long id)
