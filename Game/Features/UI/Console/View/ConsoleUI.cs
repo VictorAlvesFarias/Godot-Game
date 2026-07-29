@@ -415,9 +415,9 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					ItemDB.Initialize();
+					ItemFactory.Initialize();
 					
-					var def = ItemDB.Get(args[0]);
+					var def = ItemFactory.Create(args[0]);
 					
 					if (def == null)
 					{
@@ -442,14 +442,14 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					LocalPlayer.AddItemRequest(ItemDB.CreateInstance(def.Id));
+					LocalPlayer.AddItemRequest(ItemFactory.CreateInstance(def.Id));
 					
 					console.PrintSuccess($"+{qty}x {def.Name} adicionado ao inventÃ¡rio.");
 				},
 				getCompletions: partial =>
 				{
-					ItemDB.Initialize();
-					return ItemDB.GetAllIds()
+					ItemFactory.Initialize();
+					return ItemFactory.GetAllIds()
 						.Where(id => id.StartsWith(partial))
 						.OrderBy(id => id)
 						.ToList();
@@ -462,12 +462,12 @@ namespace Jogo25D.UI
 				description: "Lista todos os IDs de itens disponÃ­veis no banco de itens",
 				execute: (_, console) =>
 				{
-					ItemDB.Initialize();
-					var ids = ItemDB.GetAllIds().OrderBy(id => id).ToList();
+					ItemFactory.Initialize();
+					var ids = ItemFactory.GetAllIds().OrderBy(id => id).ToList();
 					console.PrintInfo($"{ids.Count} item(s) registrado(s):");
 					foreach (string id in ids)
 					{
-						var def = ItemDB.Get(id);
+						var def = ItemFactory.Create(id);
 						console.PrintNormal($"  {id,-25} {def?.Name}");
 					}
 				},

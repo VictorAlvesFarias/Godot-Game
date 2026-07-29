@@ -135,6 +135,14 @@ namespace Jogo25D.Actions
 
         #endregion
 
+        #region Core - Indicator
+
+        public virtual void UpdateIndicator(Player player, ActionDefinitionData data, float delta) { }
+
+        public virtual void DestroyIndicator() { }
+
+        #endregion
+
         #region Core - Effects
 
         protected Godot.Collections.Array<EffectDefinitionData> CreateEffects(EffectTriggerType type)

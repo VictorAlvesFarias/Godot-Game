@@ -9,7 +9,7 @@ namespace Jogo25D.Items
         #region Properties
 
         public long WorldItemId { get; set; }
-        public ItemDefinitionData Data { get; set; }
+        public ItemData Data { get; set; }
         public float Gravity { get; set; }
 
         private const float VisualScale = 0.7f;
@@ -92,7 +92,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var texture = ItemDB.Get(Data.Id)?.Icon;
+            var texture = ItemFactory.Create(Data.Id)?.Icon;
 
             _sprite.Texture = texture;
             _sprite.Scale = new Vector2(VisualScale, VisualScale);

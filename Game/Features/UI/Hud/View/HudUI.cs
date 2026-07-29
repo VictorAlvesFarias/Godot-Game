@@ -479,7 +479,7 @@ namespace Jogo25D.UI
 					continue;
 				}
 
-				var def = ActionDB.Get(action.Id);
+				var def = ActionFactory.Create(action.Id);
 				
 				if (iconRect != null)
 				{
@@ -681,7 +681,7 @@ namespace Jogo25D.UI
 
 				panel.AddThemeStyleboxOverride("panel", hotbarStyle);
 
-				var def = ItemDB.Get(slot?.Id);
+				var def = ItemFactory.Create(slot?.Id);
 				var empty = def == null || slot == null;
 
                 if (!empty && def?.Icon != null)

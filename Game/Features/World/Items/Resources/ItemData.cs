@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace Jogo25D.Features.World.Items.Resources
 {
-    public partial class ItemDefinitionData : Resource
+    public partial class ItemData : ItemDefinitionData
     {
-        public ItemDefinitionData() { }
+        public ItemData() { }
 
-        public ItemDefinitionData(string id)
+        public ItemData(string id)
         {
             Id = id;
         }
@@ -23,19 +23,23 @@ namespace Jogo25D.Features.World.Items.Resources
         #region Properties
 
         [Export, GodotDictionaryField]
-        public string Id { get; set; }
+        public long InstanceId { get; set; }
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public int Quantity { get; set; }
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
+        public int CurrentCharges { get; set; }
+
+        #endregion
+
+        #region Timers
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
+        public float ReloadTimer { get; set; }
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
+        public float CooldownRemainingTimer { get; set; }
 
         #endregion
     }

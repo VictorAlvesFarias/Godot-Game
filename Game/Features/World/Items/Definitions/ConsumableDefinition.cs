@@ -11,7 +11,7 @@ namespace Jogo25D.Items
     {
         #region Core - Virtuals
 
-        public override void Use(Player player, ItemDefinitionData instance)
+        public override void Use(Player player, ItemData instance)
         {
             if (instance == null || instance.Quantity <= 0)
             {

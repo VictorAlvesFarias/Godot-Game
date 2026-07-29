@@ -355,7 +355,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var def = ItemDB.Get(slot.Id);
+			var def = ItemFactory.Create(slot.Id);
 
 			GD.Print($"StartDrag: iniciando arrasto do slot {slotIndex} ({def?.Name})");
 
@@ -501,7 +501,7 @@ namespace Jogo25D.UI
 
 			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, index);
 
-			var definition = slot == null ? null : ItemDB.Get(slot.Id);
+			var definition = slot == null ? null : ItemFactory.Create(slot.Id);
 
 			if (slot == null || definition == null || definition.IsEmpty(slot))
 			{
@@ -552,7 +552,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var definition = ItemDB.Get(slot.Id);
+			var definition = ItemFactory.Create(slot.Id);
 
 			if (definition == null || definition.IsEmpty(slot))
 			{

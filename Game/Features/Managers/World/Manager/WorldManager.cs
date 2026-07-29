@@ -533,15 +533,15 @@ namespace Jogo25D.Systems
 
 			worldItem.Name = $"WorldItem{worldItemId}";
 			worldItem.WorldItemId = worldItemId;
-			worldItem.Data = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
+			worldItem.Data = GodotDictionaryParser.ToResource<ItemData>(data);
 			worldItem.Position = position;
 
 			SpawnWorldItem(worldItem);
 		}
 
-		public long SpawnWorldItemRequest(ItemDefinitionData item, Vector2 position)
+		public long SpawnWorldItemRequest(ItemData item, Vector2 position)
 		{
-			var worldItemId = ItemDB.NextInstanceId();
+			var worldItemId = ItemFactory.NextInstanceId();
 
 			var worldItem = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
 
@@ -637,7 +637,7 @@ namespace Jogo25D.Systems
 			{
 				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
 
-				SpawnWorldItemRequest(ItemDB.CreateInstance(grassBlock.DropItemId), dropPosition);
+				SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition);
 			}
 
 			Rpc(nameof(BreakBlockBroadcast), cell);
@@ -944,7 +944,7 @@ namespace Jogo25D.Systems
 			player.Position = Godot.Vector2.Zero;
             player.PeerId = id;
 
-            var startingWeapon = ItemDB.CreateInstance("bow_starting2");
+            var startingWeapon = ItemFactory.CreateInstance("bow_starting2");
 
 			player.GiveItem(startingWeapon);
 

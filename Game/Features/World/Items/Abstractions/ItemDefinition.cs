@@ -36,9 +36,9 @@ namespace Jogo25D.Items
 
         #region Core - Abstract
 
-        public abstract void Use(Player player, ItemDefinitionData data);
+        public abstract void Use(Player player, ItemData data);
 
-        public virtual void OnEquip(Player player, ItemDefinitionData data)
+        public virtual void OnEquip(Player player, ItemData data)
         {
             foreach (var modifier in Modifiers)
             {
@@ -51,7 +51,7 @@ namespace Jogo25D.Items
             }
         }
 
-        public virtual void OnUnequip(Player player, ItemDefinitionData data)
+        public virtual void OnUnequip(Player player, ItemData data)
         {
             foreach (var modifier in Modifiers)
             {
@@ -68,7 +68,7 @@ namespace Jogo25D.Items
 
         #region Core - Timers
 
-        public void TriggerReloadTimer(ItemDefinitionData data)
+        public void TriggerReloadTimer(ItemData data)
         {
             if (!CanReload(data))
             {
@@ -83,7 +83,7 @@ namespace Jogo25D.Items
             }
         }
 
-        public void TriggerCooldownTimer(ItemDefinitionData data)
+        public void TriggerCooldownTimer(ItemData data)
         {
             if (!CanUse(data))
             {
@@ -93,12 +93,12 @@ namespace Jogo25D.Items
             data.CooldownRemainingTimer = Cooldown;
         }
 
-        public float GetRemainingReloadTime(ItemDefinitionData data)
+        public float GetRemainingReloadTime(ItemData data)
         {
             return data == null ? 0f : Mathf.Max(0f, data.ReloadTimer);
         }
 
-        public bool IsEmpty(ItemDefinitionData data)
+        public bool IsEmpty(ItemData data)
         {
             return data == null || string.IsNullOrEmpty(data.Id) || data.Quantity <= 0;
         }
@@ -107,7 +107,7 @@ namespace Jogo25D.Items
 
         #region Core 
 
-        public float GetReloadProgress(ItemDefinitionData data)
+        public float GetReloadProgress(ItemData data)
         {
             var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var reloadCooldown = chargesProp != null ? chargesProp.ReloadCooldown : 1f;
@@ -120,7 +120,7 @@ namespace Jogo25D.Items
             return 1f - data.ReloadTimer / reloadCooldown;
         }
 
-        public bool CanReload(ItemDefinitionData data)
+        public bool CanReload(ItemData data)
         {
             var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
@@ -132,17 +132,17 @@ namespace Jogo25D.Items
             return !IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges;
         }
 
-        public bool IsReloading(ItemDefinitionData data)
+        public bool IsReloading(ItemData data)
         {
             return data.ReloadTimer > 0f;
         }
 
-        public void ConsumeCharge(ItemDefinitionData data)
+        public void ConsumeCharge(ItemData data)
         {
             data.CurrentCharges = Math.Max(0, data.CurrentCharges - 1);
         }
 
-        public void FinishReload(int chargesAdded, ItemDefinitionData data)
+        public void FinishReload(int chargesAdded, ItemData data)
         {
             var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var maxCharges = chargesProp != null ? chargesProp.MaxCharges : chargesAdded;
@@ -155,7 +155,7 @@ namespace Jogo25D.Items
 
         #region Core - Virtuals 
 
-        public virtual bool CanUse(ItemDefinitionData data)
+        public virtual bool CanUse(ItemData data)
         {
             var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
             var infiniteCharges = chargesProp != null ? chargesProp.InfiniteCharges : true;
@@ -164,7 +164,7 @@ namespace Jogo25D.Items
             return data.CooldownRemainingTimer <= 0f && !IsReloading(data) && hasCharges;
         }
 
-        public void Update(float delta, ItemDefinitionData data)
+        public void Update(float delta, ItemData data)
         {
             if (data.CooldownRemainingTimer > 0)
             {
@@ -175,6 +175,16 @@ namespace Jogo25D.Items
                 data. ReloadTimer -= delta;
             }
         }
+
+        #endregion
+
+        #region Core - Indicator
+
+        public virtual void UpdateIndicator(Player player, ItemData data, float delta) { }
+
+        public virtual void HideIndicator(Player player) { }
+
+        public virtual void DestroyIndicator() { }
 
         #endregion
     }

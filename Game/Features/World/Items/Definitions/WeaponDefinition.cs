@@ -18,7 +18,7 @@ namespace Jogo25D.Items
     {
         #region Core - Virtuals
 
-        public override void Use(Player player, ItemDefinitionData instance)
+        public override void Use(Player player, ItemData instance)
         {
             if (!CanUse(instance))
             {
@@ -111,6 +111,73 @@ namespace Jogo25D.Items
             {
                 player.ConsumeChargeRequest(instance.InstanceId);
             }
+        }
+
+        #endregion
+
+        #region Core - Indicator
+
+        private const float AimLineLength = 25.0f;
+        private const float AimLineWidth = 3.0f;
+        private const float AimLineOffset = 40.0f;
+        private static readonly Color AimLineColor = new Color(1f, 1f, 1f, 0.7f);
+
+        private Line2D _aimLine;
+
+        public override void UpdateIndicator(Player player, ItemData data, float delta)
+        {
+            EnsureAimLine(player);
+
+            var dir = player.Input.MousePosition - player.GlobalPosition;
+
+            if (dir.LengthSquared() < 0.01f)
+            {
+                _aimLine.Visible = false;
+
+                return;
+            }
+
+            var d = dir.Normalized();
+
+            _aimLine.ClearPoints();
+            _aimLine.AddPoint(d * AimLineOffset);
+            _aimLine.AddPoint(d * (AimLineOffset + AimLineLength));
+            _aimLine.Visible = true;
+        }
+
+        public override void HideIndicator(Player player)
+        {
+            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            {
+                _aimLine.Visible = false;
+            }
+        }
+
+        public override void DestroyIndicator()
+        {
+            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            {
+                _aimLine.QueueFree();
+            }
+
+            _aimLine = null;
+        }
+
+        private void EnsureAimLine(Player player)
+        {
+            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            {
+                return;
+            }
+
+            _aimLine = new Line2D
+            {
+                Width = AimLineWidth,
+                DefaultColor = AimLineColor,
+                ZIndex = 10,
+            };
+
+            player.AddChild(_aimLine);
         }
 
         #endregion

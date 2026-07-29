@@ -14,7 +14,7 @@ namespace Jogo25D.Features.World.Items.Resources
         #region Properties
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<ItemDefinitionData> Items { get; set; } = [];
+        public Godot.Collections.Array<ItemData> Items { get; set; } = [];
 
         [Export, GodotDictionaryField]
         public int Size { get; set; } = 16;

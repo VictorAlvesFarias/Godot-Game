@@ -14,7 +14,7 @@ namespace Jogo25D.Systems
     {
         #region Core - Actions
 
-        public bool AddItem(InventoryData inv, ItemDefinitionData item)
+        public bool AddItem(InventoryData inv, ItemData item)
         {
             GD.Print("[Inventory.AddItem] Starting method");
 
@@ -25,7 +25,7 @@ namespace Jogo25D.Systems
 
             EnsureSize(inv);
 
-            var definition = ItemDB.Get(item.Id);
+            var definition = ItemFactory.Create(item.Id);
 
             if (definition == null)
             {
@@ -83,7 +83,7 @@ namespace Jogo25D.Systems
                     return true;
                 }
 
-                var defSlot = ItemDB.Get(itemSlot.Id);
+                var defSlot = ItemFactory.Create(itemSlot.Id);
 
                 if (defSlot != null && defSlot.IsEmpty(itemSlot))
                 {
@@ -148,7 +148,7 @@ namespace Jogo25D.Systems
 
         #region Core - Information
 
-        public ItemDefinitionData GetSlot(InventoryData inv, int index)
+        public ItemData GetSlot(InventoryData inv, int index)
         {
             if (inv == null || index < 0 || index >= inv.Size || index >= inv.Items.Count)
             {
@@ -176,7 +176,7 @@ namespace Jogo25D.Systems
             return -1;
         }
 
-        public ItemDefinitionData FindItem(InventoryData inv, long instanceId)
+        public ItemData FindItem(InventoryData inv, long instanceId)
         {
             var index = FindSlotIndex(inv, instanceId);
 

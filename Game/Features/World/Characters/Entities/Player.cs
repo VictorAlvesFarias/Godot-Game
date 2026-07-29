@@ -54,16 +54,13 @@ namespace Jogo25D.Characters
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
-        public bool IsMining { get; set; }
-        public Vector2I MiningCell { get; set; }
-        public float MiningElapsed { get; set; }
 
         #endregion
 
-        #region Indicators 
+        #region Indicators
 
-		public Dictionary<string, IActionIndicator> ActionIndicators { get; } = new();
-		public IItemIndicator ItemIndicator { get; set; }
+		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
+		public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
 
         #endregion
 
@@ -75,8 +72,8 @@ namespace Jogo25D.Characters
 
         #region Node references
 
-        private WorldManager NetworkManager { get; set; }
-        
+        public WorldManager NetworkManager { get; set; }
+
 		#endregion
 
         #region Node children references
@@ -114,7 +111,6 @@ namespace Jogo25D.Characters
 			}
 		}
 
-
 		#endregion
 
 		#region Godot implementation
@@ -126,9 +122,9 @@ namespace Jogo25D.Characters
 
 			AddToGroup("players");
 
-			GD.Print("[Player._Ready] Initializating ItemDB");
+			GD.Print("[Player._Ready] Initializating ItemFactory");
 
-			ItemDB.Initialize();
+			ItemFactory.Initialize();
 
 			GD.Print("[Player._Ready] Trying get Nodes");
 
@@ -157,58 +153,58 @@ namespace Jogo25D.Characters
 				Data ??= new PlayerData();
 				Data.Inventory ??= new InventoryData();
 
-                GiveItem(ItemDB.CreateInstance("fire_slash_sword"));
-                GiveItem(ItemDB.CreateInstance("blue_fire_sword"));
-                GiveItem(ItemDB.CreateInstance("blue_fire_sword_alt"));
-                GiveItem(ItemDB.CreateInstance("dark_slash_sword"));
-                GiveItem(ItemDB.CreateInstance("whip"));
-                GiveItem(ItemDB.CreateInstance("green_blow_sword"));
-                GiveItem(ItemDB.CreateInstance("real_sword"));
-				GiveItem(ItemDB.CreateInstance("bow_starting2"));
+                GiveItem(ItemFactory.CreateInstance("fire_slash_sword"));
+                GiveItem(ItemFactory.CreateInstance("blue_fire_sword"));
+                GiveItem(ItemFactory.CreateInstance("blue_fire_sword_alt"));
+                GiveItem(ItemFactory.CreateInstance("dark_slash_sword"));
+                GiveItem(ItemFactory.CreateInstance("whip"));
+                GiveItem(ItemFactory.CreateInstance("green_blow_sword"));
+                GiveItem(ItemFactory.CreateInstance("real_sword"));
+				GiveItem(ItemFactory.CreateInstance("bow_starting2"));
 
-				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
+				var startingMeleeWeapon = ItemFactory.CreateInstance("sword_starting");
 
 				GiveItem(startingMeleeWeapon);
 
-				GiveItem(ItemDB.CreateInstance("pickaxe_starting"));
+				GiveItem(ItemFactory.CreateInstance("pickaxe_starting"));
 
-				var startingGrassBlocks = ItemDB.CreateInstance("block_grass");
+				var startingGrassBlocks = ItemFactory.CreateInstance("block_grass");
 
 				startingGrassBlocks.Quantity = 20;
 
 				GiveItem(startingGrassBlocks);
 
-				var startingPoisonFlask = ItemDB.CreateInstance("poison_flask");
+				var startingPoisonFlask = ItemFactory.CreateInstance("poison_flask");
 
 				startingPoisonFlask.Quantity = 20;
 
 				GiveItem(startingPoisonFlask);
 
-				var startingFireDamagePotion = ItemDB.CreateInstance("fire_damage_potion");
+				var startingFireDamagePotion = ItemFactory.CreateInstance("fire_damage_potion");
 
 				startingFireDamagePotion.Quantity = 20;
 
 				GiveItem(startingFireDamagePotion);
 
-				var startingHealthRegenPotion = ItemDB.CreateInstance("health_regen_potion");
+				var startingHealthRegenPotion = ItemFactory.CreateInstance("health_regen_potion");
 
 				startingHealthRegenPotion.Quantity = 20;
 
 				GiveItem(startingHealthRegenPotion);
 
-				var startingSpeedPotion = ItemDB.CreateInstance("speed_potion");
+				var startingSpeedPotion = ItemFactory.CreateInstance("speed_potion");
 
 				startingSpeedPotion.Quantity = 20;
 
 				GiveItem(startingSpeedPotion);
 
-				var startingInstantHealPotion = ItemDB.CreateInstance("instant_heal_potion");
+				var startingInstantHealPotion = ItemFactory.CreateInstance("instant_heal_potion");
 
 				startingInstantHealPotion.Quantity = 20;
 
 				GiveItem(startingInstantHealPotion);
 
-				foreach (var actionId in ActionDB.GetAllIds())
+				foreach (var actionId in ActionFactory.GetAllIds())
 				{
 					GiveAbility(actionId);
 				}
@@ -340,7 +336,7 @@ namespace Jogo25D.Characters
                     continue;
                 }
 
-                ItemDB.Get(item.Id)?.Update(dt, item);
+                ItemDefinitions.GetValueOrDefault(item.InstanceId)?.Update(dt, item);
             }
         }
 
@@ -355,14 +351,10 @@ namespace Jogo25D.Characters
                     continue;
                 }
 
-                var def = ActionDB.Get(action.Id);
+                var def = ActionDefinitions.GetValueOrDefault(action.Id);
 
                 def?.Update(dt, this, action);
-
-                if (def != null && ActionIndicators.TryGetValue(action.Id, out var indicator))
-                {
-                    indicator.Update(this, def, action, dt);
-                }
+                def?.UpdateIndicator(this, action, dt);
             }
         }
 
@@ -410,9 +402,9 @@ namespace Jogo25D.Characters
 		{
             var equipped = EquippedInstance();
 
-            if (ItemIndicator != null && equipped != null)
+            if (equipped != null && ItemDefinitions.TryGetValue(equipped.InstanceId, out var def))
             {
-                ItemIndicator.Update(this, equipped, dt);
+                def.UpdateIndicator(this, equipped, dt);
             }
         }
 
@@ -600,22 +592,27 @@ namespace Jogo25D.Characters
 		public void HandleUseItem(float delta)
 		{
 			var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
+			var def = data == null ? null : ItemDefinitions.GetValueOrDefault(data.InstanceId);
 
-			if (data == null)
+			if (data == null || def == null)
 			{
-				ResetMining();
+				if (def is ToolDefinition idleTool)
+				{
+					idleTool.ResetMining();
+				}
 
 				return;
 			}
 
 			if (!Input.Attack)
 			{
-				ResetMining();
+				if (def is ToolDefinition tool)
+				{
+					tool.ResetMining();
+				}
 
 				return;
 			}
-
-			var def = ItemDB.Get(data.Id);
 
 			def.Use(this, data);
 		}
@@ -629,7 +626,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var def = ItemDB.Get(data.Id);
+			var def = ItemDefinitions.GetValueOrDefault(data.InstanceId);
 			var chargesProp = Resolver.Resolve(def.Properties.OfType<ChargesPropertyData>().ToList(), data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 			if (chargesProp == null || chargesProp.InfiniteCharges)
@@ -715,96 +712,6 @@ namespace Jogo25D.Characters
 				?? parent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
 		}
 
-		public void UpdateMining(TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
-		{
-			if (layer.GetCellSourceId(targetCell) == -1)
-			{
-				ResetMining();
-
-				return;
-			}
-
-			if (!IsMining || MiningCell != targetCell)
-			{
-				IsMining = true;
-				MiningCell = targetCell;
-				MiningElapsed = 0f;
-			}
-
-			MiningElapsed += (float)GetPhysicsProcessDeltaTime();
-
-			if (MiningElapsed < breakTimeSeconds)
-			{
-				return;
-			}
-
-			ResetMining();
-
-			NetworkManager?.BreakBlockClientRequest(targetCell);
-		}
-
-		public void ResetMining()
-		{
-			IsMining = false;
-			MiningElapsed = 0f;
-		}
-
-		public Vector2I ResolveCellInRange(TileMapLayer layer, float reach)
-		{
-			var targetWorldPos = Input.MousePosition;
-			var toTarget = targetWorldPos - GlobalPosition;
-
-			if (toTarget.Length() > reach)
-			{
-				targetWorldPos = GlobalPosition + toTarget.Normalized() * reach;
-			}
-
-			return layer.LocalToMap(layer.ToLocal(targetWorldPos));
-		}
-
-		public (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, Vector2 origin, Vector2 aimPosition, float reach)
-		{
-			var toAim = aimPosition - origin;
-			var distance = Mathf.Min(toAim.Length(), reach);
-			var direction = toAim.LengthSquared() > 0.001f ? toAim.Normalized() : Vector2.Right;
-
-			var tileSize = Mathf.Max(1, layer.TileSet.TileSize.X);
-			var stepSize = tileSize * 0.5f;
-			var steps = Mathf.Max(1, Mathf.CeilToInt(distance / stepSize));
-
-			var lastEmptyCell = layer.LocalToMap(layer.ToLocal(origin));
-
-			for (int i = 1; i <= steps; i++)
-			{
-				var sampleDistance = Mathf.Min(distance, i * stepSize);
-				var samplePos = origin + direction * sampleDistance;
-				var cell = layer.LocalToMap(layer.ToLocal(samplePos));
-
-				if (layer.GetCellSourceId(cell) != -1)
-				{
-					return (true, cell, lastEmptyCell);
-				}
-
-				lastEmptyCell = cell;
-			}
-
-			return (false, default, lastEmptyCell);
-		}
-
-		public (bool Found, Vector2I Cell) ResolveMiningTargetCell(TileMapLayer layer, float reach)
-		{
-			if (Input.RestrictMiningToAccessible)
-			{
-				var hit = RaycastTiles(layer, GlobalPosition, Input.MousePosition, reach);
-
-				return (hit.FoundSolid, hit.SolidCell);
-			}
-
-			var cell = ResolveCellInRange(layer, reach);
-
-			return (layer.GetCellSourceId(cell) != -1, cell);
-		}
-
 		#endregion
 
 		#region Core - Items system
@@ -827,7 +734,7 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var slotDef = ItemDB.Get(slot.Id);
+				var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
 				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
@@ -856,7 +763,7 @@ namespace Jogo25D.Characters
 					continue;
 				}
 
-				var slotDef = ItemDB.Get(slot.Id);
+				var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
 				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
 				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
@@ -897,47 +804,69 @@ namespace Jogo25D.Characters
 
 			if (previousItem != null && previousItem.InstanceId != instanceId)
 			{
-				var previousDef = ItemDB.Get(previousItem.Id);
+				var previousDef = ItemDefinitions.GetValueOrDefault(previousItem.InstanceId);
 
 				previousDef?.OnUnequip(this, previousItem);
-
-				ItemIndicator?.Destroy();
-				ItemIndicator = null;
+				previousDef?.HideIndicator(this);
 			}
 
 			Data.EquippedItemId = instanceId;
 
-			var newDef = ItemDB.Get(item.Id);
-
-			newDef?.OnEquip(this, item);
-
-			if (ItemIndicator == null)
-			{
-				ItemIndicator = ItemIndicatorFactory.Create(newDef);
-			}
+			ItemDefinitions.GetValueOrDefault(item.InstanceId)?.OnEquip(this, item);
 
 			EmitSignal(SignalName.ItemEquipped, instanceId);
 		}
-		
-		public void GiveItem(ItemDefinitionData item)
+
+
+		private void EnsureItemDefinition(ItemData item)
 		{
-			if (Data?.Inventory == null)
+			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
 			{
 				return;
 			}
 
-			if (Inventory.AddItem(Data.Inventory, item))
+			if (Inventory.FindItem(Data.Inventory, item.InstanceId) == null)
 			{
-				EmitSignal(SignalName.InventoryChanged);
+				return;
+			}
+
+			ItemDefinitions[item.InstanceId] = ItemFactory.Create(item.Id);
+		}
+        public void GiveItem(ItemData item)
+        {
+            if (Data?.Inventory == null)
+            {
+                return;
+            }
+
+            if (Inventory.AddItem(Data.Inventory, item))
+            {
+                EnsureItemDefinition(item);
+
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
+
+        private void RemoveItemDefinitionIfGone(long instanceId)
+		{
+			if (Inventory.FindItem(Data.Inventory, instanceId) != null)
+			{
+				return;
+			}
+
+			if (ItemDefinitions.TryGetValue(instanceId, out var def))
+			{
+				def.DestroyIndicator();
+				ItemDefinitions.Remove(instanceId);
 			}
 		}
 
-		public ItemDefinitionData GetSlot(int index)
+		public ItemData GetSlot(int index)
 		{
 			return Inventory.GetSlot(Data?.Inventory, index);
 		}
 
-		public ItemDefinitionData EquippedInstance()
+		public ItemData EquippedInstance()
 		{
 			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
 		}
@@ -969,39 +898,44 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			Data.UnlockedAbilities.Add(ActionDB.CreateInstance(actionId, this));
+			var data = ActionFactory.CreateInstance(actionId);
 
-			EnsureActionIndicator(actionId);
+			Data.UnlockedAbilities.Add(data);
+
+			EnsureActionDefinition(actionId, data);
 
 			EmitSignal(SignalName.AbilitiesChanged);
 		}
 
-        public void EnsureActionIndicator(string actionId)
+        public void EnsureActionDefinition(string actionId, ActionDefinitionData data)
 		{
-			if (string.IsNullOrEmpty(actionId) || ActionIndicators.ContainsKey(actionId))
+			if (string.IsNullOrEmpty(actionId) || ActionDefinitions.ContainsKey(actionId))
 			{
 				return;
 			}
 
-			var def = ActionDB.Get(actionId);
-			var indicator = def != null ? ActionIndicatorFactory.Create(def) : null;
+			var def = ActionFactory.Create(actionId);
 
-			if (indicator != null)
+			if (def == null)
 			{
-				ActionIndicators[actionId] = indicator;
+				return;
 			}
+
+			ActionDefinitions[actionId] = def;
+
+			def.OnCreate(this, data);
 		}
 
-        public void RemoveActionIndicator(string actionId)
+        public void RemoveActionDefinition(string actionId)
 		{
-			if (string.IsNullOrEmpty(actionId) || !ActionIndicators.TryGetValue(actionId, out var indicator))
+			if (string.IsNullOrEmpty(actionId) || !ActionDefinitions.TryGetValue(actionId, out var def))
 			{
 				return;
 			}
 
-			indicator.Destroy();
+			def.DestroyIndicator();
 
-			ActionIndicators.Remove(actionId);
+			ActionDefinitions.Remove(actionId);
 		}
 
         public bool IsAbilityStillGranted(string actionId)
@@ -1049,9 +983,11 @@ namespace Jogo25D.Characters
 
 					if (!UnlockedAbilities.Any(e => e.Id == abilityId))
 					{
-						UnlockedAbilities.Add(ActionDB.CreateInstance(abilityId, this));
+						var abilityData = ActionFactory.CreateInstance(abilityId);
 
-						EnsureActionIndicator(abilityId);
+						UnlockedAbilities.Add(abilityData);
+
+						EnsureActionDefinition(abilityId, abilityData);
 					}
 				}
 
@@ -1076,7 +1012,7 @@ namespace Jogo25D.Characters
 
 					if (!string.IsNullOrEmpty(removedId) && !IsAbilityStillGranted(removedId))
 					{
-						RemoveActionIndicator(removedId);
+						RemoveActionDefinition(removedId);
 					}
 				}
 			}
@@ -1187,7 +1123,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (ItemDB.Get(item.Id) is not BlockItemDefinition blockItemDef)
+            if (ItemDefinitions.GetValueOrDefault(item.InstanceId) is not BlockItemDefinition blockItemDef)
             {
                 return;
             }
@@ -1455,15 +1391,17 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void AddItemReceive(Godot.Collections.Dictionary data)
 		{
-			var item = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
+			var item = GodotDictionaryParser.ToResource<ItemData>(data);
 
 			if (Inventory.AddItem(Data.Inventory, item))
 			{
+				EnsureItemDefinition(item);
+
 				EmitSignal(SignalName.InventoryChanged);
 			}
 		}
 
-		public void AddItemRequest(ItemDefinitionData item)
+		public void AddItemRequest(ItemData item)
 		{
 			var data = GodotDictionaryParser.ToDictionary(item);
 
@@ -1503,6 +1441,8 @@ namespace Jogo25D.Characters
 		{
 			if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
 			{
+				RemoveItemDefinitionIfGone(instanceId);
+
 				EmitSignal(SignalName.InventoryChanged);
 			}
 		}
@@ -1539,9 +1479,9 @@ namespace Jogo25D.Characters
 			}
 
 			var dropQuantity = Mathf.Min(quantity, item.Quantity);
-			var dropData = (ItemDefinitionData)item.Duplicate(true);
+			var dropData = (ItemData)item.Duplicate(true);
 
-			dropData.InstanceId = ItemDB.NextInstanceId();
+			dropData.InstanceId = ItemFactory.NextInstanceId();
 			dropData.Quantity = dropQuantity;
 
 			RemoveItemRequest(instanceId, dropQuantity);
@@ -1580,6 +1520,8 @@ namespace Jogo25D.Characters
 
 			if (Inventory.AddItem(Data.Inventory, worldItem.Data))
 			{
+				EnsureItemDefinition(worldItem.Data);
+
 				EmitSignal(SignalName.InventoryChanged);
 			}
 
@@ -1612,7 +1554,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			ItemDB.Get(data.Id)?.ConsumeCharge(data);
+			ItemDefinitions.GetValueOrDefault(data.InstanceId)?.ConsumeCharge(data);
 		}
 
 		public void ConsumeChargeRequest(long instanceId)
@@ -1639,7 +1581,7 @@ namespace Jogo25D.Characters
 
 			var taken = RemoveAmmoByChargeType(chargeType, needed);
 
-			ItemDB.Get(data.Id)?.FinishReload(taken, data);
+			ItemDefinitions.GetValueOrDefault(data.InstanceId)?.FinishReload(taken, data);
 		}
 
 		public void FinishReloadRequest(long instanceId, string chargeType, int needed)
