@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
@@ -16,6 +17,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Jogo25D.Constants.Assets.Icons;
 
 namespace Jogo25D.Characters
 {
@@ -46,31 +48,47 @@ namespace Jogo25D.Characters
 		public string DisplayName { get; set; } = "";
 		public float KnockbackTimer { get; set; }  = 0f;
         public float KnockbackDuration { get; set; } = 0.2f;
-		public PlayerData Data { get; set; } = new PlayerData();
+        public float DamagePopupDuration { get; set; } = 0.8f;
+		public float DamagePopupRiseDistance { get; set; } = 26f;
+        public PlayerData Data { get; set; } = new PlayerData();
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
+        public bool IsMining { get; set; }
+        public Vector2I MiningCell { get; set; }
+        public float MiningElapsed { get; set; }
 
+        #endregion
+
+        #region Indicators 
+
+		public Dictionary<string, IActionIndicator> ActionIndicators { get; } = new();
+		public IItemIndicator ItemIndicator { get; set; }
+
+        #endregion
+
+        #region Systems
+
+        public Inventory Inventory { get; set; } = new Inventory();
+
+        #endregion
+
+        #region Node references
+
+        private WorldManager NetworkManager { get; set; }
+        
 		#endregion
 
-		#region Systems
+        #region Node children references
 
-		public Inventory Inventory { get; set; } = new Inventory();
-
-		#endregion
-
-		#region Node references
-
-		private WorldManager NetworkManager { get; set; }
+		public PlayerInput Input { get; set; }
 		public Node2D Visuals { get; set; }
 		public AnimatedSprite2D Sprite { get; set; }
 		public CollisionShape2D Shape { get; set; }
-		public PlayerInput Input { get; set; }
 		public Node2D Labels { get; set; }
 		public Label NameLabel { get; set; }
 		public Label HealthLabel { get; set; }
 		public Label InteractPromptLabel { get; set; }
-		private float _healthLabelBaseY;
 
 		#endregion
 
@@ -95,6 +113,7 @@ namespace Jogo25D.Characters
 				Shape.Position = position;
 			}
 		}
+
 
 		#endregion
 
@@ -125,8 +144,6 @@ namespace Jogo25D.Characters
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
 			InteractPromptLabel = GetNodeOrNull<Label>("Labels/InteractPromptLabel");
 
-			_healthLabelBaseY = HealthLabel?.Position.Y ?? 0f;
-
 			GD.Print("[Player._Ready] Setting default states");
 
 			Sprite.Play("idle");
@@ -152,6 +169,14 @@ namespace Jogo25D.Characters
 				var startingMeleeWeapon = ItemDB.CreateInstance("sword_starting");
 
 				GiveItem(startingMeleeWeapon);
+
+				GiveItem(ItemDB.CreateInstance("pickaxe_starting"));
+
+				var startingGrassBlocks = ItemDB.CreateInstance("block_grass");
+
+				startingGrassBlocks.Quantity = 20;
+
+				GiveItem(startingGrassBlocks);
 
 				var startingPoisonFlask = ItemDB.CreateInstance("poison_flask");
 
@@ -205,22 +230,10 @@ namespace Jogo25D.Characters
 		{
 			var dt = (float)delta;
 
-			TickEffects(Data.CurrentEffects, dt);
-			TickEffects(CurrentEffects, dt);
-			TickKnockback(dt);
-			UpdateItemIndicator(dt);
-			UpdateAbilities(Data.UnlockedAbilities, dt);
-			UpdateAbilities(UnlockedAbilities, dt);
-
-			foreach(var item in Data.Inventory.Items)
-			{
-				if (item == null)
-				{
-					continue;
-				}
-
-				ItemDB.Get(item.Id)?.Update(dt, item);
-			}
+			UpdateEffects(dt);
+            UpdateKnockback(dt);
+			UpdateAbilities(dt);
+			UpdateItems(dt);
 
 			if (IsOwner())
 			{
@@ -234,27 +247,8 @@ namespace Jogo25D.Characters
 			HandleReload(dt);
 			UpdateAnimation();
 			UpdatePvpCollisionExceptions();
-		}
-
-		private void UpdatePvpCollisionExceptions()
-		{
-			foreach (var other in GetTree().GetNodesInGroup("players").OfType<Player>())
-			{
-				if (other == this)
-				{
-					continue;
-				}
-
-				if (Data.PvpEnabled && other.Data.PvpEnabled)
-				{
-					RemoveCollisionExceptionWith(other);
-				}
-				else
-				{
-					AddCollisionExceptionWith(other);
-				}
-			}
-		}
+			UpdateIndicators(dt);
+        }
 
 		public override void _Process(double delta)
 		{
@@ -262,223 +256,264 @@ namespace Jogo25D.Characters
 			UpdateInteractPrompt();
 		}
 
-		private void UpdateNameplate()
+        #endregion
+
+        #region Updates
+
+        protected void UpdatePvpCollisionExceptions()
+        {
+            foreach (var other in GetTree().GetNodesInGroup("players").OfType<Player>())
+            {
+                if (other == this)
+                {
+                    continue;
+                }
+
+                if (Data.PvpEnabled && other.Data.PvpEnabled)
+                {
+                    RemoveCollisionExceptionWith(other);
+                }
+                else
+                {
+                    AddCollisionExceptionWith(other);
+                }
+            }
+        }
+
+        protected void UpdateNameplate()
+        {
+            if (NameLabel == null || HealthLabel == null)
+            {
+                return;
+            }
+
+            if (IsOwner())
+            {
+                NameLabel.Visible = false;
+                HealthLabel.Visible = false;
+
+                return;
+            }
+
+            var hasName = !string.IsNullOrEmpty(DisplayName);
+
+            NameLabel.Visible = hasName;
+            NameLabel.Text = DisplayName;
+
+            HealthLabel.Visible = true;
+            HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
+        }
+
+        protected void UpdateInteractPrompt()
+        {
+            if (InteractPromptLabel == null)
+            {
+                return;
+            }
+
+            if (!IsOwner())
+            {
+                InteractPromptLabel.Visible = false;
+
+                return;
+            }
+
+            var manager = GetParent()?.GetNodeOrNull<TileEntityManager>("TileEntityManager");
+
+            if (manager == null || !manager.TryGetPromptFor(this, out var prompt))
+            {
+                InteractPromptLabel.Visible = false;
+
+                return;
+            }
+
+            InteractPromptLabel.Text = prompt;
+            InteractPromptLabel.Visible = true;
+        }
+
+        protected void UpdateItems(float dt)
 		{
-			if (NameLabel == null || HealthLabel == null)
-			{
-				return;
-			}
+            foreach (var item in Data.Inventory.Items)
+            {
+                if (item == null)
+                {
+                    continue;
+                }
 
-			if (IsOwner())
-			{
-				NameLabel.Visible = false;
-				HealthLabel.Visible = false;
+                ItemDB.Get(item.Id)?.Update(dt, item);
+            }
+        }
 
-				return;
-			}
+        protected void UpdateAbilities(float dt)
+        {
+			var abilities = Resolver.Resolve(Data.UnlockedAbilities, UnlockedAbilities);
 
-			var hasName = !string.IsNullOrEmpty(DisplayName);
+            foreach (var action in abilities)
+            {
+                if (action == null)
+                {
+                    continue;
+                }
 
-			NameLabel.Visible = hasName;
-			NameLabel.Text = DisplayName;
+                var def = ActionDB.Get(action.Id);
 
-			HealthLabel.Visible = true;
-			HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
-		}
+                def?.Update(dt, this, action);
 
-		private void UpdateInteractPrompt()
+                if (def != null && ActionIndicators.TryGetValue(action.Id, out var indicator))
+                {
+                    indicator.Update(this, def, action, dt);
+                }
+            }
+        }
+
+		protected void UpdateEffects(float dt)
 		{
-			if (InteractPromptLabel == null)
-			{
-				return;
-			}
+            var effects = Resolver.Resolve(Data.CurrentEffects, CurrentEffects);
 
-			if (!IsOwner())
-			{
-				InteractPromptLabel.Visible = false;
+            for (int i = effects.Count - 1; i >= 0; i--)
+            {
+                var effect = effects[i];
 
-				return;
-			}
+                if (effect == null)
+                {
+                    effects.RemoveAt(i);
 
-			var manager = GetParent()?.GetNodeOrNull<TileEntityManager>("TileEntityManager");
+                    continue;
+                }
 
-			if (manager == null || !manager.TryGetPromptFor(this, out var prompt))
-			{
-				InteractPromptLabel.Visible = false;
+                EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
 
-				return;
-			}
+                if (effect.Expired)
+                {
+                    effects.RemoveAt(i);
+                }
+            }
+        }
 
-			InteractPromptLabel.Text = prompt;
-			InteractPromptLabel.Visible = true;
-		}
+        protected void UpdateKnockback(float dt)
+        {
+            if (KnockbackTimer <= 0f)
+            {
+                return;
+            }
 
-		private void TickEffects(Godot.Collections.Array<EffectDefinitionData> effects, float dt)
+            KnockbackTimer -= dt;
+
+            if (KnockbackTimer <= 0f)
+            {
+                Data.CanUpdateMovement = true;
+                Velocity = Vector2.Zero;
+            }
+        }
+
+		protected void UpdateIndicators(float dt)
 		{
-			for (int i = effects.Count - 1; i >= 0; i--)
-			{
-				var effect = effects[i];
+            var equipped = EquippedInstance();
 
-				if (effect == null)
-				{
-					effects.RemoveAt(i);
+            if (ItemIndicator != null && equipped != null)
+            {
+                ItemIndicator.Update(this, equipped, dt);
+            }
+        }
 
-					continue;
-				}
+        #endregion
 
-				EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+        #region Animation 
 
-				if (effect.Expired)
-				{
-					effects.RemoveAt(i);
-				}
-			}
-		}
+        public void UpdateAnimation()
+        {
+            if (Velocity.X != 0)
+            {
+                SetFacing(Velocity.X < 0);
+            }
 
-		private void UpdateAbilities(Godot.Collections.Array<ActionDefinitionData> abilities, float dt)
-		{
-			foreach (var action in abilities)
-			{
-				if (action == null)
-				{
-					continue;
-				}
+            if (Sprite.Animation == "dead")
+            {
+                return;
+            }
 
-				var def = ActionDB.Get(action.Id);
+            if (Sprite.Animation == "melee" && Sprite.IsPlaying())
+            {
+                return;
+            }
 
-				def?.Update(dt, this, action);
+            if (Sprite.Animation == "mining" && Input.Attack)
+            {
+                return;
+            }
 
-				if (def != null)
-				{
-					GetActionIndicator(def)?.Update(this, def, action, dt);
-				}
-			}
-		}
+            if (Sprite.Animation == "taking_damage" && Sprite.IsPlaying())
+            {
+                return;
+            }
 
-		private void UpdateItemIndicator(float dt)
-		{
-			var equipped = EquippedInstance();
+            if (!IsOnFloor())
+            {
+                if (Velocity.Y < 0)
+                {
+                    if (Sprite.Animation != "jump")
+                    {
+                        GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> jump");
+                        Sprite.Play("jump");
+                    }
+                }
+                else
+                {
+                    if (Sprite.Animation != "falling" && Sprite.Animation != "dash")
+                    {
+                        GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> falling");
+                        Sprite.Play("falling");
+                    }
+                }
+                return;
+            }
 
-			if (equipped == null)
-			{
-				return;
-			}
+            if (Sprite.Animation == "dash" && Sprite.IsPlaying())
+                return;
 
-			var def = ItemDB.Get(equipped.Id);
+            if (Velocity.X != 0)
+            {
+                if (Sprite.Animation != "run")
+                {
+                    GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> run");
+                    Sprite.Play("run");
+                }
+            }
+            else
+            {
+                if (Sprite.Animation != "idle")
+                {
+                    GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> idle");
 
-			if (def != null)
-			{
-				GetItemIndicator(def)?.Update(this, def, equipped, dt);
-			}
-		}
+                    Sprite.Play("idle");
+                }
+            }
+        }
 
-		private readonly Dictionary<Type, IItemIndicator> _itemIndicators = new();
-		private readonly Dictionary<Type, IActionIndicator> _actionIndicators = new();
-		private readonly Dictionary<string, Node2D> _indicatorNodes = new();
+        #endregion
 
-		private IItemIndicator GetItemIndicator(ItemDefinition definition)
-		{
-			var type = definition.GetType();
+        #region Utils
 
-			if (!_itemIndicators.TryGetValue(type, out var indicator))
-			{
-				indicator = ItemIndicatorFactory.Create(definition);
+        public bool IsOwner()
+        {
+            return PeerId == Multiplayer.GetUniqueId();
+        }
 
-				if (indicator != null)
-				{
-					_itemIndicators[type] = indicator;
-				}
-			}
+        public bool IsServer()
+        {
+            return PeerId == 1;
+        }
 
-			return indicator;
-		}
+        public bool IsAuthoritative()
+        {
+            return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
+        }
 
-		private IActionIndicator GetActionIndicator(ActionDefinition definition)
-		{
-			var type = definition.GetType();
+        #endregion
 
-			if (!_actionIndicators.TryGetValue(type, out var indicator))
-			{
-				indicator = ActionIndicatorFactory.Create(definition);
+        #region Core - Damage system
 
-				if (indicator != null)
-				{
-					_actionIndicators[type] = indicator;
-				}
-			}
-
-			return indicator;
-		}
-
-		public T GetOrCreateIndicator<T>(string key, Action<T> configure = null) where T : Node2D, new()
-		{
-			if (_indicatorNodes.TryGetValue(key, out var existing) && existing is T typed && IsInstanceValid(existing))
-			{
-				return typed;
-			}
-
-			if (existing != null && IsInstanceValid(existing))
-			{
-				existing.QueueFree();
-			}
-
-			var node = new T();
-
-			configure?.Invoke(node);
-
-			AddChild(node);
-
-			_indicatorNodes[key] = node;
-
-			return node;
-		}
-
-		#endregion
-
-		#region Core - Damage system
-
-		public int GetMaxHealth()
-		{
-			var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
-
-			return Resolver.Resolve(Data.Properties.OfType<HealthPropertyData>().ToList(), Properties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
-		}
-
-		public Godot.Collections.Array<ActionDefinitionData> GetAllUnlockedAbilities()
-		{
-			var result = new Godot.Collections.Array<ActionDefinitionData>();
-
-			foreach (var action in Data.UnlockedAbilities)
-			{
-				result.Add(action);
-			}
-
-			foreach (var action in UnlockedAbilities)
-			{
-				result.Add(action);
-			}
-
-			return result;
-		}
-
-		public Godot.Collections.Array<EffectDefinitionData> GetAllCurrentEffects()
-		{
-			var result = new Godot.Collections.Array<EffectDefinitionData>();
-
-			foreach (var effect in Data.CurrentEffects)
-			{
-				result.Add(effect);
-			}
-
-			foreach (var effect in CurrentEffects)
-			{
-				result.Add(effect);
-			}
-
-			return result;
-		}
-
-		public virtual void ReceiveDamage(DamageInfo damage)
+        public virtual void ReceiveDamage(DamageInfo damage)
 		{
 			var resistanceFactor = 0f;
 
@@ -501,63 +536,34 @@ namespace Jogo25D.Characters
 					SetHealthRequest(Mathf.Max(0, Data.CurrentHealth - finalDamage));
 				}
 			}
-
 		}
 
-		public void ApplyKnockback(Vector2 direction, float force)
+		public int GetMaxHealth()
 		{
-			if (force <= 0f || direction == Vector2.Zero || !IsAuthoritative())
-			{
-				return;
-			}
+			var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
 
-			ApplyKnockbackRequest(direction.Normalized() * force);
+			return Resolver.Resolve(Data.Properties.OfType<HealthPropertyData>().ToList(), Properties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
 		}
 
-		public void ApplyKnockbackRequest(Vector2 velocity)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				ApplyKnockbackReceive(velocity);
+        #endregion
 
-				return;
-			}
+        #region Core - Knockback
 
-			Rpc(nameof(ApplyKnockbackReceive), velocity);
-		}
+        public void ApplyKnockback(Vector2 direction, float force)
+        {
+            if (force <= 0f || direction == Vector2.Zero || !IsAuthoritative())
+            {
+                return;
+            }
 
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ApplyKnockbackReceive(Vector2 velocity)
-		{
-			Velocity = velocity;
-			KnockbackTimer = KnockbackDuration;
-			Data.CanUpdateMovement = false;
-		}
+            ApplyKnockbackRequest(direction.Normalized() * force);
+        }
 
-		protected void TickKnockback(float dt)
-		{
-			if (KnockbackTimer <= 0f)
-			{
-				return;
-			}
+        #endregion
 
-			KnockbackTimer -= dt;
+        #region Core - Damage popup
 
-			if (KnockbackTimer <= 0f)
-			{
-				Data.CanUpdateMovement = true;
-				Velocity = Vector2.Zero;
-			}
-		}
-
-		#endregion
-
-		#region Core - Damage popup
-
-		private const float DamagePopupDuration = 0.8f;
-		private const float DamagePopupRiseDistance = 26f;
-
-		public void ShowDamagePopup(int amount)
+        public void ShowDamagePopup(int amount)
 		{
 			if (amount <= 0 || Labels == null)
 			{
@@ -597,17 +603,19 @@ namespace Jogo25D.Characters
 
 			if (data == null)
 			{
+				ResetMining();
+
 				return;
 			}
 
 			if (!Input.Attack)
 			{
+				ResetMining();
+
 				return;
 			}
 
 			var def = ItemDB.Get(data.Id);
-
-			GD.Print($"[HandleAttack] cooldown={data.CooldownRemainingTimer:F2} reloading={def.IsReloading(data)} charges={data.CurrentCharges}");
 
 			def.Use(this, data);
 		}
@@ -693,6 +701,108 @@ namespace Jogo25D.Characters
 			}
 
 			DropItemRequest(Data.EquippedItemId, 1);
+		}
+
+		#endregion
+
+		#region Core - Blocks system
+
+		public TileMapLayer GetActiveTileLayer()
+		{
+			var parent = GetParent();
+
+			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+				?? parent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+		}
+
+		public void UpdateMining(TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
+		{
+			if (layer.GetCellSourceId(targetCell) == -1)
+			{
+				ResetMining();
+
+				return;
+			}
+
+			if (!IsMining || MiningCell != targetCell)
+			{
+				IsMining = true;
+				MiningCell = targetCell;
+				MiningElapsed = 0f;
+			}
+
+			MiningElapsed += (float)GetPhysicsProcessDeltaTime();
+
+			if (MiningElapsed < breakTimeSeconds)
+			{
+				return;
+			}
+
+			ResetMining();
+
+			NetworkManager?.BreakBlockClientRequest(targetCell);
+		}
+
+		public void ResetMining()
+		{
+			IsMining = false;
+			MiningElapsed = 0f;
+		}
+
+		public Vector2I ResolveCellInRange(TileMapLayer layer, float reach)
+		{
+			var targetWorldPos = Input.MousePosition;
+			var toTarget = targetWorldPos - GlobalPosition;
+
+			if (toTarget.Length() > reach)
+			{
+				targetWorldPos = GlobalPosition + toTarget.Normalized() * reach;
+			}
+
+			return layer.LocalToMap(layer.ToLocal(targetWorldPos));
+		}
+
+		public (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, Vector2 origin, Vector2 aimPosition, float reach)
+		{
+			var toAim = aimPosition - origin;
+			var distance = Mathf.Min(toAim.Length(), reach);
+			var direction = toAim.LengthSquared() > 0.001f ? toAim.Normalized() : Vector2.Right;
+
+			var tileSize = Mathf.Max(1, layer.TileSet.TileSize.X);
+			var stepSize = tileSize * 0.5f;
+			var steps = Mathf.Max(1, Mathf.CeilToInt(distance / stepSize));
+
+			var lastEmptyCell = layer.LocalToMap(layer.ToLocal(origin));
+
+			for (int i = 1; i <= steps; i++)
+			{
+				var sampleDistance = Mathf.Min(distance, i * stepSize);
+				var samplePos = origin + direction * sampleDistance;
+				var cell = layer.LocalToMap(layer.ToLocal(samplePos));
+
+				if (layer.GetCellSourceId(cell) != -1)
+				{
+					return (true, cell, lastEmptyCell);
+				}
+
+				lastEmptyCell = cell;
+			}
+
+			return (false, default, lastEmptyCell);
+		}
+
+		public (bool Found, Vector2I Cell) ResolveMiningTargetCell(TileMapLayer layer, float reach)
+		{
+			if (Input.RestrictMiningToAccessible)
+			{
+				var hit = RaycastTiles(layer, GlobalPosition, Input.MousePosition, reach);
+
+				return (hit.FoundSolid, hit.SolidCell);
+			}
+
+			var cell = ResolveCellInRange(layer, reach);
+
+			return (layer.GetCellSourceId(cell) != -1, cell);
 		}
 
 		#endregion
@@ -791,31 +901,24 @@ namespace Jogo25D.Characters
 
 				previousDef?.OnUnequip(this, previousItem);
 
-				if (previousDef != null)
-				{
-					GetItemIndicator(previousDef)?.Hide(this);
-				}
+				ItemIndicator?.Destroy();
+				ItemIndicator = null;
 			}
 
 			Data.EquippedItemId = instanceId;
 
-			ItemDB.Get(item.Id)?.OnEquip(this, item);
+			var newDef = ItemDB.Get(item.Id);
+
+			newDef?.OnEquip(this, item);
+
+			if (ItemIndicator == null)
+			{
+				ItemIndicator = ItemIndicatorFactory.Create(newDef);
+			}
 
 			EmitSignal(SignalName.ItemEquipped, instanceId);
 		}
-
-		#region Public API - Items query
-
-		public ItemDefinitionData GetSlot(int index)
-		{
-			return Inventory.GetSlot(Data?.Inventory, index);
-		}
-
-		public ItemDefinitionData EquippedInstance()
-		{
-			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
-		}
-
+		
 		public void GiveItem(ItemDefinitionData item)
 		{
 			if (Data?.Inventory == null)
@@ -829,82 +932,21 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		#endregion
-
-		#endregion
-
-		#region Animation 
-
-		public void UpdateAnimation()
+		public ItemDefinitionData GetSlot(int index)
 		{
-			if (Velocity.X != 0)
-			{
-				SetFacing(Velocity.X < 0);
-			}
+			return Inventory.GetSlot(Data?.Inventory, index);
+		}
 
-			if (Sprite.Animation == "dead")
-			{
-				return;
-			}
-
-			if (Sprite.Animation == "melee" && Sprite.IsPlaying())
-			{
-				return;
-			}
-
-			if (Sprite.Animation == "taking_damage" && Sprite.IsPlaying())
-			{
-				return;
-			}
-
-			if (!IsOnFloor())
-			{
-				if (Velocity.Y < 0)
-				{
-					if (Sprite.Animation != "jump")
-					{
-						GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> jump");
-						Sprite.Play("jump");
-					}
-				}
-				else
-				{
-					if (Sprite.Animation != "falling" && Sprite.Animation != "dash")
-					{
-						GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> falling");
-						Sprite.Play("falling");
-					}
-				}
-				return;
-			}
-
-			if (Sprite.Animation == "dash" && Sprite.IsPlaying())
-				return;
-
-			if (Velocity.X != 0)
-			{
-				if (Sprite.Animation != "run")
-				{
-					GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> run");
-					Sprite.Play("run");
-				}
-			}
-			else
-			{
-				if (Sprite.Animation != "idle")
-				{
-					GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> idle");
-
-					Sprite.Play("idle");
-				}
-			}
+		public ItemDefinitionData EquippedInstance()
+		{
+			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
 		}
 
 		#endregion
 
-		#region Core - Effects system
+        #region Core - Effects system
 
-		public void GiveEffect(string effectId)
+        public void GiveEffect(string effectId)
 		{
 			if (string.IsNullOrEmpty(effectId) || Data?.CurrentEffects == null)
 			{
@@ -929,7 +971,43 @@ namespace Jogo25D.Characters
 
 			Data.UnlockedAbilities.Add(ActionDB.CreateInstance(actionId, this));
 
+			EnsureActionIndicator(actionId);
+
 			EmitSignal(SignalName.AbilitiesChanged);
+		}
+
+        public void EnsureActionIndicator(string actionId)
+		{
+			if (string.IsNullOrEmpty(actionId) || ActionIndicators.ContainsKey(actionId))
+			{
+				return;
+			}
+
+			var def = ActionDB.Get(actionId);
+			var indicator = def != null ? ActionIndicatorFactory.Create(def) : null;
+
+			if (indicator != null)
+			{
+				ActionIndicators[actionId] = indicator;
+			}
+		}
+
+        public void RemoveActionIndicator(string actionId)
+		{
+			if (string.IsNullOrEmpty(actionId) || !ActionIndicators.TryGetValue(actionId, out var indicator))
+			{
+				return;
+			}
+
+			indicator.Destroy();
+
+			ActionIndicators.Remove(actionId);
+		}
+
+        public bool IsAbilityStillGranted(string actionId)
+		{
+			return (Data?.UnlockedAbilities?.Any(e => e != null && e.Id == actionId) ?? false)
+				|| UnlockedAbilities.Any(e => e != null && e.Id == actionId);
 		}
 
 		#endregion
@@ -961,7 +1039,7 @@ namespace Jogo25D.Characters
 				{
 					foreach (var property in node.Properties)
 					{
-						Properties.Add(Resolver.CloneProperty(property));
+						Properties.Add(property);
 					}
 				}
 
@@ -969,9 +1047,11 @@ namespace Jogo25D.Characters
 				{
 					grantedAbilityIds.Add(abilityId);
 
-					if (!HasUnlockedAbility(abilityId))
+					if (!UnlockedAbilities.Any(e => e.Id == abilityId))
 					{
 						UnlockedAbilities.Add(ActionDB.CreateInstance(abilityId, this));
+
+						EnsureActionIndicator(abilityId);
 					}
 				}
 
@@ -979,7 +1059,7 @@ namespace Jogo25D.Characters
 				{
 					grantedEffectIds.Add(effectId);
 
-					if (!HasCurrentEffect(effectId))
+					if (!CurrentEffects.Any(e=> e.Id == effectId))
 					{
 						CurrentEffects.Add(EffectDB.CreateInstance(effectId));
 					}
@@ -990,7 +1070,14 @@ namespace Jogo25D.Characters
 			{
 				if (UnlockedAbilities[i] == null || !grantedAbilityIds.Contains(UnlockedAbilities[i].Id))
 				{
+					var removedId = UnlockedAbilities[i]?.Id;
+
 					UnlockedAbilities.RemoveAt(i);
+
+					if (!string.IsNullOrEmpty(removedId) && !IsAbilityStillGranted(removedId))
+					{
+						RemoveActionIndicator(removedId);
+					}
 				}
 			}
 
@@ -1003,45 +1090,6 @@ namespace Jogo25D.Characters
 			}
 		}
 
-		private bool HasUnlockedAbility(string actionId)
-		{
-			foreach (var action in UnlockedAbilities)
-			{
-				if (action != null && action.Id == actionId)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		private bool HasCurrentEffect(string effectId)
-		{
-			foreach (var effect in CurrentEffects)
-			{
-				if (effect != null && effect.Id == effectId)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		private SkillTreeNodeData FindSkillNodeProgress(string nodeId)
-		{
-			foreach (var entry in Data.SkillTree)
-			{
-				if (entry != null && entry.NodeId == nodeId)
-				{
-					return entry;
-				}
-			}
-
-			return null;
-		}
-
 		public bool LevelUpSkillNode(string nodeId)
 		{
 			if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(Data.SkillTree, nodeId))
@@ -1049,9 +1097,9 @@ namespace Jogo25D.Characters
 				return false;
 			}
 
-			var progress = FindSkillNodeProgress(nodeId);
+			var progress = Data.SkillTree.FirstOrDefault(e => e.NodeId == nodeId);
 
-			if (progress == null)
+            if (progress == null)
 			{
 				progress = new SkillTreeNodeData { NodeId = nodeId };
 
@@ -1122,22 +1170,71 @@ namespace Jogo25D.Characters
 
 		#endregion
 
-		#region Utils
+        #region Core - Rpc - PlaceBlock
 
-		public bool IsOwner()
-		{
-			return PeerId == Multiplayer.GetUniqueId();
-		}
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void PlaceBlockReceive(Vector2I cell, long instanceId)
+        {
+            if (!IsAuthoritative())
+            {
+                return;
+            }
 
-		public bool IsServer()
-		{
-			return PeerId == 1;
-		}
+            var item = Inventory.FindItem(Data.Inventory, instanceId);
 
-		public bool IsAuthoritative()
-		{
-			return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
-		}
+            if (item == null || item.Quantity <= 0)
+            {
+                return;
+            }
+
+            if (ItemDB.Get(item.Id) is not BlockItemDefinition blockItemDef)
+            {
+                return;
+            }
+
+            if (NetworkManager == null || !NetworkManager.PlaceBlockAuthoritative(cell, blockItemDef.BlockId))
+            {
+                return;
+            }
+
+            RemoveItemRequest(instanceId, 1);
+        }
+
+        public void PlaceBlockRequest(Vector2I cell, long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                PlaceBlockReceive(cell, instanceId);
+
+                return;
+            }
+
+            RpcId(1, nameof(PlaceBlockReceive), cell, instanceId);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Knockback
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ApplyKnockbackReceive(Vector2 velocity)
+        {
+            Velocity = velocity;
+            KnockbackTimer = KnockbackDuration;
+            Data.CanUpdateMovement = false;
+        }
+
+        public void ApplyKnockbackRequest(Vector2 velocity)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                ApplyKnockbackReceive(velocity);
+
+                return;
+            }
+
+            Rpc(nameof(ApplyKnockbackReceive), velocity);
+        }
 
         #endregion
 
@@ -1192,7 +1289,7 @@ namespace Jogo25D.Characters
         {
             LevelUpSkillNode(nodeId);
 
-            SyncSkillTreeToOwner();
+            SyncSkillTreeToRequest();
         }
 
         public void LevelUpSkillNodeRequest(string nodeId)
@@ -1212,7 +1309,7 @@ namespace Jogo25D.Characters
         {
             ResetSkillTree();
 
-            SyncSkillTreeToOwner();
+            SyncSkillTreeToRequest();
         }
 
         public void ResetSkillTreeRequest()
@@ -1225,23 +1322,6 @@ namespace Jogo25D.Characters
             }
 
             RpcId(1, nameof(ResetSkillTreeReceive));
-        }
-
-        private void SyncSkillTreeToOwner()
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
-            {
-                return;
-            }
-
-            var skillTree = new Godot.Collections.Array();
-
-            foreach (var entry in Data.SkillTree)
-            {
-                skillTree.Add(GodotDictionaryParser.ToDictionary(entry));
-            }
-
-            RpcId(PeerId, nameof(SyncSkillTreeReceive), skillTree);
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -1260,6 +1340,23 @@ namespace Jogo25D.Characters
             }
 
             ApplySkillTree();
+        }
+        
+		private void SyncSkillTreeToRequest()
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
+            {
+                return;
+            }
+
+            var skillTree = new Godot.Collections.Array();
+
+            foreach (var entry in Data.SkillTree)
+            {
+                skillTree.Add(GodotDictionaryParser.ToDictionary(entry));
+            }
+
+            RpcId(PeerId, nameof(SyncSkillTreeReceive), skillTree);
         }
 
         #endregion
@@ -1358,8 +1455,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void AddItemReceive(Godot.Collections.Dictionary data)
 		{
-			GD.Print("[Inventory.AddItemReceive] Starting method");
-
 			var item = GodotDictionaryParser.ToResource<ItemDefinitionData>(data);
 
 			if (Inventory.AddItem(Data.Inventory, item))
@@ -1370,8 +1465,6 @@ namespace Jogo25D.Characters
 
 		public void AddItemRequest(ItemDefinitionData item)
 		{
-			GD.Print("[Inventory.AddItemRequest] Starting method");
-
 			var data = GodotDictionaryParser.ToDictionary(item);
 
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
@@ -1387,8 +1480,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void MoveItemReceive(long instanceId, int toIndex)
 		{
-			GD.Print("[Inventory.MoveItemReceive] Starting method");
-
 			if (Inventory.MoveItem(Data.Inventory, instanceId, toIndex))
 			{
 				EmitSignal(SignalName.InventoryChanged);
@@ -1397,8 +1488,6 @@ namespace Jogo25D.Characters
 
 		public void MoveItemRequest(long instanceId, int toIndex)
 		{
-			GD.Print("[Inventory.MoveItemRequest] Starting method");
-
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
 			{
 				MoveItemReceive(instanceId, toIndex);
@@ -1412,8 +1501,6 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void RemoveItemReceive(long instanceId, int quantity)
 		{
-			GD.Print("[Inventory.RemoveItemReceive] Starting method");
-
 			if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
 			{
 				EmitSignal(SignalName.InventoryChanged);
@@ -1422,8 +1509,6 @@ namespace Jogo25D.Characters
 
 		public void RemoveItemRequest(long instanceId, int quantity)
 		{
-			GD.Print("[Inventory.RemoveItemRequest] Starting method");
-
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
 			{
 				RemoveItemReceive(instanceId, quantity);
@@ -1637,7 +1722,6 @@ namespace Jogo25D.Characters
 
 		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
 		{
-
 			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
 		}
 

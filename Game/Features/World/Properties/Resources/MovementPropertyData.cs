@@ -12,12 +12,10 @@ namespace Jogo25D.Features.World.Properties.Resources
 {
     public partial class MovementPropertyData : BasePropertyData
     {
-
         [Export, GodotDictionaryField]
         public float Speed { get; set; } = 0f;
 
         [Export, GodotDictionaryField]
         public float JumpVelocity { get; set; } = 0f;
-
     }
 }

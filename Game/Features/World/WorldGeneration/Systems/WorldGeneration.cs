@@ -288,5 +288,4 @@ public partial class WorldGeneration : TileMapLayer
 		SetCell(new Vector2I(x, y), PropsSourceId, _bushLeft);
 		SetCell(new Vector2I(x + 1, y), PropsSourceId, _bushRight);
 	}
-
 }

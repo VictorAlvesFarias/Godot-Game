@@ -475,10 +475,10 @@ namespace Jogo25D.UI
 			);
 
 			Register(
-				name: "reset",
-				usage: "reset",
-				description: "Reseta a posiÃ§Ã£o e a vida do jogador local",
-				execute: (_, console) =>
+				name: "teleport",
+				usage: "teleport [x] [y]",
+				description: "Teleporta o jogador local para (x, y) e reseta a vida - padrÃ£o (0, 0)",
+				execute: (args, console) =>
 				{
 					if (WorldManager == null)
 					{
@@ -487,9 +487,26 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					WorldManager.ResetPlayerClientRequest();
+					float x = 0f;
+					float y = 0f;
 
-					console.PrintSuccess("Jogador resetado.");
+					if (args.Length >= 1 && !float.TryParse(args[0], out x))
+					{
+						console.PrintError("Coordenada x invÃ¡lida.");
+
+						return;
+					}
+
+					if (args.Length >= 2 && !float.TryParse(args[1], out y))
+					{
+						console.PrintError("Coordenada y invÃ¡lida.");
+
+						return;
+					}
+
+					WorldManager.TeleportPlayerClientRequest(new Vector2(x, y));
+
+					console.PrintSuccess($"Teleportando para ({x}, {y})...");
 				},
 				getCompletions: _ => new List<string>()
 			);
@@ -525,6 +542,5 @@ namespace Jogo25D.UI
 				GetCompletions = getCompletions
 			};
 		}
-
 	}
 }

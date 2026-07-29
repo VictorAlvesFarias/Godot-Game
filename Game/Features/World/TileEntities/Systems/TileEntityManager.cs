@@ -89,6 +89,45 @@ namespace Jogo25D.TileEntities
             return _entities.TryGetValue(cell, out entity);
         }
 
+        public void ClearEntities()
+        {
+            _entities.Clear();
+            _lastCell.Clear();
+        }
+
+        public void RegisterChunk(TileMapLayer layer, Vector2I chunkCoord, int chunkSize)
+        {
+            if (_world == null || layer == null)
+            {
+                return;
+            }
+
+            var baseCellX = chunkCoord.X * chunkSize;
+            var baseCellY = chunkCoord.Y * chunkSize;
+
+            for (int localX = 0; localX < chunkSize; localX++)
+            {
+                for (int localY = 0; localY < chunkSize; localY++)
+                {
+                    ScanCell(layer, new Vector2I(baseCellX + localX, baseCellY + localY));
+                }
+            }
+        }
+
+        public void UnregisterChunk(Vector2I chunkCoord, int chunkSize)
+        {
+            var baseCellX = chunkCoord.X * chunkSize;
+            var baseCellY = chunkCoord.Y * chunkSize;
+
+            for (int localX = 0; localX < chunkSize; localX++)
+            {
+                for (int localY = 0; localY < chunkSize; localY++)
+                {
+                    _entities.Remove(new Vector2I(baseCellX + localX, baseCellY + localY));
+                }
+            }
+        }
+
         public bool TryGetPromptFor(Player player, out string prompt)
         {
             prompt = null;
@@ -105,31 +144,41 @@ namespace Jogo25D.TileEntities
 
         private void ScanTiles()
         {
-            foreach (var cell in _tileMapLayer.GetUsedCells())
+            ScanLayer(_tileMapLayer);
+        }
+
+        private void ScanLayer(TileMapLayer layer)
+        {
+            foreach (var cell in layer.GetUsedCells())
             {
-                if (!TryReadTag(cell, out var typeId))
-                {
-                    continue;
-                }
-
-                var cellPosition = _world.ToLocal(_tileMapLayer.ToGlobal(_tileMapLayer.MapToLocal(cell)));
-                var entity = TileEntityFactory.CreateInstance(typeId, cell, _world, cellPosition);
-
-                if (entity == null)
-                {
-                    continue;
-                }
-
-                _entities[cell] = entity;
-                entity.OnReady();
+                ScanCell(layer, cell);
             }
         }
 
-        private bool TryReadTag(Vector2I cell, out string typeId)
+        private void ScanCell(TileMapLayer layer, Vector2I cell)
+        {
+            if (!TryReadTag(layer, cell, out var typeId))
+            {
+                return;
+            }
+
+            var cellPosition = _world.ToLocal(layer.ToGlobal(layer.MapToLocal(cell)));
+            var entity = TileEntityFactory.CreateInstance(typeId, cell, _world, cellPosition);
+
+            if (entity == null)
+            {
+                return;
+            }
+
+            _entities[cell] = entity;
+            entity.OnReady();
+        }
+
+        private bool TryReadTag(TileMapLayer layer, Vector2I cell, out string typeId)
         {
             typeId = null;
 
-            var tileData = _tileMapLayer.GetCellTileData(cell);
+            var tileData = layer.GetCellTileData(cell);
 
             if (tileData == null)
             {

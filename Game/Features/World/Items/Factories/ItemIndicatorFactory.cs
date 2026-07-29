@@ -6,9 +6,11 @@ namespace Jogo25D.Items
 {
     public static class ItemIndicatorFactory
     {
-        private static readonly Dictionary<Type, Func<IItemIndicator>> _factories = new()
+        private static readonly Dictionary<Type, Func<ItemDefinition, IItemIndicator>> _factories = new()
         {
-            { typeof(WeaponDefinition), () => new WeaponAimIndicator() },
+            { typeof(WeaponDefinition), def => new WeaponAimIndicator() },
+            { typeof(ToolDefinition), def => new MiningIndicator((ToolDefinition)def) },
+            { typeof(BlockItemDefinition), def => new PlacementIndicator((BlockItemDefinition)def) },
         };
 
         public static IItemIndicator Create(ItemDefinition definition)
@@ -18,7 +20,7 @@ namespace Jogo25D.Items
                 return null;
             }
 
-            return _factories.TryGetValue(definition.GetType(), out var factory) ? factory() : null;
+            return _factories.TryGetValue(definition.GetType(), out var factory) ? factory(definition) : null;
         }
     }
 }

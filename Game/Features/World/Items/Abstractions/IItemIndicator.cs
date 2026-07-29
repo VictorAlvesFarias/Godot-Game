@@ -5,8 +5,10 @@ namespace Jogo25D.Items
 {
     public interface IItemIndicator
     {
-        void Update(Player player, ItemDefinition definition, ItemDefinitionData data, float delta);
+        void Update(Player player, ItemDefinitionData data, float delta);
 
         void Hide(Player player);
+
+        void Destroy();
     }
 }

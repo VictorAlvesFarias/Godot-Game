@@ -47,6 +47,7 @@ namespace Jogo25D.UI
 			MultiplayerButton.Pressed += OnMultiplayerPressed;
 			BackButton.Pressed += OnBackPressed;
 
+			PopulateDefaultWorldRow();
 			PopulateMockList();
 		}
 
@@ -54,37 +55,67 @@ namespace Jogo25D.UI
 
 		#region Core - Setup
 
+		private Button CreateWorldRow(string worldName, bool interactive)
+		{
+			var row = new Button();
+
+			row.Text = worldName;
+			row.Alignment = HorizontalAlignment.Left;
+			row.FocusMode = Control.FocusModeEnum.None;
+			row.CustomMinimumSize = new Vector2(0, 44);
+			row.AddThemeFontSizeOverride("font_size", 16);
+			row.AddThemeColorOverride("font_color", Colors.White);
+
+			var normalStyle = new StyleBoxFlat();
+			normalStyle.BgColor = new Color(1f, 1f, 1f, 0.06f);
+			normalStyle.BorderColor = new Color(1f, 1f, 1f, 0.15f);
+			normalStyle.SetBorderWidthAll(1);
+			normalStyle.SetCornerRadiusAll(4);
+			normalStyle.ContentMarginLeft = 14;
+			normalStyle.ContentMarginRight = 14;
+			normalStyle.ContentMarginTop = 10;
+			normalStyle.ContentMarginBottom = 10;
+
+			row.AddThemeStyleboxOverride("normal", normalStyle);
+			row.AddThemeStyleboxOverride("disabled", normalStyle);
+
+			if (interactive)
+			{
+				var hoverStyle = (StyleBoxFlat)normalStyle.Duplicate();
+				hoverStyle.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.15f);
+				hoverStyle.BorderColor = new Color(0.62f, 0.36f, 0.92f, 0.4f);
+
+				var pressedStyle = (StyleBoxFlat)normalStyle.Duplicate();
+				pressedStyle.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.25f);
+
+				row.AddThemeStyleboxOverride("hover", hoverStyle);
+				row.AddThemeStyleboxOverride("pressed", pressedStyle);
+				row.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+			}
+			else
+			{
+				row.AddThemeStyleboxOverride("hover", normalStyle);
+				row.AddThemeStyleboxOverride("pressed", normalStyle);
+				row.MouseFilter = Control.MouseFilterEnum.Ignore;
+			}
+
+			return row;
+		}
+
+		private void PopulateDefaultWorldRow()
+		{
+			var row = CreateWorldRow("Mundo Padrão", interactive: true);
+
+			row.Pressed += OnDefaultWorldPressed;
+
+			ListContainer.AddChild(row);
+		}
+
 		private void PopulateMockList()
 		{
 			foreach (var worldName in _mockWorlds)
 			{
-				var row = new PanelContainer();
-
-				var rowStyle = new StyleBoxFlat();
-				rowStyle.BgColor = new Color(1f, 1f, 1f, 0.06f);
-				rowStyle.BorderColor = new Color(1f, 1f, 1f, 0.15f);
-				rowStyle.SetBorderWidthAll(1);
-				rowStyle.SetCornerRadiusAll(4);
-				row.AddThemeStyleboxOverride("panel", rowStyle);
-
-				var margin = new MarginContainer();
-				margin.AddThemeConstantOverride("margin_left", 14);
-				margin.AddThemeConstantOverride("margin_top", 10);
-				margin.AddThemeConstantOverride("margin_right", 14);
-				margin.AddThemeConstantOverride("margin_bottom", 10);
-				row.AddChild(margin);
-
-				var hbox = new HBoxContainer();
-				hbox.AddThemeConstantOverride("separation", 12);
-				margin.AddChild(hbox);
-
-				var label = new Label();
-				label.Text = worldName;
-				label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-				label.VerticalAlignment = VerticalAlignment.Center;
-				hbox.AddChild(label);
-
-				ListContainer.AddChild(row);
+				ListContainer.AddChild(CreateWorldRow(worldName, interactive: false));
 			}
 		}
 
@@ -106,9 +137,16 @@ namespace Jogo25D.UI
 
 		#region Core - Actions
 
-		public void OnCreateWorldPressed()
+		public void OnDefaultWorldPressed()
 		{
 			NetworkManager?.SpawnLocalWorldAndPlayer();
+
+			Close();
+		}
+
+		public void OnCreateWorldPressed()
+		{
+			NetworkManager?.CreateProceduralWorldAndPlayer();
 
 			Close();
 		}

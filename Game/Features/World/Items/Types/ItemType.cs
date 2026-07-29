@@ -6,6 +6,8 @@ namespace Jogo25D.Items
         WeaponRanged,
         Consumable,
         Material,
+        Tool,
+        Block,
         Misc
     }
 

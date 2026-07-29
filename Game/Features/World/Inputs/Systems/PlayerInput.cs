@@ -27,6 +27,8 @@ namespace Jogo25D.Systems
         public bool DropItem { get; private set; }
         public Vector2 MousePosition { get; private set; }
 
+        public bool RestrictMiningToAccessible { get; private set; }
+
         public Player PlayerRef {get;set;}
 
         public override void _Ready()
@@ -85,6 +87,11 @@ namespace Jogo25D.Systems
             var toggleInventory = Input.IsActionJustPressed("toggle_inventory");
             var dropItem = Input.IsActionJustPressed("drop_item");
             var mousePosition = PlayerRef.GetGlobalMousePosition();
+
+            if (Input.IsActionJustPressed("toggle_mining_mode"))
+            {
+                RestrictMiningToAccessible = !RestrictMiningToAccessible;
+            }
 
             if (MoveX != moveX)
             {

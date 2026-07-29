@@ -79,6 +79,28 @@ namespace Jogo25D.Items
                 }
             };
 
+            var pickaxeStarting = new ToolDefinition {
+                Id = "pickaxe_starting",
+                Name = "Picareta",
+                Type = ItemType.Tool,
+                Description = "Usada para quebrar blocos do mundo",
+                Cooldown = 0.35f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Pickaxes.ICON_PICKAXE_1),
+                HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+            };
+
+            var blockGrass = new BlockItemDefinition {
+                Id = "block_grass",
+                Name = "Bloco de Grama",
+                Type = ItemType.Block,
+                Description = "Um bloco de terra com grama, pode ser colocado no mundo",
+                BlockId = "grass",
+                Stackable = true,
+                MaxStackSize = 999,
+                Cooldown = 0.25f,
+                Icon = GD.Load<Texture2D>(Assets.Icons.Blocks.ICON_GRASS_BLOCK),
+            };
+
             var arrow = new ConsumableDefinition {
                 Id = "arrow",
                 Name = "Flecha",
@@ -334,6 +356,8 @@ namespace Jogo25D.Items
             };
 
             Register(swordStarting);
+            Register(pickaxeStarting);
+            Register(blockGrass);
             Register(bowStarting);
             Register(fireballStarting);
             Register(arrow);

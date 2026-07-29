@@ -8,7 +8,6 @@ namespace Jogo25D.Actions
 {
     public abstract class ActionDefinition
     {
-
         #region Properties
 
         public string Id { get; init; } = "";

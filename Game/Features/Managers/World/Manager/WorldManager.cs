@@ -1,10 +1,14 @@
 using Godot;
 using System;
+using Jogo25D.Blocks;
 using Jogo25D.Characters;
+using Jogo25D.Chunks;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
+using Jogo25D.TileEntities;
+using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Systems
@@ -43,7 +47,6 @@ namespace Jogo25D.Systems
 			Multiplayer.ConnectedToServer += OnConnectedToServer;
 			Multiplayer.ConnectionFailed += OnConnectionFailed;
 			Multiplayer.ServerDisconnected += OnServerDisconnected;
-
 		}
 
         #endregion
@@ -134,7 +137,58 @@ namespace Jogo25D.Systems
 		{
 			SpawnWorld();
 
+			SetChunkStreamingEnabled(false);
+
 			RespawnLocalSoloPlayer();
+		}
+
+		public async void CreateProceduralWorldAndPlayer()
+		{
+			SpawnWorld();
+
+			ClearHandAuthoredTiles();
+
+			SetChunkStreamingEnabled(true);
+
+			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, Vector2.Zero);
+			}
+
+			RespawnLocalSoloPlayer();
+
+			loadingUi?.Close();
+		}
+
+		private void ClearHandAuthoredTiles()
+		{
+			OverworldParent?.GetNodeOrNull<TileMapLayer>("Overworld-Tiles")?.Clear();
+			UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles")?.Clear();
+
+			OverworldParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
+			UpsidedownParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void ClearHandAuthoredTilesReceive()
+		{
+			ClearHandAuthoredTiles();
+		}
+
+		private void SetChunkStreamingEnabled(bool enabled)
+		{
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				chunkStreamingManager.Enabled = enabled;
+			}
 		}
 
 		public string SpawnWorldAndJoin(string textAddress)
@@ -336,6 +390,8 @@ namespace Jogo25D.Systems
 			UpsidedownParent = null;
 			OverContainer = null;
 			UpContainer = null;
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.ResetState();
 		}
 
 		public void ReturnToMainMenu()
@@ -468,8 +524,6 @@ namespace Jogo25D.Systems
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position)
 		{
-			GD.Print($"[WorldManager.SpawnWorldItemReceive] worldItemId={worldItemId} position={position}");
-
 			if (UpsidedownParent == null || FindWorldItem(worldItemId) != null)
 			{
 				return;
@@ -537,6 +591,158 @@ namespace Jogo25D.Systems
 
 		#endregion
 
+		#region Core - Rpc - Blocks
+
+		private TileMapLayer ResolveActiveUpsidedownLayer()
+		{
+			return UpsidedownParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+				?? UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+		}
+
+		public void BreakBlockClientRequest(Vector2I cell)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				BreakBlockReceive(cell);
+
+				return;
+			}
+
+			RpcId(1, nameof(BreakBlockServerReceive), cell);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakBlockServerReceive(Vector2I cell)
+		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			BreakBlockReceive(cell);
+		}
+
+		private void BreakBlockReceive(Vector2I cell)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || layer.GetCellSourceId(cell) == -1)
+			{
+				return;
+			}
+
+			EraseBlockAndReconnect(layer, cell);
+
+			if (BlockDB.TryGet("grass", out var grassBlock))
+			{
+				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
+
+				SpawnWorldItemRequest(ItemDB.CreateInstance(grassBlock.DropItemId), dropPosition);
+			}
+
+			Rpc(nameof(BreakBlockBroadcast), cell);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakBlockBroadcast(Vector2I cell)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer != null)
+			{
+				EraseBlockAndReconnect(layer, cell);
+			}
+		}
+
+		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || layer.GetCellSourceId(cell) != -1 || !BlockDB.TryGet(blockId, out var block))
+			{
+				return false;
+			}
+
+			PaintBlockAndReconnect(layer, cell, block);
+
+			Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
+
+			return true;
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void PlaceBlockBroadcast(Vector2I cell, string blockId)
+		{
+			var layer = ResolveActiveUpsidedownLayer();
+
+			if (layer == null || !BlockDB.TryGet(blockId, out var block))
+			{
+				return;
+			}
+
+			PaintBlockAndReconnect(layer, cell, block);
+		}
+
+		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
+		{
+			layer.SetCell(cell, -1);
+
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			{
+				return;
+			}
+
+			var neighbors = GetSolidNeighborCells(layer, cell);
+
+			if (neighbors.Count > 0)
+			{
+				layer.SetCellsTerrainConnect(neighbors, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+			}
+		}
+
+		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block)
+		{
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			{
+				layer.SetCell(cell, block.SourceId, block.AtlasCoord);
+
+				return;
+			}
+
+			var cells = GetSolidNeighborCells(layer, cell);
+
+			cells.Add(cell);
+
+			layer.SetCellsTerrainConnect(cells, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+		}
+
+		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell)
+		{
+			var result = new Godot.Collections.Array<Vector2I>();
+
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 1; dy++)
+				{
+					if (dx == 0 && dy == 0)
+					{
+						continue;
+					}
+
+					var neighbor = cell + new Vector2I(dx, dy);
+
+					if (layer.GetCellSourceId(neighbor) != -1)
+					{
+						result.Add(neighbor);
+					}
+				}
+			}
+
+			return result;
+		}
+
+		#endregion
+
 		#region Core - Player lookup
 
 		public Player GetLocalPlayer()
@@ -573,13 +779,13 @@ namespace Jogo25D.Systems
         #region Core - Rpc - Player state
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ResetPlayer(long peerId, Vector2 position)
+		public void TeleportPlayer(long peerId, Vector2 position)
 		{
 			var player = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(e => e.PeerId == peerId);
 
 			if (player == null)
 			{
-				GD.Print("[WorldManager.ResetPlayer] player is null");
+				GD.Print("[WorldManager.TeleportPlayer] player is null");
 
 				return;
 			}
@@ -596,7 +802,7 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			player.GlobalPosition = Vector2.Zero;
+			player.GlobalPosition = position;
 			player.Velocity = Vector2.Zero;
 			player.Data.CurrentHealth = player.GetMaxHealth();
 			player.Sprite?.Play("idle");
@@ -610,30 +816,42 @@ namespace Jogo25D.Systems
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ResetPlayerServerReceive()
+		public void TeleportPlayerServerReceive(Vector2 position)
 		{
-			GD.Print("[WorldManager.ResetPlayerServerReceive] received trade request");
+			GD.Print($"[WorldManager.TeleportPlayerServerReceive] received teleport request to {position}");
 
 			if (!Multiplayer.IsServer())
 			{
-
-				GD.Print("[WorldManager.ResetPlayerServerReceive] not the server, ignoring request");
+				GD.Print("[WorldManager.TeleportPlayerServerReceive] not the server, ignoring request");
 
 				return;
 			}
 
 			long senderId = Multiplayer.GetRemoteSenderId();
 
-			GD.Print($"[WorldManager.ResetPlayerServerReceive] SenderId={senderId}, sending SyncDimensionTrade RPC");
+			GD.Print($"[WorldManager.TeleportPlayerServerReceive] SenderId={senderId}, sending TeleportPlayer RPC");
 
-			Rpc(nameof(ResetPlayer), senderId, Vector2.Zero);
+			Rpc(nameof(TeleportPlayer), senderId, position);
 		}
 
-		public void ResetPlayerClientRequest()
+		public async void TeleportPlayerClientRequest(Vector2 position)
 		{
-			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
+			GD.Print($"[WorldManager.TeleportPlayerClientRequest] sending teleport request to {position} (Peer 1)");
 
-			RpcId(1, nameof(ResetPlayerServerReceive));
+			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, position);
+			}
+
+			RpcId(1, nameof(TeleportPlayerServerReceive), position);
+
+			loadingUi?.Close();
 		}
 
         #endregion
@@ -688,7 +906,6 @@ namespace Jogo25D.Systems
 
 			if (!Multiplayer.IsServer())
 			{
-				
 				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
 				
 				return;
@@ -771,6 +988,15 @@ namespace Jogo25D.Systems
 
 				SpawnWorldItemRequest(worldItem, id);
 			}
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
+			{
+				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
+			}
+
+			chunkStreamingManager?.CatchUpPeer(id);
 		}
 
 		public void OnPeerDisconnected(long id)
@@ -790,6 +1016,8 @@ namespace Jogo25D.Systems
 
 				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
 			}
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RemovePeer(id);
 		}
 
 		public event Action ConnectionSucceeded;
@@ -839,6 +1067,5 @@ namespace Jogo25D.Systems
 		}
 
         #endregion
-
 	}
 }

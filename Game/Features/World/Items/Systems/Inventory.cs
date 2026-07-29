@@ -197,6 +197,5 @@ namespace Jogo25D.Systems
         }
 
         #endregion
-
     }
 }

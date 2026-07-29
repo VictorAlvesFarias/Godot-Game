@@ -13,14 +13,15 @@ namespace Jogo25D.Actions.Indicators
 
         private float? _halfWidthPx;
         private float? _halfHeightPx;
+        private Polygon2D _indicator;
 
         public void Update(Player player, ActionDefinition definition, ActionDefinitionData instance, float delta)
         {
-            var indicator = player.GetOrCreateIndicator<Polygon2D>(nameof(GroundStrikeIndicator), BuildVisual);
+            EnsureIndicator(player);
 
             if (!player.Input.Ability2Held || !instance.CanUse)
             {
-                indicator.Visible = false;
+                _indicator.Visible = false;
 
                 return;
             }
@@ -40,14 +41,38 @@ namespace Jogo25D.Actions.Indicators
 
             if (ground == null)
             {
-                indicator.Visible = false;
+                _indicator.Visible = false;
 
                 return;
             }
 
-            indicator.Polygon = BuildRectangle(halfWidth, halfHeight);
-            indicator.GlobalPosition = ground.Value - new Vector2(0, halfHeight);
-            indicator.Visible = true;
+            _indicator.Polygon = BuildRectangle(halfWidth, halfHeight);
+            _indicator.GlobalPosition = ground.Value - new Vector2(0, halfHeight);
+            _indicator.Visible = true;
+        }
+
+        public void Destroy()
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                _indicator.QueueFree();
+            }
+
+            _indicator = null;
+        }
+
+        private void EnsureIndicator(Player player)
+        {
+            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            {
+                return;
+            }
+
+            _indicator = new Polygon2D();
+
+            BuildVisual(_indicator);
+
+            player.AddChild(_indicator);
         }
 
         private void EnsureTextureSize(ActionDefinition definition)
