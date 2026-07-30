@@ -382,19 +382,13 @@ namespace Jogo25D.Characters
 
 		protected void UpdateEffects(float dt)
 		{
-            TickEffects(Data.CurrentEffects, dt);
-            TickEffects(CurrentEffects, dt);
-        }
-
-        private void TickEffects(Godot.Collections.Array<EffectDefinitionData> effects, float dt)
-        {
-            for (int i = effects.Count - 1; i >= 0; i--)
+            for (int i = Data.CurrentEffects.Count - 1; i >= 0; i--)
             {
-                var effect = effects[i];
+                var effect = Data.CurrentEffects[i];
 
                 if (effect == null)
                 {
-                    effects.RemoveAt(i);
+                    Data.CurrentEffects.RemoveAt(i);
 
                     continue;
                 }
@@ -403,7 +397,26 @@ namespace Jogo25D.Characters
 
                 if (effect.Expired)
                 {
-                    effects.RemoveAt(i);
+                    Data.CurrentEffects.RemoveAt(i);
+                }
+            }
+
+            for (int i = CurrentEffects.Count - 1; i >= 0; i--)
+            {
+                var effect = CurrentEffects[i];
+
+                if (effect == null)
+                {
+                    CurrentEffects.RemoveAt(i);
+
+                    continue;
+                }
+
+                EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+
+                if (effect.Expired)
+                {
+                    CurrentEffects.RemoveAt(i);
                 }
             }
         }
@@ -843,22 +856,7 @@ namespace Jogo25D.Characters
 			EmitSignal(SignalName.ItemEquipped, instanceId);
 		}
 
-
-		private void EnsureItemDefinition(ItemData item)
-		{
-			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
-			{
-				return;
-			}
-
-			if (Inventory.FindItem(Data.Inventory, item.InstanceId) == null)
-			{
-				return;
-			}
-
-			ItemDefinitions[item.InstanceId] = ItemFactory.Create(item.Id);
-		}
-        public void GiveItem(ItemData item)
+		public void GiveItem(ItemData item)
         {
             if (Data?.Inventory == null)
             {
@@ -873,6 +871,31 @@ namespace Jogo25D.Characters
             }
         }
 
+		public ItemData GetSlot(int index)
+		{
+			return Inventory.GetSlot(Data?.Inventory, index);
+		}
+		
+		public ItemData EquippedInstance()
+		{
+			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
+		}
+        
+		private void EnsureItemDefinition(ItemData item)
+		{
+			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
+			{
+				return;
+			}
+
+			if (Inventory.FindItem(Data.Inventory, item.InstanceId) == null)
+			{
+				return;
+			}
+
+			ItemDefinitions[item.InstanceId] = ItemFactory.Create(item.Id);
+		}
+
         private void RemoveItemDefinitionIfGone(long instanceId)
 		{
 			if (Inventory.FindItem(Data.Inventory, instanceId) != null)
@@ -885,16 +908,6 @@ namespace Jogo25D.Characters
 				def.DestroyIndicator();
 				ItemDefinitions.Remove(instanceId);
 			}
-		}
-
-		public ItemData GetSlot(int index)
-		{
-			return Inventory.GetSlot(Data?.Inventory, index);
-		}
-
-		public ItemData EquippedInstance()
-		{
-			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
 		}
 
 		#endregion
