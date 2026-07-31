@@ -1,6 +1,6 @@
 [gd_scene format=4 uid="uid://bfdarejodvd8o"]
 
-[ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/sky.png" id="1_y8qed"]
+[ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="1_y8qed"]
 [ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png" id="2_danr7"]
 [ext_resource type="Script" uid="uid://bkbt4dowylfu8" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
 [ext_resource type="Texture2D" uid="uid://b7m0ywjuggjl7" path="res://Assets/Textures/Tiles/TX Tileset Ground.png" id="3_wcluf"]

@@ -58,16 +58,16 @@ namespace Jogo25D.Constants
 
         public static class Backgrounds
         {
-            public const string SKY_TEXTURE = "res://Assets/Textures/Backgrounds/sky.png";
-
             public static class BlueSky
             {
+                public const string SKY_TEXTURE = "res://Assets/Textures/Backgrounds/blue_sky/sky.png";
                 public const string LAYER_1_TEXTURE = "res://Assets/Textures/Backgrounds/blue_sky/layer_1.png";
                 public const string LAYER_2_TEXTURE = "res://Assets/Textures/Backgrounds/blue_sky/layer_2.png";
             }
 
             public static class WhiteBlueSky
             {
+                public const string SKY_TEXTURE = "res://Assets/Textures/Backgrounds/white_blue_sky/sky.png";
                 public const string LAYER_1_TEXTURE = "res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png";
                 public const string LAYER_2_TEXTURE = "res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png";
             }

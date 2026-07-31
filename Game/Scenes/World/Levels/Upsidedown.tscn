@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b7fp0le412qg5" path="res://Features/World/Background/Entities/BackgroundController.cs" id="1_2t3hh"]
 [ext_resource type="Texture2D" uid="uid://b7m0ywjuggjl7" path="res://Assets/Textures/Tiles/TX Tileset Ground.png" id="1_664l2"]
-[ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/sky.png" id="2_a7an3"]
+[ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="2_a7an3"]
 [ext_resource type="Texture2D" uid="uid://beivbfj6e8rtt" path="res://Assets/Textures/Tiles/TX Village Props.png" id="2_e8e4v"]
 [ext_resource type="Texture2D" uid="uid://ckrj4lovpeiwe" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png" id="3_yegaj"]
 [ext_resource type="Script" uid="uid://bkbt4dowylfu8" path="res://Features/World/Camera/Entities/CameraController.cs" id="4_jbnhx"]

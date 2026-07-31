@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://l2tmrwahq7k4"
-path="res://.godot/imported/sky.png-495f8d39d87cc9f546be40150b785fc9.ctex"
+uid="uid://d2tj3j4aq4lbs"
+path="res://.godot/imported/icon_potion_46.png-3273ad6c749c6162e1fd73830c343209.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Backgrounds/sky.png"
-dest_files=["res://.godot/imported/sky.png-495f8d39d87cc9f546be40150b785fc9.ctex"]
+source_file="res://Assets/Icons/Potions/icon_potion_46.png"
+dest_files=["res://.godot/imported/icon_potion_46.png-3273ad6c749c6162e1fd73830c343209.ctex"]
 
 [params]
 
