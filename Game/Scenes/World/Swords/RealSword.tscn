@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://Scenes/World/Swords/SwordBase.tscn" id="1"]
-[ext_resource type="Texture2D" uid="uid://cj3ia40ni6xvr" path="res://Assets/Icons/Swords/icon_sword_20.png" id="2"]
+[ext_resource type="Texture2D" uid="uid://cj3ia40ni6xvr" path="res://Assets/Textures/Items/real_sword/blade.png" id="2"]
 
 [node name="RealSword" instance=ExtResource("1")]
 

@@ -8,8 +8,7 @@ namespace Jogo25D.Chunks
         public const int TerrainSetId = 0;
         public const int TerrainId = 0;
 
-        private const string OverworldTileSetPath = "res://Assets/Tiles/Generated/OverworldTileSet.tres";
-        private const string UpsidedownTileSetPath = "res://Assets/Tiles/Generated/UpsidedownTileSet.tres";
+        private const string TileSetPath = "res://Assets/Textures/Tiles/TileSet.tres";
 
         private static readonly Dictionary<string, TileSet> _tileSetCache = new();
 
@@ -120,8 +119,7 @@ namespace Jogo25D.Chunks
                 return cached;
             }
 
-            var path = dimensionId == "upsidedown" ? UpsidedownTileSetPath : OverworldTileSetPath;
-            var tileSet = GD.Load<TileSet>(path);
+            var tileSet = GD.Load<TileSet>(TileSetPath);
 
             _tileSetCache[dimensionId] = tileSet;
 

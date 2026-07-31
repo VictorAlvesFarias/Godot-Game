@@ -37,7 +37,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada bÃ¡sica para combate corpo a corpo",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_17),
+                    Icon = GD.Load<Texture2D>(Textures.Items.SWORD_STARTING_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordStarting.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -54,7 +54,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponRanged,
                     Description = "Um arco para ataques Ã  distÃ¢ncia",
                     Cooldown = 0.8f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_10),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BOW_STARTING_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -71,7 +71,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponRanged,
                     Description = "Um arco melhorado para ataques Ã  distÃ¢ncia",
                     Cooldown = 1f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_11),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BOW_STARTING2_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -88,7 +88,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Tool,
                     Description = "Usada para quebrar blocos do mundo",
                     Cooldown = 0.35f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Pickaxes.ICON_PICKAXE_1),
+                    Icon = GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
@@ -102,7 +102,7 @@ namespace Jogo25D.Items
                     Stackable = true,
                     MaxStackSize = 999,
                     Cooldown = 0.25f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Blocks.ICON_GRASS_BLOCK),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BLOCK_GRASS_ICON),
                 },
 
                 ["arrow"] = () => new ConsumableDefinition
@@ -113,7 +113,7 @@ namespace Jogo25D.Items
                     Description = "MuniÃ§Ã£o para arcos",
                     Stackable = true,
                     MaxStackSize = 9999,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_40),
+                    Icon = GD.Load<Texture2D>(Textures.Items.ARROW_ICON),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new ChargesPropertyData { ChargeItemId = "arrow" }
@@ -126,7 +126,7 @@ namespace Jogo25D.Items
                     Name = "Espada BÃ¡sica",
                     Type = ItemType.WeaponMelee,
                     Cooldown = 0.6f,
-                    Icon = ResourceLoader.Exists(Assets.Icons.Swords.ICON_SWORD_1) ? GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_1) : null,
+                    Icon = ResourceLoader.Exists(Textures.Items.SWORD_BASIC_ICON) ? GD.Load<Texture2D>(Textures.Items.SWORD_BASIC_ICON) : null,
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordBasic.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -144,7 +144,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em chamas",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_19),
+                    Icon = GD.Load<Texture2D>(Textures.Items.FIRE_SLASH_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/FireSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -161,7 +161,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em chamas geladas",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_43),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BLUE_FIRE_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -178,7 +178,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Variação da espada congelante",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_47),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BLUE_FIRE_SWORD_ALT_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSwordAlt.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -195,7 +195,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em energia sombria - o dano ignora resistências",
                     Cooldown = 0.65f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_25),
+                    Icon = GD.Load<Texture2D>(Textures.Items.DARK_SLASH_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/DarkSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -212,7 +212,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Alcance maior, dano menor",
                     Cooldown = 0.4f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_56),
+                    Icon = GD.Load<Texture2D>(Textures.Items.WHIP_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/WhipSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -229,7 +229,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de verdade",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_2),
+                    Icon = GD.Load<Texture2D>(Textures.Items.REAL_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/RealSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -246,7 +246,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma lâmina impregnada de veneno",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_21),
+                    Icon = GD.Load<Texture2D>(Textures.Items.GREEN_BLOW_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/PoisonSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -263,7 +263,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de ouro",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_10),
+                    Icon = GD.Load<Texture2D>(Textures.Items.GOLD_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/GoldSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -280,7 +280,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de prata",
                     Cooldown = 0.5f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Swords.ICON_SWORD_14),
+                    Icon = GD.Load<Texture2D>(Textures.Items.SILVER_SWORD_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SilverSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -296,7 +296,7 @@ namespace Jogo25D.Items
                     Name = "Arco BÃ¡sico",
                     Type = ItemType.WeaponRanged,
                     Cooldown = 0.8f,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Bows.ICON_BOW_1),
+                    Icon = GD.Load<Texture2D>(Textures.Items.BOW_BASIC_ICON),
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
@@ -313,7 +313,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Consumable,
                     Stackable = true,
                     MaxStackSize = 10,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_19),
+                    Icon = GD.Load<Texture2D>(Textures.Items.POISON_FLASK_ICON),
                     Effects = new Godot.Collections.Array<string> { "poison_damage" }
                 },
 
@@ -324,7 +324,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Consumable,
                     Stackable = true,
                     MaxStackSize = 10,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_22),
+                    Icon = GD.Load<Texture2D>(Textures.Items.FIRE_DAMAGE_POTION_ICON),
                     Effects = new Godot.Collections.Array<string> { "fire_damage" }
                 },
 
@@ -335,7 +335,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Consumable,
                     Stackable = true,
                     MaxStackSize = 10,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_44),
+                    Icon = GD.Load<Texture2D>(Textures.Items.HEALTH_REGEN_POTION_ICON),
                     Effects = new Godot.Collections.Array<string> { "health_regen" }
                 },
 
@@ -346,7 +346,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Consumable,
                     Stackable = true,
                     MaxStackSize = 10,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_15),
+                    Icon = GD.Load<Texture2D>(Textures.Items.SPEED_POTION_ICON),
                     Effects = new Godot.Collections.Array<string> { "speed_boost" }
                 },
 
@@ -357,7 +357,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Consumable,
                     Stackable = true,
                     MaxStackSize = 10,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Potions.ICON_POTION_13),
+                    Icon = GD.Load<Texture2D>(Textures.Items.INSTANT_HEAL_POTION_ICON),
                     Effects = new Godot.Collections.Array<string> { "instant_heal" }
                 },
             };

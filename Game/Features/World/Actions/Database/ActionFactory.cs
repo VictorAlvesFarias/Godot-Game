@@ -30,7 +30,7 @@ namespace Jogo25D.Actions
                     Cooldown = 1f,
                     Duration = 0.2f,
                     MaxCharges = 2,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_10),
+                    Icon = GD.Load<Texture2D>(Textures.Items.DASH_ICON),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DashPropertyData { DashSpeed = 800f, MovementInfluence = 0.4f }
@@ -44,7 +44,7 @@ namespace Jogo25D.Actions
                     Cooldown = 1f,
                     Duration = 0.2f,
                     MaxCharges = 2,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_4),
+                    Icon = GD.Load<Texture2D>(Textures.Items.FIREBALL_ICON),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -60,7 +60,7 @@ namespace Jogo25D.Actions
                     Cooldown = 6f,
                     Duration = 0.1f,
                     MaxCharges = 1,
-                    Icon = GD.Load<Texture2D>(Assets.Icons.Spells.ICON_SPELL_7),
+                    Icon = GD.Load<Texture2D>(Textures.Items.GROUND_STRIKE_ICON),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.Physical },

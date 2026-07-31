@@ -33,7 +33,7 @@ namespace Jogo25D.SkillTree
                 TreeId = "main",
                 Name = "Vitalidade I",
                 Description = "Aumenta a vida maxima.",
-                Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_2),
+                Icon = GD.Load<Texture2D>(Textures.Skills.VITALITY_1_ICON),
                 MaxLevel = 3,
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
@@ -47,7 +47,7 @@ namespace Jogo25D.SkillTree
                 TreeId = "main",
                 Name = "Vitalidade II",
                 Description = "Aumenta ainda mais a vida maxima. Requer Vitalidade I nivel 2.",
-                Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_3),
+                Icon = GD.Load<Texture2D>(Textures.Skills.VITALITY_2_ICON),
                 MaxLevel = 2,
                 Dependencies = new List<SkillTreeDependency>
                 {
@@ -65,7 +65,7 @@ namespace Jogo25D.SkillTree
                 TreeId = "main",
                 Name = "Passos Ligeiros",
                 Description = "Aumenta a velocidade de movimento.",
-                Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_4),
+                Icon = GD.Load<Texture2D>(Textures.Skills.SWIFT_STEPS_ICON),
                 MaxLevel = 3,
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
@@ -79,7 +79,7 @@ namespace Jogo25D.SkillTree
                 TreeId = "main",
                 Name = "Poder I",
                 Description = "Aumenta o dano fisico causado.",
-                Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_6),
+                Icon = GD.Load<Texture2D>(Textures.Skills.POWER_1_ICON),
                 MaxLevel = 3,
                 Properties = new Godot.Collections.Array<BasePropertyData>
                 {
@@ -93,7 +93,7 @@ namespace Jogo25D.SkillTree
                 TreeId = "main",
                 Name = "Dash Arcano",
                 Description = "Desbloqueia a habilidade de Dash. Requer Passos Ligeiros nivel 2 e nivel total 4 na arvore principal.",
-                Icon = GD.Load<Texture2D>(Assets.Icons.Effects.ICON_EFFECT_5),
+                Icon = GD.Load<Texture2D>(Textures.Skills.ARCANE_DASH_ICON),
                 MaxLevel = 1,
                 RequiredTreeLevel = 4,
                 Dependencies = new List<SkillTreeDependency>

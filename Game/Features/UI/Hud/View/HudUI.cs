@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Items;
@@ -38,6 +39,9 @@ namespace Jogo25D.UI
 
 		public MinimapUI minimap;
 
+		public VBoxContainer hotkeysContainer;
+		private Panel _miningHint;
+
 		public const int HotbarSize = 8;
 		public readonly Panel[] _hotbarSlotPanels = new Panel[HotbarSize];
 		public readonly TextureRect[] _hotbarIconRects = new TextureRect[HotbarSize];
@@ -55,7 +59,21 @@ namespace Jogo25D.UI
 			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
 			healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
 			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
-			minimap = GetNode<MinimapUI>("MarginContainer/MinimapPanel/Minimap");
+			minimap = GetNode<MinimapUI>("MarginContainer/TopRightColumn/MinimapPanel/Minimap");
+
+			hotkeysContainer = GetNode<VBoxContainer>("MarginContainer/TopRightColumn/HotkeysContainer");
+
+			var hotkeySlot0 = hotkeysContainer.GetNode<Panel>("HotkeySlot0");
+
+			ConfigureHotkeyHint(hotkeySlot0, "I", CreateInventoryIcon());
+			ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "M", CreateMapIcon());
+			ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "K", CreateSkillTreeIcon());
+
+			_miningHint = DuplicateHotkeySlot(hotkeySlot0);
+
+			ConfigureHotkeyHint(_miningHint, "V", GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON));
+
+			_miningHint.Visible = false;
 
 			effectsContainer = new HBoxContainer();
 			effectsContainer.AddThemeConstantOverride("separation", 6);
@@ -116,6 +134,7 @@ namespace Jogo25D.UI
 
 			UpdateAbilitySlots();
 			UpdateEffectIcons();
+			UpdateMiningHint();
 		}
 
 		#endregion
@@ -637,6 +656,118 @@ namespace Jogo25D.UI
 				{
 					slot.TimerLabel.Text = "";
 					slot.TimerLabel.Visible = false;
+				}
+			}
+		}
+
+		#endregion
+
+		#region Core - Hotkeys
+
+		public Panel DuplicateHotkeySlot(Panel template)
+		{
+			var panel = (Panel)template.Duplicate();
+
+			hotkeysContainer.AddChild(panel);
+
+			return panel;
+		}
+
+		public void ConfigureHotkeyHint(Panel panel, string key, Texture2D icon)
+		{
+			var iconRect = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
+			var keyLabel = panel.GetNode<Label>("MarginContainer/CenterContainer/KeyLabel");
+			var cornerLabel = panel.GetNode<Label>("CornerLabel");
+
+			if (icon != null)
+			{
+				iconRect.Texture = icon;
+				iconRect.Visible = true;
+				keyLabel.Visible = false;
+				cornerLabel.Text = key;
+				cornerLabel.Visible = true;
+			}
+			else
+			{
+				keyLabel.Text = key;
+				keyLabel.Visible = true;
+				iconRect.Visible = false;
+				cornerLabel.Visible = false;
+			}
+		}
+
+		public void UpdateMiningHint()
+		{
+			if (_miningHint == null)
+			{
+				return;
+			}
+
+			_miningHint.Visible = localPlayer != null
+				&& IsInstanceValid(localPlayer)
+				&& localPlayer.ItemDefinitions.Values.Any(def => def is ToolDefinition);
+		}
+
+		private static Texture2D CreateInventoryIcon()
+		{
+			var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
+			var color = Colors.White;
+
+			image.FillRect(new Rect2I(3, 3, 10, 10), color);
+			image.FillRect(new Rect2I(15, 3, 10, 10), color);
+			image.FillRect(new Rect2I(3, 15, 10, 10), color);
+			image.FillRect(new Rect2I(15, 15, 10, 10), color);
+
+			return ImageTexture.CreateFromImage(image);
+		}
+
+		private static Texture2D CreateMapIcon()
+		{
+			var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
+			var color = Colors.White;
+
+			image.FillRect(new Rect2I(2, 2, 24, 3), color);
+			image.FillRect(new Rect2I(2, 23, 24, 3), color);
+			image.FillRect(new Rect2I(2, 2, 3, 24), color);
+			image.FillRect(new Rect2I(23, 2, 3, 24), color);
+
+			FillCircle(image, new Vector2I(14, 14), 5, color);
+
+			return ImageTexture.CreateFromImage(image);
+		}
+
+		private static Texture2D CreateSkillTreeIcon()
+		{
+			var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
+			var color = Colors.White;
+
+			image.FillRect(new Rect2I(4, 13, 20, 2), color);
+
+			FillCircle(image, new Vector2I(6, 14), 4, color);
+			FillCircle(image, new Vector2I(14, 14), 4, color);
+			FillCircle(image, new Vector2I(22, 14), 4, color);
+
+			return ImageTexture.CreateFromImage(image);
+		}
+
+		private static void FillCircle(Image image, Vector2I center, int radius, Color color)
+		{
+			for (int x = -radius; x <= radius; x++)
+			{
+				for (int y = -radius; y <= radius; y++)
+				{
+					if (x * x + y * y > radius * radius)
+					{
+						continue;
+					}
+
+					var px = center.X + x;
+					var py = center.Y + y;
+
+					if (px >= 0 && px < image.GetWidth() && py >= 0 && py < image.GetHeight())
+					{
+						image.SetPixel(px, py, color);
+					}
 				}
 			}
 		}

@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://buj6v73wis75l"]
 
 [ext_resource type="Script" uid="uid://dik2gmovmhpqb" path="res://Features/World/Hitboxes/Definitions/ProjectileHitbox.cs" id="1_e8o5y"]
-[ext_resource type="Texture2D" uid="uid://nvavictoj4t8" path="res://Assets/Sprites/Speels/4.png" id="2_mlmde"]
+[ext_resource type="Texture2D" uid="uid://nvavictoj4t8" path="res://Assets/Textures/Objects/fireball/sprite.png" id="2_mlmde"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_jbwqm"]
 atlas = ExtResource("2_mlmde")

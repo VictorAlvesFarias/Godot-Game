@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bwmybap05bpw"]
 
 [ext_resource type="Script" uid="uid://ctq3rgw7rbglf" path="res://Features/World/Hitboxes/Definitions/AngledMeleeHitbox.cs" id="1_hitbox"]
-[ext_resource type="Texture2D" uid="uid://8gwk8tay77ib" path="res://Assets/Icons/Pickaxes/icon_pickaxe_1.png" id="2_icon"]
+[ext_resource type="Texture2D" uid="uid://8gwk8tay77ib" path="res://Assets/Textures/Items/pickaxe_starting/icon.png" id="2_icon"]
 
 [sub_resource type="Animation" id="Animation_swing"]
 resource_name = "swing"

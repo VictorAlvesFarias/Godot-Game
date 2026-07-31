@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://du2rl5uua1bga"]
 
 [ext_resource type="Script" uid="uid://drku4vkvh81p2" path="res://Features/UI/Inventory/View/InventoryUI.cs" id="1"]
-[ext_resource type="SpriteFrames" uid="uid://cj34f3k1r6xgd" path="res://Assets/Sprites/Character/CharacterFrames.tres" id="2_frames"]
+[ext_resource type="SpriteFrames" uid="uid://cj34f3k1r6xgd" path="res://Assets/Textures/Characters/CharacterFrames.tres" id="2_frames"]
 
 [sub_resource type="StyleBoxFlat" id="Style_ScreenBackground"]
 bg_color = Color(0.05, 0.05, 0.05, 0.92)

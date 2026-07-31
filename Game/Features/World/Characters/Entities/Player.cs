@@ -17,7 +17,6 @@ using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Jogo25D.Constants.Assets.Icons;
 
 namespace Jogo25D.Characters
 {
@@ -54,11 +53,6 @@ namespace Jogo25D.Characters
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
-
-        #endregion
-
-        #region Indicators
-
 		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
 		public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
 
@@ -91,9 +85,10 @@ namespace Jogo25D.Characters
 
 		#region Core - Facing
 
-		private float _shapeOffsetX;
-
-		public bool FacingLeft => Visuals != null && Visuals.Scale.X < 0f;
+		public bool FacingLeft ()
+		{
+			return Visuals != null && Visuals.Scale.X < 0f;
+		} 
 
 		public void SetFacing(bool faceLeft)
 		{
@@ -106,7 +101,6 @@ namespace Jogo25D.Characters
 			{
 				var position = Shape.Position;
 
-				position.X = faceLeft ? -_shapeOffsetX : _shapeOffsetX;
 				Shape.Position = position;
 			}
 		}
@@ -133,7 +127,6 @@ namespace Jogo25D.Characters
 			Visuals = GetNodeOrNull<Node2D>("Visuals");
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
 			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
-			_shapeOffsetX = Shape != null ? Mathf.Abs(Shape.Position.X) : 0f;
 			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
 			Labels = GetNodeOrNull<Node2D>("Labels");
 			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
@@ -1525,7 +1518,7 @@ namespace Jogo25D.Characters
 
 			RemoveItemRequest(instanceId, dropQuantity);
 
-			var dropOffset = new Vector2(FacingLeft ? -40f : 40f, 0f);
+			var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
 			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset);
 		}

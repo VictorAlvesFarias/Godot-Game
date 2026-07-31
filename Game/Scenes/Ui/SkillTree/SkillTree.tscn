@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://bli0n422x5i74"]
 
 [ext_resource type="Script" uid="uid://cytly8gocsxrm" path="res://Features/UI/SkillTree/View/SkillTreeUI.cs" id="1"]
-[ext_resource type="Texture2D" uid="uid://dqi4c4xrpvi2s" path="res://Assets/Icons/Effects/icon_effect_1.png" id="2_placeholder"]
+[ext_resource type="Texture2D" uid="uid://dqi4c4xrpvi2s" path="res://Assets/Textures/Items/effect_poison_damage/icon.png" id="2_placeholder"]
 
 [sub_resource type="StyleBoxFlat" id="Style_ScreenBackground"]
 bg_color = Color(0.05, 0.05, 0.05, 0.92)
