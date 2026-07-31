@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://byetdmlwjbo05"
-path="res://.godot/imported/icon_pickaxe_4.png-566440aee6749113a238e0882e4f3ffb.ctex"
+path="res://.godot/imported/icon.png-bdf4154cf7c57bf98b9082df10998905.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Icons/Pickaxes/icon_pickaxe_4.png"
-dest_files=["res://.godot/imported/icon_pickaxe_4.png-566440aee6749113a238e0882e4f3ffb.ctex"]
+source_file="res://Assets/Textures/Items/icon_pickaxe_4/icon.png"
+dest_files=["res://.godot/imported/icon.png-bdf4154cf7c57bf98b9082df10998905.ctex"]
 
 [params]
 

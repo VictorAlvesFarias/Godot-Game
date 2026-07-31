@@ -1,7 +1,7 @@
-[gd_resource type="TileSet" format=3]
+[gd_resource type="TileSet" format=3 uid="uid://dsttqtu7jsj8i"]
 
-[ext_resource type="Texture2D" path="res://Assets/Textures/Tiles/TX Tileset Ground.png" id="1_08pod"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Tiles/TX Village Props.png" id="2_xe86p"]
+[ext_resource type="Texture2D" uid="uid://b7m0ywjuggjl7" path="res://Assets/Textures/Tiles/TX Tileset Ground.png" id="1_08pod"]
+[ext_resource type="Texture2D" uid="uid://beivbfj6e8rtt" path="res://Assets/Textures/Tiles/TX Village Props.png" id="2_xe86p"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kjd5s"]
 texture = ExtResource("1_08pod")
@@ -29,7 +29,7 @@ texture_region_size = Vector2i(32, 32)
 10:0/0/terrain = 0
 10:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
 10:0/0/terrains_peering_bit/left_side = 0
-12:0/0 = 0 
+12:0/0 = 0
 12:0/0/terrain_set = 0
 12:0/0/terrain = 0
 12:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)

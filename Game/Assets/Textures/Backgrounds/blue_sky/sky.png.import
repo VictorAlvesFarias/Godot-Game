@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c25a80k4xem01"
-path="res://.godot/imported/icon.png-d90cc028d83a5d853f6988e5882033dc.ctex"
+uid="uid://bqkkbmg01n6x0"
+path="res://.godot/imported/sky.png-8186f5e9618d515663c9f9b689b59ee1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/icon_sword_44/icon.png"
-dest_files=["res://.godot/imported/icon.png-d90cc028d83a5d853f6988e5882033dc.ctex"]
+source_file="res://Assets/Textures/Backgrounds/blue_sky/sky.png"
+dest_files=["res://.godot/imported/sky.png-8186f5e9618d515663c9f9b689b59ee1.ctex"]
 
 [params]
 

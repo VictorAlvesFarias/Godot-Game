@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b7kg4ebs36fr"
-path="res://.godot/imported/icon_spell_3.png-d06a97a4d7ca0cf397e82fc30d31067b.ctex"
+path="res://.godot/imported/icon.png-d4dab3a20af95071f07ef2ae5ed8134e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Icons/Spells/icon_spell_3.png"
-dest_files=["res://.godot/imported/icon_spell_3.png-d06a97a4d7ca0cf397e82fc30d31067b.ctex"]
+source_file="res://Assets/Textures/Items/icon_spell_3/icon.png"
+dest_files=["res://.godot/imported/icon.png-d4dab3a20af95071f07ef2ae5ed8134e.ctex"]
 
 [params]
 
