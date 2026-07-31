@@ -105,7 +105,7 @@ namespace Jogo25D.Items
 
             ResetMining();
 
-            player.NetworkManager?.BreakBlockClientRequest(targetCell);
+            player.NetworkManager?.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)

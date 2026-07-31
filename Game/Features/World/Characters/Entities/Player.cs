@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Characters.Resources;
@@ -736,12 +737,18 @@ namespace Jogo25D.Characters
 
 		#region Core - Blocks system
 
+		public string GetActiveDimensionId()
+		{
+			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingManager.OverworldId : ChunkStreamingManager.UpsidedownId;
+		}
+
 		public TileMapLayer GetActiveTileLayer()
 		{
 			var parent = GetParent();
+			var handAuthoredName = GetActiveDimensionId() == ChunkStreamingManager.OverworldId ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
 			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
-				?? parent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
 		}
 
 		#endregion
@@ -1160,7 +1167,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (NetworkManager == null || !NetworkManager.PlaceBlockAuthoritative(cell, blockItemDef.BlockId))
+            if (NetworkManager == null || !NetworkManager.PlaceBlockAuthoritative(cell, blockItemDef.BlockId, GetActiveDimensionId()))
             {
                 return;
             }
@@ -1520,7 +1527,7 @@ namespace Jogo25D.Characters
 
 			var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
-			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset);
+			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
 		}
 
 		public void DropItemRequest(long instanceId, int quantity)

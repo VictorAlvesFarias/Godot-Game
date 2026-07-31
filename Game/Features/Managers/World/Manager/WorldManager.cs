@@ -514,18 +514,20 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - World items
 
-		public void SpawnWorldItem(WorldItem item)
+		private Node2D ResolveDimensionParent(string dimensionId)
 		{
-			if (UpsidedownParent != null)
-			{
-				UpsidedownParent.AddChild(item);
-			}
+			return dimensionId == ChunkStreamingManager.OverworldId ? OverworldParent : UpsidedownParent;
+		}
+
+		public void SpawnWorldItem(WorldItem item, string dimensionId)
+		{
+			ResolveDimensionParent(dimensionId)?.AddChild(item);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position)
+		public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position, string dimensionId)
 		{
-			if (UpsidedownParent == null || FindWorldItem(worldItemId) != null)
+			if (ResolveDimensionParent(dimensionId) == null || FindWorldItem(worldItemId) != null)
 			{
 				return;
 			}
@@ -537,10 +539,10 @@ namespace Jogo25D.Systems
 			worldItem.Data = GodotDictionaryParser.ToResource<ItemData>(data);
 			worldItem.Position = position;
 
-			SpawnWorldItem(worldItem);
+			SpawnWorldItem(worldItem, dimensionId);
 		}
 
-		public long SpawnWorldItemRequest(ItemData item, Vector2 position)
+		public long SpawnWorldItemRequest(ItemData item, Vector2 position, string dimensionId)
 		{
 			var worldItemId = ItemFactory.NextInstanceId();
 
@@ -551,11 +553,11 @@ namespace Jogo25D.Systems
 			worldItem.Data = item;
 			worldItem.Position = position;
 
-			SpawnWorldItem(worldItem);
+			SpawnWorldItem(worldItem, dimensionId);
 
 			var data = GodotDictionaryParser.ToDictionary(item);
 
-			Rpc(nameof(SpawnWorldItemReceive), worldItemId, data, position);
+			Rpc(nameof(SpawnWorldItemReceive), worldItemId, data, position, dimensionId);
 
 			return worldItemId;
 		}
@@ -563,8 +565,9 @@ namespace Jogo25D.Systems
 		public void SpawnWorldItemRequest(WorldItem item, long targetPeerId)
 		{
 			var data = GodotDictionaryParser.ToDictionary(item.Data);
+			var dimensionId = item.GetParent() == OverworldParent ? ChunkStreamingManager.OverworldId : ChunkStreamingManager.UpsidedownId;
 
-			RpcId(targetPeerId, nameof(SpawnWorldItemReceive), item.WorldItemId, data, item.Position);
+			RpcId(targetPeerId, nameof(SpawnWorldItemReceive), item.WorldItemId, data, item.Position, dimensionId);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -587,45 +590,49 @@ namespace Jogo25D.Systems
 
 		public WorldItem FindWorldItem(long worldItemId)
 		{
-			return UpsidedownParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+			return OverworldParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}")
+				?? UpsidedownParent?.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
 		}
 
 		#endregion
 
 		#region Core - Rpc - Blocks
 
-		private TileMapLayer ResolveActiveUpsidedownLayer()
+		private TileMapLayer ResolveDimensionLayer(string dimensionId)
 		{
-			return UpsidedownParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
-				?? UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles");
+			var parent = dimensionId == ChunkStreamingManager.OverworldId ? OverworldParent : UpsidedownParent;
+			var handAuthoredName = dimensionId == ChunkStreamingManager.OverworldId ? "Overworld-Tiles" : "Upsidedown-Tiles";
+
+			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
 		}
 
-		public void BreakBlockClientRequest(Vector2I cell)
+		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
 		{
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
 			{
-				BreakBlockReceive(cell);
+				BreakBlockReceive(cell, dimensionId);
 
 				return;
 			}
 
-			RpcId(1, nameof(BreakBlockServerReceive), cell);
+			RpcId(1, nameof(BreakBlockServerReceive), cell, dimensionId);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void BreakBlockServerReceive(Vector2I cell)
+		public void BreakBlockServerReceive(Vector2I cell, string dimensionId)
 		{
 			if (!Multiplayer.IsServer())
 			{
 				return;
 			}
 
-			BreakBlockReceive(cell);
+			BreakBlockReceive(cell, dimensionId);
 		}
 
-		private void BreakBlockReceive(Vector2I cell)
+		private void BreakBlockReceive(Vector2I cell, string dimensionId)
 		{
-			var layer = ResolveActiveUpsidedownLayer();
+			var layer = ResolveDimensionLayer(dimensionId);
 
 			if (layer == null || layer.GetCellSourceId(cell) == -1)
 			{
@@ -634,22 +641,22 @@ namespace Jogo25D.Systems
 
 			EraseBlockAndReconnect(layer, cell);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(ChunkStreamingManager.UpsidedownId, cell, "break", "");
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(dimensionId, cell, "break", "");
 
 			if (BlockDB.TryGet("grass", out var grassBlock))
 			{
 				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
 
-				SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition);
+				SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, dimensionId);
 			}
 
-			Rpc(nameof(BreakBlockBroadcast), cell);
+			Rpc(nameof(BreakBlockBroadcast), cell, dimensionId);
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void BreakBlockBroadcast(Vector2I cell)
+		public void BreakBlockBroadcast(Vector2I cell, string dimensionId)
 		{
-			var layer = ResolveActiveUpsidedownLayer();
+			var layer = ResolveDimensionLayer(dimensionId);
 
 			if (layer != null)
 			{
@@ -657,9 +664,9 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
+		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId, string dimensionId)
 		{
-			var layer = ResolveActiveUpsidedownLayer();
+			var layer = ResolveDimensionLayer(dimensionId);
 
 			if (layer == null || layer.GetCellSourceId(cell) != -1 || !BlockDB.TryGet(blockId, out var block))
 			{
@@ -668,17 +675,17 @@ namespace Jogo25D.Systems
 
 			PaintBlockAndReconnect(layer, cell, block);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(ChunkStreamingManager.UpsidedownId, cell, "place", blockId);
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(dimensionId, cell, "place", blockId);
 
-			Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
+			Rpc(nameof(PlaceBlockBroadcast), cell, blockId, dimensionId);
 
 			return true;
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void PlaceBlockBroadcast(Vector2I cell, string blockId)
+		public void PlaceBlockBroadcast(Vector2I cell, string blockId, string dimensionId)
 		{
-			var layer = ResolveActiveUpsidedownLayer();
+			var layer = ResolveDimensionLayer(dimensionId);
 
 			if (layer == null || !BlockDB.TryGet(blockId, out var block))
 			{
@@ -707,12 +714,14 @@ namespace Jogo25D.Systems
 
 		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
 		{
-			layer.SetCell(cell, -1);
-
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
 			{
+				layer.SetCell(cell, -1);
+
 				return;
 			}
+
+			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, ChunkGenerator.TerrainSetId, -1, false);
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
@@ -742,9 +751,11 @@ namespace Jogo25D.Systems
 		{
 			var result = new Godot.Collections.Array<Vector2I>();
 
-			for (int dx = -1; dx <= 1; dx++)
+			const int radius = 1;
+
+			for (int dx = -radius; dx <= radius; dx++)
 			{
-				for (int dy = -1; dy <= 1; dy++)
+				for (int dy = -radius; dy <= radius; dy++)
 				{
 					if (dx == 0 && dy == 0)
 					{
@@ -901,9 +912,11 @@ namespace Jogo25D.Systems
                 nextParent = OverworldParent;
             }
 
-            GD.Print($"[WorldManager] Moving player from {currentParent.Name} to {nextParent.Name}");
+            GD.Print($"[Dimension] Indo para: {nextParent.Name}");
 
             playerNode.Reparent(nextParent, true);
+
+            GD.Print($"[Dimension] Chegou em: {nextParent.Name}");
 
             playerNode.LastDimensionTradeMsec = Time.GetTicksMsec();
 
@@ -1013,7 +1026,8 @@ namespace Jogo25D.Systems
 				SpawnNpcRequest(npc.Position, id);
 			}
 
-			var worldItems = UpsidedownParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>();
+			var worldItems = (OverworldParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>())
+				.Concat(UpsidedownParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>());
 
 			foreach (var worldItem in worldItems)
 			{
