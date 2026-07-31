@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://dvthj1kjtge87" path="res://Assets/Textures/Backgrounds/blue_sky/layer_1.png" id="7_bg6tx"]
 [ext_resource type="Script" uid="uid://b7fp0le412qg5" path="res://Features/World/Background/Entities/BackgroundController.cs" id="8_bgscr"]
 [ext_resource type="Script" uid="uid://dv5qnuf6tw3lj" path="res://Features/World/TileEntities/Systems/TileEntityManager.cs" id="9_tileentities"]
+[ext_resource type="Script" path="res://Features/World/Chunks/View/ChunkGridOverlay.cs" id="10_chunkgrid"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_kjd5s"]
 texture = ExtResource("3_wcluf")
@@ -1070,6 +1071,9 @@ texture = ExtResource("7_bg6tx")
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
 script = ExtResource("2_vlsnn")
+
+[node name="ChunkGridOverlay" type="Node2D" parent="Camera2D"]
+script = ExtResource("10_chunkgrid")
 
 [node name="TileEntityManager" type="Node" parent="." unique_id=1265990265]
 script = ExtResource("9_tileentities")
