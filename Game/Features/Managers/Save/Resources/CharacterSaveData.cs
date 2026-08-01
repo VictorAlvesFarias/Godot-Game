@@ -12,7 +12,6 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public string OwnerProfileId { get; set; } = "";
 
-        // "" = personagem local; caso contrario, a Chave de Multiplayer dona dele.
         [Export, GodotDictionaryField]
         public string MultiplayerKey { get; set; } = "";
 

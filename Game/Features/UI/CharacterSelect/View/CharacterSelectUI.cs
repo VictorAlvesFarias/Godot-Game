@@ -14,11 +14,6 @@ namespace Jogo25D.UI
 			PeerJoinServer,
 		}
 
-		// Os personagens locais servem dois fluxos (entrar no proprio mundo,
-		// ou entrar no mundo de outra pessoa em modo LocalCharacters) que so
-		// diferem no que acontece depois de escolher - guardado como
-		// callback pra nao precisar de um "if" por fluxo espalhado pelo resto
-		// da classe. _context so decide pra onde o Voltar leva.
 		private System.Action<CharacterSaveData> _onLocalSelected;
 		private Context _context = Context.OwnWorld;
 
@@ -58,8 +53,6 @@ namespace Jogo25D.UI
 
 		#region Public API
 
-		// Entrar no proprio mundo (WorldSelectUI/CreateWorldUI ja guardaram
-		// o mundo escolhido em NetworkManager.PendingWorld*).
 		public void OpenForOwnWorld()
 		{
 			_context = Context.OwnWorld;
@@ -73,8 +66,6 @@ namespace Jogo25D.UI
 			ShowLocal();
 		}
 
-		// Entrar no mundo de outra pessoa, modo "Personagem Local"
-		// (WorldManager.JoinInfoReceive chama isso depois de conectar).
 		public void OpenForPeerJoin()
 		{
 			_context = Context.PeerJoinLocal;
@@ -83,8 +74,6 @@ namespace Jogo25D.UI
 			ShowLocal();
 		}
 
-		// Entrar no mundo de outra pessoa, modo "Personagem de Servidor"
-		// (WorldManager.ServerCharacterListAvailable, via MultiplayerUI).
 		public void OpenServer(string multiplayerKey, Godot.Collections.Array summaries)
 		{
 			_context = Context.PeerJoinServer;
@@ -99,8 +88,6 @@ namespace Jogo25D.UI
 			Visible = false;
 		}
 
-		// Chamados por CreateCharacterUI ao voltar sem criar nada - so
-		// re-exibe a lista, com o contexto/callback que ja estava guardado.
 		public void ReopenLocal()
 		{
 			ShowLocal();
@@ -111,9 +98,6 @@ namespace Jogo25D.UI
 			ShowServer();
 		}
 
-		// Chamado por CreateCharacterUI depois de criar um personagem local
-		// (tanto pra "entrar no proprio mundo" quanto pra "entrar como peer"
-		// - o callback certo ja esta guardado em _onLocalSelected).
 		public void CompleteLocalCreation(CharacterSaveData character)
 		{
 			if (character == null)
@@ -289,8 +273,6 @@ namespace Jogo25D.UI
 
 				case Context.PeerJoinLocal:
 				case Context.PeerJoinServer:
-					// Nao ha como ficar conectado sem personagem selecionado -
-					// voltar significa desistir da conexao.
 					NetworkManager.Disconnect();
 
 					GetTree().Root.GetNodeOrNull<MultiplayerUI>("Main/Ui/MultiplayerUI")?.Open();

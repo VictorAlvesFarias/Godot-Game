@@ -94,9 +94,6 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			// So guarda o mundo escolhido - quem entra de verdade e
-			// CharacterSelectUI, depois do personagem escolhido (mesmo
-			// fluxo "mundo -> personagem" de WorldSelectUI).
 			NetworkManager.PendingWorld = world;
 			NetworkManager.PendingWorldIsDefault = false;
 

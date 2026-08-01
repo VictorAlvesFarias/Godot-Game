@@ -7,10 +7,6 @@ using System.Linq;
 
 namespace Jogo25D.Systems
 {
-    // Persistencia em disco do sistema de save (ver .docs/sistema-de-save.md e
-    // .docs/spec-sistema-de-save.md). Tudo em Resource/.tres via
-    // ResourceSaver/ResourceLoader - os tipos ja sao [Export] Resource,
-    // entao nao existe camada de serializacao propria aqui.
     public partial class SaveManager : Node
     {
         public static string DEFAULT_NODE_PATH = "/root/Main/Managers/SaveManager";
@@ -143,8 +139,6 @@ namespace Jogo25D.Systems
 
         #region Core - Backup de personagem "por Peer"
 
-        // Nunca e a fonte de verdade - so uma copia de seguranca guardada
-        // pelo host, indexada pelo ProfileId do dono do personagem local.
         public void SaveBackup(string ownerProfileId, CharacterSaveData character)
         {
             if (string.IsNullOrEmpty(ownerProfileId) || character == null)
@@ -268,10 +262,6 @@ namespace Jogo25D.Systems
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
 
-        // Personagem novo ganha o mesmo "kit" inicial que o WorldManager
-        // hoje da na mao (portal + arco inicial) - assim o fluxo autoritativo
-        // de entrada so precisa marcar Player.Loaded = true e nunca precisa
-        // saber se o personagem "acabou de nascer" ou ja tinha progresso.
         private static PlayerData BuildStarterPlayerData()
         {
             var data = new PlayerData();
@@ -348,11 +338,6 @@ namespace Jogo25D.Systems
             }
         }
 
-        // DirAccess nao tem um "remover recursivo" pronto - remove todo
-        // arquivo/subpasta antes de remover a pasta em si (world.tres,
-        // overworld.tres, upsidedown.tres, ficam todos direto dentro de
-        // saves/worlds/{WorldId}/, sem subpastas, mas isso cobre o caso
-        // geral mesmo assim).
         private static void DeleteDirectoryRecursive(string dirPath)
         {
             using var dir = DirAccess.Open(dirPath);

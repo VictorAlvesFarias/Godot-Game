@@ -209,10 +209,6 @@ namespace Jogo25D.UI
 			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
 		}
 
-		// So dispara quando o mundo do host esta em modo "Personagem de
-		// Servidor" (ver WorldManager.RequestServerCharacterListServerReceive).
-		// No modo "Personagem Local" o handshake e automatico (o
-		// PendingCharacter ja escolhido na tela de mundos e mandado sozinho).
 		private void OnServerCharacterListAvailable(string multiplayerKey, Godot.Collections.Array summaries)
 		{
 			Close();

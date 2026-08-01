@@ -87,9 +87,6 @@ namespace Jogo25D.UI
 			return row;
 		}
 
-		// Mundos salvos (ao contrario de "Mundo Padrão", que nao tem save
-		// nenhum pra excluir) ganham um botao "Excluir" ao lado da linha,
-		// mesmo padrao usado em CharacterSelectUI.
 		private Control CreateWorldRowWithDelete(string title, string subtitle, System.Action onSelect, System.Action onDelete)
 		{
 			var wrapper = new HBoxContainer();
@@ -169,10 +166,6 @@ namespace Jogo25D.UI
 
 		#region Core - Actions - Mundos
 
-		// Selecionar/criar um mundo so guarda a escolha (PendingWorld*) e
-		// manda pra tela de personagem - so depois de escolher o personagem
-		// (CharacterSelectUI -> WorldManager.EnterPendingWorld) e que o
-		// mundo de fato carrega e o player entra. Ver .docs/spec-sistema-de-save.md.
 		public void OnDefaultWorldPressed()
 		{
 			NetworkManager.PendingWorld = null;

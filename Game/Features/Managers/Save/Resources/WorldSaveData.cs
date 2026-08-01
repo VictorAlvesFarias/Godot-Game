@@ -18,7 +18,6 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public WorldCharacterMode CharacterMode { get; set; } = WorldCharacterMode.LocalCharacters;
 
-        // So usado quando CharacterMode == ServerCharacters.
         [Export, GodotDictionaryField]
         public string MultiplayerKey { get; set; } = "";
 

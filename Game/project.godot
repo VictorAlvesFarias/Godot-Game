@@ -147,6 +147,10 @@ toggle_chunk_grid={
 ]
 }
 
+[network]
+
+limits/debugger/max_queued_messages=8192
+
 [physics]
 
 2d/default_gravity=1500

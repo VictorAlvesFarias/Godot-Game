@@ -36,19 +36,10 @@ namespace Jogo25D.Systems
 
         #region Save - Properties
 
-        // Metadados do mundo atual (null quando a sessao nao veio do sistema
-        // de save, ex.: "Mundo Padrao" hand-authored). So quem hospeda
-        // (host/solo) tem isso preenchido - ver .docs/sistema-de-save.md.
         public WorldSaveData CurrentWorldSave { get; private set; }
 
-        // Personagem local escolhido pra essa sessao (Fase 2/3). Null =
-        // fluxo antigo sem save de personagem nenhum.
         public CharacterSaveData PendingCharacter { get; set; }
 
-        // Mundo escolhido/criado em WorldSelectUI/CreateWorldUI, aguardando
-        // a escolha de personagem em CharacterSelectUI antes de entrar de
-        // verdade (ver EnterPendingWorld). Null junto com
-        // PendingWorldIsDefault=true significa "Mundo Padrao" hand-authored.
         public WorldSaveData PendingWorld { get; set; }
         public bool PendingWorldIsDefault { get; set; }
 
@@ -56,9 +47,6 @@ namespace Jogo25D.Systems
 
         private Timer _autosaveTimer;
 
-        // So preenchido em quem hospeda: personagem que cada peer conectado
-        // esta usando nesta sessao (backup no modo LocalCharacters, fonte de
-        // verdade no modo ServerCharacters).
         private readonly Dictionary<long, CharacterSaveData> _peerCharacters = new();
         private readonly Dictionary<long, string> _pendingProfileByPeer = new();
 
@@ -169,9 +157,6 @@ namespace Jogo25D.Systems
 			GD.Print("[WorldManager.SpawnWorld] world instantiated");
 		}
 
-		// Chamado por CharacterSelectUI depois que o personagem foi escolhido
-		// pra PendingWorld (setado antes em WorldSelectUI/CreateWorldUI) -
-		// so nesse momento o mundo de fato carrega/e criado e o player entra.
 		public void EnterPendingWorld()
 		{
 			if (PendingWorldIsDefault)
@@ -188,9 +173,6 @@ namespace Jogo25D.Systems
 
 		public void SpawnLocalWorldAndPlayer()
 		{
-			// "Mundo Padrao" hand-authored fica fora do sistema de save
-			// (ver .docs/spec-sistema-de-save.md) - garante que nenhum
-			// autosave de uma sessao anterior continue rodando aqui.
 			CurrentWorldSave = null;
 
 			StopAutosaveTimer();
@@ -202,9 +184,6 @@ namespace Jogo25D.Systems
 			RespawnLocalSoloPlayer();
 		}
 
-		// save == null cria um mundo avulso (nao listado, sem autosave
-		// configurado por ninguem) - usado como fallback caso o caller nao
-		// tenha passado por SaveManager.CreateWorld.
 		public async void CreateProceduralWorldAndPlayer(WorldSaveData save = null)
 		{
 			var saveManager = ResolveSaveManager();
@@ -448,7 +427,8 @@ namespace Jogo25D.Systems
 				Peer.Close();
 
 				Peer = null;
-				
+				Multiplayer.MultiplayerPeer = null;
+
 				GD.Print("[WorldManager.Disconnect] peer closed");
 			}
 
@@ -483,6 +463,7 @@ namespace Jogo25D.Systems
 				Peer.Close();
 
 				Peer = null;
+				Multiplayer.MultiplayerPeer = null;
 
 				GD.Print("[WorldManager.LeaveWorld] peer closed");
 			}
@@ -865,8 +846,6 @@ namespace Jogo25D.Systems
 			parent.AddChild(portal);
 		}
 
-		// Portais colocados na mao nao vem da geracao procedural - a lista
-		// inteira e reconstruida a partir do save toda vez que o mundo carrega.
 		private void RestorePortals(WorldSaveData save)
 		{
 			if (save?.Portals == null)
@@ -1090,10 +1069,6 @@ namespace Jogo25D.Systems
 			_autosaveTimer = null;
 		}
 
-		// Grava mundo (chunks + portais) e os personagens de todo mundo
-		// conectado. So faz sentido em quem hospeda (host/solo) - um peer
-		// entrando no mundo de outra pessoa nunca tem CurrentWorldSave
-		// preenchido (ver .docs/sistema-de-save.md).
 		public void SaveCurrentWorld()
 		{
 			if (CurrentWorldSave == null)
@@ -1125,10 +1100,6 @@ namespace Jogo25D.Systems
 			SaveRemotePeerCharacters(saveManager);
 		}
 
-		// O dono de um personagem local ja tem, no proprio Player em memoria,
-		// a copia mais atual dos dados (replicada por RPC como qualquer outro
-		// campo de Player.Data) - nao depende de nada vindo do servidor pra
-		// salvar o que e seu (ver .docs/spec-sistema-de-save.md secao 0).
 		private void SaveOwnLocalCharacter()
 		{
 			if (PendingCharacter == null)
@@ -1150,9 +1121,6 @@ namespace Jogo25D.Systems
 			saveManager.SaveLocalCharacter(PendingCharacter);
 		}
 
-		// So roda em quem hospeda. Backup (modo LocalCharacters) ou fonte de
-		// verdade (modo ServerCharacters) de cada peer conectado - os dados
-		// ja chegam atualizados no Player de cada um pela replicacao normal.
 		private void SaveRemotePeerCharacters(SaveManager saveManager)
 		{
 			if (!IsHostOrSolo())
@@ -1410,17 +1378,8 @@ namespace Jogo25D.Systems
 		public void OnPeerConnected(long id)
 		{
 			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
-
-			// O spawn de verdade so acontece depois do handshake de
-			// personagem (RequestJoinInfoServerReceive e as RPCs que vem
-			// depois dela) - ver regiao "Core - Rpc - Entrada com personagem".
-			// Isso existe pra dar tempo do peer escolher/criar o personagem
-			// certo antes de qualquer Player ser instanciado pra ele.
 		}
 
-		// Spawna de verdade o Player do peer, ja com o personagem
-		// (local ou de servidor) resolvido pelo handshake. Substitui o que
-		// antes rodava direto em OnPeerConnected.
 		private async void FinishPeerJoin(long id, CharacterSaveData character)
 		{
 			if (!Multiplayer.IsServer() || character == null)
@@ -1516,9 +1475,6 @@ namespace Jogo25D.Systems
 			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RemovePeer(id);
 		}
 
-		// Ultima chance de gravar o personagem desse peer antes do Player
-		// dele sumir da arvore - o autosave periodico ja cobre a maior parte,
-		// isso so evita perder o que mudou entre o ultimo tick e a saida.
 		private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
 		{
 			if (playerNode == null || CurrentWorldSave == null || !_peerCharacters.TryGetValue(id, out var character))
@@ -1563,6 +1519,7 @@ namespace Jogo25D.Systems
 			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
 
 			Peer = null;
+			Multiplayer.MultiplayerPeer = null;
 
 			GD.Print("[WorldManager.OnConnectionFailed] peer reset");
 
@@ -1579,12 +1536,6 @@ namespace Jogo25D.Systems
         #endregion
 
         #region Core - Rpc - Entrada com personagem (save)
-
-		// Handshake de 2-3 passos que decide qual personagem o peer vai usar
-		// antes do servidor spawnar o Player dele - ver
-		// .docs/spec-sistema-de-save.md Fase 3/4. O servidor nunca spawna
-		// ninguem sozinho mais (OnPeerConnected so loga) - tudo passa por
-		// aqui, terminando em FinishPeerJoin.
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void RequestJoinInfoServerReceive()
@@ -1606,27 +1557,16 @@ namespace Jogo25D.Systems
 
 			if (mode == WorldCharacterMode.LocalCharacters)
 			{
-				// A escolha do personagem sempre passa pela tela (mesmo
-				// padrao do fluxo solo: mundo -> personagem) - so depois de
-				// escolher/criar em CharacterSelectUI e que
-				// SubmitLocalCharacterForJoin manda a RPC pro host.
 				GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI")?.OpenForPeerJoin();
 
 				return;
 			}
 
-			// ServerCharacters: pede a lista de personagens dessa chave pro
-			// host antes de decidir - a UI decide o resto (ver
-			// ServerCharacterListAvailable / SelectServerCharacterRequest /
-			// CreateServerCharacterRequest).
 			var profile = ResolveSaveManager()?.GetOrCreateLocalProfile();
 
 			RpcId(1, nameof(RequestServerCharacterListServerReceive), profile?.ProfileId ?? "");
 		}
 
-		// Chamado por CharacterSelectUI.OpenForPeerJoin depois que o peer
-		// escolheu/criou o personagem local que vai usar pra entrar no mundo
-		// de outra pessoa (mundo em modo LocalCharacters).
 		public void SubmitLocalCharacterForJoin(CharacterSaveData character)
 		{
 			if (character == null)
@@ -1687,8 +1627,6 @@ namespace Jogo25D.Systems
 			SendServerCharacterListTo(senderId);
 		}
 
-		// Compartilhado entre o pedido inicial da lista e o refresh depois
-		// de criar/excluir um personagem de servidor.
 		private void SendServerCharacterListTo(long senderId)
 		{
 			if (!_pendingProfileByPeer.TryGetValue(senderId, out var profileId))
@@ -1738,9 +1676,6 @@ namespace Jogo25D.Systems
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ServerCharacterListReceive(Godot.Collections.Array summaries)
 		{
-			// So entrega os dados - quem decide selecionar um existente
-			// (SelectServerCharacterRequest) ou criar um novo
-			// (CreateServerCharacterRequest) e a UI (ver Features/UI/WorldSelect).
 			ServerCharacterListAvailable?.Invoke(CurrentWorldSave?.MultiplayerKey ?? "", summaries);
 		}
 
