@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cjaepkyh04qyr"
-path="res://.godot/imported/TX Tileset Ground Packed.png-ff7be92e898b284a18fede49fbb87602.ctex"
+uid="uid://bg7ppo1gaog8a"
+path="res://.godot/imported/lime_ground_texture.png-78cc551f8b985f225015068bbee69dd9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/TX Tileset Ground Packed.png"
-dest_files=["res://.godot/imported/TX Tileset Ground Packed.png-ff7be92e898b284a18fede49fbb87602.ctex"]
+source_file="res://Assets/Textures/Tiles/lime_ground/lime_ground_texture.png"
+dest_files=["res://.godot/imported/lime_ground_texture.png-78cc551f8b985f225015068bbee69dd9.ctex"]
 
 [params]
 

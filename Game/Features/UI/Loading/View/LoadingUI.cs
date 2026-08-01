@@ -4,7 +4,7 @@ namespace Jogo25D.UI
 {
     public partial class LoadingUI : CanvasLayer
     {
-        private const string BaseText = "Gerando mundo";
+        private const string BaseText = "Carregando";
         private const float DotsIntervalSeconds = 0.4f;
 
         public Label StatusLabel { get; set; }

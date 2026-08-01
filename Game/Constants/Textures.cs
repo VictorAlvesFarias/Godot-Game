@@ -10,10 +10,12 @@ namespace Jogo25D.Constants
 
         public static class Tiles
         {
-            public const string TILE_SET = "res://Assets/Textures/Tiles/TileSet.tres";
+            public const string TILE_SET = "res://Assets/Textures/Tiles/lime_ground/lime_ground_tileset.tres";
+            public const string UPSIDEDOWN_TILE_SET = "res://Assets/Textures/Tiles/olive_ground/olive_ground_tileset.tres";
             public const string TX_CHEST_ANIMATION_TEXTURE = "res://Assets/Textures/Tiles/TX Chest Animation.png";
-            public const string TX_TILESET_GROUND_TEXTURE = "res://Assets/Textures/Tiles/TX Tileset Ground.png";
-            public const string TX_VILLAGE_PROPS_TEXTURE = "res://Assets/Textures/Tiles/TX Village Props.png";
+            public const string TX_TILESET_GROUND_TEXTURE = "res://Assets/Textures/Tiles/lime_ground/lime_ground_texture.png";
+            public const string TX_VILLAGE_PROPS_TEXTURE = "res://Assets/Textures/Tiles/props/props_texture.png";
+            public const string TILE_03_TEXTURE = "res://Assets/Textures/Tiles/olive_ground/olive_ground_texture.png";
         }
 
         public static class Items

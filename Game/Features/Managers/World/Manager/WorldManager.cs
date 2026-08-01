@@ -209,11 +209,33 @@ namespace Jogo25D.Systems
             var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
 
             npc.Name = "NPC_Dummy";
-            npc.Position = new Vector2(200, 0);
+            npc.Position = FindGroundSpawnPosition(UpsidedownParent, 200f);
 
             npc.SetMultiplayerAuthority(1);
 
             UpsidedownParent.AddChild(npc);
+        }
+
+        private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
+        {
+            var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles");
+
+            if (layer == null)
+            {
+                return new Vector2(worldX, 0f);
+            }
+
+            var cellX = Mathf.FloorToInt(worldX / tileSize);
+
+            for (int cellY = -8; cellY <= 8; cellY++)
+            {
+                if (layer.GetCellSourceId(new Vector2I(cellX, cellY)) != -1)
+                {
+                    return new Vector2(worldX, cellY * tileSize - halfBodyHeight);
+                }
+            }
+
+            return new Vector2(worldX, 0f);
         }
 
         #endregion
@@ -424,6 +446,7 @@ namespace Jogo25D.Systems
 
 			localPlayer.Name = "Player";
 			localPlayer.PeerId = 1;
+			localPlayer.Position = FindGroundSpawnPosition(UpsidedownParent, 0f);
 
 			SpawnPlayer(localPlayer);
 
@@ -953,11 +976,37 @@ namespace Jogo25D.Systems
 			Rpc(nameof(TradeDimension), senderId);
 		}
 
-		public void TradeDimensionClientRequest()
+		public async void TradeDimensionClientRequest()
 		{
 			GD.Print("[WorldManager.RequestLocalPlayerTradeDimension] sending trade request to server (Peer 1)");
-			
+
+			var localPlayer = GetLocalPlayer();
+
+			if (localPlayer == null)
+			{
+				RpcId(1, nameof(TradeDimensionServerReceive));
+
+				return;
+			}
+
+			var currentParent = localPlayer.GetParent<Node2D>();
+			var targetDimensionId = currentParent == OverworldParent ? ChunkStreamingManager.UpsidedownId : ChunkStreamingManager.OverworldId;
+			var targetParent = currentParent == OverworldParent ? UpsidedownParent : OverworldParent;
+
+			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(targetDimensionId, targetParent, localPlayer.Position);
+			}
+
 			RpcId(1, nameof(TradeDimensionServerReceive));
+
+			loadingUi?.Close();
 		}
 
         #endregion
@@ -990,6 +1039,8 @@ namespace Jogo25D.Systems
 			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
 			{
 				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, player.Position);
+
+				player.Position = FindGroundSpawnPosition(UpsidedownParent, player.Position.X);
 
 				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
 			}
