@@ -139,7 +139,10 @@ namespace Jogo25D.Characters
 
 			GD.Print("[Player._Ready] Seting starter slot");
 
-			if (IsAuthoritative())
+			// Loaded = true significa que Data ja veio de um personagem salvo
+			// (RespawnLocalSoloPlayer/FinishPeerJoin) - nao sobrescreve com o
+			// arsenal de debug de novo a cada spawn.
+			if (IsAuthoritative() && !Loaded)
 			{
 				Data ??= new PlayerData();
 				Data.Inventory ??= new InventoryData();

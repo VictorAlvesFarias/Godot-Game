@@ -59,6 +59,8 @@ namespace Jogo25D.UI
 			WorldsButton.Pressed += OnWorldsPressed;
 			BackButton.Pressed += OnBackPressed;
 
+			NetworkManager.ServerCharacterListAvailable += OnServerCharacterListAvailable;
+
 			_connectTimeoutTimer = new Timer();
 			_connectTimeoutTimer.OneShot = true;
 			_connectTimeoutTimer.WaitTime = ConnectTimeoutSeconds;
@@ -205,6 +207,17 @@ namespace Jogo25D.UI
 			Close();
 
 			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
+		}
+
+		// So dispara quando o mundo do host esta em modo "Personagem de
+		// Servidor" (ver WorldManager.RequestServerCharacterListServerReceive).
+		// No modo "Personagem Local" o handshake e automatico (o
+		// PendingCharacter ja escolhido na tela de mundos e mandado sozinho).
+		private void OnServerCharacterListAvailable(string multiplayerKey, Godot.Collections.Array summaries)
+		{
+			Close();
+
+			GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI")?.OpenServer(multiplayerKey, summaries);
 		}
 
 		public void OnBackPressed()

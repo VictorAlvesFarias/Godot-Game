@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://Features/Managers/Screen/Manager/ScreenManager.cs" id="1_7ktwl"]
 [ext_resource type="Script" path="res://Features/Managers/World/Manager/WorldManager.cs" id="3_b871k"]
 [ext_resource type="Script" path="res://Features/World/Chunks/Systems/ChunkStreamingManager.cs" id="4_chunkstream"]
+[ext_resource type="Script" path="res://Features/Managers/Save/Manager/SaveManager.cs" id="5_savemanager"]
 
 [node name="Managers" type="Node" unique_id=940605774]
 
@@ -14,3 +15,6 @@ script = ExtResource("3_b871k")
 
 [node name="ChunkStreamingManager" type="Node" parent="." unique_id=1007702762]
 script = ExtResource("4_chunkstream")
+
+[node name="SaveManager" type="Node" parent="." unique_id=1007702763]
+script = ExtResource("5_savemanager")

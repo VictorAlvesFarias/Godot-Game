@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Jogo25D.Characters;
+using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Systems;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -526,6 +527,62 @@ namespace Jogo25D.Chunks
             foreach (var peers in loadedPeers.Values)
             {
                 peers.Remove(peerId);
+            }
+        }
+
+        #endregion
+
+        #region Core - Persistencia (save/load de mundo)
+
+        // O host decide o seed no momento em que o mundo e criado
+        // (SaveManager.CreateWorld) - isso sobrescreve o seed aleatorio que
+        // _Ready() atribui no boot. Precisa ser chamado antes de habilitar o
+        // streaming (Enabled = true) e antes de qualquer chunk carregar.
+        public void SetWorldSeed(long seed)
+        {
+            _worldSeed = seed;
+        }
+
+        // Os dicionarios _overworldState/_upsidedownState ja guardam, em RAM,
+        // exatamente o que precisa ser persistido (mutacoes de todo chunk que
+        // teve algum bloco quebrado/colocado durante a sessao, mesmo os ja
+        // descarregados - ver comentario em UnloadChunk). Exportar/importar e
+        // so a ponte pra um Resource gravavel, sem estrutura nova.
+        public DimensionSaveData ExportState(string dimensionId)
+        {
+            var state = ResolveState(dimensionId);
+            var save = new DimensionSaveData();
+
+            foreach (var (chunkCoord, chunkState) in state)
+            {
+                save.Chunks.Add(new ChunkEntryData
+                {
+                    ChunkCoordX = chunkCoord.X,
+                    ChunkCoordY = chunkCoord.Y,
+                    State = chunkState,
+                });
+            }
+
+            return save;
+        }
+
+        // So deve ser chamado na criacao/carregamento do mundo, antes de
+        // qualquer chunk ser carregado (senao sobrescreve mutacoes que ja
+        // aconteceram nesta sessao).
+        public void ImportState(string dimensionId, DimensionSaveData save)
+        {
+            var state = ResolveState(dimensionId);
+
+            state.Clear();
+
+            if (save == null)
+            {
+                return;
+            }
+
+            foreach (var entry in save.Chunks)
+            {
+                state[new Vector2I(entry.ChunkCoordX, entry.ChunkCoordY)] = entry.State ?? new ChunkStateData();
             }
         }
 

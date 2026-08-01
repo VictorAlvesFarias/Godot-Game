@@ -12,6 +12,9 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/DeathScreen/DeathScreen.tscn" id="12_deathscreen"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Loading/Loading.tscn" id="13_loading"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Map/Map.tscn" id="14_map"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/CreateWorld/CreateWorld.tscn" id="15_createworld"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/CharacterSelect/CharacterSelect.tscn" id="16_characterselect"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/CreateCharacter/CreateCharacter.tscn" id="17_createcharacter"]
 
 [node name="Ui" type="Node2D" unique_id=1165519216]
 
@@ -40,3 +43,9 @@ visible = false
 [node name="LoadingUI" parent="." instance=ExtResource("13_loading")]
 
 [node name="FullscreenMapUI" parent="." instance=ExtResource("14_map")]
+
+[node name="CreateWorldUI" parent="." instance=ExtResource("15_createworld")]
+
+[node name="CharacterSelectUI" parent="." instance=ExtResource("16_characterselect")]
+
+[node name="CreateCharacterUI" parent="." instance=ExtResource("17_createcharacter")]
