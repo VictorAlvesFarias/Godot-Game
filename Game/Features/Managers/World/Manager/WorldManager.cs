@@ -8,7 +8,7 @@ using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using System.Linq;
 using Jogo25D.Items;
-using Jogo25D.TileEntities;
+using Jogo25D.Portals;
 using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 
@@ -171,9 +171,6 @@ namespace Jogo25D.Systems
 		{
 			OverworldParent?.GetNodeOrNull<TileMapLayer>("Overworld-Tiles")?.Clear();
 			UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles")?.Clear();
-
-			OverworldParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
-			UpsidedownParent?.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.ClearEntities();
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -448,6 +445,8 @@ namespace Jogo25D.Systems
 			localPlayer.PeerId = 1;
 			localPlayer.Position = FindGroundSpawnPosition(UpsidedownParent, 0f);
 
+			localPlayer.GiveItem(ItemFactory.CreateInstance("portal"));
+
 			SpawnPlayer(localPlayer);
 
 			SpawnTestNPC();
@@ -716,6 +715,106 @@ namespace Jogo25D.Systems
 			}
 
 			PaintBlockAndReconnect(layer, cell, block);
+		}
+
+		private long _nextPortalId;
+
+		public bool PlacePortalAuthoritative(Vector2 position, string dimensionId)
+		{
+			var layer = ResolveDimensionLayer(dimensionId);
+			var parent = ResolveDimensionParent(dimensionId);
+
+			if (layer == null || parent == null)
+			{
+				return false;
+			}
+
+			var cell = layer.LocalToMap(layer.ToLocal(position));
+
+			if (layer.GetCellSourceId(cell) != -1 || layer.GetCellSourceId(cell + Vector2I.Down) == -1)
+			{
+				return false;
+			}
+
+			SpawnPortal(parent, position, ++_nextPortalId);
+
+			Rpc(nameof(PlacePortalBroadcast), position, dimensionId, _nextPortalId);
+
+			return true;
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void PlacePortalBroadcast(Vector2 position, string dimensionId, long portalId)
+		{
+			var parent = ResolveDimensionParent(dimensionId);
+
+			if (parent == null)
+			{
+				return;
+			}
+
+			SpawnPortal(parent, position, portalId);
+		}
+
+		private void SpawnPortal(Node2D parent, Vector2 position, long portalId)
+		{
+			var portal = GD.Load<PackedScene>("res://Scenes/World/Props/Portal.tscn").Instantiate<Node2D>();
+
+			portal.Name = $"Portal{portalId}";
+			portal.Position = position;
+
+			parent.AddChild(portal);
+		}
+
+		public void BreakPortalClientRequest(string portalName, string dimensionId)
+		{
+			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+			{
+				BreakPortalReceive(portalName, dimensionId);
+
+				return;
+			}
+
+			RpcId(1, nameof(BreakPortalServerReceive), portalName, dimensionId);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakPortalServerReceive(string portalName, string dimensionId)
+		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			BreakPortalReceive(portalName, dimensionId);
+		}
+
+		private void BreakPortalReceive(string portalName, string dimensionId)
+		{
+			var parent = ResolveDimensionParent(dimensionId);
+			var portal = parent?.GetNodeOrNull<Portal>(portalName);
+
+			if (portal == null)
+			{
+				return;
+			}
+
+			var dropPosition = portal.GlobalPosition;
+
+			portal.QueueFree();
+
+			SpawnWorldItemRequest(ItemFactory.CreateInstance("portal"), dropPosition, dimensionId);
+
+			Rpc(nameof(BreakPortalBroadcast), portalName, dimensionId);
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void BreakPortalBroadcast(string portalName, string dimensionId)
+		{
+			var parent = ResolveDimensionParent(dimensionId);
+			var portal = parent?.GetNodeOrNull<Portal>(portalName);
+
+			portal?.QueueFree();
 		}
 
 		public void ApplyChunkMutation(TileMapLayer layer, ChunkMutationData mutation)
@@ -1031,6 +1130,7 @@ namespace Jogo25D.Systems
             var startingWeapon = ItemFactory.CreateInstance("bow_starting2");
 
 			player.GiveItem(startingWeapon);
+			player.GiveItem(ItemFactory.CreateInstance("portal"));
 
             player.Data.EquippedItemId = startingWeapon.InstanceId;
 

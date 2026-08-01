@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
+using Jogo25D.Portals;
 
 namespace Jogo25D.Items
 {
@@ -82,7 +83,9 @@ namespace Jogo25D.Items
 
         private void UpdateMining(Player player, TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
         {
-            if (layer.GetCellSourceId(targetCell) == -1)
+            var portal = ResolveMiningTargetPortal(player, layer, targetCell);
+
+            if (portal == null && layer.GetCellSourceId(targetCell) == -1)
             {
                 ResetMining();
 
@@ -105,7 +108,34 @@ namespace Jogo25D.Items
 
             ResetMining();
 
-            player.NetworkManager?.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
+            if (portal != null)
+            {
+                player.NetworkManager?.BreakPortalClientRequest(portal.Name, player.GetActiveDimensionId());
+            }
+            else
+            {
+                player.NetworkManager?.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
+            }
+        }
+
+        private static Portal ResolveMiningTargetPortal(Player player, TileMapLayer layer, Vector2I targetCell)
+        {
+            var parent = player.GetParent();
+
+            if (parent == null)
+            {
+                return null;
+            }
+
+            foreach (var child in parent.GetChildren())
+            {
+                if (child is Portal portal && layer.LocalToMap(layer.ToLocal(portal.GlobalPosition)) == targetCell)
+                {
+                    return portal;
+                }
+            }
+
+            return null;
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)
@@ -156,12 +186,19 @@ namespace Jogo25D.Items
             {
                 var hit = RaycastTiles(layer, player.GlobalPosition, player.Input.MousePosition, reach);
 
-                return (hit.FoundSolid, hit.SolidCell);
+                if (hit.FoundSolid)
+                {
+                    return (true, hit.SolidCell);
+                }
+
+                var aimCell = ResolveCellInRange(player, layer, reach);
+
+                return (ResolveMiningTargetPortal(player, layer, aimCell) != null, aimCell);
             }
 
             var cell = ResolveCellInRange(player, layer, reach);
 
-            return (layer.GetCellSourceId(cell) != -1, cell);
+            return (layer.GetCellSourceId(cell) != -1 || ResolveMiningTargetPortal(player, layer, cell) != null, cell);
         }
 
         public override void UpdateIndicator(Player player, ItemData data, float delta)

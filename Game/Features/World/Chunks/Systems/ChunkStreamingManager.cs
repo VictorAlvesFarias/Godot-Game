@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Systems;
-using Jogo25D.TileEntities;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Chunks
@@ -232,8 +231,6 @@ namespace Jogo25D.Chunks
             loaded.Add(chunkCoord);
             loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
 
-            dimensionParent.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.RegisterChunk(layer, chunkCoord, ChunkSize);
-
             var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
             var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
 
@@ -264,8 +261,6 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
 
             ChunkGenerator.Erase(layer, chunkCoord, ChunkSize);
-
-            dimensionParent.GetNodeOrNull<TileEntityManager>("TileEntityManager")?.UnregisterChunk(chunkCoord, ChunkSize);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {

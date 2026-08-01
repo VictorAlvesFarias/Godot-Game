@@ -7,9 +7,9 @@
 [ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png" id="4_ufdy7"]
 [ext_resource type="Texture2D" uid="uid://c5wutnvn5ke2r" path="res://Assets/Textures/Backgrounds/blue_sky/layer_2.png" id="5_blm8h"]
 [ext_resource type="Texture2D" uid="uid://dvthj1kjtge87" path="res://Assets/Textures/Backgrounds/blue_sky/layer_1.png" id="6_kqktc"]
-[ext_resource type="Script" uid="uid://bk7fraquo0qo5" path="res://Features/World/TileEntities/Systems/TileEntityManager.cs" id="7_tileentities"]
-[ext_resource type="TileSet" uid="uid://bd1b5o5fe2m8w" path="res://Assets/Textures/Tiles/olive_ground/olive_ground_tileset.tres" id="9_2t3hh"]
+[ext_resource type="TileSet" uid="uid://dnh0upna6mf57" path="res://Assets/Textures/Tiles/olive_ground/olive_ground_tileset.tres" id="9_2t3hh"]
 [ext_resource type="Script" uid="uid://dqvh2ntfafi3r" path="res://Features/World/Chunks/View/ChunkGridOverlay.cs" id="10_chunkgrid"]
+[ext_resource type="PackedScene" path="res://Scenes/World/Props/Portal.tscn" id="10_yegaj"]
 
 [node name="Upsidedown" type="Node2D" unique_id=726539886]
 
@@ -24,7 +24,7 @@ repeat_times = 30
 
 [node name="Sprite" type="Sprite2D" parent="Background/Sky" unique_id=1042977176]
 texture_filter = 1
-position = Vector2(56, 154)
+position = Vector2(16, 304)
 scale = Vector2(9, 9)
 texture = ExtResource("2_a7an3")
 
@@ -102,9 +102,8 @@ script = ExtResource("4_jbnhx")
 [node name="ChunkGridOverlay" type="Node2D" parent="Camera2D" unique_id=1391806219]
 script = ExtResource("10_chunkgrid")
 
-[node name="TileEntityManager" type="Node" parent="." unique_id=1219524297]
-script = ExtResource("7_tileentities")
-TileMapLayerPath = NodePath("../Upsidedown-Tiles")
+[node name="Portal" parent="." unique_id=1940432713 instance=ExtResource("10_yegaj")]
+position = Vector2(104, 16)
 
 [node name="Upsidedown-Tiles" type="TileMapLayer" parent="." unique_id=64611662]
 texture_filter = 1

@@ -13,7 +13,6 @@ using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
-using Jogo25D.TileEntities;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
@@ -80,7 +79,6 @@ namespace Jogo25D.Characters
 		public Node2D Labels { get; set; }
 		public Label NameLabel { get; set; }
 		public Label HealthLabel { get; set; }
-		public Label InteractPromptLabel { get; set; }
 
 		#endregion
 
@@ -132,7 +130,6 @@ namespace Jogo25D.Characters
 			Labels = GetNodeOrNull<Node2D>("Labels");
 			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
-			InteractPromptLabel = GetNodeOrNull<Label>("Labels/InteractPromptLabel");
 
 			GD.Print("[Player._Ready] Setting default states");
 
@@ -265,7 +262,6 @@ namespace Jogo25D.Characters
 		public override void _Process(double delta)
 		{
 			UpdateNameplate();
-			UpdateInteractPrompt();
 		}
 
         #endregion
@@ -316,32 +312,6 @@ namespace Jogo25D.Characters
             HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
         }
 
-        protected void UpdateInteractPrompt()
-        {
-            if (InteractPromptLabel == null)
-            {
-                return;
-            }
-
-            if (!IsOwner())
-            {
-                InteractPromptLabel.Visible = false;
-
-                return;
-            }
-
-            var manager = GetParent()?.GetNodeOrNull<TileEntityManager>("TileEntityManager");
-
-            if (manager == null || !manager.TryGetPromptFor(this, out var prompt))
-            {
-                InteractPromptLabel.Visible = false;
-
-                return;
-            }
-
-            InteractPromptLabel.Text = prompt;
-            InteractPromptLabel.Visible = true;
-        }
 
         protected void UpdateItems(float dt)
 		{
@@ -1185,6 +1155,50 @@ namespace Jogo25D.Characters
             }
 
             RpcId(1, nameof(PlaceBlockReceive), cell, instanceId);
+        }
+
+        #endregion
+
+        #region Core - Rpc - PlacePortal
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void PlacePortalReceive(Vector2 position, long instanceId)
+        {
+            if (!IsAuthoritative())
+            {
+                return;
+            }
+
+            var item = Inventory.FindItem(Data.Inventory, instanceId);
+
+            if (item == null || item.Quantity <= 0)
+            {
+                return;
+            }
+
+            if (ItemDefinitions.GetValueOrDefault(item.InstanceId) is not PortalItemDefinition)
+            {
+                return;
+            }
+
+            if (NetworkManager == null || !NetworkManager.PlacePortalAuthoritative(position, GetActiveDimensionId()))
+            {
+                return;
+            }
+
+            RemoveItemRequest(instanceId, 1);
+        }
+
+        public void PlacePortalRequest(Vector2 position, long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                PlacePortalReceive(position, instanceId);
+
+                return;
+            }
+
+            RpcId(1, nameof(PlacePortalReceive), position, instanceId);
         }
 
         #endregion

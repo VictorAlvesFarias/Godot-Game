@@ -25,6 +25,7 @@ namespace Jogo25D.Constants
             public const string BOW_STARTING2_ICON = "res://Assets/Textures/Items/bow_starting2/icon.png";
             public const string PICKAXE_STARTING_ICON = "res://Assets/Textures/Items/pickaxe_starting/icon.png";
             public const string BLOCK_GRASS_ICON = "res://Assets/Textures/Items/block_grass/GrassBlock.tres";
+            public const string PORTAL_ICON = "res://Assets/Textures/Items/portal/icon.tres";
             public const string ARROW_ICON = "res://Assets/Textures/Items/arrow/icon.png";
             public const string SWORD_BASIC_ICON = "res://Assets/Textures/Items/sword_basic/icon.png";
             public const string FIRE_SLASH_SWORD_ICON = "res://Assets/Textures/Items/fire_slash_sword/icon.png";

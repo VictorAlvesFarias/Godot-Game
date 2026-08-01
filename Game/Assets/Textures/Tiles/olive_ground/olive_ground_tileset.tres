@@ -1,4 +1,4 @@
-[gd_resource type="TileSet" format=3 uid="uid://bd1b5o5fe2m8w"]
+[gd_resource type="TileSet" format=3 uid="uid://dnh0upna6mf57"]
 
 [ext_resource type="Texture2D" uid="uid://vljyxx0uapan" path="res://Assets/Textures/Tiles/olive_ground/olive_ground_texture.png" id="1_tile03"]
 
@@ -387,6 +387,4 @@ physics_layer_0/collision_layer = 1
 terrain_set_0/mode = 0
 terrain_set_0/terrain_0/name = "Terrain 0"
 terrain_set_0/terrain_0/color = Color(0.5, 0.34375, 0.25, 1)
-custom_data_layer_0/name = "tile_entity_type"
-custom_data_layer_0/type = 4
 sources/1 = SubResource("TileSetAtlasSource_tile03")

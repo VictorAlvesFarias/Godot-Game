@@ -105,6 +105,18 @@ namespace Jogo25D.Items
                     Icon = GD.Load<Texture2D>(Textures.Items.BLOCK_GRASS_ICON),
                 },
 
+                ["portal"] = () => new PortalItemDefinition
+                {
+                    Id = "portal",
+                    Name = "Portal",
+                    Type = ItemType.Misc,
+                    Description = "Cria um portal que troca de dimensão ao interagir",
+                    Stackable = true,
+                    MaxStackSize = 99,
+                    Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.PORTAL_ICON),
+                },
+
                 ["arrow"] = () => new ConsumableDefinition
                 {
                     Id = "arrow",
