@@ -21,7 +21,16 @@ namespace Jogo25D.UI
 		public string PlayerGroupName { get; set; } = "players";
 
 		public Label fpsLabel;
-		public ProgressBar healthBar;
+		public PanelContainer healthBar;
+		public PhysicalSizeTextureRect healthBarBack;
+		public RatioFillRect healthBarFill;
+
+		public ProgressBar legacyHealthBar;
+
+		private const float HealthBarBaselineMaxHealth = 50f;
+
+		private bool _healthBarBaselineCaptured;
+		private Vector2 _healthBarBackBaselineSize;
 		public HBoxContainer abilitiesContainer;
 		public HBoxContainer effectsContainer;
 		public Player localPlayer;
@@ -57,7 +66,11 @@ namespace Jogo25D.UI
 		public override void _Ready()
 		{
 			fpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
-			healthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBar");
+			legacyHealthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/LegacyHealthBar");
+			healthBar = GetNode<PanelContainer>("MarginContainer/VBoxContainer/HealthBar");
+			healthBarBack = healthBar.GetNode<PhysicalSizeTextureRect>("BarBack");
+			healthBarFill = healthBar.GetNode<RatioFillRect>("BarFill");
+
 			abilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
 			minimap = GetNode<MinimapUI>("MarginContainer/TopRightColumn/MinimapPanel/Minimap");
 
@@ -211,22 +224,37 @@ namespace Jogo25D.UI
 				FindLocalPlayer();
 			}
 
-			if (localPlayer != null && IsInstanceValid(localPlayer))
+			var maxHealth = localPlayer != null && IsInstanceValid(localPlayer) ? localPlayer.GetMaxHealth() : (int)HealthBarBaselineMaxHealth;
+			var currentHealth = localPlayer != null && IsInstanceValid(localPlayer) ? localPlayer.Data.CurrentHealth : maxHealth;
+
+			LayoutHealthBar(maxHealth, currentHealth);
+			UpdateLegacyHealthBar(maxHealth, currentHealth);
+		}
+
+		private void UpdateLegacyHealthBar(int maxHealth, int currentHealth)
+		{
+			legacyHealthBar.MaxValue = maxHealth;
+			legacyHealthBar.Value = currentHealth;
+
+			var barWidth = maxHealth * 10f;
+
+			legacyHealthBar.CustomMinimumSize = new Vector2(barWidth, 30);
+		}
+
+		private void LayoutHealthBar(int maxHealth, int currentHealth)
+		{
+			if (!_healthBarBaselineCaptured)
 			{
-				var maxHealth = localPlayer.GetMaxHealth();
-
-				healthBar.MaxValue = maxHealth;
-				healthBar.Value = localPlayer.Data.CurrentHealth;
-
-				var barWidth = maxHealth * 10f;
-
-				healthBar.CustomMinimumSize = new Vector2(barWidth, 30);
+				_healthBarBackBaselineSize = healthBarBack.PhysicalSize;
+				_healthBarBaselineCaptured = true;
 			}
-			else
-			{
-				healthBar.Value = 0;
-				healthBar.CustomMinimumSize = new Vector2(100, 30);
-			}
+
+			var pxPerHealth = _healthBarBackBaselineSize.X / HealthBarBaselineMaxHealth;
+			var growthPx = Mathf.Max(0f, maxHealth - HealthBarBaselineMaxHealth) * pxPerHealth;
+
+			healthBarBack.PhysicalSize = _healthBarBackBaselineSize + new Vector2(growthPx, 0f);
+
+			healthBarFill.Ratio = maxHealth > 0 ? Mathf.Clamp((float)currentHealth / maxHealth, 0f, 1f) : 0f;
 		}
 
 		public void FindLocalPlayer()

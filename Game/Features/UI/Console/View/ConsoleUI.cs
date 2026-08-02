@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Items;
 using Jogo25D.Systems;
@@ -507,6 +508,66 @@ namespace Jogo25D.UI
 					WorldManager.TeleportPlayerClientRequest(new Vector2(x, y));
 
 					console.PrintSuccess($"Teleportando para ({x}, {y})...");
+				},
+				getCompletions: _ => new List<string>()
+			);
+
+			Register(
+				name: "give_all",
+				usage: "give_all",
+				description: "Dá todos os itens (empilháveis com quantidade 50) e todas as habilidades ao jogador, pulando o que ele já tem",
+				execute: (_, console) =>
+				{
+					RefreshLocalPlayer();
+
+					if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+					{
+						console.PrintError("Nenhum jogador encontrado na cena.");
+
+						return;
+					}
+
+					ItemFactory.Initialize();
+					ActionFactory.Initialize();
+
+					int itemsAdded = 0;
+
+					foreach (var id in ItemFactory.GetAllIds())
+					{
+						var def = ItemFactory.Create(id);
+
+						if (def == null || LocalPlayer.Data.Inventory.Items.Any(i => i != null && i.Id == id))
+						{
+							continue;
+						}
+
+						var instance = ItemFactory.CreateInstance(id);
+
+						if (def.Stackable)
+						{
+							instance.Quantity = 50;
+						}
+
+						LocalPlayer.AddItemRequest(instance);
+
+						itemsAdded++;
+					}
+
+					int abilitiesAdded = 0;
+
+					foreach (var actionId in ActionFactory.GetAllIds())
+					{
+						if (LocalPlayer.IsAbilityStillGranted(actionId))
+						{
+							continue;
+						}
+
+						LocalPlayer.UnlockAbilityRequest(actionId);
+
+						abilitiesAdded++;
+					}
+
+					console.PrintSuccess($"+{itemsAdded} item(ns) e +{abilitiesAdded} habilidade(s) adicionados.");
 				},
 				getCompletions: _ => new List<string>()
 			);

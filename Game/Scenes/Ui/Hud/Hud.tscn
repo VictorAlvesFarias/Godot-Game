@@ -2,6 +2,11 @@
 
 [ext_resource type="Script" uid="uid://wms3g22u2756" path="res://Features/UI/Hud/View/HudUI.cs" id="1"]
 [ext_resource type="Script" uid="uid://outlrsu0iqmo" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
+[ext_resource type="Script" uid="uid://c0myf2024k3h7" path="res://Features/UI/Common/Objects/PhysicalSizeTextureRect.cs" id="2_physicalsize"]
+[ext_resource type="Script" uid="uid://mvyp2b253jup" path="res://Features/UI/Common/Objects/RatioFillRect.cs" id="2_ratiofill"]
+[ext_resource type="Texture2D" uid="uid://co23jcdnp1oqw" path="res://Assets/Textures/UI/root-healthbar_Healthbar-Back.png" id="3_elnqk"]
+[ext_resource type="Texture2D" uid="uid://bt6nb53qiqoqx" path="res://Assets/Textures/UI/root-healthbar_Wood-Top.png" id="4_healthbar_wood"]
+[ext_resource type="Texture2D" uid="uid://blmafnnh0xtvf" path="res://Assets/Textures/UI/root-healthbar_Heart.png" id="5_healthbar_heart"]
 
 [sub_resource type="StyleBoxFlat" id="Style_Minimap"]
 bg_color = Color(0.1, 0.12, 0.15, 0.9)
@@ -34,6 +39,9 @@ border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.11119685, 0.11119684, 0.11119684, 1)
+
+[sub_resource type="StyleBoxFlat" id="Style_HealthBarPanel"]
+bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="Style_AbilitySlot"]
 bg_color = Color(0.15, 0.15, 0.2, 0.95)
@@ -172,7 +180,7 @@ horizontal_alignment = 2
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1012674609]
 layout_mode = 2
 
-[node name="HealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer" unique_id=438277453]
+[node name="LegacyHealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer" unique_id=632020001]
 custom_minimum_size = Vector2(200, 30)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -181,6 +189,55 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
 max_value = 5.0
 value = 5.0
 show_percentage = false
+
+[node name="HealthBar" type="PanelContainer" parent="MarginContainer/VBoxContainer" unique_id=438277453]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("Style_HealthBarPanel")
+
+[node name="BarBack" type="TextureRect" parent="MarginContainer/VBoxContainer/HealthBar" unique_id=40543295]
+texture_filter = 1
+custom_minimum_size = Vector2(184.90001, 68.8)
+layout_mode = 2
+texture = ExtResource("3_elnqk")
+script = ExtResource("2_physicalsize")
+PhysicalSize = Vector2(43, 16)
+Zoom = 4.3
+
+[node name="Wood" type="TextureRect" parent="MarginContainer/VBoxContainer/HealthBar" unique_id=186727180]
+texture_filter = 1
+custom_minimum_size = Vector2(184.90001, 68.8)
+layout_mode = 2
+texture = ExtResource("4_healthbar_wood")
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("2_physicalsize")
+PhysicalSize = Vector2(43, 16)
+Zoom = 4.3
+
+[node name="Heart" type="TextureRect" parent="MarginContainer/VBoxContainer/HealthBar" unique_id=790421421]
+texture_filter = 1
+custom_minimum_size = Vector2(184.90001, 68.8)
+layout_mode = 2
+texture = ExtResource("5_healthbar_heart")
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("2_physicalsize")
+PhysicalSize = Vector2(43, 16)
+Zoom = 4.3
+
+[node name="BarFill" type="ColorRect" parent="MarginContainer/VBoxContainer/HealthBar" unique_id=1874243433]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+color = Color(0.9294118, 0.2509804, 0.2627451, 1)
+script = ExtResource("2_ratiofill")
+ReferencePath = NodePath("../BarBack")
+LeftFraction = 0.04651163
+TopFraction = 0.6875
+WidthFraction = 0.9069768
+HeightFraction = 0.1875
 
 [node name="AbilitiesContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=800000001]
 layout_mode = 2
