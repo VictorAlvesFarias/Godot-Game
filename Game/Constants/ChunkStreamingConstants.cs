@@ -10,5 +10,6 @@ namespace Jogo25D.Constants
         public const string OVERWORLD_ID = "overworld";
         public const string UPSIDEDOWN_ID = "upsidedown";
         public const string PROCEDURAL_LAYER_NAME = "ProceduralTiles";
+        public const string PROCEDURAL_EDGE_FILL_LAYER_NAME = "ProceduralEdgeFill";
     }
 }

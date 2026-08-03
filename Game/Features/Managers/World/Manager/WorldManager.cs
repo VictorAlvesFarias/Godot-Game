@@ -898,8 +898,15 @@ namespace Jogo25D.Systems
 			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
 			var handAuthoredName = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
-			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME)
 				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
+		}
+
+		private TileMapLayer ResolveDimensionEdgeFillLayer(string dimensionId)
+		{
+			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
+
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LAYER_NAME);
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -934,7 +941,7 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			EraseBlockAndReconnect(layer, cell);
+			EraseBlockAndReconnect(layer, cell, dimensionId);
 
 			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
 
@@ -955,7 +962,7 @@ namespace Jogo25D.Systems
 
 			if (layer != null)
 			{
-				EraseBlockAndReconnect(layer, cell);
+				EraseBlockAndReconnect(layer, cell, dimensionId);
 			}
 		}
 
@@ -968,7 +975,7 @@ namespace Jogo25D.Systems
 				return false;
 			}
 
-			PaintBlockAndReconnect(layer, cell, block);
+			PaintBlockAndReconnect(layer, cell, block, dimensionId);
 
 			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "place", blockId);
 
@@ -987,7 +994,7 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			PaintBlockAndReconnect(layer, cell, block);
+			PaintBlockAndReconnect(layer, cell, block, dimensionId);
 		}
 
 		public long NextPortalId { get; set; }
@@ -1138,24 +1145,24 @@ namespace Jogo25D.Systems
 			portal?.QueueFree();
 		}
 
-		public void ApplyChunkMutation(TileMapLayer layer, ChunkMutationData mutation)
+		public void ApplyChunkMutation(TileMapLayer layer, ChunkMutationData mutation, string dimensionId)
 		{
 			var cell = new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y);
 
 			if (mutation.Type == "break")
 			{
-				EraseBlockAndReconnect(layer, cell);
+				EraseBlockAndReconnect(layer, cell, dimensionId);
 
 				return;
 			}
 
 			if (mutation.Type == "place" && BlockDB.TryGet(mutation.ExtraData, out var block))
 			{
-				PaintBlockAndReconnect(layer, cell, block);
+				PaintBlockAndReconnect(layer, cell, block, dimensionId);
 			}
 		}
 
-		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
+		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell, string dimensionId)
 		{
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
@@ -1174,9 +1181,17 @@ namespace Jogo25D.Systems
 			{
 				BiomeTerrainConnector.ReconnectExistingCells(layer, neighbors);
 			}
+
+			var edgeFillLayer = ResolveDimensionEdgeFillLayer(dimensionId);
+
+			if (edgeFillLayer != null)
+			{
+				edgeFillLayer.SetCell(cell, -1);
+				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, neighbors);
+			}
 		}
 
-		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block)
+		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
 		{
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
@@ -1202,6 +1217,16 @@ namespace Jogo25D.Systems
 
 			BiomeTerrainConnector.Connect(layer, sameBiomeCells, biomeDef);
 			BiomeTerrainConnector.ReconnectForeignBorder(layer, sameBiomeCells, biomeDef);
+
+			var edgeFillLayer = ResolveDimensionEdgeFillLayer(dimensionId);
+
+			if (edgeFillLayer != null)
+			{
+				var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(layer, sameBiomeCells, biomeDef.TerrainSet);
+
+				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, sameBiomeCells);
+				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, foreignCells);
+			}
 		}
 
 		private BiomeDefinition ResolveBiomeForNewCell(TileMapLayer layer, Godot.Collections.Array<Vector2I> neighbors)

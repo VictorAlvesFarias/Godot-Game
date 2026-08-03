@@ -9,7 +9,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public static void Paint(TileMapLayer target, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        public static void Paint(TileMapLayer target, TileMapLayer edgeFillTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
             var baseCellX = chunkCoord.X * chunkSize;
@@ -51,6 +51,14 @@ namespace Jogo25D.Chunks
 
                 BiomeTerrainConnector.Connect(target, cellsToConnect, biomeDef);
                 BiomeTerrainConnector.ReconnectForeignBorder(target, cellsToConnect, biomeDef);
+
+                if (edgeFillTarget != null)
+                {
+                    var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(target, cellsToConnect, biomeDef.TerrainSet);
+
+                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTarget, cellsToConnect);
+                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTarget, foreignCells);
+                }
             }
             else
             {
@@ -95,7 +103,7 @@ namespace Jogo25D.Chunks
             solidCells.Add(cell);
         }
 
-        public static void Erase(TileMapLayer target, Vector2I chunkCoord, int chunkSize)
+        public static void Erase(TileMapLayer target, TileMapLayer edgeFillTarget, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -104,7 +112,10 @@ namespace Jogo25D.Chunks
             {
                 for (int localY = 0; localY < chunkSize; localY++)
                 {
-                    target.SetCell(new Vector2I(baseCellX + localX, baseCellY + localY), -1);
+                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
+
+                    target.SetCell(cell, -1);
+                    edgeFillTarget?.SetCell(cell, -1);
                 }
             }
         }
