@@ -6,6 +6,8 @@ namespace Jogo25D.Features.Managers.Save.Resources
 {
     public partial class ChunkEntryData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public int ChunkCoordX { get; set; }
 
@@ -14,5 +16,7 @@ namespace Jogo25D.Features.Managers.Save.Resources
 
         [Export, GodotDictionaryField]
         public ChunkStateData State { get; set; } = new ChunkStateData();
+
+        #endregion
     }
 }

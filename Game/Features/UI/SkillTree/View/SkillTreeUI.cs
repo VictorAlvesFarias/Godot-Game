@@ -1,254 +1,263 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
 using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-    public partial class SkillTreeUI : CanvasLayer
-    {
-        #region References
+	public partial class SkillTreeUI : CanvasLayer
+	{
+		#region Dinamic properties
 
-        public Player LocalPlayer { get; set; }
-        public PlayerInput PlayerInput => LocalPlayer?.Input;
-        public WorldManager NetworkManager { get; set; }
-        public GridContainer GridContainer { get; set; }
-        public LineEdit SearchInput { get; set; }
-        public Button ResetButton { get; set; }
-        public Label PointsLabel { get; set; }
-        public StyleBoxFlat LockedStyle { get; set; }
-        public StyleBoxFlat MaxedStyle { get; set; }
-        public Dictionary<string, Button> NodeButtons { get; set; } = new();
-        public Dictionary<string, Label> NodeLevelLabels { get; set; } = new();
+		public Player LocalPlayer { get; set; }
+		public PlayerInput PlayerInput => LocalPlayer?.Input;
+		public StyleBoxFlat LockedStyle { get; set; }
+		public StyleBoxFlat MaxedStyle { get; set; }
+		public Dictionary<string, Button> NodeButtons { get; set; } = new();
+		public Dictionary<string, Label> NodeLevelLabels { get; set; } = new();
 
-        #endregion
+		#endregion
 
-        #region Godot implementation
+		#region Node references
 
-        public override void _Ready()
-        {
-            Visible = false;
-            Layer = 20;
-            ProcessMode = ProcessModeEnum.Always;
-            PointsLabel = GetNode<Label>("Background/MainPanel/MarginContainer/Root/PointsLabel");
-            SearchInput = GetNode<LineEdit>("Background/MainPanel/MarginContainer/Root/Toolbar/SearchInput");
-            ResetButton = GetNode<Button>("Background/MainPanel/MarginContainer/Root/Toolbar/ResetButton");
-            GridContainer = GetNode<GridContainer>("Background/MainPanel/MarginContainer/Root/Scroll/GridContainer");
+		public WorldManager NetworkManager { get; set; }
 
-            SearchInput.TextChanged += OnSearchTextChanged;
-            ResetButton.Pressed += OnResetPressed;
+		#endregion
 
-            BuildStyles();
-            BuildGrid();
+		#region Node children references
 
-            CallDeferred(nameof(FindLocalPlayer));
-        }
+		public GridContainer GridContainer { get; set; }
+		public LineEdit SearchInput { get; set; }
+		public Button ResetButton { get; set; }
+		public Label PointsLabel { get; set; }
 
-        public override void _Input(InputEvent @event)
-        {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
-            {
-                FindLocalPlayer();
-            }
+		#endregion
 
-            if (PlayerInput != null && PlayerInput.IsBlockedByOther("skill_tree"))
-            {
-                return;
-            }
+		#region Godot implementation
 
-            if (@event.IsActionPressed("toggle_skill_tree") && !@event.IsEcho())
-            {
-                ToggleSkillTree();
-                GetViewport().SetInputAsHandled();
-            }
-            else if (@event.IsActionPressed("ui_cancel") && Visible)
-            {
-                ToggleSkillTree();
-                GetViewport().SetInputAsHandled();
-            }
-        }
+		public override void _Ready()
+		{
+			Visible = false;
+			Layer = 20;
+			ProcessMode = ProcessModeEnum.Always;
+			PointsLabel = GetNode<Label>("Background/MainPanel/MarginContainer/Root/PointsLabel");
+			SearchInput = GetNode<LineEdit>("Background/MainPanel/MarginContainer/Root/Toolbar/SearchInput");
+			ResetButton = GetNode<Button>("Background/MainPanel/MarginContainer/Root/Toolbar/ResetButton");
+			GridContainer = GetNode<GridContainer>("Background/MainPanel/MarginContainer/Root/Scroll/GridContainer");
 
-        public override void _Process(double delta)
-        {
-            if (Visible)
-            {
-                PlayerInput?.AddBlocker("skill_tree");
+			SearchInput.TextChanged += OnSearchTextChanged;
+			ResetButton.Pressed += OnResetPressed;
 
-                RefreshGrid();
-            }
-        }
+			BuildGrid();
 
-        #endregion
+			CallDeferred(nameof(FindLocalPlayer));
+		}
 
-        #region Core - Setup
+		public override void _Input(InputEvent @event)
+		{
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				FindLocalPlayer();
+			}
 
-        public void FindLocalPlayer()
-        {
-            NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-            LocalPlayer = NetworkManager?.GetLocalPlayer();
-        }
+			if (PlayerInput != null && PlayerInput.IsBlockedByOther("skill_tree"))
+			{
+				return;
+			}
 
-        private void BuildStyles()
-        {
-            LockedStyle = new StyleBoxFlat();
-            LockedStyle.BgColor = new Color(0.08f, 0.08f, 0.08f, 0.85f);
-            LockedStyle.BorderColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+			if (@event.IsActionPressed("toggle_skill_tree") && !@event.IsEcho())
+			{
+				ToggleSkillTree();
+				GetViewport().SetInputAsHandled();
+			}
+			else if (@event.IsActionPressed("ui_cancel") && Visible)
+			{
+				ToggleSkillTree();
+				GetViewport().SetInputAsHandled();
+			}
+		}
 
-            LockedStyle.SetBorderWidthAll(2);
+		public override void _Process(double delta)
+		{
+			if (Visible)
+			{
+				PlayerInput?.AddBlocker("skill_tree");
 
-            MaxedStyle = new StyleBoxFlat();
-            MaxedStyle.BgColor = new Color(0.25f, 0.16f, 0.35f, 0.85f);
-            MaxedStyle.BorderColor = new Color(0.62f, 0.36f, 0.92f, 1f);
+				RefreshGrid();
+			}
+		}
 
-            MaxedStyle.SetBorderWidthAll(2);
-        }
+		#endregion
 
-        private void BuildGrid()
-        {
-            var template = (Button)GridContainer.GetChild(0);
+		#region Core - Setup
 
-            foreach (var nodeId in SkillTreeDB.GetAllIds())
-            {
-                CreateNodeButton(SkillTreeDB.Get(nodeId), template);
-            }
+		public void FindLocalPlayer()
+		{
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			LocalPlayer = NetworkManager?.GetLocalPlayer();
+		}
 
-            template.QueueFree();
-        }
+		private void BuildGrid()
+		{
+			var template = (Button)GridContainer.GetChild(0);
 
-        private void CreateNodeButton(SkillTreeNode node, Button template)
-        {
-            var button = (Button)template.Duplicate();
+			LockedStyle = template.GetThemeStylebox("disabled") as StyleBoxFlat;
 
-            button.TooltipText = BuildTooltip(node);
+			var maxedStyleHolder = GetNodeOrNull<Panel>("Background/MaxedStyleHolder");
 
-            var iconRect = button.GetNode<TextureRect>("MarginContainer/Box/CenterBox/Icon");
-            var nameLabel = button.GetNode<Label>("MarginContainer/Box/CenterBox/NameLabel");
-            var levelLabel = button.GetNode<Label>("MarginContainer/Box/LevelLabel");
+			if (maxedStyleHolder == null)
+			{
+				GD.PushError("SkillTreeUI: MaxedStyleHolder não encontrado em Background.");
+			}
+			else
+			{
+				MaxedStyle = maxedStyleHolder.GetThemeStylebox("panel") as StyleBoxFlat;
+				maxedStyleHolder.Visible = false;
+			}
 
-            iconRect.Texture = node.Icon;
-            iconRect.Visible = node.Icon != null;
-            nameLabel.Text = node.Name;
+			foreach (var nodeId in SkillTreeDB.GetAllIds())
+			{
+				CreateNodeButton(SkillTreeDB.Get(nodeId), template);
+			}
 
-            var nodeId = node.Id;
+			template.QueueFree();
+		}
 
-            button.Pressed += delegate { OnNodePressed(nodeId); };
+		private void CreateNodeButton(SkillTreeNode node, Button template)
+		{
+			var button = (Button)template.Duplicate();
 
-            GridContainer.AddChild(button);
+			button.TooltipText = BuildTooltip(node);
 
-            NodeButtons[node.Id] = button;
-            NodeLevelLabels[node.Id] = levelLabel;
-        }
+			var iconRect = button.GetNode<TextureRect>("MarginContainer/Box/CenterBox/Icon");
+			var nameLabel = button.GetNode<Label>("MarginContainer/Box/CenterBox/NameLabel");
+			var levelLabel = button.GetNode<Label>("MarginContainer/Box/LevelLabel");
 
-        private string BuildTooltip(SkillTreeNode node)
-        {
-            var text = node.Description;
+			iconRect.Texture = node.Icon;
+			iconRect.Visible = node.Icon != null;
+			nameLabel.Text = node.Name;
 
-            if (node.RequiredTreeLevel > 0)
-            {
-                text += $"\nRequer nivel total {node.RequiredTreeLevel} na arvore principal.";
-            }
+			var nodeId = node.Id;
 
-            foreach (var dependency in node.Dependencies)
-            {
-                var dependencyNode = SkillTreeDB.Get(dependency.NodeId);
-                var dependencyName = dependencyNode != null ? dependencyNode.Name : dependency.NodeId;
+			button.Pressed += delegate { OnNodePressed(nodeId); };
 
-                text += $"\nRequer {dependencyName} nivel {dependency.MinLevel}.";
-            }
+			GridContainer.AddChild(button);
 
-            return text;
-        }
+			NodeButtons[node.Id] = button;
+			NodeLevelLabels[node.Id] = levelLabel;
+		}
 
-        #endregion
+		private string BuildTooltip(SkillTreeNode node)
+		{
+			var text = node.Description;
 
-        #region Core - Actions
+			if (node.RequiredTreeLevel > 0)
+			{
+				text += $"\nRequer nivel total {node.RequiredTreeLevel} na arvore principal.";
+			}
 
-        public void ToggleSkillTree()
-        {
-            Visible = !Visible;
+			foreach (var dependency in node.Dependencies)
+			{
+				var dependencyNode = SkillTreeDB.Get(dependency.NodeId);
+				var dependencyName = dependencyNode != null ? dependencyNode.Name : dependency.NodeId;
 
-            if (Visible)
-            {
-                PlayerInput?.AddBlocker("skill_tree");
+				text += $"\nRequer {dependencyName} nivel {dependency.MinLevel}.";
+			}
 
-                RefreshGrid();
-            }
-            else
-            {
-                PlayerInput?.RemoveBlocker("skill_tree");
-            }
-        }
+			return text;
+		}
 
-        public void OnNodePressed(string nodeId)
-        {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
-            {
-                return;
-            }
+		#endregion
 
-            LocalPlayer.LevelUpSkillNodeRequest(nodeId);
+		#region Core - Actions
 
-            RefreshGrid();
-        }
+		public void ToggleSkillTree()
+		{
+			Visible = !Visible;
 
-        public void OnResetPressed()
-        {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
-            {
-                return;
-            }
+			if (Visible)
+			{
+				PlayerInput?.AddBlocker("skill_tree");
 
-            LocalPlayer.ResetSkillTreeRequest();
+				RefreshGrid();
+			}
+			else
+			{
+				PlayerInput?.RemoveBlocker("skill_tree");
+			}
+		}
 
-            RefreshGrid();
-        }
+		public void OnNodePressed(string nodeId)
+		{
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				return;
+			}
 
-        public void OnSearchTextChanged(string text)
-        {
-            var query = text.Trim().ToLowerInvariant();
+			LocalPlayer.LevelUpSkillNodeRequest(nodeId);
 
-            foreach (var nodeId in NodeButtons.Keys)
-            {
-                var node = SkillTreeDB.Get(nodeId);
-                var matches = string.IsNullOrEmpty(query) || node.Name.ToLowerInvariant().Contains(query);
+			RefreshGrid();
+		}
 
-                NodeButtons[nodeId].Visible = matches;
-            }
-        }
+		public void OnResetPressed()
+		{
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				return;
+			}
 
-        #endregion
+			LocalPlayer.ResetSkillTreeRequest();
 
-        #region Core - Refresh
+			RefreshGrid();
+		}
 
-        public void RefreshGrid()
-        {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
-            {
-                FindLocalPlayer();
-            }
+		public void OnSearchTextChanged(string text)
+		{
+			var query = text.Trim().ToLowerInvariant();
 
-            var progress = LocalPlayer?.Data?.SkillTree;
+			foreach (var nodeId in NodeButtons.Keys)
+			{
+				var node = SkillTreeDB.Get(nodeId);
+				var matches = string.IsNullOrEmpty(query) || node.Name.ToLowerInvariant().Contains(query);
 
-            PointsLabel.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
+				NodeButtons[nodeId].Visible = matches;
+			}
+		}
 
-            foreach (var nodeId in SkillTreeDB.GetAllIds())
-            {
-                var node = SkillTreeDB.Get(nodeId);
-                var button = NodeButtons[nodeId];
-                var levelLabel = NodeLevelLabels[nodeId];
+		#endregion
 
-                var currentLevel = progress == null ? 0 : SkillTreeDB.GetNodeLevel(progress, nodeId);
-                var canLevelUp = progress != null && SkillTreeDB.CanLevelUp(progress, nodeId);
-                var maxed = currentLevel >= node.MaxLevel;
+		#region Core - Refresh
 
-                levelLabel.Text = $"{currentLevel}/{node.MaxLevel}";
-                button.Disabled = LocalPlayer == null || maxed || !canLevelUp;
-                
-                button.AddThemeStyleboxOverride("disabled", maxed ? MaxedStyle : LockedStyle);
-            }
-        }
+		public void RefreshGrid()
+		{
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+			{
+				FindLocalPlayer();
+			}
 
-        #endregion
-    }
+			var progress = LocalPlayer?.Data?.SkillTree;
+
+			PointsLabel.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
+
+			foreach (var nodeId in SkillTreeDB.GetAllIds())
+			{
+				var node = SkillTreeDB.Get(nodeId);
+				var button = NodeButtons[nodeId];
+				var levelLabel = NodeLevelLabels[nodeId];
+
+				var currentLevel = progress == null ? 0 : SkillTreeDB.GetNodeLevel(progress, nodeId);
+				var canLevelUp = progress != null && SkillTreeDB.CanLevelUp(progress, nodeId);
+				var maxed = currentLevel >= node.MaxLevel;
+
+				levelLabel.Text = $"{currentLevel}/{node.MaxLevel}";
+				button.Disabled = LocalPlayer == null || maxed || !canLevelUp;
+
+				button.AddThemeStyleboxOverride("disabled", maxed ? MaxedStyle : LockedStyle);
+			}
+		}
+
+		#endregion
+	}
 }

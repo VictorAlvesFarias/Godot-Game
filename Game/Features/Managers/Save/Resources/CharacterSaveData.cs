@@ -6,6 +6,8 @@ namespace Jogo25D.Features.Managers.Save.Resources
 {
     public partial class CharacterSaveData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public string CharacterId { get; set; } = "";
 
@@ -26,5 +28,7 @@ namespace Jogo25D.Features.Managers.Save.Resources
 
         [Export, GodotDictionaryField]
         public long LastPlayedUtc { get; set; }
+
+        #endregion
     }
 }

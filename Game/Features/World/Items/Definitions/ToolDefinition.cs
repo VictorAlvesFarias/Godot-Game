@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
@@ -8,17 +8,25 @@ namespace Jogo25D.Items
 {
     public class ToolDefinition : ItemDefinition
     {
-        private const float AimingAlpha = 0.15f;
-        private const float MiningAlpha = 0.45f;
+        #region Dinamic properties
 
         public float Reach { get; init; } = 120f;
         public float BreakTimeSeconds { get; init; } = 1.2f;
         public float SwingRange { get; init; } = 50f;
 
-        private bool _isMining;
-        private Vector2I _miningCell;
-        private float _miningElapsed;
-        private Polygon2D _indicator;
+        public bool IsMining { get; set; }
+        public Vector2I MiningCell { get; set; }
+        public float MiningElapsed { get; set; }
+
+        #endregion
+
+        #region Node children references
+
+        public Polygon2D Indicator { get; set; }
+
+        #endregion
+
+        #region Core - Mining
 
         public override void Use(Player player, ItemData instance)
         {
@@ -77,8 +85,8 @@ namespace Jogo25D.Items
 
         public void ResetMining()
         {
-            _isMining = false;
-            _miningElapsed = 0f;
+            IsMining = false;
+            MiningElapsed = 0f;
         }
 
         private void UpdateMining(Player player, TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
@@ -92,16 +100,16 @@ namespace Jogo25D.Items
                 return;
             }
 
-            if (!_isMining || _miningCell != targetCell)
+            if (!IsMining || MiningCell != targetCell)
             {
-                _isMining = true;
-                _miningCell = targetCell;
-                _miningElapsed = 0f;
+                IsMining = true;
+                MiningCell = targetCell;
+                MiningElapsed = 0f;
             }
 
-            _miningElapsed += (float)player.GetPhysicsProcessDeltaTime();
+            MiningElapsed += (float)player.GetPhysicsProcessDeltaTime();
 
-            if (_miningElapsed < breakTimeSeconds)
+            if (MiningElapsed < breakTimeSeconds)
             {
                 return;
             }
@@ -201,6 +209,10 @@ namespace Jogo25D.Items
             return (layer.GetCellSourceId(cell) != -1 || ResolveMiningTargetPortal(player, layer, cell) != null, cell);
         }
 
+        #endregion
+
+        #region Core - Indicator
+
         public override void UpdateIndicator(Player player, ItemData data, float delta)
         {
             if (!player.IsOwner())
@@ -230,48 +242,48 @@ namespace Jogo25D.Items
 
             EnsureIndicator(layer);
 
-            _indicator.Color = new Color(1f, 1f, 1f, _isMining ? MiningAlpha : AimingAlpha);
-            _indicator.Position = layer.MapToLocal(cell);
-            _indicator.Visible = true;
+            Indicator.Color = new Color(1f, 1f, 1f, IsMining ? 0.45f : 0.15f);
+            Indicator.Position = layer.MapToLocal(cell);
+            Indicator.Visible = true;
         }
 
         public override void HideIndicator(Player player)
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.Visible = false;
+                Indicator.Visible = false;
             }
         }
 
         public override void DestroyIndicator()
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.QueueFree();
+                Indicator.QueueFree();
             }
 
-            _indicator = null;
+            Indicator = null;
         }
 
         private void EnsureIndicator(TileMapLayer layer)
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator) && _indicator.GetParent() == layer)
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator) && Indicator.GetParent() == layer)
             {
                 return;
             }
 
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.QueueFree();
+                Indicator.QueueFree();
             }
 
-            _indicator = new Polygon2D
+            Indicator = new Polygon2D
             {
                 ZIndex = 10,
                 Polygon = BuildTileQuad(layer),
             };
 
-            layer.AddChild(_indicator);
+            layer.AddChild(Indicator);
         }
 
         private static Vector2[] BuildTileQuad(TileMapLayer layer)
@@ -286,5 +298,7 @@ namespace Jogo25D.Items
                 new Vector2(-half.X, half.Y),
             };
         }
+
+        #endregion
     }
 }

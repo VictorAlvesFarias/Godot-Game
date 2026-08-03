@@ -43,23 +43,35 @@ border_color = Color(0.11119685, 0.11119684, 0.11119684, 1)
 [sub_resource type="StyleBoxFlat" id="Style_HealthBarPanel"]
 bg_color = Color(0, 0, 0, 0)
 
-[sub_resource type="StyleBoxFlat" id="Style_AbilitySlot"]
+[sub_resource type="StyleBoxFlat" id="Style_AbilityTemplate"]
 bg_color = Color(0.15, 0.15, 0.2, 0.95)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.4, 0.4, 0.5, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="Style_CooldownOverlay"]
 bg_color = Color(0, 0, 0, 0)
 
 [sub_resource type="StyleBoxFlat" id="Style_CooldownFill"]
 bg_color = Color(0, 0, 0, 0.65)
+
+[sub_resource type="StyleBoxFlat" id="Style_EffectTemplate"]
+bg_color = Color(0.15, 0.15, 0.2, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="Style_HotbarSelected"]
+bg_color = Color(0.12, 0.12, 0.18, 0.96)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.85, 0.1, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_HotbarNormal"]
 bg_color = Color(0.08, 0.08, 0.12, 0.92)
@@ -245,12 +257,12 @@ size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/separation = 8
 
-[node name="AbilitySlot0" type="Panel" parent="MarginContainer/VBoxContainer/AbilitiesContainer" unique_id=800000002]
+[node name="AbilityTemplate" type="Panel" parent="MarginContainer/VBoxContainer/AbilitiesContainer" unique_id=800000002]
 custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
-theme_override_styles/panel = SubResource("Style_AbilitySlot")
+theme_override_styles/panel = SubResource("Style_AbilityTemplate")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000005]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate" unique_id=800000005]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -263,18 +275,20 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer" unique_id=800000006]
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate/MarginContainer" unique_id=800000006]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="IconRect" type="TextureRect" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer/CenterContainer" unique_id=800000007]
+[node name="IconRect" type="TextureRect" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate/MarginContainer/CenterContainer" unique_id=800000007]
+texture_filter = 1
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0/MarginContainer/CenterContainer" unique_id=800000008]
+[node name="NameLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate/MarginContainer/CenterContainer" unique_id=800000008]
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -284,7 +298,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="CooldownFill" type="ProgressBar" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000003]
+[node name="CooldownFill" type="ProgressBar" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate" unique_id=800000003]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -299,7 +313,7 @@ max_value = 1.0
 fill_mode = 2
 show_percentage = false
 
-[node name="TimerLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000004]
+[node name="TimerLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate" unique_id=800000004]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -314,7 +328,7 @@ theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="QtyLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilitySlot0" unique_id=800000009]
+[node name="QtyLabel" type="Label" parent="MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate" unique_id=800000009]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -345,11 +359,52 @@ text = "FPS: 60"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="EffectsContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=800000010]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_constants/separation = 6
+
+[node name="EffectTemplate" type="Panel" parent="MarginContainer/VBoxContainer/EffectsContainer" unique_id=800000011]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_EffectTemplate")
+
+[node name="IconRect" type="TextureRect" parent="MarginContainer/VBoxContainer/EffectsContainer/EffectTemplate" unique_id=800000012]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TimerLabel" type="Label" parent="MarginContainer/VBoxContainer/EffectsContainer/EffectTemplate" unique_id=800000013]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="HotbarContainer" type="HBoxContainer" parent="MarginContainer" unique_id=900000000]
 layout_mode = 2
 size_flags_vertical = 8
 theme_override_constants/separation = 4
 alignment = 1
+
+[node name="Slot0Selected" type="Panel" parent="MarginContainer/HotbarContainer" unique_id=901000006]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_HotbarSelected")
 
 [node name="Slot0" type="Panel" parent="MarginContainer/HotbarContainer" unique_id=901000000]
 custom_minimum_size = Vector2(60, 60)
@@ -371,7 +426,7 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 4
 theme_override_constants/margin_bottom = 4
 
-[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/HotbarContainer/Slot0/MarginContainer" unique_id=901000006]
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/HotbarContainer/Slot0/MarginContainer" unique_id=197306299]
 layout_mode = 2
 mouse_filter = 2
 

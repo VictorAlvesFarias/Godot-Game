@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
@@ -7,22 +7,25 @@ using Jogo25D.Hitboxes;
 using Jogo25D.Properties;
 using Jogo25D.Systems;
 using Jogo25D.Utils.Extensions;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
 
 namespace Jogo25D.Items
 {
     public class WeaponDefinition : ItemDefinition
     {
+        #region Node children references
+
+        public Line2D AimLine { get; set; }
+
+        #endregion
+
         #region Core - Virtuals
 
         public override void Use(Player player, ItemData instance)
         {
             if (!CanUse(instance))
             {
-                GD.Print($"[Attack] Bloqueado - cooldown={instance.CooldownRemainingTimer:F2} reloading={IsReloading(instance)} charges={instance.CurrentCharges}");
+                GD.Print($"[WeaponDefinition.Use] Bloqueado - cooldown={instance.CooldownRemainingTimer:F2} reloading={IsReloading(instance)} charges={instance.CurrentCharges}");
                 
                 return;
             }
@@ -60,7 +63,7 @@ namespace Jogo25D.Items
 
             if (HitboxScene.Instantiate<Area2D>() is not BaseHitbox hitbox)
             {
-                GD.Print($"[Attack] Falha ao instanciar hitbox da cena '{HitboxScene.ResourcePath}'");
+                GD.Print($"[WeaponDefinition.Use] Falha ao instanciar hitbox da cena '{HitboxScene.ResourcePath}'");
                 
                 return;
             }
@@ -103,7 +106,7 @@ namespace Jogo25D.Items
 
             player.GetParent().AddChild(hitbox);
 
-            GD.Print($"[Attack] Hitbox '{hitbox.GetType().Name}' criado - danos={damages.Count} dir={dir}");
+            GD.Print($"[WeaponDefinition.Use] Hitbox '{hitbox.GetType().Name}' criado - danos={damages.Count} dir={dir}");
 
             TriggerCooldownTimer(instance);
 
@@ -117,13 +120,6 @@ namespace Jogo25D.Items
 
         #region Core - Indicator
 
-        private const float AimLineLength = 25.0f;
-        private const float AimLineWidth = 3.0f;
-        private const float AimLineOffset = 40.0f;
-        private static readonly Color AimLineColor = new Color(1f, 1f, 1f, 0.7f);
-
-        private Line2D _aimLine;
-
         public override void UpdateIndicator(Player player, ItemData data, float delta)
         {
             EnsureAimLine(player);
@@ -132,52 +128,52 @@ namespace Jogo25D.Items
 
             if (dir.LengthSquared() < 0.01f)
             {
-                _aimLine.Visible = false;
+                AimLine.Visible = false;
 
                 return;
             }
 
             var d = dir.Normalized();
 
-            _aimLine.ClearPoints();
-            _aimLine.AddPoint(d * AimLineOffset);
-            _aimLine.AddPoint(d * (AimLineOffset + AimLineLength));
-            _aimLine.Visible = true;
+            AimLine.ClearPoints();
+            AimLine.AddPoint(d * 40.0f);
+            AimLine.AddPoint(d * (40.0f + 25.0f));
+            AimLine.Visible = true;
         }
 
         public override void HideIndicator(Player player)
         {
-            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            if (AimLine != null && GodotObject.IsInstanceValid(AimLine))
             {
-                _aimLine.Visible = false;
+                AimLine.Visible = false;
             }
         }
 
         public override void DestroyIndicator()
         {
-            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            if (AimLine != null && GodotObject.IsInstanceValid(AimLine))
             {
-                _aimLine.QueueFree();
+                AimLine.QueueFree();
             }
 
-            _aimLine = null;
+            AimLine = null;
         }
 
         private void EnsureAimLine(Player player)
         {
-            if (_aimLine != null && GodotObject.IsInstanceValid(_aimLine))
+            if (AimLine != null && GodotObject.IsInstanceValid(AimLine))
             {
                 return;
             }
 
-            _aimLine = new Line2D
+            AimLine = new Line2D
             {
-                Width = AimLineWidth,
-                DefaultColor = AimLineColor,
+                Width = 3.0f,
+                DefaultColor = new Color(1f, 1f, 1f, 0.7f),
                 ZIndex = 10,
             };
 
-            player.AddChild(_aimLine);
+            player.AddChild(AimLine);
         }
 
         #endregion

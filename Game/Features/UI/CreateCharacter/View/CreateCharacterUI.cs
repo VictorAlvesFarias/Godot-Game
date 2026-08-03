@@ -1,11 +1,12 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
 	public partial class CreateCharacterUI : CanvasLayer
 	{
-		private bool _isServerMode;
+		public bool IsServerMode { get; set; }
 
 		#region Node references
 
@@ -13,7 +14,7 @@ namespace Jogo25D.UI
 		public Button BackButton { get; set; }
 		public Button CreateButton { get; set; }
 		public WorldManager NetworkManager { get; set; }
-		public Jogo25D.Systems.SaveManager Saves { get; set; }
+		public SaveManager Saves { get; set; }
 
 		#endregion
 
@@ -27,8 +28,8 @@ namespace Jogo25D.UI
 			NameInput = GetNode<LineEdit>("MarginContainer/Root/NameInput");
 			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
 			CreateButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateButton");
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-			Saves = GetTree().Root.GetNodeOrNull<Jogo25D.Systems.SaveManager>(Jogo25D.Systems.SaveManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
 
 			BackButton.Pressed += OnBackPressed;
 			CreateButton.Pressed += OnCreatePressed;
@@ -40,14 +41,14 @@ namespace Jogo25D.UI
 
 		public void OpenLocal()
 		{
-			_isServerMode = false;
+			IsServerMode = false;
 
 			ShowScreen();
 		}
 
 		public void OpenServer()
 		{
-			_isServerMode = true;
+			IsServerMode = true;
 
 			ShowScreen();
 		}
@@ -74,7 +75,7 @@ namespace Jogo25D.UI
 
 			Close();
 
-			if (_isServerMode)
+			if (IsServerMode)
 			{
 				NetworkManager.CreateServerCharacterRequest(name);
 
@@ -92,7 +93,7 @@ namespace Jogo25D.UI
 
 			var characterSelect = GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI");
 
-			if (_isServerMode)
+			if (IsServerMode)
 			{
 				characterSelect?.ReopenServer();
 			}

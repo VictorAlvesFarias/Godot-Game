@@ -1,19 +1,19 @@
-using Godot;
-using System.Collections.Generic;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Items;
+using System.Collections.Generic;
 
 namespace Jogo25D.Hitboxes
 {
     public partial class GroundHitbox : BaseHitbox
     {
-        #region Properties
+        #region Dinamic properties
 
         public float Lifetime { get; set; } = 1.5f;
-        public float _timer;
+        public float Timer { get; set; }
 
-        public readonly HashSet<Player> _alreadyHit = new();
+        private readonly HashSet<Player> _alreadyHit = new();
 
         #endregion
 
@@ -21,9 +21,9 @@ namespace Jogo25D.Hitboxes
 
         public override void _PhysicsProcess(double delta)
         {
-            _timer += (float)delta;
+            Timer += (float)delta;
 
-            if (_timer >= Lifetime)
+            if (Timer >= Lifetime)
             {
                 QueueFree();
             }
@@ -40,36 +40,38 @@ namespace Jogo25D.Hitboxes
                 return;
             }
 
-            if (body is Player target && !_alreadyHit.Contains(target))
+            if (body is not Player target || _alreadyHit.Contains(target))
             {
-                if (IsPvpBlocked(target))
+                return;
+            }
+
+            if (IsPvpBlocked(target))
+            {
+                return;
+            }
+
+            _alreadyHit.Add(target);
+
+            foreach (var damage in Damages)
+            {
+                target.ReceiveDamage(damage);
+            }
+
+            if (KnockbackForce > 0f)
+            {
+                target.ApplyKnockback(target.GlobalPosition - GlobalPosition, KnockbackForce);
+            }
+
+            foreach (var effect in Effects)
+            {
+                if (effect.ApplyTo == EffectApply.ToTarget || effect.ApplyTo == EffectApply.ToAll)
                 {
-                    return;
+                    target.GiveEffect(effect.Id);
                 }
 
-                _alreadyHit.Add(target);
-
-                foreach (var damage in Damages)
+                if (effect.ApplyTo == EffectApply.ToOwner || effect.ApplyTo == EffectApply.ToAll)
                 {
-                    target.ReceiveDamage(damage);
-                }
-
-                if (KnockbackForce > 0f)
-                {
-                    target.ApplyKnockback(target.GlobalPosition - GlobalPosition, KnockbackForce);
-                }
-
-                foreach (var effect in Effects)
-                {
-                    if (effect.ApplyTo == EffectApply.ToTarget || effect.ApplyTo == EffectApply.ToAll)
-                    {
-                        target.GiveEffect(effect.Id);
-                    }
-
-                    if (effect.ApplyTo == EffectApply.ToOwner || effect.ApplyTo == EffectApply.ToAll)
-                    {
-                        Owner?.GiveEffect(effect.Id);
-                    }
+                    Owner?.GiveEffect(effect.Id);
                 }
             }
         }

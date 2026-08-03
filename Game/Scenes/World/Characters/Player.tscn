@@ -489,6 +489,15 @@ theme_override_font_sizes/font_size = 12
 text = "50/50"
 horizontal_alignment = 1
 
+[node name="FloatingTextTemplate" type="Label" parent="Labels" unique_id=1847926499]
+offset_right = 60.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(1, 0.25, 0.25, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+
 [node name="Visuals" type="Node2D" parent="." unique_id=496822047]
 z_index = 1
 

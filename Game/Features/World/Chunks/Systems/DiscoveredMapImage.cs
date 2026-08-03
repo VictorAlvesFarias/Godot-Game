@@ -4,32 +4,31 @@ namespace Jogo25D.Chunks
 {
     public class DiscoveredMapImage
     {
-        private const int InitialSize = 256;
-        private const int GrowMargin = 64;
+        #region Dinamic properties
 
-        private Image _image;
-        private ImageTexture _texture;
-        private Vector2I _origin;
-        private bool _dirty;
+        public Image Image { get; set; }
+        public ImageTexture Texture { get; set; }
+        public Vector2I Origin { get; set; }
+        public bool Dirty { get; set; }
 
-        public Vector2I Origin => _origin;
+        #endregion
 
         public Texture2D GetTexture()
         {
             EnsureImage();
 
-            if (_texture == null)
+            if (Texture == null)
             {
-                _texture = ImageTexture.CreateFromImage(_image);
-                _dirty = false;
+                Texture = ImageTexture.CreateFromImage(Image);
+                Dirty = false;
             }
-            else if (_dirty)
+            else if (Dirty)
             {
-                _texture.Update(_image);
-                _dirty = false;
+                Texture.Update(Image);
+                Dirty = false;
             }
 
-            return _texture;
+            return Texture;
         }
 
         public void SetCell(Vector2I cell, Color color)
@@ -37,61 +36,60 @@ namespace Jogo25D.Chunks
             EnsureImage();
             EnsureCovers(cell);
 
-            _image.SetPixel(cell.X - _origin.X, cell.Y - _origin.Y, color);
+            Image.SetPixel(cell.X - Origin.X, cell.Y - Origin.Y, color);
 
-            _dirty = true;
+            Dirty = true;
         }
 
         public void Reset()
         {
-            _image = null;
-            _texture = null;
-            _dirty = false;
-            _origin = Vector2I.Zero;
+            Image = null;
+            Texture = null;
+            Dirty = false;
+            Origin = Vector2I.Zero;
         }
 
         private void EnsureImage()
         {
-            if (_image != null)
+            if (Image != null)
             {
                 return;
             }
 
-            _image = Image.CreateEmpty(InitialSize, InitialSize, false, Image.Format.Rgba8);
-            _origin = new Vector2I(-InitialSize / 2, -InitialSize / 2);
+            Image = Godot.Image.CreateEmpty(256, 256, false, Godot.Image.Format.Rgba8);
+            Origin = new Vector2I(-256 / 2, -256 / 2);
         }
 
         private void EnsureCovers(Vector2I cell)
         {
-            var localX = cell.X - _origin.X;
-            var localY = cell.Y - _origin.Y;
+            var localX = cell.X - Origin.X;
+            var localY = cell.Y - Origin.Y;
 
-            if (localX >= 0 && localY >= 0 && localX < _image.GetWidth() && localY < _image.GetHeight())
+            if (localX >= 0 && localY >= 0 && localX < Image.GetWidth() && localY < Image.GetHeight())
             {
                 return;
             }
 
-            var oldImage = _image;
-            var oldOrigin = _origin;
+            var oldImage = Image;
+            var oldOrigin = Origin;
             var oldWidth = oldImage.GetWidth();
             var oldHeight = oldImage.GetHeight();
-
-            var minX = Mathf.Min(oldOrigin.X, cell.X) - GrowMargin;
-            var minY = Mathf.Min(oldOrigin.Y, cell.Y) - GrowMargin;
-            var maxX = Mathf.Max(oldOrigin.X + oldWidth, cell.X + 1) + GrowMargin;
-            var maxY = Mathf.Max(oldOrigin.Y + oldHeight, cell.Y + 1) + GrowMargin;
-
-            var newImage = Image.CreateEmpty(maxX - minX, maxY - minY, false, Image.Format.Rgba8);
+            var minX = Mathf.Min(oldOrigin.X, cell.X) - 64;
+            var minY = Mathf.Min(oldOrigin.Y, cell.Y) - 64;
+            var maxX = Mathf.Max(oldOrigin.X + oldWidth, cell.X + 1) + 64;
+            var maxY = Mathf.Max(oldOrigin.Y + oldHeight, cell.Y + 1) + 64;
+            var newImage = Godot.Image.CreateEmpty(maxX - minX, maxY - minY, false, Godot.Image.Format.Rgba8);
 
             newImage.BlitRect(
                 oldImage,
                 new Rect2I(Vector2I.Zero, new Vector2I(oldWidth, oldHeight)),
-                new Vector2I(oldOrigin.X - minX, oldOrigin.Y - minY));
+                new Vector2I(oldOrigin.X - minX, oldOrigin.Y - minY)
+            );
 
-            _image = newImage;
-            _origin = new Vector2I(minX, minY);
+            Image = newImage;
+            Origin = new Vector2I(minX, minY);
 
-            _texture = null;
+            Texture = null;
         }
     }
 }

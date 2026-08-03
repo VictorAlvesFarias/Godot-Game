@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
@@ -9,6 +9,7 @@ using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
+using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
@@ -50,7 +51,7 @@ namespace Jogo25D.Characters
         public float DamagePopupDuration { get; set; } = 0.8f;
 		public float DamagePopupRiseDistance { get; set; } = 26f;
         public PlayerData Data { get; set; } = new PlayerData();
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new() { new MovementPropertyData { Speed = 300f, JumpVelocity = -750f }, new HealthPropertyData() };
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
@@ -122,7 +123,7 @@ namespace Jogo25D.Characters
 			GD.Print("[Player._Ready] Trying get Nodes");
 
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNode<WorldManager>(StaticNodePathsConstants.WorldManager);
 			Visuals = GetNodeOrNull<Node2D>("Visuals");
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
 			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
@@ -565,15 +566,21 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var label = new Label();
+			var template = Labels.GetNodeOrNull<Label>("FloatingTextTemplate");
 
+			if (template == null)
+			{
+				GD.PushError("[Player.ShowDamagePopup] Template 'FloatingTextTemplate' não encontrado em Player.tscn");
+
+				return;
+			}
+
+			template.Visible = false;
+
+			var label = (Label)template.Duplicate();
+
+			label.Visible = true;
 			label.Text = $"-{amount}";
-			label.HorizontalAlignment = HorizontalAlignment.Center;
-			label.Size = new Vector2(60, 20);
-			label.AddThemeFontSizeOverride("font_size", 16);
-			label.AddThemeColorOverride("font_color", new Color(1f, 0.25f, 0.25f, 1f));
-			label.AddThemeColorOverride("font_outline_color", Colors.Black);
-			label.AddThemeConstantOverride("outline_size", 3);
 
 			var offset = new Vector2(-30f + (float)GD.RandRange(-8, 8), -70f);
 
@@ -709,13 +716,13 @@ namespace Jogo25D.Characters
 
 		public string GetActiveDimensionId()
 		{
-			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingManager.OverworldId : ChunkStreamingManager.UpsidedownId;
+			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
 		}
 
 		public TileMapLayer GetActiveTileLayer()
 		{
 			var parent = GetParent();
-			var handAuthoredName = GetActiveDimensionId() == ChunkStreamingManager.OverworldId ? "Overworld-Tiles" : "Upsidedown-Tiles";
+			var handAuthoredName = GetActiveDimensionId() == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
 			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
 				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
@@ -1534,7 +1541,7 @@ namespace Jogo25D.Characters
 			var dropQuantity = Mathf.Min(quantity, item.Quantity);
 			var dropData = (ItemData)item.Duplicate(true);
 
-			dropData.InstanceId = ItemFactory.NextInstanceId();
+			dropData.InstanceId = InstanceIdGenerator.NextInstanceId();
 			dropData.Quantity = dropQuantity;
 
 			RemoveItemRequest(instanceId, dropQuantity);

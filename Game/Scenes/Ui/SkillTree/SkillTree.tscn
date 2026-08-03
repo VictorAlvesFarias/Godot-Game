@@ -30,6 +30,14 @@ border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.25, 0.25, 0.25, 1)
 
+[sub_resource type="StyleBoxFlat" id="Style_SlotMaxed"]
+bg_color = Color(0.25, 0.16, 0.35, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.36, 0.92, 1)
+
 [node name="SkillTreeUI" type="CanvasLayer" unique_id=253909130]
 script = ExtResource("1")
 
@@ -40,6 +48,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_ScreenBackground")
+
+[node name="MaxedStyleHolder" type="Panel" parent="Background" unique_id=1172448300]
+theme_override_styles/panel = SubResource("Style_SlotMaxed")
 
 [node name="MainPanel" type="PanelContainer" parent="Background" unique_id=877619220]
 layout_mode = 0

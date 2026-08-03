@@ -1,38 +1,28 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Chunks
 {
     public partial class ChunkGridOverlay : Node2D
     {
-        private const float ChunkPixels = ChunkStreamingManager.ChunkSize * 32f;
-        private const float DrawRadius = 4000f;
+        private const float ChunkPixels = ChunkStreamingConstants.CHUNK_SIZE * 32f;
 
-        private static readonly Color LineColor = new Color(1f, 1f, 1f, 0.2f);
-        private static readonly Color CurrentChunkColor = new Color(0.3f, 1f, 1f, 0.6f);
+        public static bool Enabled { get; set; }
 
-        private static bool _enabled;
+        #region Godot implementation
 
         public override void _Ready()
         {
-            Visible = _enabled;
+            Visible = Enabled;
             ZIndex = 100;
-
-            GD.Print($"[ChunkGridOverlay] ready, parent={GetParent()?.Name}, globalPos={GlobalPosition}");
         }
 
         public override void _UnhandledInput(InputEvent @event)
         {
-            if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.PhysicalKeycode == Key.F3)
-            {
-                GD.Print($"[ChunkGridOverlay] raw F3 keydown detected, echo={keyEvent.Echo}, actionPressed={@event.IsActionPressed("toggle_chunk_grid")}");
-            }
-
             if (@event.IsActionPressed("toggle_chunk_grid") && !@event.IsEcho())
             {
-                _enabled = !_enabled;
-                Visible = _enabled;
-
-                GD.Print($"[ChunkGridOverlay] toggled, enabled={_enabled}, visible={Visible}");
+                Enabled = !Enabled;
+                Visible = Enabled;
 
                 GetViewport().SetInputAsHandled();
             }
@@ -40,9 +30,9 @@ namespace Jogo25D.Chunks
 
         public override void _Process(double delta)
         {
-            if (Visible != _enabled)
+            if (Visible != Enabled)
             {
-                Visible = _enabled;
+                Visible = Enabled;
             }
 
             if (Visible)
@@ -55,12 +45,10 @@ namespace Jogo25D.Chunks
         {
             var center = GlobalPosition;
 
-            GD.Print($"[ChunkGridOverlay] drawing, center={center}, currentChunk=({Mathf.FloorToInt(center.X / ChunkPixels)},{Mathf.FloorToInt(center.Y / ChunkPixels)})");
-
-            var startChunkX = Mathf.FloorToInt((center.X - DrawRadius) / ChunkPixels);
-            var endChunkX = Mathf.CeilToInt((center.X + DrawRadius) / ChunkPixels);
-            var startChunkY = Mathf.FloorToInt((center.Y - DrawRadius) / ChunkPixels);
-            var endChunkY = Mathf.CeilToInt((center.Y + DrawRadius) / ChunkPixels);
+            var startChunkX = Mathf.FloorToInt((center.X - 4000f) / ChunkPixels);
+            var endChunkX = Mathf.CeilToInt((center.X + 4000f) / ChunkPixels);
+            var startChunkY = Mathf.FloorToInt((center.Y - 4000f) / ChunkPixels);
+            var endChunkY = Mathf.CeilToInt((center.Y + 4000f) / ChunkPixels);
 
             var top = startChunkY * ChunkPixels - center.Y;
             var bottom = endChunkY * ChunkPixels - center.Y;
@@ -71,14 +59,14 @@ namespace Jogo25D.Chunks
             {
                 var x = chunkX * ChunkPixels - center.X;
 
-                DrawLine(new Vector2(x, top), new Vector2(x, bottom), LineColor, 1f);
+                DrawLine(new Vector2(x, top), new Vector2(x, bottom), new Color(1f, 1f, 1f, 0.2f), 1f);
             }
 
             for (var chunkY = startChunkY; chunkY <= endChunkY; chunkY++)
             {
                 var y = chunkY * ChunkPixels - center.Y;
 
-                DrawLine(new Vector2(left, y), new Vector2(right, y), LineColor, 1f);
+                DrawLine(new Vector2(left, y), new Vector2(right, y), new Color(1f, 1f, 1f, 0.2f), 1f);
             }
 
             var currentChunkX = Mathf.FloorToInt(center.X / ChunkPixels);
@@ -87,7 +75,7 @@ namespace Jogo25D.Chunks
             var chunkLeft = currentChunkX * ChunkPixels - center.X;
             var chunkTop = currentChunkY * ChunkPixels - center.Y;
 
-            DrawRect(new Rect2(chunkLeft, chunkTop, ChunkPixels, ChunkPixels), CurrentChunkColor, false, 2f);
+            DrawRect(new Rect2(chunkLeft, chunkTop, ChunkPixels, ChunkPixels), new Color(0.3f, 1f, 1f, 0.6f), false, 2f);
 
             DrawString(
                 ThemeDB.FallbackFont,
@@ -96,7 +84,9 @@ namespace Jogo25D.Chunks
                 HorizontalAlignment.Left,
                 -1f,
                 16,
-                CurrentChunkColor);
+                new Color(0.3f, 1f, 1f, 0.6f));
         }
+
+        #endregion
     }
 }

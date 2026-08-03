@@ -1,39 +1,54 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Actions;
+using Jogo25D.Characters;
+using Jogo25D.Constants;
+using Jogo25D.Items;
+using Jogo25D.Systems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jogo25D.Actions;
-using Jogo25D.Characters;
-using Jogo25D.Items;
-using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
 	public partial class ConsoleUI : CanvasLayer
 	{
+		#region Dinamic properties
+
 		public bool IsOpen { get; set; }
 		public Player LocalPlayer { get; set; }
+		public List<string> CommandHistory { get; set; } = new();
+		public int HistoryIndex { get; set; } = -1;
+		public string SavedInput { get; set; } = "";
+		public int SuggestionIndex { get; set; } = 0;
+		public Dictionary<string, ConsoleCommands> Commands { get; set; } = new();
+		public StyleBoxFlat SuggestionHighlightStyle { get; set; }
+		public StyleBox SuggestionNormalStyle { get; set; }
+
+		#endregion
+
+		#region Node references
+
+		public WorldManager WorldManager { get; set; }
+
+		#endregion
+
+		#region Node children references
 
 		public ScrollContainer HistoryScroll { get; set; }
-		public WorldManager WorldManager { get; set; }
-        public VBoxContainer HistoryContainer { get; set; }
+		public VBoxContainer HistoryContainer { get; set; }
 		public Panel SuggestionsPanel { get; set; }
 		public HBoxContainer SuggestionsBar { get; set; }
 		public LineEdit InputField { get; set; }
-
 		public Label TemplateNormal { get; set; }
 		public Label TemplateEcho { get; set; }
 		public Label TemplateInfo { get; set; }
 		public Label TemplateError { get; set; }
 		public Label TemplateSuccess { get; set; }
+		public Button SuggestionTemplate { get; set; }
 
-		public List<string> CommandHistory { get; set; } = new();
-		public int HistoryIndex { get; set; } = -1;
-		public string SavedInput { get; set; } = "";
+		#endregion
 
-		public int SuggestionIndex { get; set; } = 0;
-
-		public Dictionary<string, ConsoleCommands> Commands { get; set; } = new();
+		#region Godot implementation
 
 		public override void _Ready()
 		{
@@ -48,15 +63,45 @@ namespace Jogo25D.UI
 			TemplateInfo = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Info");
 			TemplateError = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Error");
 			TemplateSuccess = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Success");
+			SuggestionTemplate = GetNodeOrNull<Button>("Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel/Margin/SuggestionsBar/SuggestionTemplate");
+
+			TemplateNormal.Visible = false;
+			TemplateEcho.Visible = false;
+			TemplateInfo.Visible = false;
+			TemplateError.Visible = false;
+			TemplateSuccess.Visible = false;
+
+			if (SuggestionTemplate == null)
+			{
+				GD.PushError("ConsoleUI: SuggestionTemplate não encontrado em SuggestionsBar.");
+			}
+			else
+			{
+				SuggestionTemplate.Visible = false;
+			}
+
+			var suggestionHighlightHolder = GetNodeOrNull<Panel>("Background/SuggestionHighlightHolder");
+
+			if (suggestionHighlightHolder == null)
+			{
+				GD.PushError("ConsoleUI: SuggestionHighlightHolder não encontrado em Background.");
+			}
+			else
+			{
+				SuggestionHighlightStyle = suggestionHighlightHolder.GetThemeStylebox("panel") as StyleBoxFlat;
+				suggestionHighlightHolder.Visible = false;
+			}
 
 			InputField.TextChanged   += OnInputChanged;
 			InputField.TextSubmitted += OnInputSubmitted;
 
-            WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			SuggestionNormalStyle = InputField.GetThemeStylebox("normal");
 
-            LocalPlayer = WorldManager?.GetLocalPlayer();
+			WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
-            RegisterCommands();
+			LocalPlayer = WorldManager?.GetLocalPlayer();
+
+			RegisterCommands();
 
 			PrintInfo("Console carregado. Digite 'help' para listar os comandos.");
 		}
@@ -122,6 +167,10 @@ namespace Jogo25D.UI
 			}
 		}
 
+		#endregion
+
+		#region Core - Toggle
+
 		public void Toggle()
 		{
 			RefreshLocalPlayer();
@@ -147,6 +196,10 @@ namespace Jogo25D.UI
 				LocalPlayer = WorldManager?.GetLocalPlayer();
 			}
 		}
+
+		#endregion
+
+		#region Core - Input handling
 
 		public void OnInputChanged(string text)
 		{
@@ -193,10 +246,19 @@ namespace Jogo25D.UI
 			cmd.Execute(args, this);
 		}
 
+		#endregion
+
+		#region Core - Suggestions
+
 		public void RefreshSuggestions(string text)
 		{
 			foreach (Node child in SuggestionsBar.GetChildren())
 			{
+				if (child == SuggestionTemplate)
+				{
+					continue;
+				}
+
 				child.QueueFree();
 			}
 
@@ -207,15 +269,22 @@ namespace Jogo25D.UI
 				return;
 			}
 
+			if (SuggestionTemplate == null)
+			{
+				GD.PushError("ConsoleUI: SuggestionTemplate não encontrado, não é possível montar sugestões.");
+				SuggestionsPanel.Visible = false;
+				return;
+			}
+
 			SuggestionIndex = 0;
 			SuggestionsPanel.Visible = true;
 
 			var newButtons = new List<Button>();
 			foreach (string s in suggestions.Take(8))
 			{
-				var btn = new Button();
+				var btn = (Button)SuggestionTemplate.Duplicate();
 				btn.Text = s;
-				btn.Flat = true;
+				btn.Visible = true;
 				btn.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f));
 				btn.AddThemeFontSizeOverride("font_size", 13);
 
@@ -230,10 +299,10 @@ namespace Jogo25D.UI
 
 		public void NavigateSuggestions(int dir)
 		{
-			var buttons = SuggestionsBar.GetChildren().OfType<Button>().ToList();
+			var buttons = SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
 			if (buttons.Count == 0)
 			{
-			    return;
+				return;
 			}
 
 			SuggestionIndex = ((SuggestionIndex + dir + buttons.Count + 2) % (buttons.Count + 1)) - 1;
@@ -242,23 +311,15 @@ namespace Jogo25D.UI
 
 		public void UpdateSuggestionHighlight(List<Button> buttons = null)
 		{
-			buttons ??= SuggestionsBar.GetChildren().OfType<Button>().ToList();
+			buttons ??= SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
 			for (int i = 0; i < buttons.Count; i++)
 			{
 				bool selected = i == SuggestionIndex;
 				buttons[i].AddThemeColorOverride("font_color",
 					selected ? new Color(0.62f, 0.36f, 0.92f) : new Color(1f, 1f, 1f));
 				buttons[i].AddThemeStyleboxOverride("normal",
-					selected ? MakeHighlightStylebox() : new StyleBoxEmpty());
+					selected ? SuggestionHighlightStyle : SuggestionNormalStyle);
 			}
-		}
-
-		public static StyleBoxFlat MakeHighlightStylebox()
-		{
-			var sb = new StyleBoxFlat();
-			sb.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.25f);
-			sb.SetCornerRadiusAll(3);
-			return sb;
 		}
 
 		public List<string> ComputeSuggestions(string text)
@@ -286,10 +347,10 @@ namespace Jogo25D.UI
 
 		public void ApplySelectedSuggestion()
 		{
-			var buttons = SuggestionsBar.GetChildren().OfType<Button>().ToList();
+			var buttons = SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
 			if (buttons.Count == 0)
 			{
-			    return;
+				return;
 			}
 
 			int idx = SuggestionIndex >= 0 ? SuggestionIndex : 0;
@@ -319,6 +380,10 @@ namespace Jogo25D.UI
 			RefreshSuggestions(InputField.Text);
 		}
 
+		#endregion
+
+		#region Core - History
+
 		public void NavigateHistory(int dir)
 		{
 			if (CommandHistory.Count == 0)
@@ -337,11 +402,15 @@ namespace Jogo25D.UI
 			InputField.CaretColumn = InputField.Text.Length;
 		}
 
+		#endregion
+
+		#region Core - Output
+
 		public void PrintWith(Label template, string text)
 		{
 			if (string.IsNullOrEmpty(text))
 			{
-			    return;
+				return;
 			}
 
 			var label = template.Duplicate() as Label;
@@ -358,6 +427,10 @@ namespace Jogo25D.UI
 		internal void PrintError(string text) => PrintWith(TemplateError,   text);
 		internal void PrintSuccess(string text) => PrintWith(TemplateSuccess, text);
 
+		#endregion
+
+		#region Core - Player lookup
+
 		public Player GetLocalPlayer()
 		{
 			foreach (Node n in GetTree().GetNodesInGroup("players"))
@@ -369,6 +442,10 @@ namespace Jogo25D.UI
 			}
 			return null;
 		}
+
+		#endregion
+
+		#region Core - Commands
 
 		public void RegisterCommands()
 		{
@@ -417,18 +494,18 @@ namespace Jogo25D.UI
 					}
 
 					ItemFactory.Initialize();
-					
+
 					var def = ItemFactory.Create(args[0]);
-					
+
 					if (def == null)
 					{
 						console.PrintError($"Item '{args[0]}' nÃ£o encontrado. Use 'list_items' para ver os IDs disponÃ­veis.");
-						
+
 						return;
 					}
 
 					int qty = 1;
-					
+
 					if (args.Length >= 2 && !int.TryParse(args[1], out qty))
 					{
 						console.PrintError("Quantidade invÃ¡lida.");
@@ -444,7 +521,7 @@ namespace Jogo25D.UI
 					}
 
 					LocalPlayer.AddItemRequest(ItemFactory.CreateInstance(def.Id));
-					
+
 					console.PrintSuccess($"+{qty}x {def.Name} adicionado ao inventÃ¡rio.");
 				},
 				getCompletions: partial =>
@@ -603,5 +680,7 @@ namespace Jogo25D.UI
 				GetCompletions = getCompletions
 			};
 		}
+
+		#endregion
 	}
 }

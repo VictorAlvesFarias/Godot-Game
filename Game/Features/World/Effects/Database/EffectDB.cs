@@ -2,7 +2,9 @@ using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
+using Jogo25D.Instances;
 using Jogo25D.Properties;
+using System;
 using System.Collections.Generic;
 
 namespace Jogo25D.Effects
@@ -180,13 +182,6 @@ namespace Jogo25D.Effects
 
         #region Core - Instancing
 
-        private static long _nextInstanceId = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
-
-        public static long NextInstanceId()
-        {
-            return ++_nextInstanceId;
-        }
-
         public static EffectDefinitionData CreateInstance(string id)
         {
             if (!Initialized)
@@ -194,10 +189,10 @@ namespace Jogo25D.Effects
                 Initialize();
             }
 
-            var def = Get(id) ?? throw new System.Exception($"[EffectDB] Efeito '{id}' nao encontrado.");
+            var def = Get(id) ?? throw new Exception($"[EffectDB] Efeito '{id}' nao encontrado.");
             var instance = new EffectDefinitionData(id);
 
-            instance.InstanceId = NextInstanceId();
+            instance.InstanceId = InstanceIdGenerator.NextInstanceId();
             instance.Duration = def.Duration;
             instance.Infinite = def.Infinite;
             instance.Type = def.Type;

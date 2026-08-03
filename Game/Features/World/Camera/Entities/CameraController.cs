@@ -1,56 +1,47 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Systems
 {
 	public partial class CameraController : Camera2D
 	{
-		public NodePath PlayerPath;
+		#region Dinamic properties
+
 		public Node2D PlayerRef { get; set; }
+
+		#endregion
+
+		#region Node references
+
+		public WorldManager WorldManager { get; set; }
+
+		#endregion
+
+		#region Godot implementation
 
 		public override void _Ready()
 		{
 			Enabled = true;
 
-			FindLocalPlayer();
-		}
+			WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
-		public override void _PhysicsProcess(double delta)
+            PlayerRef = WorldManager?.GetLocalPlayer();
+        }
+
+        public override void _PhysicsProcess(double delta)
 		{
 			if (PlayerRef == null || !IsInstanceValid(PlayerRef))
 			{
-				FindLocalPlayer();
-			}
+                PlayerRef = WorldManager?.GetLocalPlayer();
+            }
 
-			if (PlayerRef != null && IsInstanceValid(PlayerRef))
+            if (PlayerRef != null && IsInstanceValid(PlayerRef))
 			{
 				GlobalPosition = PlayerRef.GlobalPosition;
 			}
 		}
 
-		public void FindLocalPlayer()
-		{
-			if (PlayerPath != null && !PlayerPath.IsEmpty)
-			{
-				PlayerRef = GetNodeOrNull<Node2D>(PlayerPath);
-				if (PlayerRef != null)
-				{
-					return;
-				}
-			}
-
-			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-
-			if (worldManager != null)
-			{
-				var local = worldManager.GetLocalPlayer();
-
-				if (local != null)
-				{
-					PlayerRef = local;
-					return;
-				}
-			}
-		}	
+		#endregion
 	}
 }

@@ -3,24 +3,12 @@ using Jogo25D.Actions;
 using Jogo25D.Effects;
 using Jogo25D.Properties;
 using Jogo25D.Utils.GodotDictionaryParser;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jogo25D.Features.World.Items.Resources
 {
     public partial class ItemDefinitionData : Resource
     {
-        public ItemDefinitionData() { }
-
-        public ItemDefinitionData(string id)
-        {
-            Id = id;
-        }
-
-        #region Properties
+        #region Dinamic properties
 
         [Export, GodotDictionaryField]
         public string Id { get; set; }

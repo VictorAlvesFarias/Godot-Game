@@ -12,6 +12,8 @@ namespace Jogo25D.Features.World.Resolver.Singletons
 {
     public static class Resolver
     {
+        #region Core - Resolve
+
         public static List<DamagePropertyData> Resolve(params List<DamagePropertyData>[] lists)
         {
             var result = new List<DamagePropertyData>();
@@ -110,7 +112,7 @@ namespace Jogo25D.Features.World.Resolver.Singletons
 
                     if (existing != null)
                     {
-                        existing.MaxCharges     += prop.MaxCharges;
+                        existing.MaxCharges += prop.MaxCharges;
                         existing.ReloadCooldown = Math.Min(existing.ReloadCooldown, prop.ReloadCooldown);
                         existing.InfiniteCharges = existing.InfiniteCharges || prop.InfiniteCharges;
                     }
@@ -239,14 +241,16 @@ namespace Jogo25D.Features.World.Resolver.Singletons
             {
                 foreach (var prop in list)
                 {
-                    result.AttackRange = Math.Max(result.AttackRange,     prop.AttackRange);
-                    result.AttackArea = Math.Max(result.AttackArea,      prop.AttackArea);
-                    result.KnockbackForce = Math.Max(result.KnockbackForce,  prop.KnockbackForce);
+                    result.AttackRange = Math.Max(result.AttackRange, prop.AttackRange);
+                    result.AttackArea = Math.Max(result.AttackArea, prop.AttackArea);
+                    result.KnockbackForce = Math.Max(result.KnockbackForce, prop.KnockbackForce);
                     result.ProjectileSpeed = Math.Max(result.ProjectileSpeed, prop.ProjectileSpeed);
                 }
             }
 
             return result;
         }
+
+        #endregion
     }
 }

@@ -4,6 +4,7 @@ using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Instances;
 using Jogo25D.Properties;
 using System;
 using System.Collections.Generic;
@@ -410,19 +411,12 @@ namespace Jogo25D.Items
 
         #region Core - Instancing
 
-        private static long _nextInstanceId = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
-
-        public static long NextInstanceId()
-        {
-            return ++_nextInstanceId;
-        }
-
         public static ItemData CreateInstance(string id)
         {
-            var def = Create(id) ?? throw new System.Exception($"[ItemFactory] Item '{id}' nao encontrado.");
+            var def = Create(id) ?? throw new Exception($"[ItemFactory] Item '{id}' nao encontrado.");
             var instance = new ItemData(id)
             {
-                InstanceId = NextInstanceId(),
+                InstanceId = InstanceIdGenerator.NextInstanceId(),
                 Quantity = 1,
             };
 

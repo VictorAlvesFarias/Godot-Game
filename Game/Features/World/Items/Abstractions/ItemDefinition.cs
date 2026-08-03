@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
@@ -105,7 +105,7 @@ namespace Jogo25D.Items
 
         #endregion
 
-        #region Core 
+        #region Core - Item
 
         public float GetReloadProgress(ItemData data)
         {
@@ -172,7 +172,7 @@ namespace Jogo25D.Items
             }
             if (data.ReloadTimer > 0)
             {
-                data. ReloadTimer -= delta;
+                data.ReloadTimer -= delta;
             }
         }
 

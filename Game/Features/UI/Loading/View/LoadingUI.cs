@@ -4,13 +4,10 @@ namespace Jogo25D.UI
 {
     public partial class LoadingUI : CanvasLayer
     {
-        private const string BaseText = "Carregando";
-        private const float DotsIntervalSeconds = 0.4f;
-
         public Label StatusLabel { get; set; }
 
-        private float _dotsTimer;
-        private int _dotsCount;
+        public float DotsTimer { get; set; }
+        public int DotsCount { get; set; }
 
         public override void _Ready()
         {
@@ -27,24 +24,24 @@ namespace Jogo25D.UI
                 return;
             }
 
-            _dotsTimer += (float)delta;
+            DotsTimer += (float)delta;
 
-            if (_dotsTimer < DotsIntervalSeconds)
+            if (DotsTimer < 0.4f)
             {
                 return;
             }
 
-            _dotsTimer = 0f;
-            _dotsCount = (_dotsCount + 1) % 4;
+            DotsTimer = 0f;
+            DotsCount = (DotsCount + 1) % 4;
 
-            StatusLabel.Text = BaseText + new string('.', _dotsCount);
+            StatusLabel.Text = "Carregando" + new string('.', DotsCount);
         }
 
         public void Open()
         {
-            _dotsTimer = 0f;
-            _dotsCount = 0;
-            StatusLabel.Text = BaseText;
+            DotsTimer = 0f;
+            DotsCount = 0;
+            StatusLabel.Text = "Carregando";
             Visible = true;
         }
 

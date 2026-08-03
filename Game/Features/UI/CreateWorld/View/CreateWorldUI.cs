@@ -1,4 +1,5 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Systems;
 
@@ -16,7 +17,7 @@ namespace Jogo25D.UI
 		public Button BackButton { get; set; }
 		public Button CreateButton { get; set; }
 		public WorldManager NetworkManager { get; set; }
-		public Jogo25D.Systems.SaveManager Saves { get; set; }
+		public SaveManager Saves { get; set; }
 
 		#endregion
 
@@ -34,8 +35,8 @@ namespace Jogo25D.UI
 			KeyInput = GetNode<LineEdit>("MarginContainer/Root/KeyInput");
 			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
 			CreateButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateButton");
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-			Saves = GetTree().Root.GetNodeOrNull<Jogo25D.Systems.SaveManager>(Jogo25D.Systems.SaveManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
 
 			ModeOption.Clear();
 			ModeOption.AddItem("Personagem Local", (int)WorldCharacterMode.LocalCharacters);
@@ -48,7 +49,7 @@ namespace Jogo25D.UI
 
 		#endregion
 
-		#region Public API
+		#region Core - Tela
 
 		public void Open()
 		{

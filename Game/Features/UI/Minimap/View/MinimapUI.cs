@@ -1,11 +1,14 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
+using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
     public partial class MinimapUI : Control
     {
+        #region Dinamic properties
+
         public string PlayerGroupName { get; set; } = "players";
         public float ViewRadius { get; set; } = 1200f;
         public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
@@ -17,17 +20,25 @@ namespace Jogo25D.UI
         public Node LocalPlayer { get; set; }
         public int LocalPeerId { get; set; } = 1;
 
-        private ChunkStreamingManager _chunkStreamingManager;
-
         public Vector2 PanOffset { get; set; } = Vector2.Zero;
 
         public float LastScale { get; private set; }
+
+        #endregion
+
+        #region Node references
+
+        public ChunkStreamingManager ChunkStreamingManager { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
             CustomMinimumSize = new Vector2(160, 160);
 
-            _chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+            ChunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
             if (Multiplayer != null &&
                 Multiplayer.MultiplayerPeer != null &&
@@ -35,11 +46,6 @@ namespace Jogo25D.UI
             {
                 LocalPeerId = Multiplayer.GetUniqueId();
             }
-        }
-
-        public void SetLocalPlayer(Node player)
-        {
-            LocalPlayer = player;
         }
 
         public override void _Draw()
@@ -77,6 +83,24 @@ namespace Jogo25D.UI
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
+        public override void _Process(double delta)
+        {
+            QueueRedraw();
+        }
+
+        #endregion
+
+        #region Core - Player tracking
+
+        public void SetLocalPlayer(Node player)
+        {
+            LocalPlayer = player;
+        }
+
+        #endregion
+
+        #region Core - Rendering
+
         public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
         {
             if (node is TileMapLayer layer && IsInstanceValid(layer) && layer.GetParent().GetParent().GetParent<SubViewportContainer>().Visible)
@@ -100,9 +124,9 @@ namespace Jogo25D.UI
             Texture2D texture = null;
             var origin = Vector2I.Zero;
 
-            if (_chunkStreamingManager != null)
+            if (ChunkStreamingManager != null)
             {
-                texture = _chunkStreamingManager.GetDiscoveredTexture(layer, out origin);
+                texture = ChunkStreamingManager.GetDiscoveredTexture(layer, out origin);
             }
 
             if (texture != null)
@@ -153,11 +177,10 @@ namespace Jogo25D.UI
             var minY = Mathf.Min(boxStart.Y, boxEnd.Y);
             var maxY = Mathf.Max(boxStart.Y, boxEnd.Y);
 
-            const int maxSamplesPerAxis = 160;
             var boxWidthCells = maxX - minX + 1;
             var boxHeightCells = maxY - minY + 1;
             var boxCellsPerAxis = Mathf.Max(boxWidthCells, boxHeightCells);
-            var strideCells = Mathf.Max(1, Mathf.CeilToInt(boxCellsPerAxis / (float)maxSamplesPerAxis));
+            var strideCells = Mathf.Max(1, Mathf.CeilToInt(boxCellsPerAxis / (float)160));
 
             for (int x = minX; x <= maxX; x += strideCells)
             {
@@ -218,9 +241,6 @@ namespace Jogo25D.UI
             return center + relative * scale;
         }
 
-        public override void _Process(double delta)
-        {
-            QueueRedraw();
-        }
+        #endregion
     }
 }

@@ -13,7 +13,7 @@ namespace Jogo25D.Effects
             Id = id;
         }
 
-        #region Properties
+        #region Dinamic properties
 
         [Export, GodotDictionaryField]
         public string Id { get; set; }
@@ -27,10 +27,6 @@ namespace Jogo25D.Effects
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
 
-        #endregion
-
-        #region Timers
-
         [Export, GodotDictionaryField]
         public float Duration { get; set; }
 
@@ -39,10 +35,6 @@ namespace Jogo25D.Effects
 
         [Export, GodotDictionaryField]
         public float Timer { get; set; }
-
-        #endregion
-
-        #region Flags
 
         [Export, GodotDictionaryField]
         public bool Expired { get; set; }

@@ -1,18 +1,12 @@
 ﻿using Godot;
-using Jogo25D.Actions;
-using Jogo25D.Effects;
-using Jogo25D.Properties;
 using Jogo25D.Utils.GodotDictionaryParser;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jogo25D.Features.World.Items.Resources
 {
     public partial class ItemData : ItemDefinitionData
     {
+        #region Constructors
+
         public ItemData() { }
 
         public ItemData(string id)
@@ -20,7 +14,9 @@ namespace Jogo25D.Features.World.Items.Resources
             Id = id;
         }
 
-        #region Properties
+        #endregion
+
+        #region Dinamic properties
 
         [Export, GodotDictionaryField]
         public long InstanceId { get; set; }
@@ -30,10 +26,6 @@ namespace Jogo25D.Features.World.Items.Resources
 
         [Export, GodotDictionaryField]
         public int CurrentCharges { get; set; }
-
-        #endregion
-
-        #region Timers
 
         [Export, GodotDictionaryField]
         public float ReloadTimer { get; set; }

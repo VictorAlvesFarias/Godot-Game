@@ -1,19 +1,21 @@
-using Godot;
-using System;
+﻿using Godot;
 using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
+using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Features.World.Items.Resources;
-using System.Collections.Generic;
-using System.Linq;
+using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Portals;
 using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Jogo25D.Systems
 {
@@ -21,46 +23,41 @@ namespace Jogo25D.Systems
 	{
 		#region Properties
 
-		public static int MAX_PLAYER = 4;
-		public static int DEFAULT_PORT = 9876;
-		public static string DEFAULT_ADDRESS = "127.0.0.1";
-		public static string DEFAULT_NODE_PATH = "/root/Main/Managers/WorldManager";
-
 		public ENetMultiplayerPeer Peer { get; set; }
 		public Node2D OverworldParent { get; set; }
 		public Node2D UpsidedownParent { get; set; }
 		public SubViewportContainer OverContainer { get; set; }
 		public SubViewportContainer UpContainer { get; set; }
 
-        #endregion
+		#endregion
 
-        #region Save - Properties
+		#region Save - Properties
 
-        public WorldSaveData CurrentWorldSave { get; private set; }
+		public WorldSaveData CurrentWorldSave { get; private set; }
 
-        public CharacterSaveData PendingCharacter { get; set; }
+		public CharacterSaveData PendingCharacter { get; set; }
 
-        public WorldSaveData PendingWorld { get; set; }
-        public bool PendingWorldIsDefault { get; set; }
+		public WorldSaveData PendingWorld { get; set; }
+		public bool PendingWorldIsDefault { get; set; }
 
-        public event Action<string, Godot.Collections.Array> ServerCharacterListAvailable;
+		public event Action<string, Godot.Collections.Array> ServerCharacterListAvailable;
 
-        private Timer _autosaveTimer;
+		public Timer AutosaveTimer { get; set; }
 
-        private readonly Dictionary<long, CharacterSaveData> _peerCharacters = new();
-        private readonly Dictionary<long, string> _pendingProfileByPeer = new();
+		private readonly Dictionary<long, CharacterSaveData> _peerCharacters = new();
+		private readonly Dictionary<long, string> _pendingProfileByPeer = new();
 
-        #endregion
+		#endregion
 
-        #region Systems
+		#region Systems
 
 		private Inventory Inventory { get; set; } = new Inventory();
 
-        #endregion
+		#endregion
 
-        #region Godot implementation
+		#region Godot implementation
 
-        public override void _Ready()
+		public override void _Ready()
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
 
@@ -73,9 +70,9 @@ namespace Jogo25D.Systems
 			GetTree().Root.CloseRequested += PersistBeforeLeaving;
 		}
 
-        #endregion
+		#endregion
 
-        #region Core - World spawning
+		#region Core - World spawning
 
 		private void ResolveWorldReferences()
 		{
@@ -105,7 +102,7 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager.ResolveWorldReferences] UpsidedownParent found: {UpsidedownParent.Name}");
 			}
 
-            var overContainerPath = "Main/World/Levels/OverworldViewportContainer";
+			var overContainerPath = "Main/World/Levels/OverworldViewportContainer";
 
 			OverContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(overContainerPath);
 
@@ -118,7 +115,7 @@ namespace Jogo25D.Systems
 				GD.Print($"[WorldManager.ResolveWorldReferences] OverContainer found: {OverContainer.Name}");
 			}
 
-            var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
+			var upContainerPath = "Main/World/Levels/UpsidedownViewportContainer";
 
 			UpContainer = GetTree().Root.GetNodeOrNull<SubViewportContainer>(upContainerPath);
 
@@ -188,7 +185,7 @@ namespace Jogo25D.Systems
 		{
 			var saveManager = ResolveSaveManager();
 
-			save ??= saveManager?.CreateWorld("Mundo sem nome", (long)GD.Randi(), WorldCharacterMode.LocalCharacters, "", 5);
+			save ??= saveManager?.CreateWorld("Mundo sem nome", (long)GD.Randi(), WorldCharacterMode.LocalCharacters, "", SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES);
 
 			CurrentWorldSave = save;
 
@@ -196,13 +193,13 @@ namespace Jogo25D.Systems
 
 			ClearHandAuthoredTiles();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
 			if (chunkStreamingManager != null && save != null)
 			{
 				chunkStreamingManager.SetWorldSeed(save.Seed);
-				chunkStreamingManager.ImportState(ChunkStreamingManager.OverworldId, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingManager.OverworldId));
-				chunkStreamingManager.ImportState(ChunkStreamingManager.UpsidedownId, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingManager.UpsidedownId));
+				chunkStreamingManager.ImportState(ChunkStreamingConstants.OVERWORLD_ID, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingConstants.OVERWORLD_ID));
+				chunkStreamingManager.ImportState(ChunkStreamingConstants.UPSIDEDOWN_ID, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID));
 			}
 
 			SetChunkStreamingEnabled(true);
@@ -213,7 +210,7 @@ namespace Jogo25D.Systems
 
 			if (chunkStreamingManager != null)
 			{
-				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, Vector2.Zero);
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, UpsidedownParent, Vector2.Zero);
 			}
 
 			RestorePortals(save);
@@ -239,7 +236,7 @@ namespace Jogo25D.Systems
 
 		private void SetChunkStreamingEnabled(bool enabled)
 		{
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
 			if (chunkStreamingManager != null)
 			{
@@ -254,58 +251,58 @@ namespace Jogo25D.Systems
 			return JoinServer(textAddress);
 		}
 
-        private void SpawnTestNPC()
-        {
-            if (UpsidedownParent == null || UpsidedownParent.GetNodeOrNull("NPC_Dummy") != null)
-            {
-                return;
-            }
+		private void SpawnTestNPC()
+		{
+			if (UpsidedownParent == null || UpsidedownParent.GetNodeOrNull("NPC_Dummy") != null)
+			{
+				return;
+			}
 
-            var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
+			var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
 
-            npc.Name = "NPC_Dummy";
-            npc.Position = FindGroundSpawnPosition(UpsidedownParent, 200f);
+			npc.Name = "NPC_Dummy";
+			npc.Position = FindGroundSpawnPosition(UpsidedownParent, 200f);
 
-            npc.SetMultiplayerAuthority(1);
+			npc.SetMultiplayerAuthority(1);
 
-            UpsidedownParent.AddChild(npc);
-        }
+			UpsidedownParent.AddChild(npc);
+		}
 
-        private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
-        {
-            var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles");
+		private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
+		{
+			var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles");
 
-            if (layer == null)
-            {
-                return new Vector2(worldX, 0f);
-            }
+			if (layer == null)
+			{
+				return new Vector2(worldX, 0f);
+			}
 
-            var cellX = Mathf.FloorToInt(worldX / tileSize);
+			var cellX = Mathf.FloorToInt(worldX / tileSize);
 
-            for (int cellY = -8; cellY <= 8; cellY++)
-            {
-                if (layer.GetCellSourceId(new Vector2I(cellX, cellY)) != -1)
-                {
-                    return new Vector2(worldX, cellY * tileSize - halfBodyHeight);
-                }
-            }
+			for (int cellY = -8; cellY <= 8; cellY++)
+			{
+				if (layer.GetCellSourceId(new Vector2I(cellX, cellY)) != -1)
+				{
+					return new Vector2(worldX, cellY * tileSize - halfBodyHeight);
+				}
+			}
 
-            return new Vector2(worldX, 0f);
-        }
+			return new Vector2(worldX, 0f);
+		}
 
-        #endregion
+		#endregion
 
-        #region Core - Connection
+		#region Core - Connection
 
 		public string CreateServer(string textPort)
 		{
-			var port = DEFAULT_PORT;
+			var port = NetworkingConstants.DEFAULT_PORT;
 
 			if (!string.IsNullOrEmpty(textPort))
 			{
 				if (!int.TryParse(textPort, out port))
 				{
-					port = DEFAULT_PORT;
+					port = NetworkingConstants.DEFAULT_PORT;
 				}
 			}
 
@@ -313,7 +310,7 @@ namespace Jogo25D.Systems
 
 			Peer = new ENetMultiplayerPeer();
 
-			if (Peer.CreateServer(port, MAX_PLAYER) != Error.Ok)
+			if (Peer.CreateServer(port, NetworkingConstants.MAX_PLAYER) != Error.Ok)
 			{
 				GD.Print("[WorldManager.CreateServer] failed to create server");
 
@@ -348,33 +345,33 @@ namespace Jogo25D.Systems
 		{
 			LastJoinError = "";
 
-            var ip = DEFAULT_ADDRESS;
-            var port = DEFAULT_PORT;
+			var ip = NetworkingConstants.DEFAULT_ADDRESS;
+			var port = NetworkingConstants.DEFAULT_PORT;
 
-            if (!string.IsNullOrWhiteSpace(textAddress))
-            {
-                var parts = textAddress.Split(':');
+			if (!string.IsNullOrWhiteSpace(textAddress))
+			{
+				var parts = textAddress.Split(':');
 
-                if (parts.Length > 1)
-                {
-                    if (string.IsNullOrWhiteSpace(parts[0]) || !int.TryParse(parts[1], out port))
-                    {
-                        LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
+				if (parts.Length > 1)
+				{
+					if (string.IsNullOrWhiteSpace(parts[0]) || !int.TryParse(parts[1], out port))
+					{
+						LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
 
-                        return "";
-                    }
+						return "";
+					}
 
-                    ip = parts[0];
-                }
-                else if (!int.TryParse(parts[0], out port))
-                {
-                    LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
+					ip = parts[0];
+				}
+				else if (!int.TryParse(parts[0], out port))
+				{
+					LastJoinError = "Formato de endereço inválido (esperado IP:Porta ou apenas Porta).";
 
-                    return "";
-                }
-            }
+					return "";
+				}
+			}
 
-            GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
+			GD.Print($"[WorldManager.JoinServer] JoinServer(address={ip}, port={port})");
 
 			Peer = new ENetMultiplayerPeer();
 
@@ -483,7 +480,7 @@ namespace Jogo25D.Systems
 			OverContainer = null;
 			UpContainer = null;
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.ResetState();
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.ResetState();
 		}
 
 		public void ReturnToMainMenu()
@@ -534,9 +531,204 @@ namespace Jogo25D.Systems
 			GD.Print("[WorldManager.Disconnect] respawned local solo player");
 		}
 
-        #endregion
+		#endregion
 
-        #region Core - Rpc - Player spawn
+		#region Core - Player lookup
+
+		public Player GetLocalPlayer()
+		{
+			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
+
+			var localPeerId = 1;
+
+			if (
+				Multiplayer != null &&
+				Multiplayer.MultiplayerPeer != null &&
+				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
+			)
+			{
+				localPeerId = Multiplayer.GetUniqueId();
+				GD.Print($"[WorldManager.GetLocalPlayer] localPeerId={localPeerId}");
+			}
+
+			return FindPlayerByPeerId(localPeerId);
+		}
+
+		public Player FindPlayerByPeerId(long peerId)
+		{
+			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
+			var found = players.FirstOrDefault(p => p.PeerId == peerId);
+
+			GD.Print($"[WorldManager.FindPlayerByPeerId] peerId={peerId} found={(found != null)}");
+
+			return found;
+		}
+
+		#endregion
+
+		#region Core - Peer events
+
+		public void OnPeerConnected(long id)
+		{
+			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
+		}
+
+		private async void FinishPeerJoin(long id, CharacterSaveData character)
+		{
+			if (!Multiplayer.IsServer() || character == null)
+			{
+				return;
+			}
+
+			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+
+			player.Name = $"Player{id}";
+			player.Position = Godot.Vector2.Zero;
+			player.PeerId = id;
+			player.Data = (PlayerData)character.Data.Duplicate(true);
+			player.Loaded = true;
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+
+			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, UpsidedownParent, player.Position);
+
+				player.Position = FindGroundSpawnPosition(UpsidedownParent, player.Position.X);
+
+				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
+			}
+
+			chunkStreamingManager?.CatchUpPeer(id);
+
+			SpawnPlayer(player);
+
+			SpawnPlayerRequest(player);
+
+			var players = GetTree().GetNodesInGroup("players");
+
+			foreach (Node node in players)
+			{
+				if (node is NPC)
+				{
+					continue;
+				}
+
+				if (node is Player existingPlayer && existingPlayer.PeerId != id)
+				{
+					GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about {existingPlayer.Name}");
+
+					SpawnPlayerRequest(existingPlayer, id);
+				}
+			}
+
+			var npc = UpsidedownParent?.GetNodeOrNull<Player>("NPC_Dummy");
+
+			if (npc != null)
+			{
+				GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about NPC_Dummy");
+
+				SpawnNpcRequest(npc.Position, id);
+			}
+
+			var worldItems = (OverworldParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>())
+				.Concat(UpsidedownParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>());
+
+			foreach (var worldItem in worldItems)
+			{
+				GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about {worldItem.Name}");
+
+				SpawnWorldItemRequest(worldItem, id);
+			}
+		}
+
+		public void OnPeerDisconnected(long id)
+		{
+			GD.Print($"[WorldManager.OnPeerDisconnected] OnPeerDisconnected(id={id})");
+
+			var playerNode = FindPlayerByPeerId(id);
+
+			if (playerNode == null)
+			{
+				GD.Print($"[WorldManager.OnPeerDisconnected] Player{id} not found");
+			}
+
+			SavePeerCharacterOnDisconnect(id, playerNode);
+
+			if (playerNode != null)
+			{
+				playerNode.QueueFree();
+
+				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
+			}
+
+			_peerCharacters.Remove(id);
+			_pendingProfileByPeer.Remove(id);
+
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RemovePeer(id);
+		}
+
+		private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
+		{
+			if (playerNode == null || CurrentWorldSave == null || !_peerCharacters.TryGetValue(id, out var character))
+			{
+				return;
+			}
+
+			var saveManager = ResolveSaveManager();
+
+			if (saveManager == null)
+			{
+				return;
+			}
+
+			character.Data = playerNode.Data;
+			character.LastPlayedUtc = SaveManager.NowUtc();
+
+			if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
+			{
+				saveManager.SaveServerCharacter(CurrentWorldSave.MultiplayerKey, character);
+			}
+			else
+			{
+				saveManager.SaveBackup(character.OwnerProfileId, character);
+			}
+		}
+
+		public event Action ConnectionSucceeded;
+		public event Action ConnectionAttemptFailed;
+
+		public void OnConnectedToServer()
+		{
+			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");
+
+			RpcId(1, nameof(RequestJoinInfoServerReceive));
+
+			ConnectionSucceeded?.Invoke();
+		}
+
+		public void OnConnectionFailed()
+		{
+			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
+
+			Peer = null;
+			Multiplayer.MultiplayerPeer = null;
+
+			GD.Print("[WorldManager.OnConnectionFailed] peer reset");
+
+			ConnectionAttemptFailed?.Invoke();
+		}
+
+		public void OnServerDisconnected()
+		{
+			GD.Print("[WorldManager.OnServerDisconnected] OnServerDisconnected()");
+
+			ReturnToMainMenu();
+		}
+
+		#endregion
+
+		#region Core - Rpc - Player spawn
 
 		public void SpawnPlayer(Player player)
 		{
@@ -618,7 +810,7 @@ namespace Jogo25D.Systems
 
 		private Node2D ResolveDimensionParent(string dimensionId)
 		{
-			return dimensionId == ChunkStreamingManager.OverworldId ? OverworldParent : UpsidedownParent;
+			return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
 		}
 
 		public void SpawnWorldItem(WorldItem item, string dimensionId)
@@ -646,7 +838,7 @@ namespace Jogo25D.Systems
 
 		public long SpawnWorldItemRequest(ItemData item, Vector2 position, string dimensionId)
 		{
-			var worldItemId = ItemFactory.NextInstanceId();
+			var worldItemId = InstanceIdGenerator.NextInstanceId();
 
 			var worldItem = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
 
@@ -667,7 +859,7 @@ namespace Jogo25D.Systems
 		public void SpawnWorldItemRequest(WorldItem item, long targetPeerId)
 		{
 			var data = GodotDictionaryParser.ToDictionary(item.Data);
-			var dimensionId = item.GetParent() == OverworldParent ? ChunkStreamingManager.OverworldId : ChunkStreamingManager.UpsidedownId;
+			var dimensionId = item.GetParent() == OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
 
 			RpcId(targetPeerId, nameof(SpawnWorldItemReceive), item.WorldItemId, data, item.Position, dimensionId);
 		}
@@ -702,8 +894,8 @@ namespace Jogo25D.Systems
 
 		private TileMapLayer ResolveDimensionLayer(string dimensionId)
 		{
-			var parent = dimensionId == ChunkStreamingManager.OverworldId ? OverworldParent : UpsidedownParent;
-			var handAuthoredName = dimensionId == ChunkStreamingManager.OverworldId ? "Overworld-Tiles" : "Upsidedown-Tiles";
+			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
+			var handAuthoredName = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
 			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
 				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
@@ -743,7 +935,7 @@ namespace Jogo25D.Systems
 
 			EraseBlockAndReconnect(layer, cell);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(dimensionId, cell, "break", "");
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
 
 			if (BlockDB.TryGet("grass", out var grassBlock))
 			{
@@ -777,7 +969,7 @@ namespace Jogo25D.Systems
 
 			PaintBlockAndReconnect(layer, cell, block);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RecordMutation(dimensionId, cell, "place", blockId);
+			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "place", blockId);
 
 			Rpc(nameof(PlaceBlockBroadcast), cell, blockId, dimensionId);
 
@@ -797,7 +989,7 @@ namespace Jogo25D.Systems
 			PaintBlockAndReconnect(layer, cell, block);
 		}
 
-		private long _nextPortalId;
+		public long NextPortalId { get; set; }
 
 		public bool PlacePortalAuthoritative(Vector2 position, string dimensionId)
 		{
@@ -816,9 +1008,9 @@ namespace Jogo25D.Systems
 				return false;
 			}
 
-			SpawnPortal(parent, position, ++_nextPortalId);
+			SpawnPortal(parent, position, ++NextPortalId);
 
-			Rpc(nameof(PlacePortalBroadcast), position, dimensionId, _nextPortalId);
+			Rpc(nameof(PlacePortalBroadcast), position, dimensionId, NextPortalId);
 
 			return true;
 		}
@@ -862,7 +1054,7 @@ namespace Jogo25D.Systems
 					continue;
 				}
 
-				SpawnPortal(parent, new Vector2(portalSave.PositionX, portalSave.PositionY), ++_nextPortalId);
+				SpawnPortal(parent, new Vector2(portalSave.PositionX, portalSave.PositionY), ++NextPortalId);
 			}
 		}
 
@@ -888,8 +1080,8 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			CollectFrom(OverworldParent, ChunkStreamingManager.OverworldId);
-			CollectFrom(UpsidedownParent, ChunkStreamingManager.UpsidedownId);
+			CollectFrom(OverworldParent, ChunkStreamingConstants.OVERWORLD_ID);
+			CollectFrom(UpsidedownParent, ChunkStreamingConstants.UPSIDEDOWN_ID);
 
 			return result;
 		}
@@ -964,26 +1156,26 @@ namespace Jogo25D.Systems
 
 		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell)
 		{
-			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
 				layer.SetCell(cell, -1);
 
 				return;
 			}
 
-			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, ChunkGenerator.TerrainSetId, -1, false);
+			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, 0, -1, false);
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
 			if (neighbors.Count > 0)
 			{
-				layer.SetCellsTerrainConnect(neighbors, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+				layer.SetCellsTerrainConnect(neighbors, 0, 0, false);
 			}
 		}
 
 		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block)
 		{
-			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= ChunkGenerator.TerrainSetId)
+			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
 				layer.SetCell(cell, block.SourceId, block.AtlasCoord);
 
@@ -994,7 +1186,7 @@ namespace Jogo25D.Systems
 
 			cells.Add(cell);
 
-			layer.SetCellsTerrainConnect(cells, ChunkGenerator.TerrainSetId, ChunkGenerator.TerrainId, false);
+			layer.SetCellsTerrainConnect(cells, 0, 0, false);
 		}
 
 		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell)
@@ -1026,175 +1218,7 @@ namespace Jogo25D.Systems
 
 		#endregion
 
-		#region Save - Core
-
-		private SaveManager ResolveSaveManager()
-		{
-			return GetTree().Root.GetNodeOrNull<SaveManager>(SaveManager.DEFAULT_NODE_PATH);
-		}
-
-		private bool IsHostOrSolo()
-		{
-			return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
-		}
-
-		private void StartAutosaveTimer(WorldSaveData save)
-		{
-			StopAutosaveTimer();
-
-			if (save == null || !IsHostOrSolo())
-			{
-				return;
-			}
-
-			_autosaveTimer = new Timer
-			{
-				WaitTime = Mathf.Max(1, save.AutosaveIntervalMinutes) * 60.0,
-				Autostart = true,
-			};
-
-			_autosaveTimer.Timeout += SaveCurrentWorld;
-
-			AddChild(_autosaveTimer);
-		}
-
-		private void StopAutosaveTimer()
-		{
-			if (_autosaveTimer == null)
-			{
-				return;
-			}
-
-			_autosaveTimer.QueueFree();
-			_autosaveTimer = null;
-		}
-
-		public void SaveCurrentWorld()
-		{
-			if (CurrentWorldSave == null)
-			{
-				return;
-			}
-
-			var saveManager = ResolveSaveManager();
-
-			if (saveManager == null)
-			{
-				return;
-			}
-
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
-
-			if (chunkStreamingManager != null)
-			{
-				saveManager.SaveDimensionState(CurrentWorldSave.WorldId, ChunkStreamingManager.OverworldId, chunkStreamingManager.ExportState(ChunkStreamingManager.OverworldId));
-				saveManager.SaveDimensionState(CurrentWorldSave.WorldId, ChunkStreamingManager.UpsidedownId, chunkStreamingManager.ExportState(ChunkStreamingManager.UpsidedownId));
-			}
-
-			CurrentWorldSave.Portals = CollectPortals();
-			CurrentWorldSave.LastPlayedUtc = SaveManager.NowUtc();
-
-			saveManager.SaveWorldMeta(CurrentWorldSave);
-
-			SaveOwnLocalCharacter();
-			SaveRemotePeerCharacters(saveManager);
-		}
-
-		private void SaveOwnLocalCharacter()
-		{
-			if (PendingCharacter == null)
-			{
-				return;
-			}
-
-			var saveManager = ResolveSaveManager();
-			var localPlayer = GetLocalPlayer();
-
-			if (saveManager == null || localPlayer == null)
-			{
-				return;
-			}
-
-			PendingCharacter.Data = localPlayer.Data;
-			PendingCharacter.LastPlayedUtc = SaveManager.NowUtc();
-
-			saveManager.SaveLocalCharacter(PendingCharacter);
-		}
-
-		private void SaveRemotePeerCharacters(SaveManager saveManager)
-		{
-			if (!IsHostOrSolo())
-			{
-				return;
-			}
-
-			foreach (var player in GetTree().GetNodesInGroup("players").OfType<Player>())
-			{
-				if (player.PeerId <= 1 || !_peerCharacters.TryGetValue(player.PeerId, out var character))
-				{
-					continue;
-				}
-
-				character.Data = player.Data;
-				character.LastPlayedUtc = SaveManager.NowUtc();
-
-				if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
-				{
-					saveManager.SaveServerCharacter(CurrentWorldSave.MultiplayerKey, character);
-				}
-				else
-				{
-					saveManager.SaveBackup(character.OwnerProfileId, character);
-				}
-			}
-		}
-
-		private void PersistBeforeLeaving()
-		{
-			SaveOwnLocalCharacter();
-
-			if (CurrentWorldSave != null && IsHostOrSolo())
-			{
-				SaveCurrentWorld();
-			}
-		}
-
-		#endregion
-
-		#region Core - Player lookup
-
-		public Player GetLocalPlayer()
-		{
-			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
-
-			var localPeerId = 1;
-
-			if (
-				Multiplayer != null &&
-				Multiplayer.MultiplayerPeer != null &&
-				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
-			)
-			{
-				localPeerId = Multiplayer.GetUniqueId();
-				GD.Print($"[WorldManager.GetLocalPlayer] localPeerId={localPeerId}");
-			}
-
-			return FindPlayerByPeerId(localPeerId);
-		}
-
-		public Player FindPlayerByPeerId(long peerId)
-		{
-			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
-			var found = players.FirstOrDefault(p => p.PeerId == peerId);
-
-			GD.Print($"[WorldManager.FindPlayerByPeerId] peerId={peerId} found={(found != null)}");
-
-			return found;
-		}
-
-        #endregion
-
-        #region Core - Rpc - Player state
+		#region Core - Rpc - Player state
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void TeleportPlayer(long peerId, Vector2 position)
@@ -1260,11 +1284,11 @@ namespace Jogo25D.Systems
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
 			if (chunkStreamingManager != null)
 			{
-				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, position);
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, UpsidedownParent, position);
 			}
 
 			RpcId(1, nameof(TeleportPlayerServerReceive), position);
@@ -1272,38 +1296,38 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-        #endregion
+		#endregion
 
-        #region Core - Rpc - Dimension trade
+		#region Core - Rpc - Dimension trade
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void TradeDimension(long targetPeerId)
-        {
-            GD.Print($"[WorldManager.TradeDimension] targetPeerId={targetPeerId}");
+		public void TradeDimension(long targetPeerId)
+		{
+			GD.Print($"[WorldManager.TradeDimension] targetPeerId={targetPeerId}");
 
-            var playerNode = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(p => p.PeerId == targetPeerId);
+			var playerNode = GetTree().GetNodesInGroup("players").OfType<Player>().FirstOrDefault(p => p.PeerId == targetPeerId);
 
-            if (playerNode == null) return;
+			if (playerNode == null) return;
 
-            Node2D currentParent = playerNode.GetParent<Node2D>();
-            Node2D nextParent;
+			Node2D currentParent = playerNode.GetParent<Node2D>();
+			Node2D nextParent;
 
-            if (currentParent == OverworldParent)
-            {
-                nextParent = UpsidedownParent;
-            }
-            else
-            {
-                nextParent = OverworldParent;
-            }
+			if (currentParent == OverworldParent)
+			{
+				nextParent = UpsidedownParent;
+			}
+			else
+			{
+				nextParent = OverworldParent;
+			}
 
-            GD.Print($"[Dimension] Indo para: {nextParent.Name}");
+			GD.Print($"[Dimension] Indo para: {nextParent.Name}");
 
-            playerNode.Reparent(nextParent, true);
+			playerNode.Reparent(nextParent, true);
 
-            GD.Print($"[Dimension] Chegou em: {nextParent.Name}");
+			GD.Print($"[Dimension] Chegou em: {nextParent.Name}");
 
-            playerNode.LastDimensionTradeMsec = Time.GetTicksMsec();
+			playerNode.LastDimensionTradeMsec = Time.GetTicksMsec();
 
 			var equippedItemId = playerNode.Data.EquippedItemId;
 
@@ -1312,14 +1336,14 @@ namespace Jogo25D.Systems
 				playerNode.EquipItemRequest(equippedItemId);
 			}
 
-            if (targetPeerId == Multiplayer.GetUniqueId())
-            {
-                OverContainer.Visible = (nextParent == OverworldParent);
-                UpContainer.Visible = (nextParent == UpsidedownParent);
-            }
-        }
+			if (targetPeerId == Multiplayer.GetUniqueId())
+			{
+				OverContainer.Visible = (nextParent == OverworldParent);
+				UpContainer.Visible = (nextParent == UpsidedownParent);
+			}
+		}
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void TradeDimensionServerReceive()
 		{
 			GD.Print("[WorldManager.ServerReceiveTradeRequest] received trade request");
@@ -1352,14 +1376,14 @@ namespace Jogo25D.Systems
 			}
 
 			var currentParent = localPlayer.GetParent<Node2D>();
-			var targetDimensionId = currentParent == OverworldParent ? ChunkStreamingManager.UpsidedownId : ChunkStreamingManager.OverworldId;
+			var targetDimensionId = currentParent == OverworldParent ? ChunkStreamingConstants.UPSIDEDOWN_ID : ChunkStreamingConstants.OVERWORLD_ID;
 			var targetParent = currentParent == OverworldParent ? UpsidedownParent : OverworldParent;
 
 			var loadingUi = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
 			if (chunkStreamingManager != null)
 			{
@@ -1371,171 +1395,9 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-        #endregion
+		#endregion
 
-        #region Core - Peer events
-
-		public void OnPeerConnected(long id)
-		{
-			GD.Print($"[WorldManager.OnPeerConnected] OnPeerConnected(id={id})");
-		}
-
-		private async void FinishPeerJoin(long id, CharacterSaveData character)
-		{
-			if (!Multiplayer.IsServer() || character == null)
-			{
-				return;
-			}
-
-			var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
-
-			player.Name = $"Player{id}";
-			player.Position = Godot.Vector2.Zero;
-			player.PeerId = id;
-			player.Data = (PlayerData)character.Data.Duplicate(true);
-			player.Loaded = true;
-
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
-
-			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
-			{
-				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingManager.UpsidedownId, UpsidedownParent, player.Position);
-
-				player.Position = FindGroundSpawnPosition(UpsidedownParent, player.Position.X);
-
-				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
-			}
-
-			chunkStreamingManager?.CatchUpPeer(id);
-
-			SpawnPlayer(player);
-
-			SpawnPlayerRequest(player);
-
-			var players = GetTree().GetNodesInGroup("players");
-
-			foreach (Node node in players)
-			{
-				if (node is NPC)
-				{
-					continue;
-				}
-
-				if (node is Player existingPlayer && existingPlayer.PeerId != id)
-				{
-					GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about {existingPlayer.Name}");
-
-					SpawnPlayerRequest(existingPlayer, id);
-				}
-			}
-
-			var npc = UpsidedownParent?.GetNodeOrNull<Player>("NPC_Dummy");
-
-			if (npc != null)
-			{
-				GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about NPC_Dummy");
-
-				SpawnNpcRequest(npc.Position, id);
-			}
-
-			var worldItems = (OverworldParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>())
-				.Concat(UpsidedownParent?.GetChildren().OfType<WorldItem>() ?? Enumerable.Empty<WorldItem>());
-
-			foreach (var worldItem in worldItems)
-			{
-				GD.Print($"[WorldManager.FinishPeerJoin] informing {id} about {worldItem.Name}");
-
-				SpawnWorldItemRequest(worldItem, id);
-			}
-		}
-
-		public void OnPeerDisconnected(long id)
-		{
-			GD.Print($"[WorldManager.OnPeerDisconnected] OnPeerDisconnected(id={id})");
-
-			var playerNode = FindPlayerByPeerId(id);
-
-			if (playerNode == null)
-			{
-				GD.Print($"[WorldManager.OnPeerDisconnected] Player{id} not found");
-			}
-
-			SavePeerCharacterOnDisconnect(id, playerNode);
-
-			if (playerNode != null)
-			{
-				playerNode.QueueFree();
-
-				GD.Print($"[WorldManager.OnPeerDisconnected] removed Player{id}");
-			}
-
-			_peerCharacters.Remove(id);
-			_pendingProfileByPeer.Remove(id);
-
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH)?.RemovePeer(id);
-		}
-
-		private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
-		{
-			if (playerNode == null || CurrentWorldSave == null || !_peerCharacters.TryGetValue(id, out var character))
-			{
-				return;
-			}
-
-			var saveManager = ResolveSaveManager();
-
-			if (saveManager == null)
-			{
-				return;
-			}
-
-			character.Data = playerNode.Data;
-			character.LastPlayedUtc = SaveManager.NowUtc();
-
-			if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
-			{
-				saveManager.SaveServerCharacter(CurrentWorldSave.MultiplayerKey, character);
-			}
-			else
-			{
-				saveManager.SaveBackup(character.OwnerProfileId, character);
-			}
-		}
-
-		public event Action ConnectionSucceeded;
-		public event Action ConnectionAttemptFailed;
-
-		public void OnConnectedToServer()
-		{
-			GD.Print("[WorldManager.OnConnectedToServer] OnConnectedToServer()");
-
-			RpcId(1, nameof(RequestJoinInfoServerReceive));
-
-			ConnectionSucceeded?.Invoke();
-		}
-
-		public void OnConnectionFailed()
-		{
-			GD.Print("[WorldManager.OnConnectionFailed] OnConnectionFailed()");
-
-			Peer = null;
-			Multiplayer.MultiplayerPeer = null;
-
-			GD.Print("[WorldManager.OnConnectionFailed] peer reset");
-
-			ConnectionAttemptFailed?.Invoke();
-		}
-
-		public void OnServerDisconnected()
-		{
-			GD.Print("[WorldManager.OnServerDisconnected] OnServerDisconnected()");
-
-			ReturnToMainMenu();
-		}
-
-        #endregion
-
-        #region Core - Rpc - Entrada com personagem (save)
+		#region Core - Rpc - Entrada com personagem (save)
 
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void RequestJoinInfoServerReceive()
@@ -1733,9 +1595,144 @@ namespace Jogo25D.Systems
 			FinishPeerJoin(senderId, character);
 		}
 
-        #endregion
+		#endregion
 
-        #region Utils
+		#region Save - Core
+
+		private SaveManager ResolveSaveManager()
+		{
+			return GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
+		}
+
+		private bool IsHostOrSolo()
+		{
+			return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
+		}
+
+		private void StartAutosaveTimer(WorldSaveData save)
+		{
+			StopAutosaveTimer();
+
+			if (save == null || !IsHostOrSolo())
+			{
+				return;
+			}
+
+			AutosaveTimer = new Timer
+			{
+				WaitTime = Mathf.Max(1, save.AutosaveIntervalMinutes) * 60.0,
+				Autostart = true,
+			};
+
+			AutosaveTimer.Timeout += SaveCurrentWorld;
+
+			AddChild(AutosaveTimer);
+		}
+
+		private void StopAutosaveTimer()
+		{
+			if (AutosaveTimer == null)
+			{
+				return;
+			}
+
+			AutosaveTimer.QueueFree();
+			AutosaveTimer = null;
+		}
+
+		public void SaveCurrentWorld()
+		{
+			if (CurrentWorldSave == null)
+			{
+				return;
+			}
+
+			var saveManager = ResolveSaveManager();
+
+			if (saveManager == null)
+			{
+				return;
+			}
+
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+
+			if (chunkStreamingManager != null)
+			{
+				saveManager.SaveDimensionState(CurrentWorldSave.WorldId, ChunkStreamingConstants.OVERWORLD_ID, chunkStreamingManager.ExportState(ChunkStreamingConstants.OVERWORLD_ID));
+				saveManager.SaveDimensionState(CurrentWorldSave.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID, chunkStreamingManager.ExportState(ChunkStreamingConstants.UPSIDEDOWN_ID));
+			}
+
+			CurrentWorldSave.Portals = CollectPortals();
+			CurrentWorldSave.LastPlayedUtc = SaveManager.NowUtc();
+
+			saveManager.SaveWorldMeta(CurrentWorldSave);
+
+			SaveOwnLocalCharacter();
+			SaveRemotePeerCharacters(saveManager);
+		}
+
+		private void SaveOwnLocalCharacter()
+		{
+			if (PendingCharacter == null)
+			{
+				return;
+			}
+
+			var saveManager = ResolveSaveManager();
+			var localPlayer = GetLocalPlayer();
+
+			if (saveManager == null || localPlayer == null)
+			{
+				return;
+			}
+
+			PendingCharacter.Data = localPlayer.Data;
+			PendingCharacter.LastPlayedUtc = SaveManager.NowUtc();
+
+			saveManager.SaveLocalCharacter(PendingCharacter);
+		}
+
+		private void SaveRemotePeerCharacters(SaveManager saveManager)
+		{
+			if (!IsHostOrSolo())
+			{
+				return;
+			}
+
+			foreach (var player in GetTree().GetNodesInGroup("players").OfType<Player>())
+			{
+				if (player.PeerId <= 1 || !_peerCharacters.TryGetValue(player.PeerId, out var character))
+				{
+					continue;
+				}
+
+				character.Data = player.Data;
+				character.LastPlayedUtc = SaveManager.NowUtc();
+
+				if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
+				{
+					saveManager.SaveServerCharacter(CurrentWorldSave.MultiplayerKey, character);
+				}
+				else
+				{
+					saveManager.SaveBackup(character.OwnerProfileId, character);
+				}
+			}
+		}
+
+		private void PersistBeforeLeaving()
+		{
+			SaveOwnLocalCharacter();
+
+			if (CurrentWorldSave != null && IsHostOrSolo())
+			{
+				SaveCurrentWorld();
+			}
+		}
+
+		#endregion
+
+		#region Utils
 
 		public bool IsConnected()
 		{
@@ -1751,6 +1748,7 @@ namespace Jogo25D.Systems
 			return isServer;
 		}
 
-        #endregion
+		#endregion
+
 	}
 }

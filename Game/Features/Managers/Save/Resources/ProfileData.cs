@@ -5,10 +5,14 @@ namespace Jogo25D.Features.Managers.Save.Resources
 {
     public partial class ProfileData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public string ProfileId { get; set; } = "";
 
         [Export, GodotDictionaryField]
         public string DisplayName { get; set; } = "Jogador";
+
+        #endregion
     }
 }

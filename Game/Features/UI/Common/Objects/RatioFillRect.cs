@@ -24,11 +24,12 @@ namespace Jogo25D.UI
         }
 
         private float _ratio = 1f;
-        private Control _reference;
+
+        public Control Reference { get; set; }
 
         public override void _Ready()
         {
-            _reference = GetNodeOrNull<Control>(ReferencePath);
+            Reference = GetNodeOrNull<Control>(ReferencePath);
 
             ApplyLayout();
         }
@@ -40,12 +41,12 @@ namespace Jogo25D.UI
 
         private void ApplyLayout()
         {
-            if (_reference == null)
+            if (Reference == null)
             {
                 return;
             }
 
-            var size = _reference.Size;
+            var size = Reference.Size;
 
             Position = new Vector2(size.X * LeftFraction, size.Y * TopFraction);
             Size = new Vector2(size.X * WidthFraction * _ratio, size.Y * HeightFraction);

@@ -7,6 +7,8 @@ namespace Jogo25D.Systems
 {
     public partial class PlayerInput : Node
     {
+        #region Dinamic properties
+
         public HashSet<string> Blockers { get; set; } = new();
         public float MoveX { get; private set; }
         public float MoveY { get; private set; }
@@ -29,7 +31,11 @@ namespace Jogo25D.Systems
 
         public bool RestrictMiningToAccessible { get; private set; }
 
-        public Player PlayerRef {get;set;}
+        public Player PlayerRef { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
@@ -40,6 +46,10 @@ namespace Jogo25D.Systems
         {
             Poll();
         }
+
+        #endregion
+
+        #region Core - Input
 
         public bool IsBlocked()
         {
@@ -206,6 +216,10 @@ namespace Jogo25D.Systems
             Blockers.Remove(id);
         }
 
+        #endregion
+
+        #region Core - Rpc - Input
+
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         private void ServerSetMoveX(float value)
         {
@@ -301,5 +315,7 @@ namespace Jogo25D.Systems
         {
             MousePosition = value;
         }
+
+        #endregion
     }
 }

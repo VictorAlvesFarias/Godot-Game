@@ -4,13 +4,19 @@ namespace Jogo25D.Hitboxes
 {
     public partial class AngledMeleeHitbox : MeleeHitbox
     {
-        private Node2D _origin;
+        #region Node children references
+
+        public Node2D Origin { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
             base._Ready();
 
-            _origin = GetNodeOrNull<Node2D>("Origin");
+            Origin = GetNodeOrNull<Node2D>("Origin");
 
             ApplyFlip();
             AlignToOwnerOrigin();
@@ -34,6 +40,10 @@ namespace Jogo25D.Hitboxes
             }
         }
 
+        #endregion
+
+        #region Core - Alignment
+
         private void ApplyFlip()
         {
             var dir = Vector2.Right.Rotated(Rotation);
@@ -41,23 +51,25 @@ namespace Jogo25D.Hitboxes
 
             Scale = new Vector2(1f, facingLeft ? -1f : 1f);
         }
-        
+
         private void AlignToOwnerOrigin()
         {
             var ownerOrigin = Owner.GetNodeOrNull<Node2D>("Visuals/AttackOrigin");
             var targetGlobal = ownerOrigin != null ? ownerOrigin.GlobalPosition : Owner.GlobalPosition;
 
-            if (_origin == null)
+            if (Origin == null)
             {
                 GlobalPosition = targetGlobal;
 
                 return;
             }
 
-            var scaledLocal = new Vector2(_origin.Position.X * Scale.X, _origin.Position.Y * Scale.Y);
+            var scaledLocal = new Vector2(Origin.Position.X * Scale.X, Origin.Position.Y * Scale.Y);
             var rotatedOffset = scaledLocal.Rotated(Rotation);
 
             GlobalPosition = targetGlobal - rotatedOffset;
         }
+
+        #endregion
     }
 }

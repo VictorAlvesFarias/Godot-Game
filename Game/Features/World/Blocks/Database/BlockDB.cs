@@ -3,14 +3,6 @@ using System.Collections.Generic;
 
 namespace Jogo25D.Blocks
 {
-    public class BlockDefinition
-    {
-        public string Id { get; init; }
-        public string DropItemId { get; init; }
-        public int SourceId { get; init; }
-        public Vector2I AtlasCoord { get; init; }
-    }
-
     public static class BlockDB
     {
         private static readonly Dictionary<string, BlockDefinition> _blocks = new()

@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 
@@ -6,12 +6,20 @@ namespace Jogo25D.Items
 {
     public class BlockItemDefinition : ItemDefinition
     {
-        private static readonly Color FillColor = new Color(0.3f, 1f, 0.4f, 0.3f);
+        #region Dinamic properties
 
         public string BlockId { get; init; }
         public float Reach { get; init; } = 120f;
 
-        private Polygon2D _indicator;
+        #endregion
+
+        #region Node children references
+
+        public Polygon2D Indicator { get; set; }
+
+        #endregion
+
+        #region Core - Placement
 
         public override void Use(Player player, ItemData instance)
         {
@@ -52,6 +60,10 @@ namespace Jogo25D.Items
             return layer.LocalToMap(layer.ToLocal(targetWorldPos));
         }
 
+        #endregion
+
+        #region Core - Indicator
+
         public override void UpdateIndicator(Player player, ItemData data, float delta)
         {
             if (!player.IsOwner())
@@ -81,48 +93,48 @@ namespace Jogo25D.Items
 
             EnsureIndicator(layer);
 
-            _indicator.Position = layer.MapToLocal(cell);
-            _indicator.Visible = true;
+            Indicator.Position = layer.MapToLocal(cell);
+            Indicator.Visible = true;
         }
 
         public override void HideIndicator(Player player)
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.Visible = false;
+                Indicator.Visible = false;
             }
         }
 
         public override void DestroyIndicator()
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.QueueFree();
+                Indicator.QueueFree();
             }
 
-            _indicator = null;
+            Indicator = null;
         }
 
         private void EnsureIndicator(TileMapLayer layer)
         {
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator) && _indicator.GetParent() == layer)
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator) && Indicator.GetParent() == layer)
             {
                 return;
             }
 
-            if (_indicator != null && GodotObject.IsInstanceValid(_indicator))
+            if (Indicator != null && GodotObject.IsInstanceValid(Indicator))
             {
-                _indicator.QueueFree();
+                Indicator.QueueFree();
             }
 
-            _indicator = new Polygon2D
+            Indicator = new Polygon2D
             {
                 ZIndex = 10,
-                Color = FillColor,
+                Color = new Color(0.3f, 1f, 0.4f, 0.3f),
                 Polygon = BuildTileQuad(layer),
             };
 
-            layer.AddChild(_indicator);
+            layer.AddChild(Indicator);
         }
 
         private static Vector2[] BuildTileQuad(TileMapLayer layer)
@@ -137,5 +149,7 @@ namespace Jogo25D.Items
                 new Vector2(-half.X, half.Y),
             };
         }
+
+        #endregion
     }
 }

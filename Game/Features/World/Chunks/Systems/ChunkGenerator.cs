@@ -1,17 +1,12 @@
 using Godot;
+using Jogo25D.Constants;
 using System.Collections.Generic;
 
 namespace Jogo25D.Chunks
 {
     public static class ChunkGenerator
     {
-        public const int TerrainSetId = 0;
-        public const int TerrainId = 0;
-
-        private const string OverworldTileSetPath = "res://Assets/Textures/Tiles/lime_ground/lime_ground_tileset.tres";
-        private const string UpsidedownTileSetPath = "res://Assets/Textures/Tiles/olive_ground/olive_ground_tileset.tres";
-
-        private static readonly Dictionary<string, TileSet> _tileSetCache = new();
+        #region Core - Generation
 
         public static void Paint(TileMapLayer target, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
@@ -21,7 +16,6 @@ namespace Jogo25D.Chunks
                 Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
                 Frequency = 0.05f,
             };
-
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
             var solidCells = new Godot.Collections.Array<Vector2I>();
@@ -44,11 +38,11 @@ namespace Jogo25D.Chunks
                 }
             }
 
-            if (tileSet.GetTerrainSetsCount() > TerrainSetId)
+            if (tileSet.GetTerrainSetsCount() > 0)
             {
                 AddSolidBorderNeighbors(target, solidCells, baseCellX, baseCellY, chunkSize);
 
-                target.SetCellsTerrainConnect(solidCells, TerrainSetId, TerrainId, false);
+                target.SetCellsTerrainConnect(solidCells, 0, 0, false);
             }
             else
             {
@@ -115,15 +109,8 @@ namespace Jogo25D.Chunks
 
         public static TileSet GetTileSet(string dimensionId)
         {
-            if (_tileSetCache.TryGetValue(dimensionId, out var cached))
-            {
-                return cached;
-            }
-
-            var path = dimensionId == "upsidedown" ? UpsidedownTileSetPath : OverworldTileSetPath;
+            var path = dimensionId == "upsidedown" ? Textures.Tiles.UPSIDEDOWN_TILE_SET : Textures.Tiles.TILE_SET;
             var tileSet = GD.Load<TileSet>(path);
-
-            _tileSetCache[dimensionId] = tileSet;
 
             return tileSet;
         }
@@ -157,5 +144,7 @@ namespace Jogo25D.Chunks
                 return hash;
             }
         }
+
+        #endregion
     }
 }
