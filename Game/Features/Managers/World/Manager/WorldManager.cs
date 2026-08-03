@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
@@ -1163,13 +1164,15 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, 0, -1, false);
+			var erasedTerrainSet = layer.GetCellTileData(cell)?.TerrainSet ?? 0;
+
+			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, erasedTerrainSet, -1, false);
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
 			if (neighbors.Count > 0)
 			{
-				layer.SetCellsTerrainConnect(neighbors, 0, 0, false);
+				BiomeTerrainConnector.ReconnectExistingCells(layer, neighbors);
 			}
 		}
 
@@ -1182,18 +1185,55 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var cells = GetSolidNeighborCells(layer, cell);
+			var neighbors = GetSolidNeighborCells(layer, cell);
+			var biomeDef = ResolveBiomeForNewCell(layer, neighbors);
 
-			cells.Add(cell);
+			var sameBiomeCells = new List<Vector2I> { cell };
 
-			layer.SetCellsTerrainConnect(cells, 0, 0, false);
+			foreach (var neighbor in neighbors)
+			{
+				var tileData = layer.GetCellTileData(neighbor);
+
+				if (tileData != null && tileData.TerrainSet == biomeDef.TerrainSet)
+				{
+					sameBiomeCells.Add(neighbor);
+				}
+			}
+
+			BiomeTerrainConnector.Connect(layer, sameBiomeCells, biomeDef);
+			BiomeTerrainConnector.ReconnectForeignBorder(layer, sameBiomeCells, biomeDef);
 		}
 
-		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell)
+		private BiomeDefinition ResolveBiomeForNewCell(TileMapLayer layer, Godot.Collections.Array<Vector2I> neighbors)
+		{
+			var counts = new Dictionary<int, int>();
+
+			foreach (var neighbor in neighbors)
+			{
+				var tileData = layer.GetCellTileData(neighbor);
+
+				if (tileData == null)
+				{
+					continue;
+				}
+
+				counts.TryGetValue(tileData.TerrainSet, out var count);
+				counts[tileData.TerrainSet] = count + 1;
+			}
+
+			if (counts.Count == 0)
+			{
+				return BiomeDB.Get(BiomeType.LimeGround);
+			}
+
+			var terrainSet = counts.OrderByDescending(entry => entry.Value).First().Key;
+
+			return BiomeDB.GetByTerrainSet(terrainSet) ?? BiomeDB.Get(BiomeType.LimeGround);
+		}
+
+		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell, int radius = 1)
 		{
 			var result = new Godot.Collections.Array<Vector2I>();
-
-			const int radius = 1;
 
 			for (int dx = -radius; dx <= radius; dx++)
 			{

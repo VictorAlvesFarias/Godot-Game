@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Constants;
 using System.Collections.Generic;
 
@@ -11,19 +12,23 @@ namespace Jogo25D.Chunks
         public static void Paint(TileMapLayer target, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
+            var baseCellX = chunkCoord.X * chunkSize;
+            var baseCellY = chunkCoord.Y * chunkSize;
+
+            var biome = BiomeResolver.Resolve(worldSeed, dimensionId, baseCellX + chunkSize / 2);
+            var biomeDef = BiomeDB.Get(biome);
+
             var noise = new FastNoiseLite
             {
                 Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
-                Frequency = 0.05f,
+                Frequency = biomeDef.NoiseFrequency,
             };
-            var baseCellX = chunkCoord.X * chunkSize;
-            var baseCellY = chunkCoord.Y * chunkSize;
             var solidCells = new Godot.Collections.Array<Vector2I>();
 
             for (int localX = 0; localX < chunkSize; localX++)
             {
                 var worldX = baseCellX + localX;
-                var groundHeight = Mathf.RoundToInt(noise.GetNoise1D(worldX) * 4f);
+                var groundHeight = biomeDef.HeightOffset + Mathf.RoundToInt(noise.GetNoise1D(worldX) * biomeDef.HeightAmplitude);
 
                 for (int localY = 0; localY < chunkSize; localY++)
                 {
@@ -40,9 +45,12 @@ namespace Jogo25D.Chunks
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
-                AddSolidBorderNeighbors(target, solidCells, baseCellX, baseCellY, chunkSize);
+                AddSolidBorderNeighbors(target, solidCells, baseCellX, baseCellY, chunkSize, biomeDef.TerrainSet);
 
-                target.SetCellsTerrainConnect(solidCells, 0, 0, false);
+                var cellsToConnect = new List<Vector2I>(solidCells);
+
+                BiomeTerrainConnector.Connect(target, cellsToConnect, biomeDef);
+                BiomeTerrainConnector.ReconnectForeignBorder(target, cellsToConnect, biomeDef);
             }
             else
             {
@@ -55,27 +63,36 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private static void AddSolidBorderNeighbors(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize)
+        private static void AddSolidBorderNeighbors(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize, int terrainSet)
         {
             for (int x = baseCellX - 1; x <= baseCellX + chunkSize; x++)
             {
-                AddIfSolid(target, solidCells, new Vector2I(x, baseCellY - 1));
-                AddIfSolid(target, solidCells, new Vector2I(x, baseCellY + chunkSize));
+                AddIfSolid(target, solidCells, new Vector2I(x, baseCellY - 1), terrainSet);
+                AddIfSolid(target, solidCells, new Vector2I(x, baseCellY + chunkSize), terrainSet);
             }
 
             for (int y = baseCellY; y < baseCellY + chunkSize; y++)
             {
-                AddIfSolid(target, solidCells, new Vector2I(baseCellX - 1, y));
-                AddIfSolid(target, solidCells, new Vector2I(baseCellX + chunkSize, y));
+                AddIfSolid(target, solidCells, new Vector2I(baseCellX - 1, y), terrainSet);
+                AddIfSolid(target, solidCells, new Vector2I(baseCellX + chunkSize, y), terrainSet);
             }
         }
 
-        private static void AddIfSolid(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, Vector2I cell)
+        private static void AddIfSolid(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, Vector2I cell, int terrainSet)
         {
-            if (target.GetCellSourceId(cell) != -1)
+            if (target.GetCellSourceId(cell) == -1)
             {
-                solidCells.Add(cell);
+                return;
             }
+
+            var neighborTileData = target.GetCellTileData(cell);
+
+            if (neighborTileData != null && neighborTileData.TerrainSet != terrainSet)
+            {
+                return;
+            }
+
+            solidCells.Add(cell);
         }
 
         public static void Erase(TileMapLayer target, Vector2I chunkCoord, int chunkSize)
@@ -107,12 +124,9 @@ namespace Jogo25D.Chunks
             return (0, Vector2I.Zero);
         }
 
-        public static TileSet GetTileSet(string dimensionId)
+        public static TileSet GetTileSet()
         {
-            var path = dimensionId == "upsidedown" ? Textures.Tiles.UPSIDEDOWN_TILE_SET : Textures.Tiles.TILE_SET;
-            var tileSet = GD.Load<TileSet>(path);
-
-            return tileSet;
+            return GD.Load<TileSet>(Textures.Tiles.WORLD_TILE_SET);
         }
 
         private static long CombineSeed(long worldSeed, string dimensionId, Vector2I chunkCoord)

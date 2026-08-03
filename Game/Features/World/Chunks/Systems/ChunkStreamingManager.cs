@@ -365,7 +365,7 @@ namespace Jogo25D.Chunks
             var layer = new TileMapLayer
             {
                 Name = ChunkStreamingConstants.PROCEDURAL_LAYER_NAME,
-                TileSet = ChunkGenerator.GetTileSet(dimensionId),
+                TileSet = ChunkGenerator.GetTileSet(),
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
             };
 
