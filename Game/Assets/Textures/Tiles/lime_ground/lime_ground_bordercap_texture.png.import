@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cjquohybxm3f3"
-path="res://.godot/imported/Blob_3_(cópia)_32px.png-89787bbf06caad47f92434cf40864605.ctex"
+uid="uid://b2np7ob1arpk0"
+path="res://.godot/imported/lime_ground_bordercap_texture.png-0c971283cb51f45a68a8a5b274eec282.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/Blob_3_(cópia)_32px.png"
-dest_files=["res://.godot/imported/Blob_3_(cópia)_32px.png-89787bbf06caad47f92434cf40864605.ctex"]
+source_file="res://Assets/Textures/Tiles/lime_ground/lime_ground_bordercap_texture.png"
+dest_files=["res://.godot/imported/lime_ground_bordercap_texture.png-0c971283cb51f45a68a8a5b274eec282.ctex"]
 
 [params]
 

@@ -16,6 +16,7 @@ namespace Jogo25D.Biomes
                 HeightOffset = 0,
                 InteriorSourceId = 7,
                 InteriorAtlasCoord = new Vector2I(1, 1),
+                BorderCapSourceId = 9,
             },
             [BiomeType.OliveGround] = new BiomeDefinition
             {
@@ -26,6 +27,7 @@ namespace Jogo25D.Biomes
                 HeightOffset = 0,
                 InteriorSourceId = 1,
                 InteriorAtlasCoord = new Vector2I(1, 1),
+                BorderCapSourceId = 10,
             },
         };
 

@@ -91,6 +91,11 @@ namespace Jogo25D.Chunks
                     BiomeTerrainConnector.ReconnectForeignBorder(target, group.Cells, group.BiomeDef);
                 }
 
+                foreach (var group in biomeGroups)
+                {
+                    BiomeTerrainConnector.ApplyBorderCap(target, group.Cells, group.BiomeDef);
+                }
+
                 if (edgeFillTargets != null)
                 {
                     foreach (var group in biomeGroups)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b2np7ob1arpk0"
-path="res://.godot/imported/Blob_4_(cópia)_32px.png-8c728fa034c109636e04325719cef396.ctex"
+uid="uid://cjquohybxm3f3"
+path="res://.godot/imported/olive_ground_bordercap_texture.png-2dfc41d557c247836bcb4486e0ae8313.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/Blob_4_(cópia)_32px.png"
-dest_files=["res://.godot/imported/Blob_4_(cópia)_32px.png-8c728fa034c109636e04325719cef396.ctex"]
+source_file="res://Assets/Textures/Tiles/olive_ground/olive_ground_bordercap_texture.png"
+dest_files=["res://.godot/imported/olive_ground_bordercap_texture.png-2dfc41d557c247836bcb4486e0ae8313.ctex"]
 
 [params]
 
