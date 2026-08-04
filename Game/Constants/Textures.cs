@@ -11,7 +11,10 @@ namespace Jogo25D.Constants
         public static class Tiles
         {
             public const string WORLD_TILE_SET = "res://Assets/Textures/Tiles/world_biomes_tileset.tres";
-            public const string TILE_EDGE_FILL_MATERIAL = "res://Assets/Shaders/tile_edge_fill_material.tres";
+            public const string TILE_EDGE_FILL_RIGHT_MATERIAL = "res://Assets/Shaders/tile_edge_fill_right_material.tres";
+            public const string TILE_EDGE_FILL_LEFT_MATERIAL = "res://Assets/Shaders/tile_edge_fill_left_material.tres";
+            public const string TILE_EDGE_FILL_TOP_MATERIAL = "res://Assets/Shaders/tile_edge_fill_top_material.tres";
+            public const string TILE_EDGE_FILL_BOTTOM_MATERIAL = "res://Assets/Shaders/tile_edge_fill_bottom_material.tres";
             public const string TX_CHEST_ANIMATION_TEXTURE = "res://Assets/Textures/Tiles/TX Chest Animation.png";
             public const string TX_TILESET_GROUND_TEXTURE = "res://Assets/Textures/Tiles/lime_ground/lime_ground_texture.png";
             public const string TX_VILLAGE_PROPS_TEXTURE = "res://Assets/Textures/Tiles/props/props_texture.png";

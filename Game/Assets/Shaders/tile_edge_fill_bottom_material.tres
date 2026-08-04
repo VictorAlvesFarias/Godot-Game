@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://Assets/Shaders/tile_edge_fill.gdshader" id="1_shader"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/edge_direction = Vector2(0, 1)
+shader_parameter/fill_radius = 6
+shader_parameter/color_tolerance = 0.18
+shader_parameter/debug_mode = 0

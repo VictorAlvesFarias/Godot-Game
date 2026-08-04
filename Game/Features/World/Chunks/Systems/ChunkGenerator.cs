@@ -9,7 +9,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public static void Paint(TileMapLayer target, TileMapLayer edgeFillTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        public static void Paint(TileMapLayer target, TileMapLayer[] edgeFillTargets, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
             var baseCellX = chunkCoord.X * chunkSize;
@@ -52,12 +52,12 @@ namespace Jogo25D.Chunks
                 BiomeTerrainConnector.Connect(target, cellsToConnect, biomeDef);
                 BiomeTerrainConnector.ReconnectForeignBorder(target, cellsToConnect, biomeDef);
 
-                if (edgeFillTarget != null)
+                if (edgeFillTargets != null)
                 {
                     var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(target, cellsToConnect, biomeDef.TerrainSet);
 
-                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTarget, cellsToConnect);
-                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTarget, foreignCells);
+                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, cellsToConnect);
+                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, foreignCells);
                 }
             }
             else
@@ -103,7 +103,7 @@ namespace Jogo25D.Chunks
             solidCells.Add(cell);
         }
 
-        public static void Erase(TileMapLayer target, TileMapLayer edgeFillTarget, Vector2I chunkCoord, int chunkSize)
+        public static void Erase(TileMapLayer target, TileMapLayer[] edgeFillTargets, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -115,7 +115,14 @@ namespace Jogo25D.Chunks
                     var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
 
                     target.SetCell(cell, -1);
-                    edgeFillTarget?.SetCell(cell, -1);
+
+                    if (edgeFillTargets != null)
+                    {
+                        foreach (var edgeFillTarget in edgeFillTargets)
+                        {
+                            edgeFillTarget?.SetCell(cell, -1);
+                        }
+                    }
                 }
             }
         }

@@ -4,4 +4,7 @@
 
 [resource]
 shader = ExtResource("1_shader")
+shader_parameter/edge_direction = Vector2(-1, 0)
 shader_parameter/fill_radius = 6
+shader_parameter/color_tolerance = 0.18
+shader_parameter/debug_mode = 0

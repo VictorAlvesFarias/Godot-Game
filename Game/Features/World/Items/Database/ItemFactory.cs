@@ -93,6 +93,18 @@ namespace Jogo25D.Items
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
+                ["pickaxe_onehit"] = () => new ToolDefinition
+                {
+                    Id = "pickaxe_onehit",
+                    Name = "Picareta Onehit",
+                    Type = ItemType.Tool,
+                    Description = "Destroi qualquer bloco em um unico golpe",
+                    Cooldown = 0.35f,
+                    BreakTimeSeconds = 0.01f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON),
+                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                },
+
                 ["block_grass"] = () => new BlockItemDefinition
                 {
                     Id = "block_grass",

@@ -142,17 +142,22 @@ namespace Jogo25D.Biomes
             }
         }
 
-        private static readonly Vector2I[] CardinalOffsets = new Vector2I[]
+        // Ordem fixa usada em qualquer lugar que trabalhe com as 4 camadas de preenchimento
+        // direcional: Direita, Esquerda, Cima, Baixo (cima = Y menor, mesma convencao da UV do
+        // shader tile_edge_fill.gdshader).
+        public static readonly Vector2I[] EdgeFillDirectionOffsets = new Vector2I[]
         {
-            new Vector2I(1, 0), new Vector2I(-1, 0), new Vector2I(0, 1), new Vector2I(0, -1),
+            new Vector2I(1, 0), new Vector2I(-1, 0), new Vector2I(0, -1), new Vector2I(0, 1),
         };
 
-        // Copia, na camada de preenchimento de borda, o MESMO tile que ja esta na camada de
-        // chao - mas SO pras celulas que encostam (lado a lado) em outro terrain_set. Essa
-        // camada carrega o shader de preenchimento (ver tile_edge_fill.gdshader), entao so essas
-        // celulas recebem o efeito; o resto do chao fica intocado. Celulas sem vizinho
-        // estrangeiro sao limpas dessa camada.
-        public static void PaintEdgeFillOverlay(TileMapLayer groundLayer, TileMapLayer fillLayer, IEnumerable<Vector2I> cells)
+        // Copia, em CADA UMA das 4 camadas de preenchimento direcional, o MESMO tile que ja
+        // esta na camada de chao - mas SO na camada correspondente ao lado que realmente
+        // encosta em outro terrain_set (ex: se o vizinho estrangeiro esta a direita, so a
+        // camada "Right" recebe a copia dessa celula). Cada camada carrega um material do
+        // shader tile_edge_fill.gdshader configurado pra so preencher aquela metade do tile.
+        // "fillLayers" deve seguir a mesma ordem de EdgeFillDirectionOffsets (Right, Left, Top,
+        // Bottom); qualquer posicao pode ser null se a camada nao existir.
+        public static void PaintEdgeFillOverlay(TileMapLayer groundLayer, TileMapLayer[] fillLayers, IEnumerable<Vector2I> cells)
         {
             foreach (var cell in cells)
             {
@@ -160,42 +165,42 @@ namespace Jogo25D.Biomes
 
                 if (tileData == null)
                 {
-                    fillLayer.SetCell(cell, -1);
+                    foreach (var fillLayer in fillLayers)
+                    {
+                        fillLayer?.SetCell(cell, -1);
+                    }
 
                     continue;
                 }
 
-                var bordersForeignTileset = false;
-
-                foreach (var offset in CardinalOffsets)
+                for (int i = 0; i < EdgeFillDirectionOffsets.Length; i++)
                 {
-                    var neighbor = cell + offset;
+                    var fillLayer = fillLayers[i];
 
-                    if (groundLayer.GetCellSourceId(neighbor) == -1)
+                    if (fillLayer == null)
                     {
                         continue;
                     }
 
-                    var neighborTileData = groundLayer.GetCellTileData(neighbor);
+                    var neighbor = cell + EdgeFillDirectionOffsets[i];
+                    var touchesForeignTileset = false;
 
-                    if (neighborTileData == null || neighborTileData.TerrainSet == tileData.TerrainSet)
+                    if (groundLayer.GetCellSourceId(neighbor) != -1)
                     {
-                        continue;
+                        var neighborTileData = groundLayer.GetCellTileData(neighbor);
+
+                        touchesForeignTileset = neighborTileData != null && neighborTileData.TerrainSet != tileData.TerrainSet;
                     }
 
-                    bordersForeignTileset = true;
-
-                    break;
+                    if (touchesForeignTileset)
+                    {
+                        fillLayer.SetCell(cell, groundLayer.GetCellSourceId(cell), groundLayer.GetCellAtlasCoords(cell), groundLayer.GetCellAlternativeTile(cell));
+                    }
+                    else
+                    {
+                        fillLayer.SetCell(cell, -1);
+                    }
                 }
-
-                if (!bordersForeignTileset)
-                {
-                    fillLayer.SetCell(cell, -1);
-
-                    continue;
-                }
-
-                fillLayer.SetCell(cell, groundLayer.GetCellSourceId(cell), groundLayer.GetCellAtlasCoords(cell), groundLayer.GetCellAlternativeTile(cell));
             }
         }
 

@@ -902,11 +902,25 @@ namespace Jogo25D.Systems
 				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
 		}
 
-		private TileMapLayer ResolveDimensionEdgeFillLayer(string dimensionId)
+		private static readonly string[] EdgeFillLayerNames = new[]
+		{
+			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_RIGHT_LAYER_NAME,
+			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LEFT_LAYER_NAME,
+			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_TOP_LAYER_NAME,
+			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_BOTTOM_LAYER_NAME,
+		};
+
+		private TileMapLayer[] ResolveDimensionEdgeFillLayers(string dimensionId)
 		{
 			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
+			var layers = new TileMapLayer[EdgeFillLayerNames.Length];
 
-			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LAYER_NAME);
+			for (int i = 0; i < EdgeFillLayerNames.Length; i++)
+			{
+				layers[i] = parent?.GetNodeOrNull<TileMapLayer>(EdgeFillLayerNames[i]);
+			}
+
+			return layers;
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -1182,13 +1196,14 @@ namespace Jogo25D.Systems
 				BiomeTerrainConnector.ReconnectExistingCells(layer, neighbors);
 			}
 
-			var edgeFillLayer = ResolveDimensionEdgeFillLayer(dimensionId);
+			var edgeFillLayers = ResolveDimensionEdgeFillLayers(dimensionId);
 
-			if (edgeFillLayer != null)
+			foreach (var edgeFillLayer in edgeFillLayers)
 			{
-				edgeFillLayer.SetCell(cell, -1);
-				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, neighbors);
+				edgeFillLayer?.SetCell(cell, -1);
 			}
+
+			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, neighbors);
 		}
 
 		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
@@ -1201,7 +1216,7 @@ namespace Jogo25D.Systems
 			}
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
-			var biomeDef = ResolveBiomeForNewCell(layer, neighbors);
+			var biomeDef = ResolveBiomeForCell(cell, dimensionId);
 
 			var sameBiomeCells = new List<Vector2I> { cell };
 
@@ -1218,42 +1233,30 @@ namespace Jogo25D.Systems
 			BiomeTerrainConnector.Connect(layer, sameBiomeCells, biomeDef);
 			BiomeTerrainConnector.ReconnectForeignBorder(layer, sameBiomeCells, biomeDef);
 
-			var edgeFillLayer = ResolveDimensionEdgeFillLayer(dimensionId);
+			var edgeFillLayers = ResolveDimensionEdgeFillLayers(dimensionId);
+			var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(layer, sameBiomeCells, biomeDef.TerrainSet);
 
-			if (edgeFillLayer != null)
-			{
-				var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(layer, sameBiomeCells, biomeDef.TerrainSet);
-
-				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, sameBiomeCells);
-				BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayer, foreignCells);
-			}
+			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, sameBiomeCells);
+			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, foreignCells);
 		}
 
-		private BiomeDefinition ResolveBiomeForNewCell(TileMapLayer layer, Godot.Collections.Array<Vector2I> neighbors)
+		// Resolve o bioma pelo mesmo ruido global usado na geracao do mundo (BiomeResolver),
+		// nao pelos vizinhos locais - assim o bloco colocado sempre reflete o bioma "correto"
+		// daquela posicao, mesmo que ainda nao exista nenhum vizinho daquele bioma por perto
+		// (ex: cavando um tunel em direcao a fronteira antes de alcancar o outro bioma).
+		// IMPORTANTE: usa o centro do CHUNK (32 celulas), nao a celula em si - e exatamente
+		// assim que ChunkGenerator.Paint resolve o bioma na geracao original (um chunk inteiro
+		// e sempre um unico bioma), entao precisa ser identico aqui pra bater com o chao real
+		// perto da fronteira.
+		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
-			var counts = new Dictionary<int, int>();
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var worldSeed = chunkStreamingManager?.WorldSeed ?? 0;
+			var chunkX = Mathf.FloorToInt(cell.X / (float)ChunkStreamingConstants.CHUNK_SIZE);
+			var baseCellX = chunkX * ChunkStreamingConstants.CHUNK_SIZE;
+			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, baseCellX + ChunkStreamingConstants.CHUNK_SIZE / 2);
 
-			foreach (var neighbor in neighbors)
-			{
-				var tileData = layer.GetCellTileData(neighbor);
-
-				if (tileData == null)
-				{
-					continue;
-				}
-
-				counts.TryGetValue(tileData.TerrainSet, out var count);
-				counts[tileData.TerrainSet] = count + 1;
-			}
-
-			if (counts.Count == 0)
-			{
-				return BiomeDB.Get(BiomeType.LimeGround);
-			}
-
-			var terrainSet = counts.OrderByDescending(entry => entry.Value).First().Key;
-
-			return BiomeDB.GetByTerrainSet(terrainSet) ?? BiomeDB.Get(BiomeType.LimeGround);
+			return BiomeDB.Get(biome);
 		}
 
 		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell, int radius = 1)

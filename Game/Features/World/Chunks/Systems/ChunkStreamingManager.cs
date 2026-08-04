@@ -45,8 +45,8 @@ namespace Jogo25D.Chunks
 
         public TileMapLayer OverworldLayer { get; set; }
         public TileMapLayer UpsidedownLayer { get; set; }
-        public TileMapLayer OverworldEdgeFillLayer { get; set; }
-        public TileMapLayer UpsidedownEdgeFillLayer { get; set; }
+        public TileMapLayer[] OverworldEdgeFillLayers { get; set; }
+        public TileMapLayer[] UpsidedownEdgeFillLayers { get; set; }
 
         #endregion
 
@@ -220,9 +220,9 @@ namespace Jogo25D.Chunks
         private void LoadChunk(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
         {
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayer = GetEdgeFillLayer(dimensionId);
+            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
 
-            ChunkGenerator.Paint(layer, edgeFillLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Paint(layer, edgeFillLayers, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -264,9 +264,9 @@ namespace Jogo25D.Chunks
             // perto), senao um buraco cavado sumia assim que o chunk saia
             // de raio e voltava do jeito gerado original.
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayer = GetEdgeFillLayer(dimensionId);
+            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
 
-            ChunkGenerator.Erase(layer, edgeFillLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Erase(layer, edgeFillLayers, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -375,37 +375,59 @@ namespace Jogo25D.Chunks
 
             dimensionParent.AddChild(layer);
 
-            // Camada so pros tiles que encostam em um tileset DIFERENTE - fica por cima da
-            // camada de chao (adicionada depois, como irmao seguinte) com o shader de
-            // preenchimento de buraco. So essa celula-copia leva o shader, o resto do chao fica
-            // intocado.
-            var edgeFillLayer = new TileMapLayer
+            // 4 camadas so pros tiles que encostam em um tileset DIFERENTE, uma por lado
+            // (Direita/Esquerda/Cima/Baixo - mesma ordem de BiomeTerrainConnector.
+            // EdgeFillDirectionOffsets) - ficam por cima da camada de chao (adicionadas depois,
+            // como irmas seguintes) cada uma com o material do shader configurado pra so
+            // preencher aquela metade do tile. Uma celula so aparece na(s) camada(s) do(s) lado(s)
+            // que realmente encosta(m) em outro terrain_set.
+            var edgeFillLayerNames = new[]
             {
-                Name = ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LAYER_NAME,
-                TileSet = ChunkGenerator.GetTileSet(),
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                Material = GD.Load<ShaderMaterial>(Textures.Tiles.TILE_EDGE_FILL_MATERIAL),
+                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_RIGHT_LAYER_NAME,
+                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LEFT_LAYER_NAME,
+                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_TOP_LAYER_NAME,
+                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_BOTTOM_LAYER_NAME,
             };
+            var edgeFillMaterialPaths = new[]
+            {
+                Textures.Tiles.TILE_EDGE_FILL_RIGHT_MATERIAL,
+                Textures.Tiles.TILE_EDGE_FILL_LEFT_MATERIAL,
+                Textures.Tiles.TILE_EDGE_FILL_TOP_MATERIAL,
+                Textures.Tiles.TILE_EDGE_FILL_BOTTOM_MATERIAL,
+            };
+            var edgeFillLayers = new TileMapLayer[edgeFillLayerNames.Length];
 
-            dimensionParent.AddChild(edgeFillLayer);
+            for (int i = 0; i < edgeFillLayerNames.Length; i++)
+            {
+                var edgeFillLayer = new TileMapLayer
+                {
+                    Name = edgeFillLayerNames[i],
+                    TileSet = ChunkGenerator.GetTileSet(),
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                    Material = GD.Load<ShaderMaterial>(edgeFillMaterialPaths[i]),
+                };
+
+                dimensionParent.AddChild(edgeFillLayer);
+                edgeFillLayers[i] = edgeFillLayer;
+            }
 
             if (dimensionId == ChunkStreamingConstants.OVERWORLD_ID)
             {
                 OverworldLayer = layer;
-                OverworldEdgeFillLayer = edgeFillLayer;
+                OverworldEdgeFillLayers = edgeFillLayers;
             }
             else
             {
                 UpsidedownLayer = layer;
-                UpsidedownEdgeFillLayer = edgeFillLayer;
+                UpsidedownEdgeFillLayers = edgeFillLayers;
             }
 
             return layer;
         }
 
-        private TileMapLayer GetEdgeFillLayer(string dimensionId)
+        private TileMapLayer[] GetEdgeFillLayers(string dimensionId)
         {
-            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldEdgeFillLayer : UpsidedownEdgeFillLayer;
+            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldEdgeFillLayers : UpsidedownEdgeFillLayers;
         }
 
         private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
@@ -473,9 +495,9 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayer = GetEdgeFillLayer(dimensionId);
+            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
 
-            ChunkGenerator.Paint(layer, edgeFillLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Paint(layer, edgeFillLayers, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -505,9 +527,9 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayer = GetEdgeFillLayer(dimensionId);
+            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
 
-            ChunkGenerator.Erase(layer, edgeFillLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Erase(layer, edgeFillLayers, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion
