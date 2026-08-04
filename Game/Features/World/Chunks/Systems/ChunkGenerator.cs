@@ -15,20 +15,32 @@ namespace Jogo25D.Chunks
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
 
-            var biome = BiomeResolver.Resolve(worldSeed, dimensionId, baseCellX + chunkSize / 2);
-            var biomeDef = BiomeDB.Get(biome);
-
-            var noise = new FastNoiseLite
-            {
-                Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
-                Frequency = biomeDef.NoiseFrequency,
-            };
-            var solidCells = new Godot.Collections.Array<Vector2I>();
+            // A altura do relevo de cada COLUNA usa um bioma "de referencia" (resolvido no
+            // centro vertical do chunk) - mantem o relevo suave, sem degrau quando a fronteira
+            // corta a coluna no meio. Ja o bioma de CADA CELULA solida (usado pra escolher a
+            // textura) e resolvido individualmente (X e Y), entao perto da fronteira algumas
+            // celulas divergem do bioma da coluna, criando a tendrilha organica em vez de uma
+            // faixa reta.
+            var solidCellsByBiome = new Dictionary<BiomeType, List<Vector2I>>();
+            var heightNoiseByBiome = new Dictionary<BiomeType, FastNoiseLite>();
 
             for (int localX = 0; localX < chunkSize; localX++)
             {
                 var worldX = baseCellX + localX;
-                var groundHeight = biomeDef.HeightOffset + Mathf.RoundToInt(noise.GetNoise1D(worldX) * biomeDef.HeightAmplitude);
+                var columnBiome = BiomeResolver.Resolve(worldSeed, dimensionId, worldX, baseCellY + chunkSize / 2);
+                var columnBiomeDef = BiomeDB.Get(columnBiome);
+
+                if (!heightNoiseByBiome.TryGetValue(columnBiome, out var heightNoise))
+                {
+                    heightNoise = new FastNoiseLite
+                    {
+                        Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
+                        Frequency = columnBiomeDef.NoiseFrequency,
+                    };
+                    heightNoiseByBiome[columnBiome] = heightNoise;
+                }
+
+                var groundHeight = columnBiomeDef.HeightOffset + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude);
 
                 for (int localY = 0; localY < chunkSize; localY++)
                 {
@@ -39,39 +51,72 @@ namespace Jogo25D.Chunks
                         continue;
                     }
 
-                    solidCells.Add(new Vector2I(worldX, worldY));
+                    var cellBiome = BiomeResolver.Resolve(worldSeed, dimensionId, worldX, worldY);
+
+                    if (!solidCellsByBiome.TryGetValue(cellBiome, out var cells))
+                    {
+                        cells = new List<Vector2I>();
+                        solidCellsByBiome[cellBiome] = cells;
+                    }
+
+                    cells.Add(new Vector2I(worldX, worldY));
                 }
             }
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
-                AddSolidBorderNeighbors(target, solidCells, baseCellX, baseCellY, chunkSize, biomeDef.TerrainSet);
+                var biomeGroups = new List<(BiomeDefinition BiomeDef, List<Vector2I> Cells)>();
 
-                var cellsToConnect = new List<Vector2I>(solidCells);
+                foreach (var entry in solidCellsByBiome)
+                {
+                    var biomeDef = BiomeDB.Get(entry.Key);
+                    var cells = entry.Value;
 
-                BiomeTerrainConnector.Connect(target, cellsToConnect, biomeDef);
-                BiomeTerrainConnector.ReconnectForeignBorder(target, cellsToConnect, biomeDef);
+                    AddSolidBorderNeighbors(target, cells, baseCellX, baseCellY, chunkSize, biomeDef.TerrainSet);
+
+                    biomeGroups.Add((biomeDef, cells));
+                }
+
+                // Conecta TODOS os grupos primeiro, so depois reconecta a fronteira estrangeira
+                // de cada um - senao o grupo processado primeiro veria os outros biomas (ainda
+                // nao pintados nessa mesma chamada) como vazio, tratando a divisa como
+                // precipicio de um lado so.
+                foreach (var group in biomeGroups)
+                {
+                    BiomeTerrainConnector.Connect(target, group.Cells, group.BiomeDef);
+                }
+
+                foreach (var group in biomeGroups)
+                {
+                    BiomeTerrainConnector.ReconnectForeignBorder(target, group.Cells, group.BiomeDef);
+                }
 
                 if (edgeFillTargets != null)
                 {
-                    var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(target, cellsToConnect, biomeDef.TerrainSet);
+                    foreach (var group in biomeGroups)
+                    {
+                        var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(target, group.Cells, group.BiomeDef.TerrainSet);
 
-                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, cellsToConnect);
-                    BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, foreignCells);
+                        BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, group.Cells);
+                        BiomeTerrainConnector.PaintEdgeFillOverlay(target, edgeFillTargets, foreignCells);
+                    }
                 }
             }
             else
             {
                 var (sourceId, atlasCoord) = GetFallbackTile(tileSet);
 
-                foreach (var cell in solidCells)
+                foreach (var cells in solidCellsByBiome.Values)
                 {
-                    target.SetCell(cell, sourceId, atlasCoord);
+                    foreach (var cell in cells)
+                    {
+                        target.SetCell(cell, sourceId, atlasCoord);
+                    }
                 }
             }
         }
 
-        private static void AddSolidBorderNeighbors(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize, int terrainSet)
+        private static void AddSolidBorderNeighbors(TileMapLayer target, List<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize, int terrainSet)
         {
             for (int x = baseCellX - 1; x <= baseCellX + chunkSize; x++)
             {
@@ -86,7 +131,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private static void AddIfSolid(TileMapLayer target, Godot.Collections.Array<Vector2I> solidCells, Vector2I cell, int terrainSet)
+        private static void AddIfSolid(TileMapLayer target, List<Vector2I> solidCells, Vector2I cell, int terrainSet)
         {
             if (target.GetCellSourceId(cell) == -1)
             {

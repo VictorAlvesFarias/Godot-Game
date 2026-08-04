@@ -1244,17 +1244,14 @@ namespace Jogo25D.Systems
 		// nao pelos vizinhos locais - assim o bloco colocado sempre reflete o bioma "correto"
 		// daquela posicao, mesmo que ainda nao exista nenhum vizinho daquele bioma por perto
 		// (ex: cavando um tunel em direcao a fronteira antes de alcancar o outro bioma).
-		// IMPORTANTE: usa o centro do CHUNK (32 celulas), nao a celula em si - e exatamente
-		// assim que ChunkGenerator.Paint resolve o bioma na geracao original (um chunk inteiro
-		// e sempre um unico bioma), entao precisa ser identico aqui pra bater com o chao real
-		// perto da fronteira.
+		// IMPORTANTE: usa a propria celula (X e Y) - e exatamente assim que ChunkGenerator.Paint
+		// resolve o bioma de cada celula solida agora (por celula, nao por chunk inteiro), entao
+		// precisa ser identico aqui pra bater com o chao real perto da fronteira.
 		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
 			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 			var worldSeed = chunkStreamingManager?.WorldSeed ?? 0;
-			var chunkX = Mathf.FloorToInt(cell.X / (float)ChunkStreamingConstants.CHUNK_SIZE);
-			var baseCellX = chunkX * ChunkStreamingConstants.CHUNK_SIZE;
-			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, baseCellX + ChunkStreamingConstants.CHUNK_SIZE / 2);
+			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, cell.X, cell.Y);
 
 			return BiomeDB.Get(biome);
 		}
