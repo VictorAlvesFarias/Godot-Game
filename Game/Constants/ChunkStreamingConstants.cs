@@ -14,5 +14,6 @@ namespace Jogo25D.Constants
         public const string PROCEDURAL_EDGE_FILL_LEFT_LAYER_NAME = "ProceduralEdgeFillLeft";
         public const string PROCEDURAL_EDGE_FILL_TOP_LAYER_NAME = "ProceduralEdgeFillTop";
         public const string PROCEDURAL_EDGE_FILL_BOTTOM_LAYER_NAME = "ProceduralEdgeFillBottom";
+        public const string PROCEDURAL_BORDER_CAP_LAYER_NAME = "ProceduralBorderCap";
     }
 }

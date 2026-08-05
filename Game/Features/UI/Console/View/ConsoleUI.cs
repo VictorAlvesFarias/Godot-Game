@@ -668,6 +668,37 @@ namespace Jogo25D.UI
 				},
 				getCompletions: _ => new List<string>()
 			);
+
+			Register(
+				name: "cam_no_clip",
+				usage: "cam_no_clip enable/disable",
+				description: "Ativa ou desativa a camera livre (voar pelo mapa com zoom out infinito)",
+				execute: (args, console) =>
+				{
+					if (args.Length < 1 || (args[0] != "enable" && args[0] != "disable"))
+					{
+						console.PrintError("Uso: cam_no_clip enable/disable");
+
+						return;
+					}
+
+					var camera = GetTree().GetNodesInGroup("cameras").OfType<CameraController>().FirstOrDefault();
+
+					if (camera == null)
+					{
+						console.PrintError("Nenhuma camera encontrada na cena.");
+
+						return;
+					}
+
+					camera.FreeCameraEnabled = args[0] == "enable";
+
+					console.PrintSuccess($"Camera livre {(camera.FreeCameraEnabled ? "ativada" : "desativada")}.");
+				},
+				getCompletions: partial => new List<string> { "enable", "disable" }
+					.Where(option => option.StartsWith(partial))
+					.ToList()
+			);
 		}
 
 		public void Register(string name, string usage, string description, Action<string[], ConsoleUI> execute, Func<string, List<string>> getCompletions)

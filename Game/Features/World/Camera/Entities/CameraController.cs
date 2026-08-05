@@ -27,6 +27,8 @@ namespace Jogo25D.Systems
 		{
 			Enabled = true;
 
+			AddToGroup("cameras");
+
 			WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
             PlayerRef = WorldManager?.GetLocalPlayer();
@@ -34,15 +36,6 @@ namespace Jogo25D.Systems
 
 		public override void _Input(InputEvent @event)
 		{
-			if (@event is InputEventKey key && key.Pressed && !key.Echo && key.Keycode == Key.F2)
-			{
-				FreeCameraEnabled = !FreeCameraEnabled;
-
-				GetViewport().SetInputAsHandled();
-
-				return;
-			}
-
 			if (!FreeCameraEnabled)
 			{
 				return;

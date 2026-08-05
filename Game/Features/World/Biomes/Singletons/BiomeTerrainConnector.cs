@@ -204,6 +204,118 @@ namespace Jogo25D.Biomes
             }
         }
 
+        // Pinta a variante BorderCap numa camada SEPARADA (por cima do chao, nunca substitui a
+        // celula original) - so nas celulas de "cells" que encostam (8 direcoes) em algum tile
+        // de OUTRO bioma no chao. A variante usa um terrain_set PROPRIO e exclusivo (nao o mesmo
+        // terrain_set do chao), entao o autotile dela so conecta com OUTRAS celulas BorderCap do
+        // MESMO bioma que tambem estejam na linha de juncao - nunca com o bioma oposto, e nunca
+        // "rouba" celulas normais de interior (que ficam noutro terrain_set inteiramente).
+        public static void PaintBorderCap(TileMapLayer overlayLayer, TileMapLayer groundLayer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
+        {
+            var junctionCells = new List<Vector2I>();
+            var junctionSet = new HashSet<Vector2I>();
+
+            foreach (var cell in cells)
+            {
+                overlayLayer.SetCell(cell, -1);
+
+                if (TouchesForeignBiome(groundLayer, cell, biomeDef.TerrainSet))
+                {
+                    junctionCells.Add(cell);
+                    junctionSet.Add(cell);
+                }
+            }
+
+            if (junctionCells.Count == 0)
+            {
+                return;
+            }
+
+            // O calculo de conexao (abaixo) so enxerga o que ja esta pintado NESSA camada de
+            // overlay - como so as celulas da linha de juncao sao pintadas ali, o lado que vira
+            // pro INTERIOR do proprio bioma pareceria "vazio" (sem conexao), mesmo o chao la
+            // embaixo sendo solido do mesmo bioma. Pra evitar isso, disfarca temporariamente
+            // esses vizinhos interiores (mesmo bioma, fora da linha de juncao) de tile BorderCap
+            // interior nessa mesma camada - exatamente o mesmo truque que Connect() ja usa pro
+            // lado estrangeiro, so que aqui e pro proprio bioma. Depois do calculo, os vizinhos
+            // disfarcados voltam a ficar vazios (o overlay so mostra a linha de fato).
+            var disguisedCells = new HashSet<Vector2I>();
+
+            foreach (var cell in junctionCells)
+            {
+                foreach (var offset in NeighborOffsets)
+                {
+                    var neighbor = cell + offset;
+
+                    if (junctionSet.Contains(neighbor) || !disguisedCells.Add(neighbor))
+                    {
+                        continue;
+                    }
+
+                    // Se ja existe um BorderCap DE VERDADE aqui (pintado por outro chunk/celula
+                    // vizinha antes dessa chamada), NAO disfarca por cima - senao ao desfazer o
+                    // disfarce no final a gente apaga um tile que ja estava certo, criando um
+                    // buraco na linha (era exatamente o "alguns pontos falhando" reportado).
+                    if (overlayLayer.GetCellSourceId(neighbor) != -1)
+                    {
+                        disguisedCells.Remove(neighbor);
+                        continue;
+                    }
+
+                    if (groundLayer.GetCellSourceId(neighbor) == -1)
+                    {
+                        continue;
+                    }
+
+                    var neighborTileData = groundLayer.GetCellTileData(neighbor);
+
+                    if (neighborTileData == null || neighborTileData.TerrainSet != biomeDef.TerrainSet)
+                    {
+                        disguisedCells.Remove(neighbor);
+                        continue;
+                    }
+
+                    overlayLayer.SetCell(neighbor, biomeDef.BorderCapSourceId, biomeDef.InteriorAtlasCoord);
+                }
+            }
+
+            var junctionCellsArray = new Godot.Collections.Array<Vector2I>();
+
+            foreach (var cell in junctionCells)
+            {
+                junctionCellsArray.Add(cell);
+            }
+
+            overlayLayer.SetCellsTerrainConnect(junctionCellsArray, biomeDef.BorderCapTerrainSet, 0, false);
+
+            foreach (var cell in disguisedCells)
+            {
+                overlayLayer.SetCell(cell, -1);
+            }
+        }
+
+        private static bool TouchesForeignBiome(TileMapLayer layer, Vector2I cell, int terrainSet)
+        {
+            foreach (var offset in NeighborOffsets)
+            {
+                var neighbor = cell + offset;
+
+                if (layer.GetCellSourceId(neighbor) == -1)
+                {
+                    continue;
+                }
+
+                var neighborTileData = layer.GetCellTileData(neighbor);
+
+                if (neighborTileData != null && neighborTileData.TerrainSet != terrainSet)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // Devolve as celulas vizinhas de OUTRO bioma que encostam em "cells" - usado pra tambem
         // atualizar a camada de preenchimento do OUTRO lado da fronteira (o vizinho ja pintado).
         public static List<Vector2I> GetForeignNeighborCells(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, int terrainSet)

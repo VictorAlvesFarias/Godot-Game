@@ -9,7 +9,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public static void Paint(TileMapLayer target, TileMapLayer[] edgeFillTargets, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        public static void Paint(TileMapLayer target, TileMapLayer[] edgeFillTargets, TileMapLayer borderCapTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
             var baseCellX = chunkCoord.X * chunkSize;
@@ -91,6 +91,14 @@ namespace Jogo25D.Chunks
                     BiomeTerrainConnector.ReconnectForeignBorder(target, group.Cells, group.BiomeDef);
                 }
 
+                if (borderCapTarget != null)
+                {
+                    foreach (var group in biomeGroups)
+                    {
+                        BiomeTerrainConnector.PaintBorderCap(borderCapTarget, target, group.Cells, group.BiomeDef);
+                    }
+                }
+
                 if (edgeFillTargets != null)
                 {
                     foreach (var group in biomeGroups)
@@ -148,7 +156,7 @@ namespace Jogo25D.Chunks
             solidCells.Add(cell);
         }
 
-        public static void Erase(TileMapLayer target, TileMapLayer[] edgeFillTargets, Vector2I chunkCoord, int chunkSize)
+        public static void Erase(TileMapLayer target, TileMapLayer[] edgeFillTargets, TileMapLayer borderCapTarget, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -160,6 +168,7 @@ namespace Jogo25D.Chunks
                     var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
 
                     target.SetCell(cell, -1);
+                    borderCapTarget?.SetCell(cell, -1);
 
                     if (edgeFillTargets != null)
                     {

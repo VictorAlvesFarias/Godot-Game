@@ -923,6 +923,62 @@ namespace Jogo25D.Systems
 			return layers;
 		}
 
+		private TileMapLayer ResolveDimensionBorderCapLayer(string dimensionId)
+		{
+			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
+
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
+		}
+
+		// Reconecta o BorderCap (camada separada, ver BiomeTerrainConnector.PaintBorderCap) das
+		// celulas passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado
+		// depois de quebrar/colocar bloco perto de uma fronteira, pra manter a variante
+		// consistente sem precisar repintar o chunk inteiro.
+		private void RepaintBorderCapForCells(TileMapLayer layer, TileMapLayer borderCapLayer, IEnumerable<Vector2I> cells)
+		{
+			if (borderCapLayer == null)
+			{
+				return;
+			}
+
+			var groups = new Dictionary<int, List<Vector2I>>();
+
+			foreach (var cell in cells)
+			{
+				if (layer.GetCellSourceId(cell) == -1)
+				{
+					continue;
+				}
+
+				var tileData = layer.GetCellTileData(cell);
+
+				if (tileData == null)
+				{
+					continue;
+				}
+
+				if (!groups.TryGetValue(tileData.TerrainSet, out var group))
+				{
+					group = new List<Vector2I>();
+					groups[tileData.TerrainSet] = group;
+				}
+
+				group.Add(cell);
+			}
+
+			foreach (var group in groups)
+			{
+				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+				if (biomeDef == null)
+				{
+					continue;
+				}
+
+				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, group.Value, biomeDef);
+			}
+		}
+
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
 		{
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
@@ -1204,6 +1260,12 @@ namespace Jogo25D.Systems
 			}
 
 			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, neighbors);
+
+			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
+
+			borderCapLayer?.SetCell(cell, -1);
+
+			RepaintBorderCapForCells(layer, borderCapLayer, neighbors);
 		}
 
 		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
@@ -1238,6 +1300,14 @@ namespace Jogo25D.Systems
 
 			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, sameBiomeCells);
 			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, foreignCells);
+
+			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
+
+			if (borderCapLayer != null)
+			{
+				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, sameBiomeCells, biomeDef);
+				RepaintBorderCapForCells(layer, borderCapLayer, foreignCells);
+			}
 		}
 
 		// Resolve o bioma pelo mesmo ruido global usado na geracao do mundo (BiomeResolver),
