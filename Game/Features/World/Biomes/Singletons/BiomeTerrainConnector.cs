@@ -142,37 +142,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // Troca, pela variante BorderCap do bioma, toda celula cujo vizinho DE CIMA (0,-1) seja
-        // de OUTRO bioma - so isso, nenhuma outra regra de conexao/vizinhanca muda. A variante
-        // usa o MESMO atlas coord (e portanto a mesma tabela de terrains_peering_bit, ou seja as
-        // MESMAS regras de conexao) que o autotile normal ja escolheu pra essa celula - so troca
-        // a fonte (textura), preservando forma/conexao. Roda depois do autotile normal
-        // (Connect/ReconnectForeignBorder), sobrescrevendo o resultado dele so nessas celulas.
-        public static void ApplyBorderCap(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
-        {
-            foreach (var cell in cells)
-            {
-                var above = cell + new Vector2I(0, -1);
-
-                if (layer.GetCellSourceId(above) == -1)
-                {
-                    continue;
-                }
-
-                var aboveTileData = layer.GetCellTileData(above);
-
-                if (aboveTileData == null || aboveTileData.TerrainSet == biomeDef.TerrainSet)
-                {
-                    continue;
-                }
-
-                var atlasCoord = layer.GetCellAtlasCoords(cell);
-                var alternativeId = layer.GetCellAlternativeTile(cell);
-
-                layer.SetCell(cell, biomeDef.BorderCapSourceId, atlasCoord, alternativeId);
-            }
-        }
-
         // Ordem fixa usada em qualquer lugar que trabalhe com as 4 camadas de preenchimento
         // direcional: Direita, Esquerda, Cima, Baixo (cima = Y menor, mesma convencao da UV do
         // shader tile_edge_fill.gdshader).

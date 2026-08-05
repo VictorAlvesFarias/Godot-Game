@@ -13,7 +13,6 @@ namespace Jogo25D.Biomes
         public int HeightOffset { get; init; }
         public int InteriorSourceId { get; init; }
         public Vector2I InteriorAtlasCoord { get; init; }
-        public int BorderCapSourceId { get; init; }
 
         #endregion
     }
