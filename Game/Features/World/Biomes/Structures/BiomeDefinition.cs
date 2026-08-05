@@ -15,6 +15,7 @@ namespace Jogo25D.Biomes
         public Vector2I InteriorAtlasCoord { get; init; }
         public int BorderCapSourceId { get; init; }
         public int BorderCapTerrainSet { get; init; }
+        public int BaseSourceId { get; init; }
 
         #endregion
     }

@@ -893,90 +893,33 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - Blocks
 
+		// As camadas procedurais (Texture/BorderCap/Base) agora vivem DENTRO do
+		// BiomeConnectionGraph da dimensao (filhas de verdade dele, nao mais soltas direto no
+		// dimensionParent) - resolve o grafo uma vez e le as 3 propriedades dele.
+		private BiomeConnectionGraph ResolveDimensionBiomeGraph(string dimensionId)
+		{
+			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
+
+			return parent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME);
+		}
+
 		private TileMapLayer ResolveDimensionLayer(string dimensionId)
 		{
 			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
 			var handAuthoredName = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
-			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME)
+			return ResolveDimensionBiomeGraph(dimensionId)?.TextureLayer
 				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
-		}
-
-		private static readonly string[] EdgeFillLayerNames = new[]
-		{
-			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_RIGHT_LAYER_NAME,
-			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LEFT_LAYER_NAME,
-			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_TOP_LAYER_NAME,
-			ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_BOTTOM_LAYER_NAME,
-		};
-
-		private TileMapLayer[] ResolveDimensionEdgeFillLayers(string dimensionId)
-		{
-			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
-			var layers = new TileMapLayer[EdgeFillLayerNames.Length];
-
-			for (int i = 0; i < EdgeFillLayerNames.Length; i++)
-			{
-				layers[i] = parent?.GetNodeOrNull<TileMapLayer>(EdgeFillLayerNames[i]);
-			}
-
-			return layers;
 		}
 
 		private TileMapLayer ResolveDimensionBorderCapLayer(string dimensionId)
 		{
-			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
-
-			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
+			return ResolveDimensionBiomeGraph(dimensionId)?.BorderCapLayer;
 		}
 
-		// Reconecta o BorderCap (camada separada, ver BiomeTerrainConnector.PaintBorderCap) das
-		// celulas passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado
-		// depois de quebrar/colocar bloco perto de uma fronteira, pra manter a variante
-		// consistente sem precisar repintar o chunk inteiro.
-		private void RepaintBorderCapForCells(TileMapLayer layer, TileMapLayer borderCapLayer, IEnumerable<Vector2I> cells)
+		private TileMapLayer ResolveDimensionBaseLayer(string dimensionId)
 		{
-			if (borderCapLayer == null)
-			{
-				return;
-			}
-
-			var groups = new Dictionary<int, List<Vector2I>>();
-
-			foreach (var cell in cells)
-			{
-				if (layer.GetCellSourceId(cell) == -1)
-				{
-					continue;
-				}
-
-				var tileData = layer.GetCellTileData(cell);
-
-				if (tileData == null)
-				{
-					continue;
-				}
-
-				if (!groups.TryGetValue(tileData.TerrainSet, out var group))
-				{
-					group = new List<Vector2I>();
-					groups[tileData.TerrainSet] = group;
-				}
-
-				group.Add(cell);
-			}
-
-			foreach (var group in groups)
-			{
-				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
-
-				if (biomeDef == null)
-				{
-					continue;
-				}
-
-				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, group.Value, biomeDef);
-			}
+			return ResolveDimensionBiomeGraph(dimensionId)?.BaseLayer;
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -1247,25 +1190,67 @@ namespace Jogo25D.Systems
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
-			if (neighbors.Count > 0)
+			// Agrupa os vizinhos solidos por bioma e reconecta CADA grupo com o proprio bioma
+			// (Connect) E com quem encosta nele (ReconnectForeignBorder) - o mesmo padrao de
+			// PaintBlockAndReconnect (colocar bloco).
+			var biomeGroups = new Dictionary<int, List<Vector2I>>();
+
+			foreach (var neighbor in neighbors)
 			{
-				BiomeTerrainConnector.ReconnectExistingCells(layer, neighbors);
+				var tileData = layer.GetCellTileData(neighbor);
+
+				if (tileData == null)
+				{
+					continue;
+				}
+
+				if (!biomeGroups.TryGetValue(tileData.TerrainSet, out var group))
+				{
+					group = new List<Vector2I>();
+					biomeGroups[tileData.TerrainSet] = group;
+				}
+
+				group.Add(neighbor);
 			}
 
-			var edgeFillLayers = ResolveDimensionEdgeFillLayers(dimensionId);
+			var touchedCells = new HashSet<Vector2I>(neighbors);
 
-			foreach (var edgeFillLayer in edgeFillLayers)
+			foreach (var group in biomeGroups)
 			{
-				edgeFillLayer?.SetCell(cell, -1);
+				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+				if (biomeDef == null)
+				{
+					continue;
+				}
+
+				BiomeTerrainConnector.Connect(layer, group.Value, biomeDef);
+				BiomeTerrainConnector.ReconnectForeignBorder(layer, group.Value, biomeDef);
+
+				foreach (var foreignCell in BiomeTerrainConnector.GetForeignNeighborCells(layer, group.Value, biomeDef.TerrainSet))
+				{
+					touchedCells.Add(foreignCell);
+				}
 			}
 
-			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, neighbors);
+			var expandedNeighbors = GetExpandedNeighborCells(layer, new Godot.Collections.Array<Vector2I>(touchedCells));
+
+			if (expandedNeighbors.Count > 0)
+			{
+				BiomeTerrainConnector.ReconnectExistingCells(layer, expandedNeighbors);
+			}
 
 			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
 
 			borderCapLayer?.SetCell(cell, -1);
 
-			RepaintBorderCapForCells(layer, borderCapLayer, neighbors);
+			RepaintBorderCapForCells(layer, borderCapLayer, expandedNeighbors);
+
+			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
+
+			baseLayer?.SetCell(cell, -1);
+
+			RepaintBaseLayerForCells(layer, baseLayer, expandedNeighbors);
 		}
 
 		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
@@ -1295,35 +1280,158 @@ namespace Jogo25D.Systems
 			BiomeTerrainConnector.Connect(layer, sameBiomeCells, biomeDef);
 			BiomeTerrainConnector.ReconnectForeignBorder(layer, sameBiomeCells, biomeDef);
 
-			var edgeFillLayers = ResolveDimensionEdgeFillLayers(dimensionId);
 			var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(layer, sameBiomeCells, biomeDef.TerrainSet);
 
-			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, sameBiomeCells);
-			BiomeTerrainConnector.PaintEdgeFillOverlay(layer, edgeFillLayers, foreignCells);
+			var expandedForeignCells = GetExpandedNeighborCells(layer, foreignCells);
+
+			if (expandedForeignCells.Count > 0)
+			{
+				BiomeTerrainConnector.ReconnectExistingCells(layer, expandedForeignCells);
+			}
 
 			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
 
 			if (borderCapLayer != null)
 			{
 				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, sameBiomeCells, biomeDef);
-				RepaintBorderCapForCells(layer, borderCapLayer, foreignCells);
+				RepaintBorderCapForCells(layer, borderCapLayer, expandedForeignCells);
+			}
+
+			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
+
+			if (baseLayer != null)
+			{
+				BiomeTerrainConnector.PaintBaseLayer(baseLayer, layer, sameBiomeCells, biomeDef);
+				RepaintBaseLayerForCells(layer, baseLayer, expandedForeignCells);
 			}
 		}
 
-		// Resolve o bioma pelo mesmo ruido global usado na geracao do mundo (BiomeResolver),
-		// nao pelos vizinhos locais - assim o bloco colocado sempre reflete o bioma "correto"
-		// daquela posicao, mesmo que ainda nao exista nenhum vizinho daquele bioma por perto
-		// (ex: cavando um tunel em direcao a fronteira antes de alcancar o outro bioma).
-		// IMPORTANTE: usa a propria celula (X e Y) - e exatamente assim que ChunkGenerator.Paint
-		// resolve o bioma de cada celula solida agora (por celula, nao por chunk inteiro), entao
-		// precisa ser identico aqui pra bater com o chao real perto da fronteira.
-		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
+		// Espelha a camada BASE (ver BiomeTerrainConnector.PaintBaseLayer) das celulas passadas -
+		// usado depois de quebrar/colocar bloco perto de uma fronteira, pra manter a base
+		// consistente sem precisar repintar o chunk inteiro.
+		private void RepaintBaseLayerForCells(TileMapLayer layer, TileMapLayer baseLayer, IEnumerable<Vector2I> cells)
 		{
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
-			var worldSeed = chunkStreamingManager?.WorldSeed ?? 0;
-			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, cell.X, cell.Y);
+			if (baseLayer == null)
+			{
+				return;
+			}
 
-			return BiomeDB.Get(biome);
+			var groups = new Dictionary<int, List<Vector2I>>();
+
+			foreach (var cell in cells)
+			{
+				if (layer.GetCellSourceId(cell) == -1)
+				{
+					baseLayer.SetCell(cell, -1);
+
+					continue;
+				}
+
+				var tileData = layer.GetCellTileData(cell);
+
+				if (tileData == null)
+				{
+					continue;
+				}
+
+				if (!groups.TryGetValue(tileData.TerrainSet, out var group))
+				{
+					group = new List<Vector2I>();
+					groups[tileData.TerrainSet] = group;
+				}
+
+				group.Add(cell);
+			}
+
+			foreach (var group in groups)
+			{
+				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+				if (biomeDef == null)
+				{
+					continue;
+				}
+
+				BiomeTerrainConnector.PaintBaseLayer(baseLayer, layer, group.Value, biomeDef);
+			}
+		}
+
+		// Reconecta o BorderCap (camada separada, ver BiomeTerrainConnector.PaintBorderCap) das
+		// celulas passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado
+		// depois de quebrar/colocar bloco perto de uma fronteira, pra manter a variante
+		// consistente sem precisar repintar o chunk inteiro.
+		private void RepaintBorderCapForCells(TileMapLayer layer, TileMapLayer borderCapLayer, IEnumerable<Vector2I> cells)
+		{
+			if (borderCapLayer == null)
+			{
+				return;
+			}
+
+			var groups = new Dictionary<int, List<Vector2I>>();
+
+			foreach (var cell in cells)
+			{
+				if (layer.GetCellSourceId(cell) == -1)
+				{
+					continue;
+				}
+
+				var tileData = layer.GetCellTileData(cell);
+
+				if (tileData == null)
+				{
+					continue;
+				}
+
+				if (!groups.TryGetValue(tileData.TerrainSet, out var group))
+				{
+					group = new List<Vector2I>();
+					groups[tileData.TerrainSet] = group;
+				}
+
+				group.Add(cell);
+			}
+
+			foreach (var group in groups)
+			{
+				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+				if (biomeDef == null)
+				{
+					continue;
+				}
+
+				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, group.Value, biomeDef);
+			}
+		}
+
+		// Amplia um conjunto de celulas pra incluir tambem os vizinhos solidos DELAS (2o grau a
+		// partir da celula original quebrada/colocada).
+		private Godot.Collections.Array<Vector2I> GetExpandedNeighborCells(TileMapLayer layer, IEnumerable<Vector2I> seedCells)
+		{
+			var seen = new HashSet<Vector2I>();
+			var result = new Godot.Collections.Array<Vector2I>();
+
+			foreach (var cell in seedCells)
+			{
+				if (seen.Add(cell))
+				{
+					result.Add(cell);
+				}
+			}
+
+			foreach (var cell in result.ToArray())
+			{
+				foreach (var neighbor in GetSolidNeighborCells(layer, cell))
+				{
+					if (seen.Add(neighbor))
+					{
+						result.Add(neighbor);
+					}
+				}
+			}
+
+			return result;
 		}
 
 		private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(TileMapLayer layer, Vector2I cell, int radius = 1)
@@ -1349,6 +1457,22 @@ namespace Jogo25D.Systems
 			}
 
 			return result;
+		}
+
+		// Resolve o bioma pelo mesmo ruido global usado na geracao do mundo (BiomeResolver),
+		// nao pelos vizinhos locais - assim o bloco colocado sempre reflete o bioma "correto"
+		// daquela posicao, mesmo que ainda nao exista nenhum vizinho daquele bioma por perto
+		// (ex: cavando um tunel em direcao a fronteira antes de alcancar o outro bioma).
+		// IMPORTANTE: usa a propria celula (X e Y) - e exatamente assim que ChunkGenerator.Paint
+		// resolve o bioma de cada celula solida agora (por celula, nao por chunk inteiro), entao
+		// precisa ser identico aqui pra bater com o chao real perto da fronteira.
+		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
+		{
+			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var worldSeed = chunkStreamingManager?.WorldSeed ?? 0;
+			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, cell.X, cell.Y);
+
+			return BiomeDB.Get(biome);
 		}
 
 		#endregion

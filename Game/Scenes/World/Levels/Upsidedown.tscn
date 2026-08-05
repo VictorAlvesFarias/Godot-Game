@@ -10,8 +10,12 @@
 [ext_resource type="TileSet" uid="uid://dnh0upna6mf57" path="res://Assets/Textures/Tiles/olive_ground/olive_ground_tileset.tres" id="9_2t3hh"]
 [ext_resource type="Script" uid="uid://dqvh2ntfafi3r" path="res://Features/World/Chunks/View/ChunkGridOverlay.cs" id="10_chunkgrid"]
 [ext_resource type="PackedScene" path="res://Scenes/World/Props/Portal.tscn" id="10_yegaj"]
+[ext_resource type="Script" path="res://Features/World/Biomes/Singletons/BiomeConnectionGraph.cs" id="11_biomeconngraph"]
 
 [node name="Upsidedown" type="Node2D" unique_id=726539886]
+
+[node name="BiomeConnectionGraph" type="Node2D" parent="." unique_id=726539900]
+script = ExtResource("11_biomeconngraph")
 
 [node name="Background" type="Node2D" parent="." unique_id=655906721]
 script = ExtResource("1_2t3hh")

@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
@@ -45,10 +46,10 @@ namespace Jogo25D.Chunks
 
         public TileMapLayer OverworldLayer { get; set; }
         public TileMapLayer UpsidedownLayer { get; set; }
-        public TileMapLayer[] OverworldEdgeFillLayers { get; set; }
-        public TileMapLayer[] UpsidedownEdgeFillLayers { get; set; }
         public TileMapLayer OverworldBorderCapLayer { get; set; }
         public TileMapLayer UpsidedownBorderCapLayer { get; set; }
+        public TileMapLayer OverworldBaseLayer { get; set; }
+        public TileMapLayer UpsidedownBaseLayer { get; set; }
 
         #endregion
 
@@ -222,10 +223,10 @@ namespace Jogo25D.Chunks
         private void LoadChunk(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
         {
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
             var borderCapLayer = GetBorderCapLayer(dimensionId);
+            var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Paint(layer, edgeFillLayers, borderCapLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Paint(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -267,10 +268,10 @@ namespace Jogo25D.Chunks
             // perto), senao um buraco cavado sumia assim que o chunk saia
             // de raio e voltava do jeito gerado original.
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
             var borderCapLayer = GetBorderCapLayer(dimensionId);
+            var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Erase(layer, edgeFillLayers, borderCapLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Erase(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -370,55 +371,39 @@ namespace Jogo25D.Chunks
                 return existing;
             }
 
-            var layer = new TileMapLayer
+            // O BiomeConnectionGraph centraliza as regras de conexao entre biomas E guarda as 3
+            // camadas como FILHAS DE VERDADE dele (nao so uma referencia em C#) - uma instancia
+            // por dimensao, ja pre-autorada nas cenas Overworld.tscn/Upsidedown.tscn (assim da
+            // pra ver/editar as regras no Inspector sem precisar rodar o jogo). So cria uma nova
+            // por codigo se por algum motivo ela nao existir na cena. Ordem de desenho dentro
+            // dele (irmas mais antigas ficam embaixo): Base -> BorderCap -> Texture (chao).
+            var biomeGraph = dimensionParent.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME);
+
+            if (biomeGraph == null)
             {
-                Name = ChunkStreamingConstants.PROCEDURAL_LAYER_NAME,
+                biomeGraph = new BiomeConnectionGraph
+                {
+                    Name = ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME,
+                };
+
+                dimensionParent.AddChild(biomeGraph);
+            }
+
+            // Camada BASE: preenchimento solido que o chao (agora com o centro vazado, so a
+            // borda/detalhe) deixa aparecer por baixo. Mesmo formato/atlas coord do chao sempre
+            // (ver BiomeTerrainConnector.PaintBaseLayer), so textura diferente.
+            var baseLayer = new TileMapLayer
+            {
+                Name = ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME,
                 TileSet = ChunkGenerator.GetTileSet(),
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
             };
 
-            dimensionParent.AddChild(layer);
+            biomeGraph.AddChild(baseLayer);
 
-            // 4 camadas so pros tiles que encostam em um tileset DIFERENTE, uma por lado
-            // (Direita/Esquerda/Cima/Baixo - mesma ordem de BiomeTerrainConnector.
-            // EdgeFillDirectionOffsets) - ficam por cima da camada de chao (adicionadas depois,
-            // como irmas seguintes) cada uma com o material do shader configurado pra so
-            // preencher aquela metade do tile. Uma celula so aparece na(s) camada(s) do(s) lado(s)
-            // que realmente encosta(m) em outro terrain_set.
-            var edgeFillLayerNames = new[]
-            {
-                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_RIGHT_LAYER_NAME,
-                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_LEFT_LAYER_NAME,
-                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_TOP_LAYER_NAME,
-                ChunkStreamingConstants.PROCEDURAL_EDGE_FILL_BOTTOM_LAYER_NAME,
-            };
-            var edgeFillMaterialPaths = new[]
-            {
-                Textures.Tiles.TILE_EDGE_FILL_RIGHT_MATERIAL,
-                Textures.Tiles.TILE_EDGE_FILL_LEFT_MATERIAL,
-                Textures.Tiles.TILE_EDGE_FILL_TOP_MATERIAL,
-                Textures.Tiles.TILE_EDGE_FILL_BOTTOM_MATERIAL,
-            };
-            var edgeFillLayers = new TileMapLayer[edgeFillLayerNames.Length];
-
-            for (int i = 0; i < edgeFillLayerNames.Length; i++)
-            {
-                var edgeFillLayer = new TileMapLayer
-                {
-                    Name = edgeFillLayerNames[i],
-                    TileSet = ChunkGenerator.GetTileSet(),
-                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                    Material = GD.Load<ShaderMaterial>(edgeFillMaterialPaths[i]),
-                    Visible = false,
-                };
-
-                dimensionParent.AddChild(edgeFillLayer);
-                edgeFillLayers[i] = edgeFillLayer;
-            }
-
-            // Camada de BorderCap: uma so, adicionada POR CIMA de tudo (chao + edge-fill) - nao
-            // substitui o tile do chao, so desenha a variante sobreposta nas celulas que estao
-            // na linha de juncao com outro bioma (ver BiomeTerrainConnector.PaintBorderCap).
+            // Camada de BorderCap: nao substitui o tile do chao, so desenha a variante nas
+            // celulas que estao na linha de juncao com outro bioma (ver
+            // BiomeTerrainConnector.PaintBorderCap).
             var borderCapLayer = new TileMapLayer
             {
                 Name = ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME,
@@ -426,27 +411,40 @@ namespace Jogo25D.Chunks
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
             };
 
-            dimensionParent.AddChild(borderCapLayer);
+            biomeGraph.AddChild(borderCapLayer);
+
+            var layer = new TileMapLayer
+            {
+                Name = ChunkStreamingConstants.PROCEDURAL_LAYER_NAME,
+                TileSet = ChunkGenerator.GetTileSet(),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            };
+
+            biomeGraph.AddChild(layer);
+
+            biomeGraph.BaseLayer = baseLayer;
+            biomeGraph.BorderCapLayer = borderCapLayer;
+            biomeGraph.TextureLayer = layer;
 
             if (dimensionId == ChunkStreamingConstants.OVERWORLD_ID)
             {
                 OverworldLayer = layer;
-                OverworldEdgeFillLayers = edgeFillLayers;
                 OverworldBorderCapLayer = borderCapLayer;
+                OverworldBaseLayer = baseLayer;
             }
             else
             {
                 UpsidedownLayer = layer;
-                UpsidedownEdgeFillLayers = edgeFillLayers;
                 UpsidedownBorderCapLayer = borderCapLayer;
+                UpsidedownBaseLayer = baseLayer;
             }
 
             return layer;
         }
 
-        private TileMapLayer[] GetEdgeFillLayers(string dimensionId)
+        private TileMapLayer GetBaseLayer(string dimensionId)
         {
-            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldEdgeFillLayers : UpsidedownEdgeFillLayers;
+            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldBaseLayer : UpsidedownBaseLayer;
         }
 
         private TileMapLayer GetBorderCapLayer(string dimensionId)
@@ -519,10 +517,10 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
             var borderCapLayer = GetBorderCapLayer(dimensionId);
+            var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Paint(layer, edgeFillLayers, borderCapLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Paint(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -552,10 +550,10 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var edgeFillLayers = GetEdgeFillLayers(dimensionId);
             var borderCapLayer = GetBorderCapLayer(dimensionId);
+            var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Erase(layer, edgeFillLayers, borderCapLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            ChunkGenerator.Erase(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion
