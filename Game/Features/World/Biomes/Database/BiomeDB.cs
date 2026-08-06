@@ -54,18 +54,5 @@ namespace Jogo25D.Biomes
 
             return null;
         }
-
-        public static BiomeDefinition GetByBaseTerrainSet(int baseTerrainSet)
-        {
-            foreach (var definition in _biomes.Values)
-            {
-                if (definition.BaseTerrainSet == baseTerrainSet)
-                {
-                    return definition;
-                }
-            }
-
-            return null;
-        }
     }
 }

@@ -1,18 +1,17 @@
-[gd_scene format=3 uid="uid://bfdarejodvd8o"]
+[gd_scene format=4 uid="uid://bfdarejodvd8o"]
 
-[ext_resource type="Texture2D" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="1_y8qed"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png" id="2_danr7"]
-[ext_resource type="Script" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Backgrounds/blue_sky/layer_2.png" id="5_bg2tx"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png" id="6_bg3tx"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Backgrounds/blue_sky/layer_1.png" id="7_bg6tx"]
-[ext_resource type="Script" path="res://Features/World/Background/Entities/BackgroundController.cs" id="8_bgscr"]
-[ext_resource type="Script" path="res://Features/World/Biomes/Structures/TerrainConnectionRule.cs" id="9_cg0d3"]
-[ext_resource type="Script" path="res://Features/World/Chunks/View/ChunkGridOverlay.cs" id="10_chunkgrid"]
-[ext_resource type="PackedScene" path="res://Scenes/World/Props/Portal.tscn" id="11_portal"]
-[ext_resource type="Script" path="res://Features/World/Biomes/Singletons/TerrainLayer.cs" id="12_terrainlayer"]
-[ext_resource type="Script" path="res://Features/World/Portals/Entities/Portal.cs" id="13_dllxf"]
-[ext_resource type="TileSet" path="res://Assets/Textures/Tiles/world_biomes_tileset.tres" id="13_worldbiomes"]
+[ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="1_y8qed"]
+[ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png" id="2_danr7"]
+[ext_resource type="Script" uid="uid://bkbt4dowylfu8" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
+[ext_resource type="Texture2D" uid="uid://c5wutnvn5ke2r" path="res://Assets/Textures/Backgrounds/blue_sky/layer_2.png" id="5_bg2tx"]
+[ext_resource type="Texture2D" uid="uid://ckrj4lovpeiwe" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png" id="6_bg3tx"]
+[ext_resource type="Texture2D" uid="uid://dvthj1kjtge87" path="res://Assets/Textures/Backgrounds/blue_sky/layer_1.png" id="7_bg6tx"]
+[ext_resource type="Script" uid="uid://b7fp0le412qg5" path="res://Features/World/Background/Entities/BackgroundController.cs" id="8_bgscr"]
+[ext_resource type="Script" uid="uid://bu2ntlu1s2ts" path="res://Features/World/Biomes/Structures/TerrainConnectionRule.cs" id="9_cg0d3"]
+[ext_resource type="Script" uid="uid://b2mihxtpk7lfb" path="res://Features/World/Chunks/View/ChunkGridOverlay.cs" id="10_chunkgrid"]
+[ext_resource type="PackedScene" uid="uid://dh7dfd3dtn5rb" path="res://Scenes/World/Props/Portal.tscn" id="11_portal"]
+[ext_resource type="Script" uid="uid://6fmnwq2uuxh4" path="res://Features/World/Biomes/Singletons/TerrainLayer.cs" id="12_terrainlayer"]
+[ext_resource type="TileSet" uid="uid://b4e324u050je5" path="res://Assets/Textures/Tiles/world_biomes_tileset.tres" id="13_worldbiomes"]
 
 [sub_resource type="Resource" id="Resource_t0lt0"]
 script = ExtResource("9_cg0d3")
@@ -107,20 +106,23 @@ texture = ExtResource("7_bg6tx")
 
 [node name="Base" type="TileMapLayer" parent="." unique_id=1538923773]
 texture_filter = 1
+tile_map_data = PackedByteArray("AAD9//z/CwADAAAAAAD9//3/CwAIAAIAAAD9//7/CwAGAAEAAAD9////CwAAAAIAAAD+////CwABAAIAAAD/////CwABAAIAAAAAAP//CwACAAIAAAAAAP7/CwAFAAEAAAABAP7/CwABAAIAAAABAP3/CwABAAAAAAACAP3/CwAGAAIAAAAAAP3/CwAIAAIAAAD///3/CwABAAAAAAD+//3/CwABAAAAAAD+//7/CwABAAEAAAD///7/CwABAAEAAAAAAPz/CwADAAAAAAADAP3/CwABAAEAAAAEAP3/CwABAAEAAAAFAP3/CwACAAEAAAAFAP7/CwACAAIAAAAEAP7/CwABAAIAAAADAP7/CwABAAIAAAACAP7/CwABAAIAAAADAPz/CwABAAAAAAAEAPv/CwADAAAAAAAEAPz/CwAIAAIAAAAFAPz/CwACAAAAAAACAPz/CwAAAAAAAAD8//3/CwABAAAAAAD7//3/CwAGAAAAAAD6//3/CwAAAAMAAAD7//7/CwAAAAIAAAD8//7/CwABAAIAAAA=")
 tile_set = ExtResource("13_worldbiomes")
 script = ExtResource("12_terrainlayer")
-Connections = Array[ExtResource("9_cg0d3")]([SubResource("Resource_t0lt0")])
+Connections = [SubResource("Resource_t0lt0")]
 
 [node name="Bordercap" type="TileMapLayer" parent="." unique_id=351296527]
 texture_filter = 1
+tile_map_data = PackedByteArray("AAD6//3/CQAAAAMAAAD7//3/CQAGAAAAAAD8//3/CQABAAAAAAD9//3/CQAIAAIAAAD9//7/CQAGAAEAAAD8//7/CQABAAIAAAD7//7/CQAAAAIAAAD9////CQAAAAIAAAD+////CQABAAIAAAD/////CQABAAIAAAAAAP//CQACAAIAAAAAAP7/CQAFAAQAAAD///7/CQABAAEAAAD+//7/CQABAAEAAAD+//3/CQABAAAAAAD///3/CQABAAAAAAD9//z/CQADAAAAAAAAAP3/CQAHAAIAAAAAAPz/CQADAAAAAAABAP7/AQAAAAMAAAACAP7/AQACAAMAAAADAP7/CQAAAAMAAAAEAP7/CQACAAMAAAA=")
 tile_set = ExtResource("13_worldbiomes")
 script = ExtResource("12_terrainlayer")
+ShowTerrainSetDebug = true
 
 [node name="Texture" type="TileMapLayer" parent="." unique_id=1002773653]
 texture_filter = 1
 tile_set = ExtResource("13_worldbiomes")
 script = ExtResource("12_terrainlayer")
-Connections = Array[ExtResource("9_cg0d3")]([SubResource("Resource_40gko")])
+Connections = [SubResource("Resource_40gko")]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
@@ -129,7 +131,5 @@ script = ExtResource("2_vlsnn")
 [node name="ChunkGridOverlay" type="Node2D" parent="Camera2D" unique_id=970219548]
 script = ExtResource("10_chunkgrid")
 
-[node name="Portal" type="Area2D" parent="." unique_id=1270403732 instance=ExtResource("11_portal")]
+[node name="Portal" parent="." unique_id=1270403732 instance=ExtResource("11_portal")]
 position = Vector2(-272, 16)
-collision_layer = 0
-script = ExtResource("13_dllxf")

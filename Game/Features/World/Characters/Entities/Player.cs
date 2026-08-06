@@ -731,35 +731,6 @@ namespace Jogo25D.Characters
 
 		#region Core - Items system
 
-		public int CountAmmoByChargeType(string chargeType)
-		{
-			if (string.IsNullOrEmpty(chargeType))
-			{
-				return 0;
-			}
-
-			int count = 0;
-
-			for (int i = 0; i < Data.Inventory.Size; i++)
-			{
-				var slot = Data.Inventory.Items[i];
-
-				if (slot == null || slot.InstanceId == Data.EquippedItemId)
-				{
-					continue;
-				}
-
-				var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
-				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
-
-				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
-				{
-					count += slot.Quantity;
-				}
-			}
-			return count;
-		}
-
 		public int RemoveAmmoByChargeType(string chargeType, int quantity)
 		{
 			if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
@@ -1239,18 +1210,6 @@ namespace Jogo25D.Characters
         public void AddEffectReceive(string effectId)
         {
             GiveEffect(effectId);
-        }
-
-        public void AddEffectRequest(string effectId)
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-            {
-                AddEffectReceive(effectId);
-
-                return;
-            }
-
-            RpcId(1, nameof(AddEffectReceive), effectId);
         }
 
         #endregion

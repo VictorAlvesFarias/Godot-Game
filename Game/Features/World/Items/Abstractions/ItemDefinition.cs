@@ -93,11 +93,6 @@ namespace Jogo25D.Items
             data.CooldownRemainingTimer = Cooldown;
         }
 
-        public float GetRemainingReloadTime(ItemData data)
-        {
-            return data == null ? 0f : Mathf.Max(0f, data.ReloadTimer);
-        }
-
         public bool IsEmpty(ItemData data)
         {
             return data == null || string.IsNullOrEmpty(data.Id) || data.Quantity <= 0;
@@ -106,19 +101,6 @@ namespace Jogo25D.Items
         #endregion
 
         #region Core - Item
-
-        public float GetReloadProgress(ItemData data)
-        {
-            var chargesProp = Resolver.Resolve(Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
-            var reloadCooldown = chargesProp != null ? chargesProp.ReloadCooldown : 1f;
-
-            if (reloadCooldown <= 0f)
-            {
-                return 1f;
-            }
-
-            return 1f - data.ReloadTimer / reloadCooldown;
-        }
 
         public bool CanReload(ItemData data)
         {

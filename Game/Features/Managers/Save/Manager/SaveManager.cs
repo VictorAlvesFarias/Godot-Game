@@ -68,11 +68,6 @@ namespace Jogo25D.Systems
             return character;
         }
 
-        public CharacterSaveData LoadLocalCharacter(string characterId)
-        {
-            return LoadCharacterAt($"{SavesConstants.CHARACTERS_DIR}/{characterId}.tres");
-        }
-
         public void SaveLocalCharacter(CharacterSaveData character)
         {
             EnsureDir(SavesConstants.CHARACTERS_DIR);
@@ -206,15 +201,6 @@ namespace Jogo25D.Systems
             SaveWorldMeta(world);
 
             return world;
-        }
-
-        public WorldSaveData LoadWorldMeta(string worldId)
-        {
-            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/world.tres";
-
-            return ResourceLoader.Exists(path)
-                ? ResourceLoader.Load<WorldSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
-                : null;
         }
 
         public void SaveWorldMeta(WorldSaveData world)
