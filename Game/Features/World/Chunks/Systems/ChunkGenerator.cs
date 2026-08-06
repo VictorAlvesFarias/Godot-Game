@@ -108,7 +108,12 @@ namespace Jogo25D.Chunks
                 {
                     foreach (var group in biomeGroups)
                     {
-                        borderCapTarget.PaintBorderCap(target, group.Cells, group.BiomeDef.TerrainSet, group.BiomeDef.BorderCapTerrainSet);
+                        borderCapTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
+                    }
+
+                    foreach (var group in biomeGroups)
+                    {
+                        borderCapTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
                     }
                 }
 

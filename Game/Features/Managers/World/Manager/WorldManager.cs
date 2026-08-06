@@ -1232,13 +1232,13 @@ namespace Jogo25D.Systems
 
 			borderCapLayer?.SetCell(cell, -1);
 
-			RepaintBorderCapForCells(layer, borderCapLayer, expandedNeighbors);
+			RepaintDependentLayerForCells(layer, borderCapLayer, expandedNeighbors, def => def.BorderCapTerrainSet);
 
 			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
 			baseLayer?.SetCell(cell, -1);
 
-			RepaintBaseLayerForCells(layer, baseLayer, expandedNeighbors);
+			RepaintDependentLayerForCells(layer, baseLayer, expandedNeighbors, def => def.BaseTerrainSet);
 		}
 
 		private void PaintBlockAndReconnect(TerrainLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
@@ -1281,8 +1281,8 @@ namespace Jogo25D.Systems
 
 			if (borderCapLayer != null)
 			{
-				borderCapLayer.PaintBorderCap(layer, sameBiomeCells, biomeDef.TerrainSet, biomeDef.BorderCapTerrainSet);
-				RepaintBorderCapForCells(layer, borderCapLayer, expandedForeignCells);
+				borderCapLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BorderCapTerrainSet);
+				RepaintDependentLayerForCells(layer, borderCapLayer, expandedForeignCells, def => def.BorderCapTerrainSet);
 			}
 
 			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
@@ -1290,16 +1290,17 @@ namespace Jogo25D.Systems
 			if (baseLayer != null)
 			{
 				baseLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BaseTerrainSet);
-				RepaintBaseLayerForCells(layer, baseLayer, expandedForeignCells);
+				RepaintDependentLayerForCells(layer, baseLayer, expandedForeignCells, def => def.BaseTerrainSet);
 			}
 		}
 
-		// Reconecta a camada BASE (ver TerrainLayer.ConnectDependent) das celulas passadas -
-		// usado depois de quebrar/colocar bloco perto de uma fronteira, pra manter a base
-		// consistente sem precisar repintar o chunk inteiro.
-		private void RepaintBaseLayerForCells(TileMapLayer layer, TerrainLayer baseLayer, IEnumerable<Vector2I> cells)
+		// Reconecta uma camada DEPENDENTE do chao (Base ou Bordercap - ambas agora pintam
+		// exatamente as mesmas posicoes que o chao, cada uma com seu proprio terrain_set) pras
+		// celulas passadas - usado depois de quebrar/colocar bloco perto de uma fronteira, pra
+		// manter a camada consistente sem precisar repintar o chunk inteiro.
+		private void RepaintDependentLayerForCells(TileMapLayer layer, TerrainLayer dependentLayer, IEnumerable<Vector2I> cells, Func<BiomeDefinition, int> terrainSetSelector)
 		{
-			if (baseLayer == null)
+			if (dependentLayer == null)
 			{
 				return;
 			}
@@ -1310,7 +1311,7 @@ namespace Jogo25D.Systems
 			{
 				if (layer.GetCellSourceId(cell) == -1)
 				{
-					baseLayer.SetCell(cell, -1);
+					dependentLayer.SetCell(cell, -1);
 
 					continue;
 				}
@@ -1340,56 +1341,7 @@ namespace Jogo25D.Systems
 					continue;
 				}
 
-				baseLayer.ConnectDependent(layer, group.Value, biomeDef.BaseTerrainSet);
-			}
-		}
-
-		// Reconecta o BorderCap (camada separada, ver TerrainLayer.PaintBorderCap) das celulas
-		// passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado depois de
-		// quebrar/colocar bloco perto de uma fronteira, pra manter a variante consistente sem
-		// precisar repintar o chunk inteiro.
-		private void RepaintBorderCapForCells(TileMapLayer layer, TerrainLayer borderCapLayer, IEnumerable<Vector2I> cells)
-		{
-			if (borderCapLayer == null)
-			{
-				return;
-			}
-
-			var groups = new Dictionary<int, List<Vector2I>>();
-
-			foreach (var cell in cells)
-			{
-				if (layer.GetCellSourceId(cell) == -1)
-				{
-					continue;
-				}
-
-				var tileData = layer.GetCellTileData(cell);
-
-				if (tileData == null)
-				{
-					continue;
-				}
-
-				if (!groups.TryGetValue(tileData.TerrainSet, out var group))
-				{
-					group = new List<Vector2I>();
-					groups[tileData.TerrainSet] = group;
-				}
-
-				group.Add(cell);
-			}
-
-			foreach (var group in groups)
-			{
-				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
-
-				if (biomeDef == null)
-				{
-					continue;
-				}
-
-				borderCapLayer.PaintBorderCap(layer, group.Value, biomeDef.TerrainSet, biomeDef.BorderCapTerrainSet);
+				dependentLayer.ConnectDependent(layer, group.Value, terrainSetSelector(biomeDef));
 			}
 		}
 
