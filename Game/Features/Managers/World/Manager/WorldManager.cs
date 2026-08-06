@@ -223,14 +223,17 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-		// As camadas Base/Bordercap/Texture do BiomeConnectionGraph sao REUTILIZADAS pela
-		// geracao procedural (nunca recriadas) - qualquer tile de teste pintado no editor precisa
-		// ser apagado aqui antes de gerar um mundo novo, senao sobreviveria misturado com o
-		// mundo gerado.
+		// Base/Bordercap/Texture sao REUTILIZADAS pela geracao procedural (nunca recriadas) -
+		// qualquer tile de teste pintado no editor precisa ser apagado aqui antes de gerar um
+		// mundo novo, senao sobreviveria misturado com o mundo gerado.
 		private void ClearWorldLayers()
 		{
-			OverworldParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.ClearLayers();
-			UpsidedownParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.ClearLayers();
+			foreach (var parent in new[] { OverworldParent, UpsidedownParent })
+			{
+				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME)?.Clear();
+				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME)?.Clear();
+				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME)?.Clear();
+			}
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -275,7 +278,7 @@ namespace Jogo25D.Systems
 
 		private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
 		{
-			var layer = dimensionParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.TextureLayer;
+			var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 
 			if (layer == null)
 			{
@@ -897,29 +900,21 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - Blocks
 
-		// As camadas procedurais (Texture/BorderCap/Base) agora vivem DENTRO do
-		// BiomeConnectionGraph da dimensao (filhas de verdade dele, nao mais soltas direto no
-		// dimensionParent) - resolve o grafo uma vez e le as 3 propriedades dele.
-		private BiomeConnectionGraph ResolveDimensionBiomeGraph(string dimensionId)
+		// Base/Bordercap/Texture sao filhas DIRETAS da dimensao, cada uma com o script
+		// TerrainLayer anexado - sem node pai centralizador nenhum.
+		private TerrainLayer ResolveDimensionLayer(string dimensionId)
 		{
-			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
-
-			return parent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME);
+			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 		}
 
-		private TileMapLayer ResolveDimensionLayer(string dimensionId)
+		private TerrainLayer ResolveDimensionBorderCapLayer(string dimensionId)
 		{
-			return ResolveDimensionBiomeGraph(dimensionId)?.TextureLayer;
+			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
 		}
 
-		private TileMapLayer ResolveDimensionBorderCapLayer(string dimensionId)
+		private TerrainLayer ResolveDimensionBaseLayer(string dimensionId)
 		{
-			return ResolveDimensionBiomeGraph(dimensionId)?.BorderCapLayer;
-		}
-
-		private TileMapLayer ResolveDimensionBaseLayer(string dimensionId)
-		{
-			return ResolveDimensionBiomeGraph(dimensionId)?.BaseLayer;
+			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -1158,7 +1153,7 @@ namespace Jogo25D.Systems
 			portal?.QueueFree();
 		}
 
-		public void ApplyChunkMutation(TileMapLayer layer, ChunkMutationData mutation, string dimensionId)
+		public void ApplyChunkMutation(TerrainLayer layer, ChunkMutationData mutation, string dimensionId)
 		{
 			var cell = new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y);
 
@@ -1175,7 +1170,7 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		private void EraseBlockAndReconnect(TileMapLayer layer, Vector2I cell, string dimensionId)
+		private void EraseBlockAndReconnect(TerrainLayer layer, Vector2I cell, string dimensionId)
 		{
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
@@ -1190,9 +1185,9 @@ namespace Jogo25D.Systems
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
-			// Agrupa os vizinhos solidos por bioma e reconecta CADA grupo com o proprio bioma
-			// (Connect) E com quem encosta nele (ReconnectForeignBorder) - o mesmo padrao de
-			// PaintBlockAndReconnect (colocar bloco).
+			// Agrupa os vizinhos solidos por terrain_set e reconecta CADA grupo com o proprio
+			// terreno (Connect) E com quem encosta nele (ReconnectForeignBorder) - o mesmo padrao
+			// de PaintBlockAndReconnect (colocar bloco).
 			var biomeGroups = new Dictionary<int, List<Vector2I>>();
 
 			foreach (var neighbor in neighbors)
@@ -1217,17 +1212,10 @@ namespace Jogo25D.Systems
 
 			foreach (var group in biomeGroups)
 			{
-				var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+				layer.Connect(group.Value, group.Key);
+				layer.ReconnectForeignBorder(group.Value, group.Key);
 
-				if (biomeDef == null)
-				{
-					continue;
-				}
-
-				BiomeTerrainConnector.Connect(layer, group.Value, biomeDef);
-				BiomeTerrainConnector.ReconnectForeignBorder(layer, group.Value, biomeDef);
-
-				foreach (var foreignCell in BiomeTerrainConnector.GetForeignNeighborCells(layer, group.Value, biomeDef.TerrainSet))
+				foreach (var foreignCell in layer.GetForeignNeighborCells(group.Value, group.Key))
 				{
 					touchedCells.Add(foreignCell);
 				}
@@ -1237,7 +1225,7 @@ namespace Jogo25D.Systems
 
 			if (expandedNeighbors.Count > 0)
 			{
-				BiomeTerrainConnector.ReconnectExistingCells(layer, expandedNeighbors);
+				layer.ReconnectExistingCells(expandedNeighbors);
 			}
 
 			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
@@ -1253,7 +1241,7 @@ namespace Jogo25D.Systems
 			RepaintBaseLayerForCells(layer, baseLayer, expandedNeighbors);
 		}
 
-		private void PaintBlockAndReconnect(TileMapLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
+		private void PaintBlockAndReconnect(TerrainLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
 		{
 			if (layer.TileSet == null || layer.TileSet.GetTerrainSetsCount() <= 0)
 			{
@@ -1277,23 +1265,23 @@ namespace Jogo25D.Systems
 				}
 			}
 
-			BiomeTerrainConnector.Connect(layer, sameBiomeCells, biomeDef);
-			BiomeTerrainConnector.ReconnectForeignBorder(layer, sameBiomeCells, biomeDef);
+			layer.Connect(sameBiomeCells, biomeDef.TerrainSet);
+			layer.ReconnectForeignBorder(sameBiomeCells, biomeDef.TerrainSet);
 
-			var foreignCells = BiomeTerrainConnector.GetForeignNeighborCells(layer, sameBiomeCells, biomeDef.TerrainSet);
+			var foreignCells = layer.GetForeignNeighborCells(sameBiomeCells, biomeDef.TerrainSet);
 
 			var expandedForeignCells = GetExpandedNeighborCells(layer, foreignCells);
 
 			if (expandedForeignCells.Count > 0)
 			{
-				BiomeTerrainConnector.ReconnectExistingCells(layer, expandedForeignCells);
+				layer.ReconnectExistingCells(expandedForeignCells);
 			}
 
 			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
 
 			if (borderCapLayer != null)
 			{
-				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, sameBiomeCells, biomeDef);
+				borderCapLayer.PaintBorderCap(layer, sameBiomeCells, biomeDef.TerrainSet, biomeDef.BorderCapTerrainSet);
 				RepaintBorderCapForCells(layer, borderCapLayer, expandedForeignCells);
 			}
 
@@ -1301,15 +1289,15 @@ namespace Jogo25D.Systems
 
 			if (baseLayer != null)
 			{
-				BiomeTerrainConnector.ConnectBase(baseLayer, layer, sameBiomeCells, biomeDef);
+				baseLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BaseTerrainSet);
 				RepaintBaseLayerForCells(layer, baseLayer, expandedForeignCells);
 			}
 		}
 
-		// Reconecta a camada BASE (ver BiomeTerrainConnector.ConnectBase) das celulas passadas -
+		// Reconecta a camada BASE (ver TerrainLayer.ConnectDependent) das celulas passadas -
 		// usado depois de quebrar/colocar bloco perto de uma fronteira, pra manter a base
 		// consistente sem precisar repintar o chunk inteiro.
-		private void RepaintBaseLayerForCells(TileMapLayer layer, TileMapLayer baseLayer, IEnumerable<Vector2I> cells)
+		private void RepaintBaseLayerForCells(TileMapLayer layer, TerrainLayer baseLayer, IEnumerable<Vector2I> cells)
 		{
 			if (baseLayer == null)
 			{
@@ -1352,15 +1340,15 @@ namespace Jogo25D.Systems
 					continue;
 				}
 
-				BiomeTerrainConnector.ConnectBase(baseLayer, layer, group.Value, biomeDef);
+				baseLayer.ConnectDependent(layer, group.Value, biomeDef.BaseTerrainSet);
 			}
 		}
 
-		// Reconecta o BorderCap (camada separada, ver BiomeTerrainConnector.PaintBorderCap) das
-		// celulas passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado
-		// depois de quebrar/colocar bloco perto de uma fronteira, pra manter a variante
-		// consistente sem precisar repintar o chunk inteiro.
-		private void RepaintBorderCapForCells(TileMapLayer layer, TileMapLayer borderCapLayer, IEnumerable<Vector2I> cells)
+		// Reconecta o BorderCap (camada separada, ver TerrainLayer.PaintBorderCap) das celulas
+		// passadas, agrupando por bioma (le o TerrainSet de "layer", o chao) - usado depois de
+		// quebrar/colocar bloco perto de uma fronteira, pra manter a variante consistente sem
+		// precisar repintar o chunk inteiro.
+		private void RepaintBorderCapForCells(TileMapLayer layer, TerrainLayer borderCapLayer, IEnumerable<Vector2I> cells)
 		{
 			if (borderCapLayer == null)
 			{
@@ -1401,7 +1389,7 @@ namespace Jogo25D.Systems
 					continue;
 				}
 
-				BiomeTerrainConnector.PaintBorderCap(borderCapLayer, layer, group.Value, biomeDef);
+				borderCapLayer.PaintBorderCap(layer, group.Value, biomeDef.TerrainSet, biomeDef.BorderCapTerrainSet);
 			}
 		}
 

@@ -12,6 +12,5 @@ namespace Jogo25D.Constants
         public const string PROCEDURAL_LAYER_NAME = "Texture";
         public const string PROCEDURAL_BORDER_CAP_LAYER_NAME = "Bordercap";
         public const string PROCEDURAL_BASE_LAYER_NAME = "Base";
-        public const string PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME = "BiomeConnectionGraph";
     }
 }

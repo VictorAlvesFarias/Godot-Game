@@ -9,7 +9,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public static void Paint(TileMapLayer target, TileMapLayer borderCapTarget, TileMapLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        public static void Paint(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
             var baseCellX = chunkCoord.X * chunkSize;
@@ -83,24 +83,24 @@ namespace Jogo25D.Chunks
                 // precipicio de um lado so.
                 foreach (var group in biomeGroups)
                 {
-                    BiomeTerrainConnector.Connect(target, group.Cells, group.BiomeDef);
+                    target.Connect(group.Cells, group.BiomeDef.TerrainSet);
                 }
 
                 foreach (var group in biomeGroups)
                 {
-                    BiomeTerrainConnector.ReconnectForeignBorder(target, group.Cells, group.BiomeDef);
+                    target.ReconnectForeignBorder(group.Cells, group.BiomeDef.TerrainSet);
                 }
 
                 if (baseTarget != null)
                 {
                     foreach (var group in biomeGroups)
                     {
-                        BiomeTerrainConnector.ConnectBase(baseTarget, target, group.Cells, group.BiomeDef);
+                        baseTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet);
                     }
 
                     foreach (var group in biomeGroups)
                     {
-                        BiomeTerrainConnector.ReconnectForeignBaseBorder(baseTarget, target, group.Cells, group.BiomeDef);
+                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet);
                     }
                 }
 
@@ -108,7 +108,7 @@ namespace Jogo25D.Chunks
                 {
                     foreach (var group in biomeGroups)
                     {
-                        BiomeTerrainConnector.PaintBorderCap(borderCapTarget, target, group.Cells, group.BiomeDef);
+                        borderCapTarget.PaintBorderCap(target, group.Cells, group.BiomeDef.TerrainSet, group.BiomeDef.BorderCapTerrainSet);
                     }
                 }
 

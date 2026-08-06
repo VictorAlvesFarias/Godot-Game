@@ -724,7 +724,7 @@ namespace Jogo25D.Characters
 		{
 			var parent = GetParent();
 
-			return parent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.TextureLayer;
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 		}
 
 		#endregion
