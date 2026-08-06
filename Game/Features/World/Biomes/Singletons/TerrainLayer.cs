@@ -76,6 +76,7 @@ namespace Jogo25D.Biomes
         public override void _Ready()
         {
             BuildTerrainMap();
+            RedrawDebugOverlay();
         }
 
         // Hook oficial do proprio TileMapLayer - chamado pelo Godot toda vez que celulas
@@ -142,6 +143,8 @@ namespace Jogo25D.Biomes
             {
                 _isRecalculating = false;
             }
+
+            RedrawDebugOverlay();
         }
 
         // Varre o TileSet inteiro uma vez e guarda, pra cada terrain_set encontrado, UM atlas
@@ -193,6 +196,157 @@ namespace Jogo25D.Biomes
 
         #endregion
 
+        #region Debug - desenho do mapeamento de terreno
+
+        // Toggle no Inspector - desenha por cima de cada celula pintada o mesmo mapeamento de
+        // peering bits que a aba Terrains do TileSet mostra pra cada tile. Serve pra ver de cara
+        // se duas celulas vizinhas de camadas/biomas diferentes estao realmente com o terrain_set
+        // e a conectividade que voce espera, sem precisar abrir o TileSet e procurar o atlas
+        // coord manualmente.
+        [Export]
+        public bool ShowTerrainSetDebug
+        {
+            get => _showTerrainSetDebug;
+            set
+            {
+                _showTerrainSetDebug = value;
+                RedrawDebugOverlay();
+            }
+        }
+
+        private bool _showTerrainSetDebug;
+        private DebugOverlay _debugOverlay;
+
+        // As 9 sub-regioes de uma celula (grade 3x3), na mesma disposicao que a aba Terrains do
+        // TileSet usa pra mostrar quais peering bits um tile tem marcados - o meio (Vector2I(1,1))
+        // nao e um peering bit de verdade, e so preenchido sempre que a celula tem terreno, pra
+        // fechar o desenho visualmente igual ao editor nativo.
+        private static readonly (TileSet.CellNeighbor Bit, Vector2I GridPos)[] PeeringBitGrid = new[]
+        {
+            (TileSet.CellNeighbor.TopLeftCorner, new Vector2I(0, 0)),
+            (TileSet.CellNeighbor.TopSide, new Vector2I(1, 0)),
+            (TileSet.CellNeighbor.TopRightCorner, new Vector2I(2, 0)),
+            (TileSet.CellNeighbor.LeftSide, new Vector2I(0, 1)),
+            (TileSet.CellNeighbor.RightSide, new Vector2I(2, 1)),
+            (TileSet.CellNeighbor.BottomLeftCorner, new Vector2I(0, 2)),
+            (TileSet.CellNeighbor.BottomSide, new Vector2I(1, 2)),
+            (TileSet.CellNeighbor.BottomRightCorner, new Vector2I(2, 2)),
+        };
+
+        // O overlay de debug NAO desenha direto nessa TileMapLayer (via _Draw() dela) porque
+        // Base/Bordercap sao desenhadas ANTES das camadas irmas seguintes na arvore (Bordercap e
+        // Texture) - o proprio _Draw() delas ficaria escondido atras dos tiles das camadas
+        // desenhadas depois. Em vez disso usa um child Node2D dedicado com ZIndex bem alto e
+        // ZAsRelative=false, garantindo que fica por cima de QUALQUER outra camada da cena,
+        // independente da ordem na arvore.
+        private void RedrawDebugOverlay()
+        {
+            if (!_showTerrainSetDebug)
+            {
+                _debugOverlay?.QueueRedraw();
+
+                return;
+            }
+
+            if (_debugOverlay == null || !IsInstanceValid(_debugOverlay))
+            {
+                _debugOverlay = new DebugOverlay
+                {
+                    Name = "__TerrainSetDebugOverlay",
+                    TerrainLayerOwner = this,
+                    ZIndex = 4096,
+                    ZAsRelative = false,
+                };
+
+                AddChild(_debugOverlay);
+            }
+
+            _debugOverlay.QueueRedraw();
+        }
+
+        // Desenha, em cima de cada celula pintada, o mesmo mapeamento de peering bits que a aba
+        // Terrains do TileSet mostra pra cada tile (qual canto/lado esta marcado como parte do
+        // terreno) - mas direto no mapa, sobre a celula de verdade, em vez de precisar abrir o
+        // TileSet e procurar o atlas coord manualmente. Chamado pelo DebugOverlay filho (ver
+        // RedrawDebugOverlay) - "target" recebe os DrawXxx pra ficar no ZIndex alto do overlay,
+        // nao no ZIndex normal dessa camada.
+        private void DrawTerrainSetDebug(CanvasItem target)
+        {
+            var tileSize = TileSet?.TileSize ?? new Vector2I(32, 32);
+            var subSize = new Vector2(tileSize.X / 3f, tileSize.Y / 3f);
+            var font = ThemeDB.FallbackFont;
+
+            foreach (var cell in GetUsedCells())
+            {
+                var tileData = GetCellTileData(cell);
+
+                if (tileData == null)
+                {
+                    continue;
+                }
+
+                var terrainSet = tileData.TerrainSet;
+                var color = ColorForTerrainSet(terrainSet);
+                var topLeft = MapToLocal(cell) - new Vector2(tileSize.X / 2f, tileSize.Y / 2f);
+                var cellRect = new Rect2(topLeft, tileSize);
+
+                // Meio - representa o terreno em si (sempre preenchido, nao e peering bit).
+                target.DrawRect(new Rect2(topLeft + subSize, subSize), color with { A = 0.6f }, filled: true);
+
+                foreach (var (bit, gridPos) in PeeringBitGrid)
+                {
+                    if (tileData.GetTerrainPeeringBit(bit) < 0)
+                    {
+                        continue;
+                    }
+
+                    var subTopLeft = topLeft + new Vector2(gridPos.X * subSize.X, gridPos.Y * subSize.Y);
+
+                    target.DrawRect(new Rect2(subTopLeft, subSize), color with { A = 0.6f }, filled: true);
+                }
+
+                // Grade 3x3 fina por cima, igual ao preview do editor, so pra separar visualmente
+                // as sub-regioes.
+                for (int i = 1; i < 3; i++)
+                {
+                    target.DrawLine(topLeft + new Vector2(subSize.X * i, 0), topLeft + new Vector2(subSize.X * i, tileSize.Y), Colors.Black with { A = 0.4f }, 1f);
+                    target.DrawLine(topLeft + new Vector2(0, subSize.Y * i), topLeft + new Vector2(tileSize.X, subSize.Y * i), Colors.Black with { A = 0.4f }, 1f);
+                }
+
+                target.DrawRect(cellRect, color, filled: false, width: 1.5f);
+                target.DrawString(font, topLeft + new Vector2(2, 11), terrainSet.ToString(), HorizontalAlignment.Left, -1, 11, Colors.White);
+            }
+        }
+
+        // Cor deterministica (sempre a mesma pro mesmo terrain_set) espalhada pela roda de matiz
+        // usando a razao aurea, pra terrain_set vizinhos (0/1, 4/5...) nao ficarem com cores
+        // parecidas por acaso.
+        private static Color ColorForTerrainSet(int terrainSet)
+        {
+            var hue = (terrainSet * 0.6180339887f) % 1f;
+
+            return Color.FromHsv(hue, 0.75f, 1f);
+        }
+
+        // Node2D auxiliar minimo - so existe pra ter seu proprio ZIndex absoluto acima de tudo.
+        // Sem posicao/escala propria (fica exatamente sobreposto ao pai), entao as coordenadas
+        // calculadas via MapToLocal() do pai (TerrainLayer) valem direto aqui tambem.
+        [Tool]
+        private partial class DebugOverlay : Node2D
+        {
+            public TerrainLayer TerrainLayerOwner { get; set; }
+
+            public override void _Draw()
+            {
+                if (TerrainLayerOwner != null && TerrainLayerOwner._showTerrainSetDebug)
+                {
+                    TerrainLayerOwner.DrawTerrainSetDebug(this);
+                }
+            }
+        }
+
+        #endregion
+
         #region Conexao
 
         // Conecta "cells" (todas do mesmo terrain_set) com o autotile - vizinhos solidos de OUTRO
@@ -234,6 +388,7 @@ namespace Jogo25D.Biomes
             }
 
             SetCellsTerrainConnect(cellsArray, terrainSet, 0, false);
+            RedrawDebugOverlay();
 
             foreach (var entry in disguisedNeighbors)
             {
