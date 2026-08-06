@@ -314,7 +314,12 @@ namespace Jogo25D.Biomes
                 }
 
                 target.DrawRect(cellRect, color, filled: false, width: 1.5f);
+
+                var sourceId = GetCellSourceId(cell);
+                var atlasCoord = GetCellAtlasCoords(cell);
+
                 target.DrawString(font, topLeft + new Vector2(2, 11), terrainSet.ToString(), HorizontalAlignment.Left, -1, 11, Colors.White);
+                target.DrawString(font, topLeft + new Vector2(2, tileSize.Y - 3), $"{sourceId}:{atlasCoord.X},{atlasCoord.Y}", HorizontalAlignment.Left, -1, 9, Colors.White);
             }
         }
 
