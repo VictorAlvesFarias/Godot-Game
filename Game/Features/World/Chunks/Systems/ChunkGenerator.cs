@@ -95,7 +95,12 @@ namespace Jogo25D.Chunks
                 {
                     foreach (var group in biomeGroups)
                     {
-                        BiomeTerrainConnector.PaintBaseLayer(baseTarget, target, group.Cells, group.BiomeDef);
+                        BiomeTerrainConnector.ConnectBase(baseTarget, target, group.Cells, group.BiomeDef);
+                    }
+
+                    foreach (var group in biomeGroups)
+                    {
+                        BiomeTerrainConnector.ReconnectForeignBaseBorder(baseTarget, target, group.Cells, group.BiomeDef);
                     }
                 }
 

@@ -19,6 +19,40 @@ namespace Jogo25D.Biomes
         // os vizinhos disfarcados voltam ao tile real deles.
         public static void Connect(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
         {
+            ConnectTerrain(layer, cells, biomeDef, biomeDef.TerrainSet, biomeDef.InteriorSourceId, BiomeDB.GetByTerrainSet);
+        }
+
+        // Mesma logica do Connect(), mas pro terrain_set da camada BASE (biomeDef.BaseTerrainSet)
+        // em vez do terrain_set do chao. "baseLayer" so conecta as celulas que ainda estao
+        // solidas em "groundLayer" - qualquer celula que ja tenha sido apagada la vira vazia
+        // aqui tambem (senao a base ficaria "flutuando" sem chao por cima).
+        public static void ConnectBase(TileMapLayer baseLayer, TileMapLayer groundLayer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
+        {
+            var activeCells = new List<Vector2I>();
+
+            foreach (var cell in cells)
+            {
+                if (groundLayer.GetCellSourceId(cell) == -1)
+                {
+                    baseLayer.SetCell(cell, -1);
+
+                    continue;
+                }
+
+                activeCells.Add(cell);
+            }
+
+            ConnectTerrain(baseLayer, activeCells, biomeDef, biomeDef.BaseTerrainSet, biomeDef.BaseSourceId, BiomeDB.GetByBaseTerrainSet);
+        }
+
+        // Nucleo comum do Connect()/ConnectBase() - qual terrain_set usar e como resolver o
+        // BiomeDefinition de um vizinho estrangeiro variam (chao usa TerrainSet/GetByTerrainSet,
+        // base usa BaseTerrainSet/GetByBaseTerrainSet), mas o disfarce-conecta-desfaz e o mesmo
+        // pros dois, e a regra de conexao (BiomeConnectionGraph.AreConnected) e por BIOMA, nao
+        // por terrain_set - entao chao e base do mesmo par de biomas sempre concordam se
+        // conectam ou nao.
+        private static void ConnectTerrain(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef, int layerTerrainSet, int disguiseSourceId, System.Func<int, BiomeDefinition> resolveForeignBiome)
+        {
             if (cells.Count == 0)
             {
                 return;
@@ -26,12 +60,12 @@ namespace Jogo25D.Biomes
 
             var graph = ResolveConnectionGraph(layer);
             var cellSet = new HashSet<Vector2I>(cells);
-            var foreignNeighbors = CollectForeignNeighbors(layer, cellSet, biomeDef.TerrainSet);
+            var foreignNeighbors = CollectForeignNeighbors(layer, cellSet, layerTerrainSet);
             var disguisedNeighbors = new List<ForeignCellInfo>();
 
             foreach (var entry in foreignNeighbors)
             {
-                var foreignBiomeDef = BiomeDB.GetByTerrainSet(entry.TerrainSet);
+                var foreignBiomeDef = resolveForeignBiome(entry.TerrainSet);
 
                 if (foreignBiomeDef == null || graph == null || !graph.AreConnected(biomeDef.Type, foreignBiomeDef.Type))
                 {
@@ -39,7 +73,7 @@ namespace Jogo25D.Biomes
                 }
 
                 disguisedNeighbors.Add(entry);
-                layer.SetCell(entry.Cell, biomeDef.InteriorSourceId, biomeDef.InteriorAtlasCoord);
+                layer.SetCell(entry.Cell, disguiseSourceId, biomeDef.InteriorAtlasCoord);
             }
 
             var cellsArray = new Godot.Collections.Array<Vector2I>();
@@ -49,7 +83,7 @@ namespace Jogo25D.Biomes
                 cellsArray.Add(cell);
             }
 
-            layer.SetCellsTerrainConnect(cellsArray, biomeDef.TerrainSet, 0, false);
+            layer.SetCellsTerrainConnect(cellsArray, layerTerrainSet, 0, false);
 
             foreach (var entry in disguisedNeighbors)
             {
@@ -57,7 +91,7 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // "layer" (camada de textura/chao) e sempre filha direta do BiomeConnectionGraph da
+        // "layer" (camada de textura/chao/base) e sempre filha direta do BiomeConnectionGraph da
         // dimensao dela agora, entao basta subir um nivel - nao precisa de NodePath fixo.
         private static BiomeConnectionGraph ResolveConnectionGraph(TileMapLayer layer)
         {
@@ -69,8 +103,39 @@ namespace Jogo25D.Biomes
         // solido temporario. Assim os dois lados da fronteira ficam com a borda correta.
         public static void ReconnectForeignBorder(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
         {
+            foreach (var group in GroupForeignNeighborsByTerrainSet(layer, cells, biomeDef.TerrainSet))
+            {
+                var foreignBiomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+                if (foreignBiomeDef == null)
+                {
+                    continue;
+                }
+
+                Connect(layer, group.Value, foreignBiomeDef);
+            }
+        }
+
+        // Mesma ideia do ReconnectForeignBorder(), so que pra camada BASE.
+        public static void ReconnectForeignBaseBorder(TileMapLayer baseLayer, TileMapLayer groundLayer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
+        {
+            foreach (var group in GroupForeignNeighborsByTerrainSet(baseLayer, cells, biomeDef.BaseTerrainSet))
+            {
+                var foreignBiomeDef = BiomeDB.GetByBaseTerrainSet(group.Key);
+
+                if (foreignBiomeDef == null)
+                {
+                    continue;
+                }
+
+                ConnectBase(baseLayer, groundLayer, group.Value, foreignBiomeDef);
+            }
+        }
+
+        private static Dictionary<int, List<Vector2I>> GroupForeignNeighborsByTerrainSet(TileMapLayer layer, IReadOnlyCollection<Vector2I> cells, int terrainSet)
+        {
             var cellSet = new HashSet<Vector2I>(cells);
-            var foreignNeighbors = CollectForeignNeighbors(layer, cellSet, biomeDef.TerrainSet);
+            var foreignNeighbors = CollectForeignNeighbors(layer, cellSet, terrainSet);
             var groups = new Dictionary<int, List<Vector2I>>();
 
             foreach (var entry in foreignNeighbors)
@@ -84,17 +149,7 @@ namespace Jogo25D.Biomes
                 group.Add(entry.Cell);
             }
 
-            foreach (var group in groups)
-            {
-                var foreignBiomeDef = BiomeDB.GetByTerrainSet(group.Key);
-
-                if (foreignBiomeDef == null)
-                {
-                    continue;
-                }
-
-                Connect(layer, group.Value, foreignBiomeDef);
-            }
+            return groups;
         }
 
         // Reconecta cada celula com o bioma que ela JA tem (le o TerrainSet do tile atual),
@@ -140,29 +195,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-
-        // Espelha, numa camada SEPARADA por BAIXO do chao, o mesmo atlas coord que o chao ja
-        // resolveu pra cada celula - a textura "_base" tem exatamente a mesma grade/formato da
-        // textura de chao normal, so que preenchida solida (a textura de chao em si agora tem o
-        // centro vazado, deixando a base aparecer por baixo). Mesmo comportamento de sempre,
-        // simplesmente dividido em duas camadas.
-        public static void PaintBaseLayer(TileMapLayer baseLayer, TileMapLayer groundLayer, IReadOnlyCollection<Vector2I> cells, BiomeDefinition biomeDef)
-        {
-            foreach (var cell in cells)
-            {
-                if (groundLayer.GetCellSourceId(cell) == -1)
-                {
-                    baseLayer.SetCell(cell, -1);
-                    continue;
-                }
-
-                var atlasCoord = groundLayer.GetCellAtlasCoords(cell);
-                var alternativeId = groundLayer.GetCellAlternativeTile(cell);
-
-                baseLayer.SetCell(cell, biomeDef.BaseSourceId, atlasCoord, alternativeId);
-            }
-        }
-
         // Pinta a variante BorderCap numa camada SEPARADA (por cima do chao, nunca substitui a
         // celula original) - so nas celulas de "cells" que encostam (8 direcoes) em algum tile
         // de OUTRO bioma no chao. A variante usa um terrain_set PROPRIO e exclusivo (nao o mesmo
@@ -178,7 +210,7 @@ namespace Jogo25D.Biomes
             {
                 overlayLayer.SetCell(cell, -1);
 
-                if (TouchesForeignBiome(groundLayer, cell, biomeDef.TerrainSet))
+                if (TouchesForeignBiome(groundLayer, cell, biomeDef))
                 {
                     junctionCells.Add(cell);
                     junctionSet.Add(cell);
@@ -253,8 +285,14 @@ namespace Jogo25D.Biomes
             }
         }
 
-        private static bool TouchesForeignBiome(TileMapLayer layer, Vector2I cell, int terrainSet)
+        // "Fronteira de verdade" pra fins de BorderCap so conta se o vizinho for de um
+        // terrain_set DIFERENTE *e* os dois biomas NAO estiverem marcados como conectados no
+        // BiomeConnectionGraph - senao o BorderCap desenharia uma borda decorativa bem em cima de
+        // uma costura que o Connect() ja deixa lisa entre dois biomas conectados.
+        private static bool TouchesForeignBiome(TileMapLayer layer, Vector2I cell, BiomeDefinition biomeDef)
         {
+            var graph = ResolveConnectionGraph(layer);
+
             foreach (var offset in NeighborOffsets)
             {
                 var neighbor = cell + offset;
@@ -266,10 +304,19 @@ namespace Jogo25D.Biomes
 
                 var neighborTileData = layer.GetCellTileData(neighbor);
 
-                if (neighborTileData != null && neighborTileData.TerrainSet != terrainSet)
+                if (neighborTileData == null || neighborTileData.TerrainSet == biomeDef.TerrainSet)
                 {
-                    return true;
+                    continue;
                 }
+
+                var foreignBiomeDef = BiomeDB.GetByTerrainSet(neighborTileData.TerrainSet);
+
+                if (foreignBiomeDef != null && graph != null && graph.AreConnected(biomeDef.Type, foreignBiomeDef.Type))
+                {
+                    continue;
+                }
+
+                return true;
             }
 
             return false;

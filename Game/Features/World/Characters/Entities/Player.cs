@@ -1,5 +1,6 @@
 ﻿using Godot;
 using Jogo25D.Actions;
+using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
@@ -722,10 +723,8 @@ namespace Jogo25D.Characters
 		public TileMapLayer GetActiveTileLayer()
 		{
 			var parent = GetParent();
-			var handAuthoredName = GetActiveDimensionId() == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
-			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
-				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
+			return parent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.TextureLayer;
 		}
 
 		#endregion

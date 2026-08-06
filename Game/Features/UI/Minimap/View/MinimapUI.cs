@@ -103,9 +103,19 @@ namespace Jogo25D.UI
 
         public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
         {
-            if (node is TileMapLayer layer && IsInstanceValid(layer) && layer.GetParent().GetParent().GetParent<SubViewportContainer>().Visible)
+            if (node is TileMapLayer layer && IsInstanceValid(layer))
             {
-                DrawTileMapLayer(layer, playerPos, center, scale);
+                // Nem todo TileMapLayer da arvore fica embaixo de um SubViewportContainer (ex.:
+                // um layer direto na raiz da dimensao) - GetParent<T>() do proprio Godot lanca
+                // InvalidCastException se o ancestral nesse nivel nao for do tipo pedido, entao
+                // usa GetParentOrNull e so desenha se o container realmente existir e existir e
+                // estiver visivel.
+                var container = layer.GetParent()?.GetParent()?.GetParentOrNull<SubViewportContainer>();
+
+                if (container != null && container.Visible)
+                {
+                    DrawTileMapLayer(layer, playerPos, center, scale);
+                }
             }
 
             foreach (Node child in node.GetChildren())

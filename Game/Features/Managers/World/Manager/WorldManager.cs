@@ -192,7 +192,7 @@ namespace Jogo25D.Systems
 
 			SpawnWorld();
 
-			ClearHandAuthoredTiles();
+			ClearWorldLayers();
 
 			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
@@ -223,16 +223,20 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-		private void ClearHandAuthoredTiles()
+		// As camadas Base/Bordercap/Texture do BiomeConnectionGraph sao REUTILIZADAS pela
+		// geracao procedural (nunca recriadas) - qualquer tile de teste pintado no editor precisa
+		// ser apagado aqui antes de gerar um mundo novo, senao sobreviveria misturado com o
+		// mundo gerado.
+		private void ClearWorldLayers()
 		{
-			OverworldParent?.GetNodeOrNull<TileMapLayer>("Overworld-Tiles")?.Clear();
-			UpsidedownParent?.GetNodeOrNull<TileMapLayer>("Upsidedown-Tiles")?.Clear();
+			OverworldParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.ClearLayers();
+			UpsidedownParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.ClearLayers();
 		}
 
 		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ClearHandAuthoredTilesReceive()
+		public void ClearWorldLayersReceive()
 		{
-			ClearHandAuthoredTiles();
+			ClearWorldLayers();
 		}
 
 		private void SetChunkStreamingEnabled(bool enabled)
@@ -271,7 +275,7 @@ namespace Jogo25D.Systems
 
 		private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
 		{
-			var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles");
+			var layer = dimensionParent?.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME)?.TextureLayer;
 
 			if (layer == null)
 			{
@@ -597,7 +601,7 @@ namespace Jogo25D.Systems
 
 				player.Position = FindGroundSpawnPosition(UpsidedownParent, player.Position.X);
 
-				RpcId(id, nameof(ClearHandAuthoredTilesReceive));
+				RpcId(id, nameof(ClearWorldLayersReceive));
 			}
 
 			chunkStreamingManager?.CatchUpPeer(id);
@@ -905,11 +909,7 @@ namespace Jogo25D.Systems
 
 		private TileMapLayer ResolveDimensionLayer(string dimensionId)
 		{
-			var parent = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
-			var handAuthoredName = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? "Overworld-Tiles" : "Upsidedown-Tiles";
-
-			return ResolveDimensionBiomeGraph(dimensionId)?.TextureLayer
-				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
+			return ResolveDimensionBiomeGraph(dimensionId)?.TextureLayer;
 		}
 
 		private TileMapLayer ResolveDimensionBorderCapLayer(string dimensionId)
@@ -1301,12 +1301,12 @@ namespace Jogo25D.Systems
 
 			if (baseLayer != null)
 			{
-				BiomeTerrainConnector.PaintBaseLayer(baseLayer, layer, sameBiomeCells, biomeDef);
+				BiomeTerrainConnector.ConnectBase(baseLayer, layer, sameBiomeCells, biomeDef);
 				RepaintBaseLayerForCells(layer, baseLayer, expandedForeignCells);
 			}
 		}
 
-		// Espelha a camada BASE (ver BiomeTerrainConnector.PaintBaseLayer) das celulas passadas -
+		// Reconecta a camada BASE (ver BiomeTerrainConnector.ConnectBase) das celulas passadas -
 		// usado depois de quebrar/colocar bloco perto de uma fronteira, pra manter a base
 		// consistente sem precisar repintar o chunk inteiro.
 		private void RepaintBaseLayerForCells(TileMapLayer layer, TileMapLayer baseLayer, IEnumerable<Vector2I> cells)
@@ -1352,7 +1352,7 @@ namespace Jogo25D.Systems
 					continue;
 				}
 
-				BiomeTerrainConnector.PaintBaseLayer(baseLayer, layer, group.Value, biomeDef);
+				BiomeTerrainConnector.ConnectBase(baseLayer, layer, group.Value, biomeDef);
 			}
 		}
 

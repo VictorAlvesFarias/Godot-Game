@@ -9,9 +9,9 @@ namespace Jogo25D.Constants
         public const float EVALUATE_INTERVAL_SECONDS = 0.75f;
         public const string OVERWORLD_ID = "overworld";
         public const string UPSIDEDOWN_ID = "upsidedown";
-        public const string PROCEDURAL_LAYER_NAME = "ProceduralTiles";
-        public const string PROCEDURAL_BORDER_CAP_LAYER_NAME = "ProceduralBorderCap";
-        public const string PROCEDURAL_BASE_LAYER_NAME = "ProceduralTilesBase";
+        public const string PROCEDURAL_LAYER_NAME = "Texture";
+        public const string PROCEDURAL_BORDER_CAP_LAYER_NAME = "Bordercap";
+        public const string PROCEDURAL_BASE_LAYER_NAME = "Base";
         public const string PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME = "BiomeConnectionGraph";
     }
 }

@@ -372,11 +372,12 @@ namespace Jogo25D.Chunks
             }
 
             // O BiomeConnectionGraph centraliza as regras de conexao entre biomas E guarda as 3
-            // camadas como FILHAS DE VERDADE dele (nao so uma referencia em C#) - uma instancia
-            // por dimensao, ja pre-autorada nas cenas Overworld.tscn/Upsidedown.tscn (assim da
-            // pra ver/editar as regras no Inspector sem precisar rodar o jogo). So cria uma nova
-            // por codigo se por algum motivo ela nao existir na cena. Ordem de desenho dentro
-            // dele (irmas mais antigas ficam embaixo): Base -> BorderCap -> Texture (chao).
+            // camadas (Base -> BorderCap -> Texture, irmas mais antigas ficam embaixo) como
+            // FILHAS DE VERDADE dele - ja pre-autoradas nas cenas Overworld.tscn/Upsidedown.tscn
+            // (da pra ver/editar as regras e pintar de teste no Inspector sem rodar o jogo). Por
+            // isso REUTILIZA as 3 camadas que ja existem na cena em vez de criar novas por cima -
+            // EnsureLayers() so cria as que faltarem, como rede de seguranca caso o node tenha
+            // sido criado dinamicamente (nao deveria acontecer no fluxo normal).
             var biomeGraph = dimensionParent.GetNodeOrNull<BiomeConnectionGraph>(ChunkStreamingConstants.PROCEDURAL_BIOME_CONNECTION_GRAPH_NAME);
 
             if (biomeGraph == null)
@@ -389,54 +390,21 @@ namespace Jogo25D.Chunks
                 dimensionParent.AddChild(biomeGraph);
             }
 
-            // Camada BASE: preenchimento solido que o chao (agora com o centro vazado, so a
-            // borda/detalhe) deixa aparecer por baixo. Mesmo formato/atlas coord do chao sempre
-            // (ver BiomeTerrainConnector.PaintBaseLayer), so textura diferente.
-            var baseLayer = new TileMapLayer
-            {
-                Name = ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME,
-                TileSet = ChunkGenerator.GetTileSet(),
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-            };
+            biomeGraph.EnsureLayers(ChunkGenerator.GetTileSet());
 
-            biomeGraph.AddChild(baseLayer);
-
-            // Camada de BorderCap: nao substitui o tile do chao, so desenha a variante nas
-            // celulas que estao na linha de juncao com outro bioma (ver
-            // BiomeTerrainConnector.PaintBorderCap).
-            var borderCapLayer = new TileMapLayer
-            {
-                Name = ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME,
-                TileSet = ChunkGenerator.GetTileSet(),
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-            };
-
-            biomeGraph.AddChild(borderCapLayer);
-
-            var layer = new TileMapLayer
-            {
-                Name = ChunkStreamingConstants.PROCEDURAL_LAYER_NAME,
-                TileSet = ChunkGenerator.GetTileSet(),
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-            };
-
-            biomeGraph.AddChild(layer);
-
-            biomeGraph.BaseLayer = baseLayer;
-            biomeGraph.BorderCapLayer = borderCapLayer;
-            biomeGraph.TextureLayer = layer;
+            var layer = biomeGraph.TextureLayer;
 
             if (dimensionId == ChunkStreamingConstants.OVERWORLD_ID)
             {
                 OverworldLayer = layer;
-                OverworldBorderCapLayer = borderCapLayer;
-                OverworldBaseLayer = baseLayer;
+                OverworldBorderCapLayer = biomeGraph.BorderCapLayer;
+                OverworldBaseLayer = biomeGraph.BaseLayer;
             }
             else
             {
                 UpsidedownLayer = layer;
-                UpsidedownBorderCapLayer = borderCapLayer;
-                UpsidedownBaseLayer = baseLayer;
+                UpsidedownBorderCapLayer = biomeGraph.BorderCapLayer;
+                UpsidedownBaseLayer = biomeGraph.BaseLayer;
             }
 
             return layer;

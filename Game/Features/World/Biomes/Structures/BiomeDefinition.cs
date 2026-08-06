@@ -16,6 +16,7 @@ namespace Jogo25D.Biomes
         public int BorderCapSourceId { get; init; }
         public int BorderCapTerrainSet { get; init; }
         public int BaseSourceId { get; init; }
+        public int BaseTerrainSet { get; init; }
 
         #endregion
     }

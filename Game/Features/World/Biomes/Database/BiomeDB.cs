@@ -19,6 +19,7 @@ namespace Jogo25D.Biomes
                 BorderCapSourceId = 9,
                 BorderCapTerrainSet = 2,
                 BaseSourceId = 11,
+                BaseTerrainSet = 4,
             },
             [BiomeType.OliveGround] = new BiomeDefinition
             {
@@ -32,6 +33,7 @@ namespace Jogo25D.Biomes
                 BorderCapSourceId = 10,
                 BorderCapTerrainSet = 3,
                 BaseSourceId = 12,
+                BaseTerrainSet = 5,
             },
         };
 
@@ -45,6 +47,19 @@ namespace Jogo25D.Biomes
             foreach (var definition in _biomes.Values)
             {
                 if (definition.TerrainSet == terrainSet)
+                {
+                    return definition;
+                }
+            }
+
+            return null;
+        }
+
+        public static BiomeDefinition GetByBaseTerrainSet(int baseTerrainSet)
+        {
+            foreach (var definition in _biomes.Values)
+            {
+                if (definition.BaseTerrainSet == baseTerrainSet)
                 {
                     return definition;
                 }
