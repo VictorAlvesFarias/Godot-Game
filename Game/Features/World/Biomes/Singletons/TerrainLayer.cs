@@ -239,7 +239,12 @@ namespace Jogo25D.Biomes
         // desenhadas depois. Em vez disso usa um child Node2D dedicado com ZIndex bem alto e
         // ZAsRelative=false, garantindo que fica por cima de QUALQUER outra camada da cena,
         // independente da ordem na arvore.
-        private void RedrawDebugOverlay()
+        // Publico de proposito: qualquer SetCell feito de FORA da camada (ex.: WorldManager
+        // apagando uma unica celula ao quebrar bloco) nao passa por Connect(), que e onde o
+        // redesenho automatico normalmente acontece - quem faz esse SetCell cru precisa chamar
+        // isso manualmente depois, senao o overlay de debug fica com dado desatualizado (mesmo
+        // que a celula de verdade ja esteja certa).
+        public void RedrawDebugOverlay()
         {
             if (!_showTerrainSetDebug)
             {

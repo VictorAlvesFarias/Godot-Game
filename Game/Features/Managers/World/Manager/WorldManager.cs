@@ -1230,15 +1230,38 @@ namespace Jogo25D.Systems
 
 			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
 
-			borderCapLayer?.SetCell(cell, -1);
+			EraseCellWithTerrainConnect(borderCapLayer, cell);
+			borderCapLayer?.RedrawDebugOverlay();
 
 			RepaintDependentLayerForCells(layer, borderCapLayer, expandedNeighbors, def => def.BorderCapTerrainSet);
 
 			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
-			baseLayer?.SetCell(cell, -1);
+			EraseCellWithTerrainConnect(baseLayer, cell);
+			baseLayer?.RedrawDebugOverlay();
 
 			RepaintDependentLayerForCells(layer, baseLayer, expandedNeighbors, def => def.BaseTerrainSet);
+		}
+
+		// Apaga UMA celula usando SetCellsTerrainConnect (terrain=-1, "essa celula nao tem
+		// terreno nenhum") em vez de um SetCell(cell, -1) cru - le o terrain_set QUE JA ESTAVA
+		// naquela celula NESSA MESMA camada (nunca o de outra camada) e usa ele como segundo
+		// parametro, so pra o Godot saber quais regras de peering bit aplicar ao recalcular. Um
+		// SetCell cru so marca a celula como vazia sem passar pelo sistema de terreno - o
+		// resultado final costuma ser o mesmo, mas SetCellsTerrainConnect e o caminho "oficial"
+		// que o proprio Texture ja usava, entao Base/Bordercap passam a seguir o mesmo padrao.
+		private static void EraseCellWithTerrainConnect(TerrainLayer layer, Vector2I cell)
+		{
+			if (layer == null || layer.GetCellSourceId(cell) == -1)
+			{
+				// Nada pra apagar (ja vazia) - nao ha terrain_set de verdade pra ler aqui, entao
+				// nao ha porque chamar SetCellsTerrainConnect com um valor de fallback arbitrario.
+				return;
+			}
+
+			var terrainSet = layer.GetCellTileData(cell).TerrainSet;
+
+			layer.SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, terrainSet, -1, false);
 		}
 
 		private void PaintBlockAndReconnect(TerrainLayer layer, Vector2I cell, BlockDefinition block, string dimensionId)
@@ -1311,7 +1334,7 @@ namespace Jogo25D.Systems
 			{
 				if (layer.GetCellSourceId(cell) == -1)
 				{
-					dependentLayer.SetCell(cell, -1);
+					EraseCellWithTerrainConnect(dependentLayer, cell);
 
 					continue;
 				}
@@ -1343,6 +1366,14 @@ namespace Jogo25D.Systems
 
 				dependentLayer.ConnectDependent(layer, group.Value, terrainSetSelector(biomeDef));
 			}
+
+			// ConnectDependent() ja redesenha o overlay quando chama Connect() por baixo - mas se
+			// TODAS as celulas passadas cairem no ramo "SetCell(-1) cru" (linha 1316, sem grupo
+			// nenhum pra reconectar - ex.: perto de uma borda onde os vizinhos tambem estao
+			// vazios), nenhum Connect() roda e o overlay fica com dado velho mesmo a celula real
+			// ja estando certa. Redesenha de qualquer forma, garantindo que sempre reflete o
+			// estado atual.
+			dependentLayer.RedrawDebugOverlay();
 		}
 
 		// Amplia um conjunto de celulas pra incluir tambem os vizinhos solidos DELAS (2o grau a
