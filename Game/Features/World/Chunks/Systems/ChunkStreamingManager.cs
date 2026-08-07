@@ -81,20 +81,50 @@ namespace Jogo25D.Chunks
 
             EvaluateTimer = 0f;
 
-            Evaluate(ChunkStreamingConstants.OVERWORLD_ID, WorldManager.OverworldParent, _loadedOverworld, _overworldState, _overworldLoadedPeers);
-            Evaluate(ChunkStreamingConstants.UPSIDEDOWN_ID, WorldManager.UpsidedownParent, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers);
+            // Fire-and-forget guardado por dimensao - Evaluate agora e assincrono (carregar/
+            // descarregar chunk fica espalhado ao longo de varios frames, ver PaintAsync/
+            // EraseAsync), entao pode ainda estar rodando quando o proximo _Process bateria o
+            // intervalo de novo. Sem essa guarda, chamadas se sobrepoem e disputam o mesmo chunk.
+            if (!_isEvaluatingOverworld)
+            {
+                _isEvaluatingOverworld = true;
+
+                _ = EvaluateAsync(ChunkStreamingConstants.OVERWORLD_ID, WorldManager.OverworldParent, _loadedOverworld, _overworldState, _overworldLoadedPeers, () => _isEvaluatingOverworld = false);
+            }
+
+            if (!_isEvaluatingUpsidedown)
+            {
+                _isEvaluatingUpsidedown = true;
+
+                _ = EvaluateAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, WorldManager.UpsidedownParent, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, () => _isEvaluatingUpsidedown = false);
+            }
         }
 
         #endregion
 
         #region Core - Evaluation (load/unload decision)
 
+        private bool _isEvaluatingOverworld;
+        private bool _isEvaluatingUpsidedown;
+
         private bool IsServerAuthoritative()
         {
             return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
         }
 
-        private void Evaluate(string dimensionId, Node2D dimensionParent, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
+        private async Task EvaluateAsync(string dimensionId, Node2D dimensionParent, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, System.Action onDone)
+        {
+            try
+            {
+                await EvaluateCore(dimensionId, dimensionParent, loaded, state, loadedPeers);
+            }
+            finally
+            {
+                onDone();
+            }
+        }
+
+        private async Task EvaluateCore(string dimensionId, Node2D dimensionParent, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
         {
             if (dimensionParent == null)
             {
@@ -143,11 +173,16 @@ namespace Jogo25D.Chunks
                 .OrderBy(c => playerChunks.Min(pc => Mathf.Max(Mathf.Abs(c.X - pc.X), Mathf.Abs(c.Y - pc.Y))))
                 .Take(ChunkStreamingConstants.MAX_CHUNK_LOADS_PER_TICK);
 
-            foreach (var chunkCoord in missing)
+            // Materializa a lista ANTES de comecar a carregar - LoadChunkAsync adiciona em
+            // "loaded" progressivamente, e como estamos num foreach com await no meio, mudar a
+            // colecao-fonte no meio da enumeracao seria fragil.
+            var missingList = missing.ToList();
+
+            foreach (var chunkCoord in missingList)
             {
                 var requestingPeers = neededByPeer.TryGetValue(chunkCoord, out var peers) ? peers : new HashSet<long>();
 
-                LoadChunk(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers, requestingPeers);
+                await LoadChunkAsync(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers, requestingPeers);
             }
 
             var toUnload = new List<Vector2I>();
@@ -169,7 +204,7 @@ namespace Jogo25D.Chunks
 
             foreach (var chunkCoord in toUnload)
             {
-                UnloadChunk(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers);
+                await UnloadChunkAsync(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers);
             }
         }
 
@@ -194,9 +229,7 @@ namespace Jogo25D.Chunks
 
                     if (!loaded.Contains(chunkCoord))
                     {
-                        LoadChunk(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers, new HashSet<long> { ownPeerId });
-
-                        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                        await LoadChunkAsync(dimensionId, dimensionParent, chunkCoord, loaded, state, loadedPeers, new HashSet<long> { ownPeerId });
                     }
                 }
             }
@@ -220,13 +253,18 @@ namespace Jogo25D.Chunks
 
         #region Core - Load/Unload (server-side)
 
-        private void LoadChunk(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
+        private async Task LoadChunkAsync(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
         {
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Paint(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            // Marca como carregado JA, antes de pintar (que agora leva varios frames) - senao um
+            // Evaluate seguinte, batendo enquanto esse chunk ainda esta sendo pintado aos poucos,
+            // veria esse chunk como "faltando" de novo e tentaria carregar duas vezes.
+            loaded.Add(chunkCoord);
+
+            await ChunkGenerator.PaintAsync(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -237,7 +275,6 @@ namespace Jogo25D.Chunks
             ApplyMutations(layer, chunkState, dimensionId);
             RecordDiscovered(dimensionId, layer, chunkCoord);
 
-            loaded.Add(chunkCoord);
             loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
 
             var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
@@ -254,7 +291,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private void UnloadChunk(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
+        private async Task UnloadChunkAsync(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
         {
             if (!loaded.Remove(chunkCoord))
             {
@@ -271,7 +308,7 @@ namespace Jogo25D.Chunks
             var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Erase(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.EraseAsync(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -481,7 +518,7 @@ namespace Jogo25D.Chunks
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void LoadChunkReceive(string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
+        public async void LoadChunkReceive(string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
         {
             var dimensionParent = ResolveDimensionParent(dimensionId);
             var loaded = ResolveLoaded(dimensionId);
@@ -495,20 +532,20 @@ namespace Jogo25D.Chunks
             var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Paint(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            loaded.Add(chunkCoord);
+
+            await ChunkGenerator.PaintAsync(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
             ApplyMutations(layer, chunkState, dimensionId);
             RecordDiscovered(dimensionId, layer, chunkCoord);
 
-            loaded.Add(chunkCoord);
-
             ResolveState(dimensionId)[chunkCoord] = chunkState;
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void UnloadChunkReceive(string dimensionId, Vector2I chunkCoord)
+        public async void UnloadChunkReceive(string dimensionId, Vector2I chunkCoord)
         {
             var loaded = ResolveLoaded(dimensionId);
 
@@ -528,7 +565,7 @@ namespace Jogo25D.Chunks
             var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            ChunkGenerator.Erase(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.EraseAsync(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion
