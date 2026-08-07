@@ -230,7 +230,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_q8ap0")
 }],
-"loop": 0,
+"loop": false,
 "name": &"dash",
 "speed": 6.0
 }, {
@@ -265,7 +265,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_v0eud")
 }],
-"loop": 0,
+"loop": false,
 "name": &"dead",
 "speed": 10.0
 }, {
@@ -288,7 +288,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_p2prp")
 }],
-"loop": 1,
+"loop": true,
 "name": &"falling",
 "speed": 6.0
 }, {
@@ -311,7 +311,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_ybxhf")
 }],
-"loop": 1,
+"loop": true,
 "name": &"idle",
 "speed": 6.0
 }, {
@@ -334,7 +334,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_nch53")
 }],
-"loop": 1,
+"loop": true,
 "name": &"jump",
 "speed": 6.0
 }, {
@@ -360,7 +360,7 @@ animations = [{
 "duration": 0.3,
 "texture": SubResource("AtlasTexture_rptst")
 }],
-"loop": 0,
+"loop": false,
 "name": &"melee",
 "speed": 5.0
 }, {
@@ -386,7 +386,7 @@ animations = [{
 "duration": 0.3,
 "texture": SubResource("AtlasTexture_rptst")
 }],
-"loop": 1,
+"loop": true,
 "name": &"mining",
 "speed": 5.0
 }, {
@@ -415,7 +415,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_qmo7y")
 }],
-"loop": 1,
+"loop": true,
 "name": &"run",
 "speed": 8.0
 }, {
@@ -432,7 +432,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_0fesh")
 }],
-"loop": 0,
+"loop": false,
 "name": &"stop",
 "speed": 4.0
 }, {
@@ -449,7 +449,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_i8ycs")
 }],
-"loop": 0,
+"loop": false,
 "name": &"taking_damage",
 "speed": 4.0
 }]

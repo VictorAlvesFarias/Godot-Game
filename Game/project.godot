@@ -16,13 +16,12 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Jogo 2.5D"
 run/main_scene="res://Scenes/Main.tscn"
-config/features=PackedStringArray("4.7", "C#")
+config/features=PackedStringArray("4.6", "C#")
 
 [display]
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/size/mode=2
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
