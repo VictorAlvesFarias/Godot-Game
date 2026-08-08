@@ -5,9 +5,10 @@ namespace Jogo25D.Chunks
 {
     public partial class ChunkGridOverlay : Node2D
     {
-        private const float ChunkPixels = ChunkStreamingConstants.CHUNK_SIZE * 32f;
-
         public static bool Enabled { get; set; }
+
+        private ChunkStreamingManager _chunkStreamingManager;
+        private float _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * 32f;
 
         #region Godot implementation
 
@@ -15,6 +16,8 @@ namespace Jogo25D.Chunks
         {
             Visible = Enabled;
             ZIndex = 100;
+
+            _chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
         }
 
         public override void _UnhandledInput(InputEvent @event)
@@ -44,6 +47,13 @@ namespace Jogo25D.Chunks
         public override void _Draw()
         {
             var center = GlobalPosition;
+
+            if (_chunkStreamingManager != null)
+            {
+                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * _chunkStreamingManager.TileSize;
+            }
+
+            var ChunkPixels = _chunkPixels;
 
             var startChunkX = Mathf.FloorToInt((center.X - 4000f) / ChunkPixels);
             var endChunkX = Mathf.CeilToInt((center.X + 4000f) / ChunkPixels);

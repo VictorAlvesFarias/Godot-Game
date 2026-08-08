@@ -276,15 +276,16 @@ namespace Jogo25D.Systems
 			UpsidedownParent.AddChild(npc);
 		}
 
-		private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, int tileSize = 32, float halfBodyHeight = 15f)
+		private Vector2 FindGroundSpawnPosition(Node2D dimensionParent, float worldX, float halfBodyHeight = 15f)
 		{
 			var layer = dimensionParent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 
-			if (layer == null)
+			if (layer?.TileSet == null)
 			{
 				return new Vector2(worldX, 0f);
 			}
 
+			var tileSize = layer.TileSet.TileSize.X;
 			var cellX = Mathf.FloorToInt(worldX / tileSize);
 
 			for (int cellY = -8; cellY <= 8; cellY++)

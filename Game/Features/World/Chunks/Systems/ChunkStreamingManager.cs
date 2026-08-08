@@ -17,7 +17,7 @@ namespace Jogo25D.Chunks
         #region Dinamic properties
 
         public bool Enabled { get; set; } = false;
-        public int TileSize { get; set; } = 32;
+        public int TileSize => OverworldLayer?.TileSet?.TileSize.X ?? UpsidedownLayer?.TileSet?.TileSize.X ?? 32;
         public float EvaluateTimer { get; set; }
         public long WorldSeed { get; set; }
 
