@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 
 namespace Jogo25D.Biomes
 {
-    // Script anexado DIRETO numa TileMapLayer (Base/Bordercap/Texture sao cada uma uma instancia
-    // desse script, sem node pai centralizador nenhum). Mapeia sozinho, lendo o proprio TileSet,
-    // qual atlas coord representa o interior de cada terrain_set - nao depende de BiomeDB nem de
-    // nenhum outro node pra saber disso. As regras de conexao (Connections, editavel no
-    // Inspector) tambem sao proprias dessa camada - nao existe conceito de regra compartilhada
-    // entre camadas diferentes. No editor, qualquer alteracao de tile (_UpdateCells) recalcula
-    // sozinha usando essas regras, sem precisar de comando manual.
+    public enum ConnectionsMode
+    {
+        Blocklist,
+        Allowlist,
+    }
+
     [Tool]
     public partial class TerrainLayer : TileMapLayer
     {
@@ -23,17 +22,87 @@ namespace Jogo25D.Biomes
 
         #region Regras de conexao
 
-        // Array SEM tipo generico de proposito, e leitura via Get() (API dinamica do Godot) em
-        // vez de cast C# pra TerrainConnectionRule: dentro do PROPRIO EDITOR (nao no jogo
-        // rodando), um Resource [GlobalClass] customizado as vezes nao resolve pro tipo C# certo
-        // no momento em que a cena carrega (limitacao conhecida do Godot 4 C#) - o wrapper fica
-        // como Resource generico, e QUALQUER cast C# (direto ou "as") falha ou retorna null. Get()
-        // passa por cima disso porque le a propriedade exportada pelo proprio sistema de
-        // propriedades do Godot, que sempre sabe o valor certo independente de como o C# resolveu
-        // o tipo do objeto.
-        [Export] public Godot.Collections.Array Connections { get; set; } = new();
+        private const string ConnectionsHint = "24/17:" + nameof(TerrainConnectionRule);
 
-        [Export] public TileSet.CellNeighbor Cell { get; set; }
+        private Godot.Collections.Array<Resource> _connections = new();
+
+        [Export(PropertyHint.TypeString, ConnectionsHint)]
+        public Godot.Collections.Array<Resource> Connections
+        {
+            get => _connections;
+            set
+            {
+                _connections = value;
+                NotifyConfigChanged();
+            }
+        }
+
+        private bool _useGodotNativeAutotile;
+
+        [Export]
+        public bool UseGodotNativeAutotile
+        {
+            get => _useGodotNativeAutotile;
+            set
+            {
+                _useGodotNativeAutotile = value;
+                NotifyConfigChanged();
+            }
+        }
+
+        private bool _useConnections;
+
+        [Export]
+        public bool UseConnections
+        {
+            get => _useConnections;
+            set
+            {
+                _useConnections = value;
+                NotifyConfigChanged();
+            }
+        }
+
+        private ConnectionsMode _mode = ConnectionsMode.Blocklist;
+
+        [Export]
+        public ConnectionsMode Mode
+        {
+            get => _mode;
+            set
+            {
+                _mode = value;
+                NotifyConfigChanged();
+            }
+        }
+
+        private const string RelationsHint = "24/17:" + nameof(TileDirectionRelation);
+
+        private Godot.Collections.Array<Resource> _relations = new();
+
+        [Export(PropertyHint.TypeString, RelationsHint)]
+        public Godot.Collections.Array<Resource> Relations
+        {
+            get => _relations;
+            set
+            {
+                _relations= value;
+                BuildRelationSet();
+                NotifyConfigChanged();
+            }
+        }
+
+        private HashSet<(int TerrainSet, Vector2I AtlasCoord, TileSet.CellNeighbor Direction)> _relationSet;
+
+        private void NotifyConfigChanged()
+        {
+            if (!Engine.IsEditorHint() || !IsInsideTree())
+            {
+                return;
+            }
+
+            TriggerRecalculate();
+        }
 
         public bool AreConnected(int terrainSetA, int terrainSetB)
         {
@@ -42,9 +111,16 @@ namespace Jogo25D.Biomes
                 return true;
             }
 
-            foreach (var entry in Connections)
+            if (!UseConnections)
             {
-                if (entry.Obj is not Resource resource)
+                return false;
+            }
+
+            var hasRule = false;
+
+            foreach (var resource in Connections)
+            {
+                if (resource == null)
                 {
                     continue;
                 }
@@ -62,21 +138,53 @@ namespace Jogo25D.Biomes
 
                 if ((ruleA == terrainSetA && ruleB == terrainSetB) || (ruleA == terrainSetB && ruleB == terrainSetA))
                 {
-                    return true;
+                    hasRule = true;
+                    break;
                 }
             }
 
-            return false;
+            return Mode == ConnectionsMode.Blocklist
+                ? !hasRule
+                : hasRule;
+        }
+
+        private void BuildRelationSet()
+        {
+            _relationSet = new HashSet<(int, Vector2I, TileSet.CellNeighbor)>();
+
+            foreach (var resource in Relations)
+            {
+                if (resource == null)
+                {
+                    continue;
+                }
+
+                var terrainSetVariant = resource.Get(TileDirectionRelation.PropertyName.TerrainSet);
+                var atlasCoordVariant = resource.Get(TileDirectionRelation.PropertyName.AtlasCoord);
+                var directionsVariant = resource.Get(TileDirectionRelation.PropertyName.Directions);
+
+                if (terrainSetVariant.VariantType != Variant.Type.Int
+                    || atlasCoordVariant.VariantType != Variant.Type.Vector2I
+                    || directionsVariant.VariantType != Variant.Type.Array)
+                {
+                    continue;
+                }
+
+                var terrainSet = terrainSetVariant.AsInt32();
+                var atlasCoord = atlasCoordVariant.AsVector2I();
+                var directions = directionsVariant.AsGodotArray<TileSet.CellNeighbor>();
+
+                foreach (var direction in directions)
+                {
+                    _relationSet.Add((terrainSet, atlasCoord, direction));
+                }
+            }
         }
 
         #endregion
 
         #region Mapeamento terrain_set -> tabela de tiles por assinatura de bits
 
-        // Bit i da assinatura corresponde a NeighborOffsets[i] (mesma ordem: TopLeft, Top,
-        // TopRight, Left, Right, BottomLeft, Bottom, BottomRight) - usado tanto pra ler um tile
-        // do TileSet (ComputeTileSignature) quanto pra montar a assinatura esperada de uma celula
-        // (TryMatchTile), garantindo que os dois lados usam exatamente a mesma ordem de bits.
         private static readonly TileSet.CellNeighbor[] SignatureBits = new[]
         {
             TileSet.CellNeighbor.TopLeftCorner, TileSet.CellNeighbor.TopSide, TileSet.CellNeighbor.TopRightCorner,
@@ -98,36 +206,16 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // terrain_set -> (assinatura de 8 bits -> tile exato). Substitui o antigo
-        // _interiorTileByTerrainSet (que so guardava UM tile de referencia por terrain_set, usado
-        // pra disfarçar vizinho estrangeiro) - agora guardamos os 47 tiles inteiros de cada
-        // terrain_set, indexados pela propria forma, pra buscar o tile certo na mao em vez de
-        // pedir pro Godot (SetCellsTerrainConnect) decidir.
         private Dictionary<int, Dictionary<int, TileMatch>> _tilesByTerrainSetAndSignature;
         private bool _isRecalculating;
 
         public override void _Ready()
         {
             BuildTerrainMap();
+            BuildRelationSet();
             RedrawDebugOverlay();
         }
 
-        // Hook oficial do proprio TileMapLayer - chamado pelo Godot toda vez que celulas
-        // precisam de atualizacao interna, com as coordenadas exatas que mudaram. So liga em
-        // editor - em jogo a geracao procedural ja chama Connect/Reconnect explicitamente por
-        // chunk, reagir tambem aqui duplicaria trabalho.
-        //
-        // IMPORTANTE: NAO chamar NotifyRuntimeTileDataUpdate()/UpdateInternals() dentro de
-        // TriggerRecalculate() - os dois forcam uma atualizacao interna IMEDIATA, o que reentra
-        // nesse mesmo _UpdateCells ainda durante a chamada atual e vira um loop sem fim (call
-        // stack overflow). O guard de _isRecalculating sozinho ja evita reconectar em cima de
-        // reconexao; o proprio Godot cuida de redesenhar no fim do frame (batched update), sem
-        // precisar forcar nada daqui.
-        //
-        // Nota: qualquer SetCell chamado por script (nao importa o gatilho) faz o dock de pintura
-        // de Terrains do editor recarregar e perder a selecao do terreno escolhido na paleta -
-        // efeito colateral do proprio editor reagindo a mudanca de dados da camada, nao tem como
-        // evitar daqui.
         public override void _UpdateCells(Godot.Collections.Array<Vector2I> coords, bool forcedCleanup)
         {
             if (!Engine.IsEditorHint() || forcedCleanup || _isRecalculating)
@@ -138,26 +226,6 @@ namespace Jogo25D.Biomes
             TriggerRecalculate();
         }
 
-        // Toggle no Inspector (liga/desliga, o valor em si nao importa) - forca um recalculo na
-        // hora, sem depender do hook. Atalho manual de reserva.
-        [Export]
-        public bool Recalculate
-        {
-            get => false;
-            set
-            {
-                if (!value || !Engine.IsEditorHint())
-                {
-                    return;
-                }
-
-                TriggerRecalculate();
-            }
-        }
-
-        // Recalcula TODAS as celulas pintadas usando as regras de conexao atuais. Guarda de
-        // reentrancia porque ReconnectExistingCells tambem chama SetCell/SetCellsTerrainConnect,
-        // o que dispara _UpdateCells de novo.
         private void TriggerRecalculate()
         {
             if (_isRecalculating)
@@ -170,6 +238,7 @@ namespace Jogo25D.Biomes
             try
             {
                 BuildTerrainMap();
+                BuildRelationSet();
                 ReconnectExistingCells(GetUsedCells());
             }
             finally
@@ -180,11 +249,6 @@ namespace Jogo25D.Biomes
             RedrawDebugOverlay();
         }
 
-        // Varre o TileSet inteiro uma vez e guarda, pra cada terrain_set encontrado, TODOS os
-        // tiles configurados, indexados pela propria assinatura de peering bits. E a base do
-        // matcher proprio (ver regiao Conexao) - em vez de pedir pro SetCellsTerrainConnect do
-        // Godot escolher o tile (que "espalha" a atualizacao pra vizinhos fora da lista passada,
-        // a causa raiz da instabilidade que a gente rastreou), a gente pesquisa aqui direto.
         private void BuildTerrainMap()
         {
             _tilesByTerrainSetAndSignature = new Dictionary<int, Dictionary<int, TileMatch>>();
@@ -226,10 +290,6 @@ namespace Jogo25D.Biomes
 
                         var signature = ComputeTileSignature(tileData);
 
-                        // Assinatura duplicada (dois tiles com os mesmos bits - a ambiguidade que
-                        // fazia o Godot escolher meio aleatorio entre eles) sempre fica com o
-                        // PRIMEIRO encontrado ao varrer - escolha deterministica, nunca mais varia
-                        // entre execucoes/frames.
                         if (!bySignature.ContainsKey(signature))
                         {
                             bySignature[signature] = new TileMatch(sourceId, atlasCoord, alternativeId);
@@ -258,11 +318,6 @@ namespace Jogo25D.Biomes
 
         #region Debug - desenho do mapeamento de terreno
 
-        // Toggle no Inspector - desenha por cima de cada celula pintada o mesmo mapeamento de
-        // peering bits que a aba Terrains do TileSet mostra pra cada tile. Serve pra ver de cara
-        // se duas celulas vizinhas de camadas/biomas diferentes estao realmente com o terrain_set
-        // e a conectividade que voce espera, sem precisar abrir o TileSet e procurar o atlas
-        // coord manualmente.
         [Export]
         public bool ShowTerrainSetDebug
         {
@@ -277,10 +332,6 @@ namespace Jogo25D.Biomes
         private bool _showTerrainSetDebug;
         private DebugOverlay _debugOverlay;
 
-        // As 9 sub-regioes de uma celula (grade 3x3), na mesma disposicao que a aba Terrains do
-        // TileSet usa pra mostrar quais peering bits um tile tem marcados - o meio (Vector2I(1,1))
-        // nao e um peering bit de verdade, e so preenchido sempre que a celula tem terreno, pra
-        // fechar o desenho visualmente igual ao editor nativo.
         private static readonly (TileSet.CellNeighbor Bit, Vector2I GridPos)[] PeeringBitGrid = new[]
         {
             (TileSet.CellNeighbor.TopLeftCorner, new Vector2I(0, 0)),
@@ -293,17 +344,6 @@ namespace Jogo25D.Biomes
             (TileSet.CellNeighbor.BottomRightCorner, new Vector2I(2, 2)),
         };
 
-        // O overlay de debug NAO desenha direto nessa TileMapLayer (via _Draw() dela) porque
-        // Base/Bordercap sao desenhadas ANTES das camadas irmas seguintes na arvore (Bordercap e
-        // Texture) - o proprio _Draw() delas ficaria escondido atras dos tiles das camadas
-        // desenhadas depois. Em vez disso usa um child Node2D dedicado com ZIndex bem alto e
-        // ZAsRelative=false, garantindo que fica por cima de QUALQUER outra camada da cena,
-        // independente da ordem na arvore.
-        // Publico de proposito: qualquer SetCell feito de FORA da camada (ex.: WorldManager
-        // apagando uma unica celula ao quebrar bloco) nao passa por Connect(), que e onde o
-        // redesenho automatico normalmente acontece - quem faz esse SetCell cru precisa chamar
-        // isso manualmente depois, senao o overlay de debug fica com dado desatualizado (mesmo
-        // que a celula de verdade ja esteja certa).
         public void RedrawDebugOverlay()
         {
             if (!_showTerrainSetDebug)
@@ -329,12 +369,6 @@ namespace Jogo25D.Biomes
             _debugOverlay.QueueRedraw();
         }
 
-        // Desenha, em cima de cada celula pintada, o mesmo mapeamento de peering bits que a aba
-        // Terrains do TileSet mostra pra cada tile (qual canto/lado esta marcado como parte do
-        // terreno) - mas direto no mapa, sobre a celula de verdade, em vez de precisar abrir o
-        // TileSet e procurar o atlas coord manualmente. Chamado pelo DebugOverlay filho (ver
-        // RedrawDebugOverlay) - "target" recebe os DrawXxx pra ficar no ZIndex alto do overlay,
-        // nao no ZIndex normal dessa camada.
         private void DrawTerrainSetDebug(CanvasItem target)
         {
             var tileSize = TileSet?.TileSize ?? new Vector2I(32, 32);
@@ -355,7 +389,6 @@ namespace Jogo25D.Biomes
                 var topLeft = MapToLocal(cell) - new Vector2(tileSize.X / 2f, tileSize.Y / 2f);
                 var cellRect = new Rect2(topLeft, tileSize);
 
-                // Meio - representa o terreno em si (sempre preenchido, nao e peering bit).
                 target.DrawRect(new Rect2(topLeft + subSize, subSize), color with { A = 0.6f }, filled: true);
 
                 foreach (var (bit, gridPos) in PeeringBitGrid)
@@ -370,8 +403,6 @@ namespace Jogo25D.Biomes
                     target.DrawRect(new Rect2(subTopLeft, subSize), color with { A = 0.6f }, filled: true);
                 }
 
-                // Grade 3x3 fina por cima, igual ao preview do editor, so pra separar visualmente
-                // as sub-regioes.
                 for (int i = 1; i < 3; i++)
                 {
                     target.DrawLine(topLeft + new Vector2(subSize.X * i, 0), topLeft + new Vector2(subSize.X * i, tileSize.Y), Colors.Black with { A = 0.4f }, 1f);
@@ -388,9 +419,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // Cor deterministica (sempre a mesma pro mesmo terrain_set) espalhada pela roda de matiz
-        // usando a razao aurea, pra terrain_set vizinhos (0/1, 4/5...) nao ficarem com cores
-        // parecidas por acaso.
         private static Color ColorForTerrainSet(int terrainSet)
         {
             var hue = (terrainSet * 0.6180339887f) % 1f;
@@ -398,9 +426,6 @@ namespace Jogo25D.Biomes
             return Color.FromHsv(hue, 0.75f, 1f);
         }
 
-        // Node2D auxiliar minimo - so existe pra ter seu proprio ZIndex absoluto acima de tudo.
-        // Sem posicao/escala propria (fica exatamente sobreposto ao pai), entao as coordenadas
-        // calculadas via MapToLocal() do pai (TerrainLayer) valem direto aqui tambem.
         [Tool]
         private partial class DebugOverlay : Node2D
         {
@@ -419,49 +444,39 @@ namespace Jogo25D.Biomes
 
         #region Conexao
 
-        // Conecta "cells" (todas do mesmo terrain_set) com o autotile - versao sincrona, usada
-        // pelas operacoes pequenas e imediatas (quebrar/colocar um bloco). So delega pra
-        // ConnectAsync com "cellsPerFrame" praticamente infinito - como o loop nunca bate esse
-        // limite, o ToSignal la dentro nunca roda, entao a Task ja volta CONCLUIDA e
-        // GetAwaiter().GetResult() nao bloqueia nem "desdobra" nada - e so pra nao duplicar a
-        // logica do matcher em dois lugares.
         public void Connect(IReadOnlyCollection<Vector2I> cells, int terrainSet)
         {
             ConnectAsync(cells, terrainSet, cellsPerFrame: int.MaxValue).GetAwaiter().GetResult();
         }
 
-        // Matcher PROPRIO, nao usa SetCellsTerrainConnect do Godot. Pra cada celula, calcula a
-        // assinatura de bits esperada lendo o estado REAL atual dos 8 vizinhos (mesmo terrain_set,
-        // ou terrain_set conectado via Connections/AreConnected) e busca na tabela (ver
-        // BuildTerrainMap) o tile exato - SetCell direto, sem disfarce/restauracao. Isso garante
-        // que essa chamada NUNCA toca em nenhuma celula alem das que estao em "cells" (o
-        // SetCellsTerrainConnect do Godot "espalha" a atualizacao pra vizinhos fora da lista
-        // passada, usando o estado real deles naquele instante sem respeitar nosso disfarce - foi
-        // essa a causa raiz, comprovada via teste headless, de celulas ja corretas ficarem
-        // obsoletas so por uma chamada de Connect() de OUTRO chunk/celula sem relacao nenhuma).
-        //
-        // Processa em lotes de "cellsPerFrame", cedendo um frame inteiro entre cada lote (await
-        // ToSignal ProcessFrame) pra nao travar o jogo pintando um chunk inteiro (ate 1024
-        // celulas x varias camadas) tudo de uma vez num unico frame - usado pelo carregamento de
-        // chunk (Connect() acima usa cellsPerFrame=infinito, ou seja, roda tudo de uma vez, sem
-        // ceder nada, pra operacoes pequenas). Seguro dividir NO MEIO do foreach porque o cellSet
-        // usado pelo matcher ja e construido ANTES do loop inteiro e so verifica se a celula FAZ
-        // PARTE do lote - nao depende de ela ja ter sido escrita na grade de verdade, entao
-        // pausar entre celulas nao muda o resultado.
         public async Task ConnectAsync(IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200)
         {
-            if (cells.Count == 0 || _tilesByTerrainSetAndSignature == null)
+            if (cells.Count == 0)
             {
                 return;
             }
 
-            // cellSet = todo mundo que vai virar solido desse terrain_set NESSA chamada, mesmo
-            // que ainda nao tenha sido colocado na grade de verdade quando a celula da vez for
-            // calculada. Sem isso, um lote grande e novo (ex.: chunk inteiro pintado pela
-            // primeira vez) processado celula-por-celula veria os PROPRIOS vizinhos do lote como
-            // "vazios" (ainda nao chegou a vez deles no foreach) e cada celula viraria uma ilha
-            // isolada - foi exatamente esse bug que apareceu no primeiro teste headless (quase
-            // toda celula sem RightSide/BottomSide, mesmo cercada de vizinho do mesmo bioma).
+            if (UseGodotNativeAutotile)
+            {
+                var nativeCellsArray = new Godot.Collections.Array<Vector2I>();
+
+                foreach (var cell in cells)
+                {
+                    SetCell(cell, -1);
+                    nativeCellsArray.Add(cell);
+                }
+
+                SetCellsTerrainConnect(nativeCellsArray, terrainSet, 0, false);
+                RedrawDebugOverlay();
+
+                return;
+            }
+
+            if (_tilesByTerrainSetAndSignature == null)
+            {
+                return;
+            }
+
             var cellSet = new HashSet<Vector2I>(cells);
             var processedSinceYield = 0;
 
@@ -485,13 +500,8 @@ namespace Jogo25D.Biomes
             RedrawDebugOverlay();
         }
 
-        // Calcula a assinatura de bits esperada pra "cell" (lados primeiro, cantos so contam se
-        // os dois lados adjacentes tambem contarem - confirmado pixel a pixel que nenhum dos 47
-        // tiles reais tem canto sem os dois lados juntos, entao calcular assim garante que a
-        // assinatura montada sempre bate com um tile que existe de verdade) e busca o tile exato
-        // na tabela. Se a assinatura exata nao existir (buraco real no atlas, nao deveria
-        // acontecer com o set de 47 completo), degrada removendo cantos ate achar alguma
-        // combinacao valida, com o interior cheio como ultimo recurso.
+        private static readonly int[] CornerIndices = new[] { 0, 2, 5, 7 };
+
         private bool TryMatchTile(Vector2I cell, int terrainSet, HashSet<Vector2I> cellSet, out TileMatch match)
         {
             match = default;
@@ -501,18 +511,94 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
+            var cornerConnected = new bool[SignatureBits.Length];
             var expected = new bool[SignatureBits.Length];
 
-            // Lados (indices 1, 3, 4, 6 = TopSide, LeftSide, RightSide, BottomSide).
             for (int i = 0; i < SignatureBits.Length; i++)
             {
                 if (!TryGetCornerFlanks(SignatureBits[i], out _, out _))
                 {
-                    expected[i] = IsConnectedNeighbor(cell + NeighborOffsets[i], terrainSet, cellSet);
+                    expected[i] = IsConnectedNeighbor(cell + NeighborOffsets[i], terrainSet, cellSet, SignatureBits[i]);
                 }
             }
 
-            // Cantos (dependem dos lados ja calculados acima).
+            for (int i = 0; i < SignatureBits.Length; i++)
+            {
+                if (!TryGetCornerFlanks(SignatureBits[i], out var flankA, out var flankB))
+                {
+                    continue;
+                }
+
+                cornerConnected[i] = IsConnectedNeighbor(cell + NeighborOffsets[i], terrainSet, cellSet, SignatureBits[i]);
+
+                var flankAIndex = System.Array.IndexOf(SignatureBits, flankA);
+                var flankBIndex = System.Array.IndexOf(SignatureBits, flankB);
+
+                expected[i] = expected[flankAIndex] && expected[flankBIndex] && cornerConnected[i];
+            }
+
+            if (!TryFindMatch(bySignature, expected, out match))
+            {
+                return false;
+            }
+
+            if (_relationSet == null)
+            {
+                return true;
+            }
+
+            for (int iteration = 0; iteration < SignatureBits.Length; iteration++)
+            {
+                if (!ApplySelfRelations(cell, terrainSet, match.AtlasCoord, expected, cornerConnected))
+                {
+                    return true;
+                }
+
+                if (!TryFindMatch(bySignature, expected, out match))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool ApplySelfRelations(Vector2I cell, int terrainSet, Vector2I selfAtlasCoord, bool[] expected, bool[] cornerConnected)
+        {
+            var changed = false;
+
+            for (int i = 0; i < SignatureBits.Length; i++)
+            {
+                if (TryGetCornerFlanks(SignatureBits[i], out _, out _))
+                {
+                    continue;
+                }
+
+                if (!expected[i])
+                {
+                    continue;
+                }
+
+                var neighborCell = cell + NeighborOffsets[i];
+                var neighborTileData = GetCellTileData(neighborCell);
+
+                if (neighborTileData == null || neighborTileData.TerrainSet == terrainSet)
+                {
+                    continue;
+                }
+
+                if (_relationSet.Contains((terrainSet, selfAtlasCoord, SignatureBits[i])))
+                {
+                    expected[i] = false;
+                    changed = true;
+                }
+            }
+
+            if (!changed)
+            {
+                return false;
+            }
+
             for (int i = 0; i < SignatureBits.Length; i++)
             {
                 if (!TryGetCornerFlanks(SignatureBits[i], out var flankA, out var flankB))
@@ -523,10 +609,14 @@ namespace Jogo25D.Biomes
                 var flankAIndex = System.Array.IndexOf(SignatureBits, flankA);
                 var flankBIndex = System.Array.IndexOf(SignatureBits, flankB);
 
-                expected[i] = expected[flankAIndex] && expected[flankBIndex]
-                    && IsConnectedNeighbor(cell + NeighborOffsets[i], terrainSet, cellSet);
+                expected[i] = expected[flankAIndex] && expected[flankBIndex] && cornerConnected[i];
             }
 
+            return true;
+        }
+
+        private static bool TryFindMatch(Dictionary<int, TileMatch> bySignature, bool[] expected, out TileMatch match)
+        {
             var signature = 0;
 
             for (int i = 0; i < expected.Length; i++)
@@ -537,26 +627,19 @@ namespace Jogo25D.Biomes
                 }
             }
 
-            // Degrade removendo os 4 bits de canto (indices 0, 2, 5, 7) um a um, do menos pro
-            // mais "generico", ate achar uma combinacao que exista na tabela - o interior cheio
-            // (todos os lados, sem canto nenhum removido primeiro) e sempre a ultima tentativa
-            // antes de desistir.
-            var cornerIndices = new[] { 0, 2, 5, 7 };
-
-            for (int dropCount = 0; dropCount <= cornerIndices.Length; dropCount++)
+            for (int dropCount = 0; dropCount <= CornerIndices.Length; dropCount++)
             {
-                if (TryFindWithDroppedCorners(bySignature, signature, cornerIndices, dropCount, out match))
+                if (TryFindWithDroppedCorners(bySignature, signature, CornerIndices, dropCount, out match))
                 {
                     return true;
                 }
             }
 
+            match = default;
+
             return false;
         }
 
-        // Tenta achar, na tabela, alguma assinatura que seja igual a "signature" com exatamente
-        // "dropCount" bits de canto a menos (nunca adiciona bit, so remove) - usado como fallback
-        // gradual quando a combinacao exata nao existe no atlas.
         private static bool TryFindWithDroppedCorners(Dictionary<int, TileMatch> bySignature, int signature, int[] cornerIndices, int dropCount, out TileMatch match)
         {
             if (dropCount == 0)
@@ -566,8 +649,6 @@ namespace Jogo25D.Biomes
 
             match = default;
 
-            // So testa combinacoes de cantos REALMENTE marcados em "signature" - remover um bit
-            // que ja nao existe nao muda nada.
             var setCorners = new List<int>();
 
             foreach (var idx in cornerIndices)
@@ -638,11 +719,23 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // "neighborCell" conta como conectado se: (a) fizer parte do MESMO lote que esta sendo
-        // conectado agora (cellSet - mesmo que ainda nao tenha sido escrito na grade de verdade,
-        // porque o foreach do Connect() ainda nao chegou nela), ou (b) ja existir na grade de
-        // verdade com o mesmo terrain_set OU um terrain_set liberado em Connections/AreConnected.
-        private bool IsConnectedNeighbor(Vector2I neighborCell, int terrainSet, HashSet<Vector2I> cellSet)
+        private static TileSet.CellNeighbor OppositeDirection(TileSet.CellNeighbor bit)
+        {
+            switch (bit)
+            {
+                case TileSet.CellNeighbor.TopLeftCorner: return TileSet.CellNeighbor.BottomRightCorner;
+                case TileSet.CellNeighbor.TopSide: return TileSet.CellNeighbor.BottomSide;
+                case TileSet.CellNeighbor.TopRightCorner: return TileSet.CellNeighbor.BottomLeftCorner;
+                case TileSet.CellNeighbor.LeftSide: return TileSet.CellNeighbor.RightSide;
+                case TileSet.CellNeighbor.RightSide: return TileSet.CellNeighbor.LeftSide;
+                case TileSet.CellNeighbor.BottomLeftCorner: return TileSet.CellNeighbor.TopRightCorner;
+                case TileSet.CellNeighbor.BottomSide: return TileSet.CellNeighbor.TopSide;
+                case TileSet.CellNeighbor.BottomRightCorner: return TileSet.CellNeighbor.TopLeftCorner;
+                default: return bit;
+            }
+        }
+
+        private bool IsConnectedNeighbor(Vector2I neighborCell, int terrainSet, HashSet<Vector2I> cellSet, TileSet.CellNeighbor direction)
         {
             if (cellSet.Contains(neighborCell))
             {
@@ -656,13 +749,29 @@ namespace Jogo25D.Biomes
 
             var tileData = GetCellTileData(neighborCell);
 
-            return tileData != null && (tileData.TerrainSet == terrainSet || AreConnected(terrainSet, tileData.TerrainSet));
+            if (tileData == null)
+            {
+                return false;
+            }
+
+            if (tileData.TerrainSet == terrainSet)
+            {
+                return true;
+            }
+
+            var baseConnected = AreConnected(terrainSet, tileData.TerrainSet);
+
+            if (_relationSet == null)
+            {
+                return baseConnected;
+            }
+
+            var neighborAtlasCoord = GetCellAtlasCoords(neighborCell);
+            var hasRelation = _relationSet.Contains((tileData.TerrainSet, neighborAtlasCoord, OppositeDirection(direction)));
+
+            return baseConnected && !hasRelation;
         }
 
-        // Mesma logica do Connect(), mas so mantem as celulas que ainda estao solidas em
-        // "dependency" (usado pela camada Base, que so existe onde ha chao) - qualquer celula
-        // sem chao correspondente vira vazia aqui tambem. Versao sincrona - delega pra
-        // ConnectDependentAsync (mesmo truque de cellsPerFrame=infinito do Connect()).
         public void ConnectDependent(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet)
         {
             ConnectDependentAsync(dependency, cells, terrainSet, cellsPerFrame: int.MaxValue).GetAwaiter().GetResult();
@@ -687,10 +796,6 @@ namespace Jogo25D.Biomes
             await ConnectAsync(activeCells, terrainSet, cellsPerFrame);
         }
 
-        // Espelha o Connect() do outro lado da divisa: reconecta as celulas estrangeiras que
-        // encostam em "cells", cada uma com o proprio terrain_set dela, tratando "cells" como
-        // solido temporario. Assim os dois lados da fronteira ficam com a borda correta. Versao
-        // sincrona - delega pra ReconnectForeignBorderAsync.
         public void ReconnectForeignBorder(IReadOnlyCollection<Vector2I> cells, int terrainSet)
         {
             ReconnectForeignBorderAsync(cells, terrainSet, cellsPerFrame: int.MaxValue).GetAwaiter().GetResult();
@@ -717,12 +822,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // Reconecta cada celula com o terrain_set que ela JA tem (le o TerrainSet do tile atual),
-        // agrupando antes de conectar - assim celulas de terrenos diferentes nunca sao repintadas
-        // com o terrain de outra. Passada final util depois de Connect+ReconnectForeignBorder:
-        // recalcula CADA celula de novo (nao so o subconjunto de fronteira) usando o estado ja
-        // estavel dos vizinhos - corrige artefatos de canto que sobram quando so o subconjunto
-        // estrangeiro e recalculado.
         public void ReconnectExistingCells(IEnumerable<Vector2I> cells)
         {
             var groups = new Dictionary<int, List<Vector2I>>();
@@ -760,8 +859,6 @@ namespace Jogo25D.Biomes
 
         #region Vizinhanca
 
-        // Devolve as celulas vizinhas de OUTRO terrain_set que encostam em "cells" - usado pra
-        // tambem atualizar a celula do OUTRO lado da fronteira (o vizinho ja pintado).
         public List<Vector2I> GetForeignNeighborCells(IReadOnlyCollection<Vector2I> cells, int terrainSet)
         {
             var cellSet = new HashSet<Vector2I>(cells);
