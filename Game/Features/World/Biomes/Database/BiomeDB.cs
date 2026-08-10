@@ -20,7 +20,7 @@ namespace Jogo25D.Biomes
                 BorderCapTerrainSet = 2,
                 BaseSourceId = 11,
                 BaseTerrainSet = 4,
-                TreeChance = 0.6f,
+                TreeChance = 0.97f,
             },
             [BiomeType.OliveGround] = new BiomeDefinition
             {

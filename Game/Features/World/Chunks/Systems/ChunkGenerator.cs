@@ -236,30 +236,36 @@ namespace Jogo25D.Chunks
         public const int TreeWoodTerrainSet = 6;
         public const int TreeLeafTerrainSet = 7;
 
-        // A arvore desenhada a mao (tronco de 3, copa em pinheiro 1->3->5->5) e so o MODELO -
-        // cada arvore gerada varia tronco/copa dentro desses intervalos (aleatorio determinado
-        // por worldSeed+coluna, entao estavel entre recarregamentos do mesmo mundo) pra nao
-        // sair sempre o mesmo desenho repetido. A maioria das arvores sai no intervalo "normal"
-        // (pequena/media) - uma fracao (TreeBigChance) sai no intervalo "grande", pra ter arvore
-        // grande de vez em quando misturada entre as pequenas, sem virar a maioria.
-        private static readonly (int Min, int Max) TreeTrunkHeightRange = (2, 4);
-        private static readonly (int Min, int Max) TreeCanopyRowsRange = (3, 5);
-        private static readonly (int Min, int Max) TreeCanopyMaxRadiusRange = (1, 2);
+        // As 4 arvores desenhadas a mao no editor (achadas na layer Bordercap, resquicio de
+        // antes da arvore mudar pra Base - trunk em x=-37/-33/-27/-22 do Upsidedown.tscn) viraram
+        // 4 MODELOS FIXOS em vez de intervalos aleatorios - cada arvore gerada usa a altura de
+        // tronco e o formato de copa EXATOS de um dos 4 exemplos, sem variar. CanopyRadii vai de
+        // BAIXO (linha 0, encostada no tronco) pra CIMA (ultima linha, topo da copa) - cada valor
+        // e o raio lateral daquela linha (largura = 2*raio+1), sempre centrado no tronco (X=0).
+        private readonly struct TreeTemplate
+        {
+            public readonly int TrunkHeight;
+            public readonly int[] CanopyRadii;
 
-        private const float TreeBigChance = 0.18f;
-        private static readonly (int Min, int Max) TreeBigTrunkHeightRange = (5, 8);
-        private static readonly (int Min, int Max) TreeBigCanopyRowsRange = (6, 9);
-        private static readonly (int Min, int Max) TreeBigCanopyMaxRadiusRange = (2, 3);
+            public TreeTemplate(int trunkHeight, int[] canopyRadii)
+            {
+                TrunkHeight = trunkHeight;
+                CanopyRadii = canopyRadii;
+            }
+        }
 
-        private const int TreeMaxPossibleCanopyRadius = 3;
-        private const int TreeMaxPossibleHeight = 8 + 9 - 1;
-
-        // Espacamento minimo entre troncos - sem isso, cada coluna rola sua chance de forma
-        // independente, entao em chances mais altas (ou so por azar) colunas vizinhas emplacavam
-        // arvore cada uma, e como a copa chega a 5 celulas de largura, duas arvores proximas
-        // ficavam com a copa colada/sobreposta - lia como uma massa unica grossa em vez de
-        // arvores separadas.
-        private const int TreeMinSpacing = TreeMaxPossibleCanopyRadius * 2 + 3;
+        private static readonly TreeTemplate[] TreeTemplates =
+        {
+            // Arvore 1 (x=-37 no editor): tronco 6, copa 1->3->5->7->7 (topo->base).
+            new TreeTemplate(6, new[] { 3, 3, 2, 1, 0 }),
+            // Arvore 2 (x=-33 no editor): tronco 2, copa 1->3->3 (topo->base).
+            new TreeTemplate(2, new[] { 1, 1, 0 }),
+            // Arvore 3 (x=-27 no editor): tronco 8, copa 1->3->5->5->3 (topo->base) - afunila
+            // nos dois extremos, copa arredondada.
+            new TreeTemplate(8, new[] { 1, 2, 2, 1, 0 }),
+            // Arvore 4 (x=-22 no editor): tronco 3, copa 1->3->5->5 (topo->base).
+            new TreeTemplate(3, new[] { 2, 2, 1, 0 }),
+        };
 
         private static void PlaceTrees(TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
@@ -270,7 +276,7 @@ namespace Jogo25D.Chunks
 
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
-            var nextAllowedWorldX = int.MinValue;
+            var lastTreeRightEdge = int.MinValue;
             var trunkCells = new List<Vector2I>();
             var canopyCells = new List<Vector2I>();
 
@@ -286,10 +292,7 @@ namespace Jogo25D.Chunks
                 var localX = column.WorldX - baseCellX;
                 var localSurfaceY = column.GroundHeight - baseCellY;
 
-                if (localX < TreeMaxPossibleCanopyRadius || localX > chunkSize - 1 - TreeMaxPossibleCanopyRadius
-                    || localSurfaceY < 0 || localSurfaceY >= chunkSize
-                    || localSurfaceY - TreeMaxPossibleHeight < 0
-                    || column.WorldX < nextAllowedWorldX)
+                if (localSurfaceY < 0 || localSurfaceY >= chunkSize)
                 {
                     continue;
                 }
@@ -299,15 +302,27 @@ namespace Jogo25D.Chunks
                     continue;
                 }
 
-                var isBigTree = ColumnRandom01(worldSeed, dimensionId, column.WorldX, 4) < TreeBigChance;
+                // Sorteia entre os 4 modelos com a MESMA chance cada (25%) - indice 0..3 direto,
+                // sem pesos.
+                var templateIndex = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 1, (0, TreeTemplates.Length - 1));
+                var template = TreeTemplates[templateIndex];
+                var maxRadius = template.CanopyRadii.Length == 0 ? 0 : template.CanopyRadii[0];
 
-                var trunkHeight = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 1, isBigTree ? TreeBigTrunkHeightRange : TreeTrunkHeightRange);
-                var canopyRows = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 2, isBigTree ? TreeBigCanopyRowsRange : TreeCanopyRowsRange);
-                var maxRadius = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 3, isBigTree ? TreeBigCanopyMaxRadiusRange : TreeCanopyMaxRadiusRange);
+                var treeHeight = template.TrunkHeight + template.CanopyRadii.Length;
+                var leftEdge = column.WorldX - maxRadius;
 
-                CollectTreeCells(new Vector2I(column.WorldX, column.GroundHeight), trunkHeight, canopyRows, maxRadius, trunkCells, canopyCells);
+                // Garante pelo menos 1 celula vazia de folga entre a copa dessa arvore e a borda
+                // direita da ultima arvore plantada.
+                if (localX < maxRadius || localX > chunkSize - 1 - maxRadius
+                    || localSurfaceY - treeHeight < 0
+                    || leftEdge <= lastTreeRightEdge + 1)
+                {
+                    continue;
+                }
 
-                nextAllowedWorldX = column.WorldX + TreeMinSpacing;
+                CollectTreeCells(new Vector2I(column.WorldX, column.GroundHeight), template, trunkCells, canopyCells);
+
+                lastTreeRightEdge = column.WorldX + maxRadius;
             }
 
             if (trunkCells.Count == 0)
@@ -319,18 +334,17 @@ namespace Jogo25D.Chunks
             baseTarget.Connect(canopyCells, TreeLeafTerrainSet);
         }
 
-        private static void CollectTreeCells(Vector2I groundCell, int trunkHeight, int canopyRows, int maxRadius, List<Vector2I> trunkCells, List<Vector2I> canopyCells)
+        private static void CollectTreeCells(Vector2I groundCell, TreeTemplate template, List<Vector2I> trunkCells, List<Vector2I> canopyCells)
         {
-            for (int trunkStep = 1; trunkStep <= trunkHeight; trunkStep++)
+            for (int trunkStep = 1; trunkStep <= template.TrunkHeight; trunkStep++)
             {
                 trunkCells.Add(groundCell + new Vector2I(0, -trunkStep));
             }
 
-            for (int row = 0; row < canopyRows; row++)
+            for (int row = 0; row < template.CanopyRadii.Length; row++)
             {
-                var offsetY = -trunkHeight - row;
-                var rowFromTop = canopyRows - 1 - row;
-                var radius = Mathf.Min(rowFromTop, maxRadius);
+                var offsetY = -template.TrunkHeight - row;
+                var radius = template.CanopyRadii[row];
 
                 for (int canopyX = -radius; canopyX <= radius; canopyX++)
                 {
