@@ -47,6 +47,8 @@ namespace Jogo25D.Constants
             public const string FIREBALL_ICON = "res://Assets/Textures/Items/fireball/icon.png";
             public const string GROUND_STRIKE_ICON = "res://Assets/Textures/Items/ground_strike/icon.png";
             public const string EFFECT_POISON_DAMAGE_ICON = "res://Assets/Textures/Items/effect_poison_damage/icon.png";
+            public const string ITEM_WOOD_ICON = "res://Assets/Textures/Items/item_wood/icon.png";
+            public const string ITEM_LEAF_ICON = "res://Assets/Textures/Items/item_leaf/icon.png";
         }
 
         public static class Skills

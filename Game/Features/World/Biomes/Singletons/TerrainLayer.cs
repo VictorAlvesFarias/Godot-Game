@@ -209,8 +209,23 @@ namespace Jogo25D.Biomes
         private Dictionary<int, Dictionary<int, TileMatch>> _tilesByTerrainSetAndSignature;
         private bool _isRecalculating;
 
+        // Godot agrupa tiles em "quadrantes" (rendering_quadrant_size, em NUMERO DE TILES, nao
+        // pixels) pra desenhar cada grupo como um unico mesh/draw call. O valor default (16) foi
+        // calibrado pra tile_size=32 (quadrante de 512px de lado) - se o tile_size diminui sem
+        // esse numero acompanhar, cada quadrante passa a cobrir uma area MENOR em pixels, entao
+        // a mesma tela visivel precisa de mais quadrantes (mais draw calls/meshes) pra ser
+        // desenhada - e um custo de renderizacao real, direto, que so aparece ao diminuir o
+        // tile_size. Recalcula aqui pra manter o tamanho do quadrante em PIXELS constante,
+        // independente do tile_size escolhido no TileSet.
+        private const int ReferenceQuadrantSize = 16;
+        private const int ReferenceTileSize = 32;
+
         public override void _Ready()
         {
+            var tileSize = TileSet?.TileSize.X ?? ReferenceTileSize;
+
+            RenderingQuadrantSize = Mathf.Max(1, Mathf.RoundToInt(ReferenceQuadrantSize * ReferenceTileSize / (float)tileSize));
+
             BuildTerrainMap();
             BuildRelationSet();
             RedrawDebugOverlay();
@@ -796,27 +811,27 @@ namespace Jogo25D.Biomes
             await ConnectAsync(activeCells, terrainSet, cellsPerFrame);
         }
 
-        public void ReconnectForeignBorder(IReadOnlyCollection<Vector2I> cells, int terrainSet)
+        public void ReconnectForeignBorder(IReadOnlyCollection<Vector2I> cells, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
-            ReconnectForeignBorderAsync(cells, terrainSet, cellsPerFrame: int.MaxValue).GetAwaiter().GetResult();
+            ReconnectForeignBorderAsync(cells, terrainSet, cellsPerFrame: int.MaxValue, excludedForeignTerrainSets: excludedForeignTerrainSets).GetAwaiter().GetResult();
         }
 
-        public async Task ReconnectForeignBorderAsync(IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200)
+        public async Task ReconnectForeignBorderAsync(IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200, HashSet<int> excludedForeignTerrainSets = null)
         {
-            foreach (var group in GroupForeignNeighborsByTerrainSet(cells, terrainSet))
+            foreach (var group in GroupForeignNeighborsByTerrainSet(cells, terrainSet, excludedForeignTerrainSets))
             {
                 await ConnectAsync(group.Value, group.Key, cellsPerFrame);
             }
         }
 
-        public void ReconnectForeignBorderDependent(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet)
+        public void ReconnectForeignBorderDependent(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
-            ReconnectForeignBorderDependentAsync(dependency, cells, terrainSet, cellsPerFrame: int.MaxValue).GetAwaiter().GetResult();
+            ReconnectForeignBorderDependentAsync(dependency, cells, terrainSet, cellsPerFrame: int.MaxValue, excludedForeignTerrainSets: excludedForeignTerrainSets).GetAwaiter().GetResult();
         }
 
-        public async Task ReconnectForeignBorderDependentAsync(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200)
+        public async Task ReconnectForeignBorderDependentAsync(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200, HashSet<int> excludedForeignTerrainSets = null)
         {
-            foreach (var group in GroupForeignNeighborsByTerrainSet(cells, terrainSet))
+            foreach (var group in GroupForeignNeighborsByTerrainSet(cells, terrainSet, excludedForeignTerrainSets))
             {
                 await ConnectDependentAsync(dependency, group.Value, group.Key, cellsPerFrame);
             }
@@ -859,10 +874,10 @@ namespace Jogo25D.Biomes
 
         #region Vizinhanca
 
-        public List<Vector2I> GetForeignNeighborCells(IReadOnlyCollection<Vector2I> cells, int terrainSet)
+        public List<Vector2I> GetForeignNeighborCells(IReadOnlyCollection<Vector2I> cells, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
             var cellSet = new HashSet<Vector2I>(cells);
-            var foreign = CollectForeignNeighbors(cellSet, terrainSet);
+            var foreign = CollectForeignNeighbors(cellSet, terrainSet, excludedForeignTerrainSets);
             var result = new List<Vector2I>();
 
             foreach (var entry in foreign)
@@ -873,10 +888,10 @@ namespace Jogo25D.Biomes
             return result;
         }
 
-        private Dictionary<int, List<Vector2I>> GroupForeignNeighborsByTerrainSet(IReadOnlyCollection<Vector2I> cells, int terrainSet)
+        private Dictionary<int, List<Vector2I>> GroupForeignNeighborsByTerrainSet(IReadOnlyCollection<Vector2I> cells, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
             var cellSet = new HashSet<Vector2I>(cells);
-            var foreignNeighbors = CollectForeignNeighbors(cellSet, terrainSet);
+            var foreignNeighbors = CollectForeignNeighbors(cellSet, terrainSet, excludedForeignTerrainSets);
             var groups = new Dictionary<int, List<Vector2I>>();
 
             foreach (var entry in foreignNeighbors)
@@ -899,7 +914,13 @@ namespace Jogo25D.Biomes
             public int TerrainSet;
         }
 
-        private List<ForeignCellInfo> CollectForeignNeighbors(HashSet<Vector2I> cellSet, int terrainSet)
+        // excludedForeignTerrainSets deixa de fora terrain_sets que NAO fazem parte do sistema
+        // de bioma ground/bordercap/base espelhado entre camadas (ex: madeira/folha de arvore) -
+        // sem isso, uma celula decorativa vizinha de uma borda de chunk era detectada como
+        // "vizinho estrangeiro" do bioma, reconectada via ConnectDependent, e apagada porque a
+        // camada dependencia (Texture) nunca teve tile nela pra comecar (arvore nao espelha nas
+        // 3 camadas do jeito que bioma espelha).
+        private List<ForeignCellInfo> CollectForeignNeighbors(HashSet<Vector2I> cellSet, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
             var result = new List<ForeignCellInfo>();
             var seen = new HashSet<Vector2I>();
@@ -923,6 +944,11 @@ namespace Jogo25D.Biomes
                     var tileData = GetCellTileData(neighbor);
 
                     if (tileData == null || tileData.TerrainSet == terrainSet)
+                    {
+                        continue;
+                    }
+
+                    if (excludedForeignTerrainSets != null && excludedForeignTerrainSets.Contains(tileData.TerrainSet))
                     {
                         continue;
                     }

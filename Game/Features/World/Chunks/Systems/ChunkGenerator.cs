@@ -8,12 +8,20 @@ namespace Jogo25D.Chunks
 {
     public static class ChunkGenerator
     {
+        // Passado pra ReconnectForeignBorder(Dependent) do bioma (ground/bordercap/base) pra
+        // essas passadas nunca tratarem uma celula de arvore vizinha como "vizinho estrangeiro
+        // do bioma" - sem isso, uma arvore encostada na borda de um chunk era detectada como tal
+        // pelo chunk vizinho ao carregar, reconectada via ConnectDependent (que depende da
+        // Texture ter uma celula ali) e apagada, porque tronco/copa nao espelham nas 3 camadas
+        // do jeito que bioma espelha.
+        private static readonly HashSet<int> TreeTerrainSets = new() { TreeWoodTerrainSet, TreeLeafTerrainSet };
+
         #region Core - Generation
 
         public static void Paint(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
-            var solidCellsByBiome = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
+            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
@@ -30,7 +38,7 @@ namespace Jogo25D.Chunks
 
                 foreach (var group in biomeGroups)
                 {
-                    target.ReconnectForeignBorder(group.Cells, group.BiomeDef.TerrainSet);
+                    target.ReconnectForeignBorder(group.Cells, group.BiomeDef.TerrainSet, TreeTerrainSets);
                 }
 
                 if (baseTarget != null)
@@ -42,7 +50,7 @@ namespace Jogo25D.Chunks
 
                     foreach (var group in biomeGroups)
                     {
-                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet);
+                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet, TreeTerrainSets);
                     }
                 }
 
@@ -55,10 +63,11 @@ namespace Jogo25D.Chunks
 
                     foreach (var group in biomeGroups)
                     {
-                        borderCapTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
+                        borderCapTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, TreeTerrainSets);
                     }
                 }
 
+                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize);
             }
             else
             {
@@ -83,7 +92,7 @@ namespace Jogo25D.Chunks
         public static async Task PaintAsync(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
-            var solidCellsByBiome = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
+            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
@@ -96,7 +105,7 @@ namespace Jogo25D.Chunks
 
                 foreach (var group in biomeGroups)
                 {
-                    await target.ReconnectForeignBorderAsync(group.Cells, group.BiomeDef.TerrainSet, cellsPerFrame);
+                    await target.ReconnectForeignBorderAsync(group.Cells, group.BiomeDef.TerrainSet, cellsPerFrame, TreeTerrainSets);
                 }
 
                 if (baseTarget != null)
@@ -108,7 +117,7 @@ namespace Jogo25D.Chunks
 
                     foreach (var group in biomeGroups)
                     {
-                        await baseTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BaseTerrainSet, cellsPerFrame);
+                        await baseTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BaseTerrainSet, cellsPerFrame, TreeTerrainSets);
                     }
                 }
 
@@ -121,9 +130,11 @@ namespace Jogo25D.Chunks
 
                     foreach (var group in biomeGroups)
                     {
-                        await borderCapTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame);
+                        await borderCapTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame, TreeTerrainSets);
                     }
                 }
+
+                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize);
             }
             else
             {
@@ -144,11 +155,26 @@ namespace Jogo25D.Chunks
         // coluna no meio. Ja o bioma de CADA CELULA solida (usado pra escolher a textura) e
         // resolvido individualmente (X e Y), entao perto da fronteira algumas celulas divergem do
         // bioma da coluna, criando a tendrilha organica em vez de uma faixa reta.
-        private static Dictionary<BiomeType, List<Vector2I>> ResolveSolidCellsByBiome(long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        private readonly struct ColumnSurface
+        {
+            public readonly int WorldX;
+            public readonly int GroundHeight;
+            public readonly BiomeType Biome;
+
+            public ColumnSurface(int worldX, int groundHeight, BiomeType biome)
+            {
+                WorldX = worldX;
+                GroundHeight = groundHeight;
+                Biome = biome;
+            }
+        }
+
+        private static (Dictionary<BiomeType, List<Vector2I>> SolidCellsByBiome, List<ColumnSurface> ColumnSurfaces) ResolveSolidCellsByBiome(long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
             var solidCellsByBiome = new Dictionary<BiomeType, List<Vector2I>>();
+            var columnSurfaces = new List<ColumnSurface>();
             var heightNoiseByBiome = new Dictionary<BiomeType, FastNoiseLite>();
 
             for (int localX = 0; localX < chunkSize; localX++)
@@ -168,6 +194,8 @@ namespace Jogo25D.Chunks
                 }
 
                 var groundHeight = columnBiomeDef.HeightOffset + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude);
+
+                columnSurfaces.Add(new ColumnSurface(worldX, groundHeight, columnBiome));
 
                 for (int localY = 0; localY < chunkSize; localY++)
                 {
@@ -190,7 +218,147 @@ namespace Jogo25D.Chunks
                 }
             }
 
-            return solidCellsByBiome;
+            return (solidCellsByBiome, columnSurfaces);
+        }
+
+        // Arvore modelada a partir de uma arvore desenhada a mao no editor (Upsidedown.tscn):
+        // Tronco (terrain_set 6 = Tree Wood) e copa (terrain_set 7 = Tree Leaf) vao os dois na
+        // layer Base - nao competem visualmente com nada, ja que as celulas da arvore ficam
+        // todas no ar acima do chao (Base so tem chao onde Texture/Bordercap tambem tem, entao
+        // fica vazia exatamente onde a arvore cresce). Os dois passam pelo mediator (Connect)
+        // usando o mesmo mapeamento blob47 do resto do tileset, entao ganham bordas/cantos
+        // organicos em vez de bloco solido. A copa e o tronco se conectam entre si por padrao
+        // (mesma layer, sem bloqueio configurado) - o layer pode ter regras de bloqueio contra
+        // o proprio chao da Base (terrain_set 4/5) pra nao "derreterem" na base do bioma.
+        // Cada arvore fica inteira dentro dos limites locais do proprio chunk pra nao depender
+        // de chunks vizinhos ainda nao carregados nem sumir pela metade quando um vizinho
+        // descarrega.
+        public const int TreeWoodTerrainSet = 6;
+        public const int TreeLeafTerrainSet = 7;
+
+        // A arvore desenhada a mao (tronco de 3, copa em pinheiro 1->3->5->5) e so o MODELO -
+        // cada arvore gerada varia tronco/copa dentro desses intervalos (aleatorio determinado
+        // por worldSeed+coluna, entao estavel entre recarregamentos do mesmo mundo) pra nao
+        // sair sempre o mesmo desenho repetido. A maioria das arvores sai no intervalo "normal"
+        // (pequena/media) - uma fracao (TreeBigChance) sai no intervalo "grande", pra ter arvore
+        // grande de vez em quando misturada entre as pequenas, sem virar a maioria.
+        private static readonly (int Min, int Max) TreeTrunkHeightRange = (2, 4);
+        private static readonly (int Min, int Max) TreeCanopyRowsRange = (3, 5);
+        private static readonly (int Min, int Max) TreeCanopyMaxRadiusRange = (1, 2);
+
+        private const float TreeBigChance = 0.18f;
+        private static readonly (int Min, int Max) TreeBigTrunkHeightRange = (5, 8);
+        private static readonly (int Min, int Max) TreeBigCanopyRowsRange = (6, 9);
+        private static readonly (int Min, int Max) TreeBigCanopyMaxRadiusRange = (2, 3);
+
+        private const int TreeMaxPossibleCanopyRadius = 3;
+        private const int TreeMaxPossibleHeight = 8 + 9 - 1;
+
+        // Espacamento minimo entre troncos - sem isso, cada coluna rola sua chance de forma
+        // independente, entao em chances mais altas (ou so por azar) colunas vizinhas emplacavam
+        // arvore cada uma, e como a copa chega a 5 celulas de largura, duas arvores proximas
+        // ficavam com a copa colada/sobreposta - lia como uma massa unica grossa em vez de
+        // arvores separadas.
+        private const int TreeMinSpacing = TreeMaxPossibleCanopyRadius * 2 + 3;
+
+        private static void PlaceTrees(TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        {
+            if (baseTarget == null)
+            {
+                return;
+            }
+
+            var baseCellX = chunkCoord.X * chunkSize;
+            var baseCellY = chunkCoord.Y * chunkSize;
+            var nextAllowedWorldX = int.MinValue;
+            var trunkCells = new List<Vector2I>();
+            var canopyCells = new List<Vector2I>();
+
+            foreach (var column in columnSurfaces)
+            {
+                var biomeDef = BiomeDB.Get(column.Biome);
+
+                if (biomeDef.TreeChance <= 0f)
+                {
+                    continue;
+                }
+
+                var localX = column.WorldX - baseCellX;
+                var localSurfaceY = column.GroundHeight - baseCellY;
+
+                if (localX < TreeMaxPossibleCanopyRadius || localX > chunkSize - 1 - TreeMaxPossibleCanopyRadius
+                    || localSurfaceY < 0 || localSurfaceY >= chunkSize
+                    || localSurfaceY - TreeMaxPossibleHeight < 0
+                    || column.WorldX < nextAllowedWorldX)
+                {
+                    continue;
+                }
+
+                if (ColumnRandom01(worldSeed, dimensionId, column.WorldX, 0) >= biomeDef.TreeChance)
+                {
+                    continue;
+                }
+
+                var isBigTree = ColumnRandom01(worldSeed, dimensionId, column.WorldX, 4) < TreeBigChance;
+
+                var trunkHeight = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 1, isBigTree ? TreeBigTrunkHeightRange : TreeTrunkHeightRange);
+                var canopyRows = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 2, isBigTree ? TreeBigCanopyRowsRange : TreeCanopyRowsRange);
+                var maxRadius = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 3, isBigTree ? TreeBigCanopyMaxRadiusRange : TreeCanopyMaxRadiusRange);
+
+                CollectTreeCells(new Vector2I(column.WorldX, column.GroundHeight), trunkHeight, canopyRows, maxRadius, trunkCells, canopyCells);
+
+                nextAllowedWorldX = column.WorldX + TreeMinSpacing;
+            }
+
+            if (trunkCells.Count == 0)
+            {
+                return;
+            }
+
+            baseTarget.Connect(trunkCells, TreeWoodTerrainSet);
+            baseTarget.Connect(canopyCells, TreeLeafTerrainSet);
+        }
+
+        private static void CollectTreeCells(Vector2I groundCell, int trunkHeight, int canopyRows, int maxRadius, List<Vector2I> trunkCells, List<Vector2I> canopyCells)
+        {
+            for (int trunkStep = 1; trunkStep <= trunkHeight; trunkStep++)
+            {
+                trunkCells.Add(groundCell + new Vector2I(0, -trunkStep));
+            }
+
+            for (int row = 0; row < canopyRows; row++)
+            {
+                var offsetY = -trunkHeight - row;
+                var rowFromTop = canopyRows - 1 - row;
+                var radius = Mathf.Min(rowFromTop, maxRadius);
+
+                for (int canopyX = -radius; canopyX <= radius; canopyX++)
+                {
+                    canopyCells.Add(groundCell + new Vector2I(canopyX, offsetY));
+                }
+            }
+        }
+
+        private static float ColumnRandom01(long worldSeed, string dimensionId, int worldX, int salt)
+        {
+            unchecked
+            {
+                long hash = worldSeed;
+
+                hash = hash * 397 ^ StableStringHash(dimensionId);
+                hash = hash * 397 ^ worldX;
+                hash = hash * 397 ^ salt;
+                hash = hash * 397 ^ 0x5EED5EEDL;
+
+                return (hash & 0xFFFFFF) / (float)0xFFFFFF;
+            }
+        }
+
+        private static int ColumnRandomInt(long worldSeed, string dimensionId, int worldX, int salt, (int Min, int Max) range)
+        {
+            var span = range.Max - range.Min + 1;
+
+            return range.Min + Mathf.Min(span - 1, (int)(ColumnRandom01(worldSeed, dimensionId, worldX, salt) * span));
         }
 
         private static List<(BiomeDefinition BiomeDef, List<Vector2I> Cells)> BuildBiomeGroups(TerrainLayer target, Dictionary<BiomeType, List<Vector2I>> solidCellsByBiome, Vector2I chunkCoord, int chunkSize)

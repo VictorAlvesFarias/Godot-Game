@@ -945,8 +945,36 @@ namespace Jogo25D.Systems
 		{
 			var layer = ResolveDimensionLayer(dimensionId);
 
-			if (layer == null || layer.GetCellSourceId(cell) == -1)
+			if (layer == null)
 			{
+				return;
+			}
+
+			if (layer.GetCellSourceId(cell) == -1)
+			{
+				// Nao ha nada na Texture nessa celula - pode ser uma decoracao que so existe na
+				// Base (arvore: tronco e copa, sem espelho na Texture). Trata como uma quebra
+				// simples, isolada dessa camada, em vez do fluxo completo de bioma/dependencia.
+				var decorationLayer = ResolveDimensionBaseLayer(dimensionId);
+				var decorationTerrainSet = decorationLayer?.GetCellTileData(cell)?.TerrainSet;
+
+				if (decorationLayer == null || decorationTerrainSet == null)
+				{
+					return;
+				}
+
+				var decorationDropPosition = decorationLayer.ToGlobal(decorationLayer.MapToLocal(cell));
+
+				BreakDecorationOnly(decorationLayer, cell);
+
+				var decorationDropItemId = decorationTerrainSet == ChunkGenerator.TreeLeafTerrainSet ? "item_leaf" : "item_wood";
+
+				SpawnWorldItemRequest(ItemFactory.CreateInstance(decorationDropItemId), decorationDropPosition, dimensionId);
+
+				GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
+
+				Rpc(nameof(BreakBlockBroadcast), cell, dimensionId);
+
 				return;
 			}
 
@@ -954,10 +982,10 @@ namespace Jogo25D.Systems
 
 			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
 
+			var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
+
 			if (BlockDB.TryGet("grass", out var grassBlock))
 			{
-				var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
-
 				SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, dimensionId);
 			}
 
@@ -969,22 +997,55 @@ namespace Jogo25D.Systems
 		{
 			var layer = ResolveDimensionLayer(dimensionId);
 
-			if (layer != null)
+			if (layer == null)
 			{
-				EraseBlockAndReconnect(layer, cell, dimensionId);
+				return;
 			}
+
+			if (layer.GetCellSourceId(cell) == -1)
+			{
+				BreakDecorationOnly(ResolveDimensionBaseLayer(dimensionId), cell);
+
+				return;
+			}
+
+			EraseBlockAndReconnect(layer, cell, dimensionId);
+		}
+
+		// Quebra uma celula que so existe numa camada DECORATIVA (Base - ex: tronco/copa de
+		// arvore), sem espelho na Texture. Nao passa pelo fluxo de bioma/dependencia porque nao
+		// e uma celula de chao - so apaga e reconecta as decoracoes ao redor.
+		private static void BreakDecorationOnly(TerrainLayer decorationLayer, Vector2I cell)
+		{
+			if (decorationLayer == null || decorationLayer.GetCellSourceId(cell) == -1)
+			{
+				return;
+			}
+
+			EraseCellWithTerrainConnect(decorationLayer, cell);
+			ReconnectDecorationsNear(decorationLayer, cell);
+			decorationLayer.RedrawDebugOverlay();
 		}
 
 		public bool PlaceBlockAuthoritative(Vector2I cell, string blockId, string dimensionId)
 		{
 			var layer = ResolveDimensionLayer(dimensionId);
+			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
-			if (layer == null || layer.GetCellSourceId(cell) != -1 || !BlockDB.TryGet(blockId, out var block))
+			if (layer == null || !BlockDB.TryGet(blockId, out var block))
 			{
 				return false;
 			}
 
-			PaintBlockAndReconnect(layer, cell, block, dimensionId);
+			if (layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
+			{
+				return false;
+			}
+
+			if (!PlaceBlockOnCorrectLayer(layer, baseLayer, cell, block, dimensionId))
+			{
+				return false;
+			}
 
 			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "place", blockId);
 
@@ -997,13 +1058,57 @@ namespace Jogo25D.Systems
 		public void PlaceBlockBroadcast(Vector2I cell, string blockId, string dimensionId)
 		{
 			var layer = ResolveDimensionLayer(dimensionId);
+			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
 			if (layer == null || !BlockDB.TryGet(blockId, out var block))
 			{
 				return;
 			}
 
+			PlaceBlockOnCorrectLayer(layer, baseLayer, cell, block, dimensionId);
+		}
+
+		// Blocos normais (ex: "grass") viram parte do terrain_set do bioma de chao, na Texture -
+		// blocos decorativos (ex: "wood"/"leaf") tem terrain_set proprio e vao pra camada Base,
+		// espelhando exatamente como TreeGenerator planta a arvore.
+		private bool PlaceBlockOnCorrectLayer(TerrainLayer layer, TerrainLayer baseLayer, Vector2I cell, BlockDefinition block, string dimensionId)
+		{
+			if (block.TerrainSet.HasValue)
+			{
+				if (baseLayer == null)
+				{
+					return false;
+				}
+
+				PaintDecorationBlockAndReconnect(baseLayer, cell, block.TerrainSet.Value);
+
+				return true;
+			}
+
 			PaintBlockAndReconnect(layer, cell, block, dimensionId);
+
+			return true;
+		}
+
+		private void PaintDecorationBlockAndReconnect(TerrainLayer decorationLayer, Vector2I cell, int terrainSet)
+		{
+			var neighbors = GetSolidNeighborCells(decorationLayer, cell);
+			var sameCells = new List<Vector2I> { cell };
+
+			foreach (var neighbor in neighbors)
+			{
+				var tileData = decorationLayer.GetCellTileData(neighbor);
+
+				if (tileData != null && tileData.TerrainSet == terrainSet)
+				{
+					sameCells.Add(neighbor);
+				}
+			}
+
+			decorationLayer.Connect(sameCells, terrainSet);
+			decorationLayer.ReconnectForeignBorder(sameCells, terrainSet);
+			ReconnectDecorationsNear(decorationLayer, cell);
+			decorationLayer.RedrawDebugOverlay();
 		}
 
 		public long NextPortalId { get; set; }
@@ -1160,6 +1265,13 @@ namespace Jogo25D.Systems
 
 			if (mutation.Type == "break")
 			{
+				if (layer.GetCellSourceId(cell) == -1)
+				{
+					BreakDecorationOnly(ResolveDimensionBaseLayer(dimensionId), cell);
+
+					return;
+				}
+
 				EraseBlockAndReconnect(layer, cell, dimensionId);
 
 				return;
@@ -1167,7 +1279,7 @@ namespace Jogo25D.Systems
 
 			if (mutation.Type == "place" && BlockDB.TryGet(mutation.ExtraData, out var block))
 			{
-				PaintBlockAndReconnect(layer, cell, block, dimensionId);
+				PlaceBlockOnCorrectLayer(layer, ResolveDimensionBaseLayer(dimensionId), cell, block, dimensionId);
 			}
 		}
 
@@ -1242,6 +1354,44 @@ namespace Jogo25D.Systems
 			baseLayer?.RedrawDebugOverlay();
 
 			RepaintDependentLayerForCells(layer, baseLayer, expandedNeighbors, def => def.BaseTerrainSet);
+
+			ReconnectDecorationsNear(layer, cell);
+			ReconnectDecorationsNear(borderCapLayer, cell);
+			ReconnectDecorationsNear(baseLayer, cell);
+		}
+
+		// Recalcula, num raio pequeno ao redor da celula editada, TODAS as celulas ja existentes
+		// em CADA camada (agrupando por terrain_set atual - arvore, chao, o que for) - cobre
+		// decoracoes como tronco/copa de arvore (terrain_set 6/7) que colocar/quebrar bloco do
+		// lado nunca alcancava antes, porque o resto dessa funcao so segue a cadeia de vizinhos
+		// do PROPRIO bioma (0/1), nunca entra em celulas de outra natureza que so existem numa
+		// camada dependente (ex: tronco so existe no Bordercap, sem espelho na Texture).
+		private static void ReconnectDecorationsNear(TerrainLayer layer, Vector2I originCell, int radius = 4)
+		{
+			if (layer == null)
+			{
+				return;
+			}
+
+			var nearbyCells = new List<Vector2I>();
+
+			for (int dx = -radius; dx <= radius; dx++)
+			{
+				for (int dy = -radius; dy <= radius; dy++)
+				{
+					var cell = originCell + new Vector2I(dx, dy);
+
+					if (layer.GetCellSourceId(cell) != -1)
+					{
+						nearbyCells.Add(cell);
+					}
+				}
+			}
+
+			if (nearbyCells.Count > 0)
+			{
+				layer.ReconnectExistingCells(nearbyCells);
+			}
 		}
 
 		// Apaga UMA celula usando SetCellsTerrainConnect (terrain=-1, "essa celula nao tem
@@ -1316,6 +1466,10 @@ namespace Jogo25D.Systems
 				baseLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BaseTerrainSet);
 				RepaintDependentLayerForCells(layer, baseLayer, expandedForeignCells, def => def.BaseTerrainSet);
 			}
+
+			ReconnectDecorationsNear(layer, cell);
+			ReconnectDecorationsNear(borderCapLayer, cell);
+			ReconnectDecorationsNear(baseLayer, cell);
 		}
 
 		// Reconecta uma camada DEPENDENTE do chao (Base ou Bordercap - ambas agora pintam

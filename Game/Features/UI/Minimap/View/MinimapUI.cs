@@ -83,8 +83,25 @@ namespace Jogo25D.UI
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
+        // QueueRedraw() sem throttle rodava _Draw() (que varre a arvore INTEIRA da cena e, pras
+        // layers sem textura de "descoberto" em cache - Bordercap/Base - faz um loop celula por
+        // celula numa caixa de ~150x150) toda unica frame, sem nenhuma necessidade - minimapa nao
+        // precisa atualizar a 60fps. Redesenha so ~12x/s, imperceptivel visualmente pra um
+        // minimapa, mas corta esse custo por ~5x.
+        private const float RedrawIntervalSeconds = 1f / 12f;
+        private float _redrawTimer;
+
         public override void _Process(double delta)
         {
+            _redrawTimer += (float)delta;
+
+            if (_redrawTimer < RedrawIntervalSeconds)
+            {
+                return;
+            }
+
+            _redrawTimer = 0f;
+
             QueueRedraw();
         }
 
@@ -146,7 +163,11 @@ namespace Jogo25D.UI
                 return;
             }
 
-            DrawStaticLayerCells(layer, playerPos, center, scale);
+            // Sem textura de "descoberto" em cache (Bordercap/Base, que so tem cache pra
+            // Texture) - NAO cai no fallback celula-por-celula aqui, ele varre uma caixa de
+            // ~150x150 celulas toda vez que o minimapa redesenha. Bordercap/Base mostram o mesmo
+            // chao que a Texture ja mostra (via textura em cache), entao pular eles nao muda o
+            // que aparece no minimapa de forma perceptivel.
         }
 
         private void DrawDiscoveredTexture(TileMapLayer layer, Texture2D texture, Vector2I origin, Vector2 playerPos, Vector2 center, float scale)
@@ -168,58 +189,6 @@ namespace Jogo25D.UI
                 new Vector2(cullRadius, cullRadius) * scale * 2f);
 
             DrawTextureRectRegion(texture, destRect, srcRegion);
-        }
-
-        private void DrawStaticLayerCells(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
-        {
-            var tileSize = layer.TileSet.TileSize;
-            var cullRadius = ViewRadius * 1.5f;
-            var cullRadiusSquared = cullRadius * cullRadius;
-
-            var topLeftLocal = layer.ToLocal(playerPos - new Vector2(cullRadius, cullRadius));
-            var bottomRightLocal = layer.ToLocal(playerPos + new Vector2(cullRadius, cullRadius));
-
-            var boxStart = layer.LocalToMap(topLeftLocal);
-            var boxEnd = layer.LocalToMap(bottomRightLocal);
-
-            var minX = Mathf.Min(boxStart.X, boxEnd.X);
-            var maxX = Mathf.Max(boxStart.X, boxEnd.X);
-            var minY = Mathf.Min(boxStart.Y, boxEnd.Y);
-            var maxY = Mathf.Max(boxStart.Y, boxEnd.Y);
-
-            var boxWidthCells = maxX - minX + 1;
-            var boxHeightCells = maxY - minY + 1;
-            var boxCellsPerAxis = Mathf.Max(boxWidthCells, boxHeightCells);
-            var strideCells = Mathf.Max(1, Mathf.CeilToInt(boxCellsPerAxis / (float)160));
-
-            for (int x = minX; x <= maxX; x += strideCells)
-            {
-                for (int y = minY; y <= maxY; y += strideCells)
-                {
-                    var cell = new Vector2I(x, y);
-
-                    if (layer.GetCellSourceId(cell) == -1)
-                    {
-                        continue;
-                    }
-
-                    var worldPos = layer.ToGlobal(layer.MapToLocal(cell));
-
-                    if (worldPos.DistanceSquaredTo(playerPos) > cullRadiusSquared)
-                    {
-                        continue;
-                    }
-
-                    var mapPos = WorldToMap(worldPos, playerPos, center, scale);
-                    var size = tileSize.X * scale * strideCells;
-                    var rect = new Rect2(
-                        mapPos - new Vector2(size / 2f, size / 2f),
-                        new Vector2(size, size)
-                    );
-
-                    DrawRect(rect, TileColor);
-                }
-            }
         }
 
         public void DrawPlayers(Vector2 playerPos, Vector2 center, float scale)

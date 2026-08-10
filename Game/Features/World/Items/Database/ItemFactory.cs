@@ -118,6 +118,32 @@ namespace Jogo25D.Items
                     Icon = GD.Load<Texture2D>(Textures.Items.BLOCK_GRASS_ICON),
                 },
 
+                ["item_wood"] = () => new BlockItemDefinition
+                {
+                    Id = "item_wood",
+                    Name = "Madeira",
+                    Type = ItemType.Material,
+                    Description = "Madeira retirada do tronco de uma árvore, pode ser colocada no mundo",
+                    BlockId = "wood",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                    Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.ITEM_WOOD_ICON),
+                },
+
+                ["item_leaf"] = () => new BlockItemDefinition
+                {
+                    Id = "item_leaf",
+                    Name = "Folha",
+                    Type = ItemType.Material,
+                    Description = "Folhas retiradas da copa de uma árvore, pode ser colocada no mundo",
+                    BlockId = "leaf",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                    Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.ITEM_LEAF_ICON),
+                },
+
                 ["portal"] = () => new PortalItemDefinition
                 {
                     Id = "portal",

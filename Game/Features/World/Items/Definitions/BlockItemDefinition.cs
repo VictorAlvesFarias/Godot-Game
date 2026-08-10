@@ -83,8 +83,9 @@ namespace Jogo25D.Items
             }
 
             var cell = ResolveCellInRange(player, layer, Reach);
+            var baseLayer = player.GetActiveBaseLayer();
 
-            if (layer.GetCellSourceId(cell) != -1)
+            if (layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
             {
                 HideIndicator(player);
 

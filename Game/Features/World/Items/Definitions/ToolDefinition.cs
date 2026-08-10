@@ -63,6 +63,7 @@ namespace Jogo25D.Items
             }
 
             var layer = player.GetActiveTileLayer();
+            var baseLayer = player.GetActiveBaseLayer();
 
             if (layer == null)
             {
@@ -71,7 +72,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var (found, targetCell) = ResolveMiningTargetCell(player, layer, Reach);
+            var (found, targetCell) = ResolveMiningTargetCell(player, layer, baseLayer, Reach);
 
             if (!found)
             {
@@ -80,7 +81,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            UpdateMining(player, layer, targetCell, BreakTimeSeconds);
+            UpdateMining(player, layer, baseLayer, targetCell, BreakTimeSeconds);
         }
 
         public void ResetMining()
@@ -89,11 +90,11 @@ namespace Jogo25D.Items
             MiningElapsed = 0f;
         }
 
-        private void UpdateMining(Player player, TileMapLayer layer, Vector2I targetCell, float breakTimeSeconds)
+        private void UpdateMining(Player player, TileMapLayer layer, TileMapLayer baseLayer, Vector2I targetCell, float breakTimeSeconds)
         {
             var portal = ResolveMiningTargetPortal(player, layer, targetCell);
 
-            if (portal == null && layer.GetCellSourceId(targetCell) == -1)
+            if (portal == null && !IsSolid(layer, baseLayer, targetCell))
             {
                 ResetMining();
 
@@ -159,7 +160,15 @@ namespace Jogo25D.Items
             return layer.LocalToMap(layer.ToLocal(targetWorldPos));
         }
 
-        private static (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, Vector2 origin, Vector2 aimPosition, float reach)
+        // Tronco/copa de arvore so existem na layer Base (sem espelho na Texture) - qualquer
+        // checagem de "tem bloco aqui" pra mineracao precisa olhar as duas camadas, senao uma
+        // celula que so existe na Base fica impossivel de mirar/quebrar.
+        private static bool IsSolid(TileMapLayer layer, TileMapLayer baseLayer, Vector2I cell)
+        {
+            return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);
+        }
+
+        private static (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, TileMapLayer baseLayer, Vector2 origin, Vector2 aimPosition, float reach)
         {
             var toAim = aimPosition - origin;
             var distance = Mathf.Min(toAim.Length(), reach);
@@ -177,7 +186,7 @@ namespace Jogo25D.Items
                 var samplePos = origin + direction * sampleDistance;
                 var cell = layer.LocalToMap(layer.ToLocal(samplePos));
 
-                if (layer.GetCellSourceId(cell) != -1)
+                if (IsSolid(layer, baseLayer, cell))
                 {
                     return (true, cell, lastEmptyCell);
                 }
@@ -188,11 +197,11 @@ namespace Jogo25D.Items
             return (false, default, lastEmptyCell);
         }
 
-        private static (bool Found, Vector2I Cell) ResolveMiningTargetCell(Player player, TileMapLayer layer, float reach)
+        private static (bool Found, Vector2I Cell) ResolveMiningTargetCell(Player player, TileMapLayer layer, TileMapLayer baseLayer, float reach)
         {
             if (player.Input.RestrictMiningToAccessible)
             {
-                var hit = RaycastTiles(layer, player.GlobalPosition, player.Input.MousePosition, reach);
+                var hit = RaycastTiles(layer, baseLayer, player.GlobalPosition, player.Input.MousePosition, reach);
 
                 if (hit.FoundSolid)
                 {
@@ -206,7 +215,7 @@ namespace Jogo25D.Items
 
             var cell = ResolveCellInRange(player, layer, reach);
 
-            return (layer.GetCellSourceId(cell) != -1 || ResolveMiningTargetPortal(player, layer, cell) != null, cell);
+            return (IsSolid(layer, baseLayer, cell) || ResolveMiningTargetPortal(player, layer, cell) != null, cell);
         }
 
         #endregion
@@ -223,6 +232,7 @@ namespace Jogo25D.Items
             }
 
             var layer = player.GetActiveTileLayer();
+            var baseLayer = player.GetActiveBaseLayer();
 
             if (layer == null)
             {
@@ -231,7 +241,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var (found, cell) = ResolveMiningTargetCell(player, layer, Reach);
+            var (found, cell) = ResolveMiningTargetCell(player, layer, baseLayer, Reach);
 
             if (!found)
             {
