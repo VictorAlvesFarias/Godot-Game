@@ -12,6 +12,8 @@ using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Portals;
+using Jogo25D.Props;
+using Jogo25D.Structures;
 using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
@@ -967,7 +969,7 @@ namespace Jogo25D.Systems
 
 				BreakDecorationOnly(decorationLayer, cell);
 
-				var decorationDropItemId = decorationTerrainSet == ChunkGenerator.TreeLeafTerrainSet ? "item_leaf" : "item_wood";
+				var decorationDropItemId = decorationTerrainSet == TreeStructureDefinition.LeafTerrainSet ? "item_leaf" : "item_wood";
 
 				SpawnWorldItemRequest(ItemFactory.CreateInstance(decorationDropItemId), decorationDropPosition, dimensionId);
 
@@ -1152,12 +1154,14 @@ namespace Jogo25D.Systems
 
 		private void SpawnPortal(Node2D parent, Vector2 position, long portalId)
 		{
-			var portal = GD.Load<PackedScene>("res://Scenes/World/Props/Portal.tscn").Instantiate<Node2D>();
+			var portal = PropDB.Get("portal")?.Spawn(parent, position);
+
+			if (portal == null)
+			{
+				return;
+			}
 
 			portal.Name = $"Portal{portalId}";
-			portal.Position = position;
-
-			parent.AddChild(portal);
 		}
 
 		private void RestorePortals(WorldSaveData save)

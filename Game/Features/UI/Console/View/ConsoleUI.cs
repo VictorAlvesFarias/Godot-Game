@@ -590,6 +590,30 @@ namespace Jogo25D.UI
 			);
 
 			Register(
+				name: "reset",
+				usage: "reset",
+				description: "Reseta o jogador local (mesma coisa que morrer e reviver - vida cheia, de volta pro spawn)",
+				execute: (_, console) =>
+				{
+					if (WorldManager == null)
+					{
+						console.PrintError("WorldManager nÃ£o encontrado.");
+
+						return;
+					}
+
+					// Mesmo caminho que o botao "Reviver" da tela de morte usa
+					// (DeathScreenUI.OnRevivePressed) - teleporta pro spawn (0,0), o que ja
+					// reseta vida/velocidade/sprite/bloqueio de input como efeito colateral
+					// (ver WorldManager.TeleportPlayer).
+					WorldManager.TeleportPlayerClientRequest(Vector2.Zero);
+
+					console.PrintSuccess("Jogador resetado.");
+				},
+				getCompletions: _ => new List<string>()
+			);
+
+			Register(
 				name: "give_all",
 				usage: "give_all",
 				description: "Dá todos os itens (empilháveis com quantidade 50) e todas as habilidades ao jogador, pulando o que ele já tem",

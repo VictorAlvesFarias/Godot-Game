@@ -52,7 +52,22 @@ namespace Jogo25D.Characters
         public float DamagePopupDuration { get; set; } = 0.8f;
 		public float DamagePopupRiseDistance { get; set; } = 26f;
         public PlayerData Data { get; set; } = new PlayerData();
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new() { new MovementPropertyData { Speed = 300f, JumpVelocity = -750f }, new HealthPropertyData() };
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = CreateBaseProperties();
+
+        // Velocidade/vida base do personagem, ANTES de qualquer bonus da arvore de
+        // habilidades. ApplySkillTree() reconstroi "Properties" a partir DESSAS aqui + o que a
+        // arvore concede - sem isso, ApplySkillTree() fazia Properties.Clear() e nunca
+        // devolvia essas duas entradas, entao QUALQUER jogador (novo ou carregado, arvore de
+        // habilidades vazia ou nao) nascia com Speed=0/JumpVelocity=0/MaxHealth=0: parado no
+        // lugar e com a barra de vida sempre em 0, mesmo sem ter morrido.
+        private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
+        {
+            return new Godot.Collections.Array<BasePropertyData>
+            {
+                new MovementPropertyData { Speed = 300f, JumpVelocity = -750f },
+                new HealthPropertyData(),
+            };
+        }
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
@@ -946,7 +961,15 @@ namespace Jogo25D.Characters
 
 		public void ApplySkillTree()
 		{
+			// Reconstroi a partir da base (velocidade/vida sem nenhum bonus) - NAO so
+			// Properties.Clear(), senao o jogador perde Speed/JumpVelocity/MaxHealth de
+			// vez sempre que isso roda (todo _Ready, novo personagem ou nao).
 			Properties.Clear();
+
+			foreach (var baseProperty in CreateBaseProperties())
+			{
+				Properties.Add(baseProperty);
+			}
 
 			var grantedAbilityIds = new HashSet<string>();
 			var grantedEffectIds = new HashSet<string>();

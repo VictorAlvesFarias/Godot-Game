@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 
 namespace Jogo25D.Biomes
 {
@@ -17,7 +18,11 @@ namespace Jogo25D.Biomes
         public int BorderCapTerrainSet { get; init; }
         public int BaseSourceId { get; init; }
         public int BaseTerrainSet { get; init; }
-        public float TreeChance { get; init; }
+
+        // Ids de StructureDefinition (StructureDB) que podem nascer sozinhas nesse bioma - cada
+        // uma rola sua PROPRIA chance (StructureDefinition.Chance) por coluna elegivel. Lista
+        // vazia/null = bioma sem decoracao procedural nenhuma.
+        public List<string> StructureIds { get; init; } = new();
 
         #endregion
     }

@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Structures;
 using System.Collections.Generic;
 
 namespace Jogo25D.Blocks
@@ -18,17 +19,17 @@ namespace Jogo25D.Blocks
             {
                 Id = "wood",
                 DropItemId = "item_wood",
-                SourceId = 6,
+                SourceId = TreeStructureDefinition.WoodTerrainSet,
                 AtlasCoord = new Vector2I(1, 1),
-                TerrainSet = 6,
+                TerrainSet = TreeStructureDefinition.WoodTerrainSet,
             },
             ["leaf"] = new BlockDefinition
             {
                 Id = "leaf",
                 DropItemId = "item_leaf",
-                SourceId = 7,
+                SourceId = TreeStructureDefinition.LeafTerrainSet,
                 AtlasCoord = new Vector2I(1, 1),
-                TerrainSet = 7,
+                TerrainSet = TreeStructureDefinition.LeafTerrainSet,
             },
         };
 
