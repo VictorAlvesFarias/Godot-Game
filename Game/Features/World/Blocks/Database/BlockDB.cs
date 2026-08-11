@@ -11,14 +11,14 @@ namespace Jogo25D.Blocks
             {
                 Id = "grass",
                 DropItemId = "block_grass",
-                SourceId = 7,
+                SourceId = 0,
                 AtlasCoord = new Vector2I(1, 0),
             },
             ["wood"] = new BlockDefinition
             {
                 Id = "wood",
                 DropItemId = "item_wood",
-                SourceId = 13,
+                SourceId = 6,
                 AtlasCoord = new Vector2I(1, 1),
                 TerrainSet = 6,
             },
@@ -26,7 +26,7 @@ namespace Jogo25D.Blocks
             {
                 Id = "leaf",
                 DropItemId = "item_leaf",
-                SourceId = 14,
+                SourceId = 7,
                 AtlasCoord = new Vector2I(1, 1),
                 TerrainSet = 7,
             },

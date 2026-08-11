@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://boxu22na5c4om"
-path="res://.godot/imported/Blob_1_32px.png-efd39d709253d66ba1dd4b68ebc0eba9.ctex"
+uid="uid://bttwo86q525de"
+path="res://.godot/imported/olive_grass_texture.png-a67c866d8375e915b70049ce20b7c58d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/lime_tree_sheet/Blob_1_32px.png"
-dest_files=["res://.godot/imported/Blob_1_32px.png-efd39d709253d66ba1dd4b68ebc0eba9.ctex"]
+source_file="res://Assets/Textures/Tiles/olive/olive_grass_texture.png"
+dest_files=["res://.godot/imported/olive_grass_texture.png-a67c866d8375e915b70049ce20b7c58d.ctex"]
 
 [params]
 

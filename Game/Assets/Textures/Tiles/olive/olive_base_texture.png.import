@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://vljyxx0uapan"
-path="res://.godot/imported/olive_ground_texture.png-c1037d2344e7fc6150e4a708bc94f9a5.ctex"
+uid="uid://ww6odhyebt1j"
+path="res://.godot/imported/olive_base_texture.png-61e29bf33b1bca1ab815ec3b7075c744.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/olive_ground/olive_ground_texture.png"
-dest_files=["res://.godot/imported/olive_ground_texture.png-c1037d2344e7fc6150e4a708bc94f9a5.ctex"]
+source_file="res://Assets/Textures/Tiles/olive/olive_base_texture.png"
+dest_files=["res://.godot/imported/olive_base_texture.png-61e29bf33b1bca1ab815ec3b7075c744.ctex"]
 
 [params]
 

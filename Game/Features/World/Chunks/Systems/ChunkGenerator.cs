@@ -16,12 +16,28 @@ namespace Jogo25D.Chunks
         // do jeito que bioma espelha.
         private static readonly HashSet<int> TreeTerrainSets = new() { TreeWoodTerrainSet, TreeLeafTerrainSet };
 
+        // Todo o algoritmo original (altura de arvore, amplitude de relevo, frequencia de ruido,
+        // espacamento minimo) foi desenhado e calibrado visualmente com tile_size=32 - continua
+        // usando esses mesmos numeros como referencia, so multiplicando (dimensoes em tiles) ou
+        // dividindo (frequencia, que e "ciclos por tile") pelo quanto o tile encolheu/cresceu
+        // desde entao. Assim o mundo fica proporcional ao PLAYER (cujo tamanho em pixels nao
+        // muda) em vez de proporcional ao tile, nao importa o tile_size escolhido no TileSet.
+        private const int ReferenceTileSize = 32;
+
+        private static int GetWorldScale(TileSet tileSet)
+        {
+            var tileSize = tileSet?.TileSize.X ?? ReferenceTileSize;
+
+            return Mathf.Max(1, Mathf.RoundToInt(ReferenceTileSize / (float)tileSize));
+        }
+
         #region Core - Generation
 
         public static void Paint(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
-            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
+            var worldScale = GetWorldScale(tileSet);
+            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
@@ -67,7 +83,7 @@ namespace Jogo25D.Chunks
                     }
                 }
 
-                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize);
+                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -92,7 +108,8 @@ namespace Jogo25D.Chunks
         public static async Task PaintAsync(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
-            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize);
+            var worldScale = GetWorldScale(tileSet);
+            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
 
             if (tileSet.GetTerrainSetsCount() > 0)
             {
@@ -134,7 +151,7 @@ namespace Jogo25D.Chunks
                     }
                 }
 
-                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize);
+                PlaceTrees(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -169,7 +186,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private static (Dictionary<BiomeType, List<Vector2I>> SolidCellsByBiome, List<ColumnSurface> ColumnSurfaces) ResolveSolidCellsByBiome(long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        private static (Dictionary<BiomeType, List<Vector2I>> SolidCellsByBiome, List<ColumnSurface> ColumnSurfaces) ResolveSolidCellsByBiome(long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -188,12 +205,19 @@ namespace Jogo25D.Chunks
                     heightNoise = new FastNoiseLite
                     {
                         Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
-                        Frequency = columnBiomeDef.NoiseFrequency,
+                        // Frequencia e "ciclos por tile" - com o tile menor, um mesmo passo de 1
+                        // tile percorre MENOS distancia em pixel, entao teria que andar mais
+                        // tiles pra completar o mesmo ciclo (mesma paisagem em pixels) que o
+                        // algoritmo original desenhava a tile_size=32.
+                        Frequency = columnBiomeDef.NoiseFrequency / worldScale,
                     };
                     heightNoiseByBiome[columnBiome] = heightNoise;
                 }
 
-                var groundHeight = columnBiomeDef.HeightOffset + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude);
+                // Amplitude/offset sao alturas em TILES - escala pra cima junto com o encolhimento
+                // do tile, senao o relevo (em pixels) fica achatado pela metade em vez de manter
+                // a mesma proporcao com o player que tinha no algoritmo original.
+                var groundHeight = columnBiomeDef.HeightOffset * worldScale + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude * worldScale);
 
                 columnSurfaces.Add(new ColumnSurface(worldX, groundHeight, columnBiome));
 
@@ -267,7 +291,35 @@ namespace Jogo25D.Chunks
             new TreeTemplate(3, new[] { 2, 2, 1, 0 }),
         };
 
-        private static void PlaceTrees(TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        // Os 4 TreeTemplates acima foram desenhados/extraidos a tile_size=32 (a referencia) - pra
+        // manter o MESMO tamanho em pixels (proporcional ao player) com um tile menor, cada
+        // dimensao em tiles precisa crescer na mesma proporcao que o tile encolheu. So multiplicar
+        // o raio deixaria a copa mais larga sem ficar mais alta (achatada) - por isso cada linha
+        // original tambem e repetida "worldScale" vezes, esticando a altura junto com a largura,
+        // como um "pixel scale 2x" da silhueta original.
+        private static TreeTemplate ScaleTemplate(TreeTemplate template, int worldScale)
+        {
+            if (worldScale <= 1)
+            {
+                return template;
+            }
+
+            var scaledRadii = new int[template.CanopyRadii.Length * worldScale];
+
+            for (int row = 0; row < template.CanopyRadii.Length; row++)
+            {
+                var scaledRadius = template.CanopyRadii[row] * worldScale;
+
+                for (int repeat = 0; repeat < worldScale; repeat++)
+                {
+                    scaledRadii[row * worldScale + repeat] = scaledRadius;
+                }
+            }
+
+            return new TreeTemplate(template.TrunkHeight * worldScale, scaledRadii);
+        }
+
+        private static void PlaceTrees(TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
             if (baseTarget == null)
             {
@@ -279,6 +331,11 @@ namespace Jogo25D.Chunks
             var lastTreeRightEdge = int.MinValue;
             var trunkCells = new List<Vector2I>();
             var canopyCells = new List<Vector2I>();
+
+            // 1 celula de folga (no algoritmo original, a tile_size=32) - escala junto, senao o
+            // espacamento minimo entre arvores fica visualmente menor que antes conforme o tile
+            // encolhe.
+            var minGapTiles = worldScale;
 
             foreach (var column in columnSurfaces)
             {
@@ -305,17 +362,17 @@ namespace Jogo25D.Chunks
                 // Sorteia entre os 4 modelos com a MESMA chance cada (25%) - indice 0..3 direto,
                 // sem pesos.
                 var templateIndex = ColumnRandomInt(worldSeed, dimensionId, column.WorldX, 1, (0, TreeTemplates.Length - 1));
-                var template = TreeTemplates[templateIndex];
+                var template = ScaleTemplate(TreeTemplates[templateIndex], worldScale);
                 var maxRadius = template.CanopyRadii.Length == 0 ? 0 : template.CanopyRadii[0];
 
                 var treeHeight = template.TrunkHeight + template.CanopyRadii.Length;
                 var leftEdge = column.WorldX - maxRadius;
 
-                // Garante pelo menos 1 celula vazia de folga entre a copa dessa arvore e a borda
-                // direita da ultima arvore plantada.
+                // Garante pelo menos "minGapTiles" celulas vazias de folga entre a copa dessa
+                // arvore e a borda direita da ultima arvore plantada.
                 if (localX < maxRadius || localX > chunkSize - 1 - maxRadius
                     || localSurfaceY - treeHeight < 0
-                    || leftEdge <= lastTreeRightEdge + 1)
+                    || leftEdge <= lastTreeRightEdge + minGapTiles)
                 {
                     continue;
                 }

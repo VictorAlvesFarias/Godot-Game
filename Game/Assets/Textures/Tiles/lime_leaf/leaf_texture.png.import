@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://btgujoao0cahn"
-path="res://.godot/imported/Blob_2_32px.png-46d79ae6fb6d536dde95c7a3066c89da.ctex"
+uid="uid://qe3dyic31d0b"
+path="res://.godot/imported/leaf_texture.png-1b2dca9b0e086238509b583b8b7df106.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/tree_wood/Blob_2_32px.png"
-dest_files=["res://.godot/imported/Blob_2_32px.png-46d79ae6fb6d536dde95c7a3066c89da.ctex"]
+source_file="res://Assets/Textures/Tiles/lime_leaf/leaf_texture.png"
+dest_files=["res://.godot/imported/leaf_texture.png-1b2dca9b0e086238509b583b8b7df106.ctex"]
 
 [params]
 
