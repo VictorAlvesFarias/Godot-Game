@@ -14,7 +14,7 @@ Nota: 1 celula do preview = 1 tile no jogo. O C# NAO multiplica esses ranges pel
 do ChunkGenerator (tile_size=16 -> worldScale=2); o preview e o jogo devem bater 1:1 em celulas.
 
 Uso:
-    python .dev/tune_hybrid_tree.py [--count 30] [--seed-start 0] [--out .dev/tree_previews/hybrid]
+    python .dev/tune_hybrid_tree.py [--count 30] [--seed-start 0] [--out .temp/tree_previews/hybrid]
 """
 
 import argparse
@@ -260,7 +260,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--count", type=int, default=30)
     parser.add_argument("--seed-start", type=int, default=0)
-    parser.add_argument("--out", type=str, default=".dev/tree_previews/hybrid")
+    parser.add_argument("--out", type=str, default=".temp/tree_previews/hybrid")
     args = parser.parse_args()
 
     out_dir = Path(args.out)

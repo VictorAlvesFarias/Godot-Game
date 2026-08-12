@@ -430,7 +430,7 @@ namespace Jogo25D.Structures
 				return;
 			}
 
-			var exportDirectory = ProjectSettings.GlobalizePath("res://.dev/godot/tree");
+			var exportDirectory = ProjectSettings.GlobalizePath("res://.temp/godot/tree");
 			Directory.CreateDirectory(exportDirectory);
 
 			var left = 0;
