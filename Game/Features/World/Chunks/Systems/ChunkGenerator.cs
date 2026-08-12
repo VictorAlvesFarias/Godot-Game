@@ -76,7 +76,7 @@ namespace Jogo25D.Chunks
                     }
                 }
 
-                PlaceStructures(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
+                PlaceStructures(target, borderCapTarget, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -144,7 +144,7 @@ namespace Jogo25D.Chunks
                     }
                 }
 
-                PlaceStructures(baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
+                PlaceStructures(target, borderCapTarget, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -246,7 +246,7 @@ namespace Jogo25D.Chunks
         // entao ganha bordas/cantos organicos em vez de bloco solido. Cada instancia fica inteira
         // dentro dos limites locais do proprio chunk pra nao depender de chunks vizinhos ainda
         // nao carregados nem sumir pela metade quando um vizinho descarrega.
-        private static void PlaceStructures(TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
+        private static void PlaceStructures(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
             if (baseTarget == null)
             {
@@ -307,6 +307,12 @@ namespace Jogo25D.Chunks
                     }
 
                     var bounds = structure.GetBounds(worldSeed, dimensionId, column.WorldX, worldScale);
+
+                    if (!IsStructureVolumeClear(target, borderCapTarget, column.WorldX, column.GroundHeight, bounds))
+                    {
+                        continue;
+                    }
+
                     var candidateLeftX = column.WorldX - bounds.Left;
                     var hasPreviousRightEdge = lastRightEdgeByStructure.TryGetValue(structureId, out var lastRightEdge) && lastRightEdge != int.MinValue;
 
@@ -330,8 +336,11 @@ namespace Jogo25D.Chunks
 
                     if (baseTarget != null)
                     {
-                        var overlayText = structureId == "tree" ? column.WorldX.ToString() : $"{structureId}:{column.WorldX}";
-                        baseTarget.AddDebugOverlayAnnotation(new Vector2I(column.WorldX, column.GroundHeight), overlayText, Colors.White);
+                        if (structureId != "tree" || TreeDebugConstants.EnableTreeDebugOverlay)
+                        {
+                            var overlayText = structureId == "tree" ? column.WorldX.ToString() : $"{structureId}:{column.WorldX}";
+                            baseTarget.AddDebugOverlayAnnotation(new Vector2I(column.WorldX, column.GroundHeight), overlayText, Colors.White);
+                        }
                     }
 
                     lastRightEdgeByStructure[structureId] = column.WorldX + bounds.Right;
@@ -419,6 +428,34 @@ namespace Jogo25D.Chunks
             }
 
             return lastRightEdge;
+        }
+
+        private static bool IsStructureVolumeClear(TerrainLayer target, TerrainLayer borderCapTarget, int worldX, int groundHeight, StructureBounds bounds)
+        {
+            var leftX = worldX - bounds.Left;
+            var rightX = worldX + bounds.Right;
+            var topY = groundHeight - bounds.Top;
+            var bottomY = groundHeight - 1;
+
+            for (int x = leftX; x <= rightX; x++)
+            {
+                for (int y = topY; y <= bottomY; y++)
+                {
+                    var cell = new Vector2I(x, y);
+
+                    if (target.GetCellSourceId(cell) != -1)
+                    {
+                        return false;
+                    }
+
+                    if (borderCapTarget != null && borderCapTarget.GetCellSourceId(cell) != -1)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private static void AddIfSolid(TileMapLayer target, List<Vector2I> solidCells, Vector2I cell, int terrainSet)

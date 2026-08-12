@@ -13,8 +13,9 @@ namespace Jogo25D.Structures
                 // ERA 0.97 (arvore pequena antiga) -> 0.25 (hibrida grande + espacamento por
                 // caixa completa da copa = quase nada spawnava). Com arvore calibrada 1:1 no
                 // Python e espacamento por coluna-ancora do tronco, 0.65 da floresta visivel
-                // sem grudar tronco em tronco.
-                Chance = 0.65f,
+                    // sem grudar tronco em tronco. Sobe um pouco mais pra compensar a filtragem de
+                    // volume livre acima do chao e voltar a encher o mapa.
+                    Chance = 0.82f,
             },
         };
 

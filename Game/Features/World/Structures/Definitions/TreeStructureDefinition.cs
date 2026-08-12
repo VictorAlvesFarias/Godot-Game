@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Chunks;
+using Jogo25D.Constants;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,18 +33,112 @@ namespace Jogo25D.Structures
 			public int[] RadiusByRow; // indice 0 = base da copa (encostada no tronco)
 		}
 
+		private sealed class TreeRandom
+		{
+			private readonly uint[] _state = new uint[624];
+			private int _index = 624;
+
+			public TreeRandom(uint seed)
+			{
+				Initialize(seed);
+			}
+
+			private void Initialize(uint seed)
+			{
+				_state[0] = seed;
+				for (var i = 1; i < _state.Length; i++)
+				{
+					var previous = _state[i - 1];
+					_state[i] = unchecked(1812433253u * (previous ^ (previous >> 30)) + (uint)i);
+				}
+
+				_index = _state.Length;
+			}
+
+			private void Twist()
+			{
+				for (var i = 0; i < _state.Length; i++)
+				{
+					var y = (_state[i] & 0x80000000u) | (_state[(i + 1) % _state.Length] & 0x7fffffffu);
+					var next = _state[(i + 397) % _state.Length] ^ (y >> 1);
+
+					if ((y & 1u) != 0)
+					{
+						next ^= 0x9908b0dfu;
+					}
+
+					_state[i] = next;
+				}
+
+				_index = 0;
+			}
+
+			private uint NextUInt32()
+			{
+				if (_index >= _state.Length)
+				{
+					Twist();
+				}
+
+				var value = _state[_index++];
+				value ^= value >> 11;
+				value ^= (value << 7) & 0x9d2c5680u;
+				value ^= (value << 15) & 0xefc60000u;
+				value ^= value >> 18;
+
+				return value;
+			}
+
+			public double NextDouble()
+			{
+				return (((NextUInt32() >> 5) * 67108864.0) + (NextUInt32() >> 6)) / 9007199254740992.0;
+			}
+
+			public int NextInt(int minInclusive, int maxInclusive)
+			{
+				if (maxInclusive < minInclusive)
+				{
+					return minInclusive;
+				}
+
+				var span = maxInclusive - minInclusive + 1;
+				return minInclusive + Mathf.Clamp((int)(NextDouble() * span), 0, span - 1);
+			}
+
+			public bool NextBool()
+			{
+				return NextInt(0, 1) == 1;
+			}
+		}
+
 		// worldScale e ignorado aqui de proposito: os ranges abaixo foram calibrados 1:1 com
 		// .dev/tune_hybrid_tree.py (1 celula = 1 tile). Multiplicar pelo worldScale do
 		// ChunkGenerator (tile_size=16 -> 2) dobrava tronco/copa/galhos em relacao ao preview
 		// Python e quebrava a silhueta que foi escolhida visualmente.
-		private TreeShape GenerateShape(long worldSeed, string dimensionId, int worldX, int worldScale)
+		private static int RoundToEven(float value)
 		{
-			_ = worldScale;
+			return (int)Math.Round(value, MidpointRounding.ToEven);
+		}
 
-			var trunkHeight = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 0, (7, 12));
-			var canopyHeight = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 1, (5, 9));
-			var maxRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 2, (3, 6));
-			var trunkLean = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 3, (-1, 1));
+		private static uint CombineTreeSeed(long worldSeed, string dimensionId, string structureId, int worldX)
+		{
+			unchecked
+			{
+				ulong hash = (ulong)worldSeed;
+				hash = hash * 397u ^ (ulong)WorldRandom.StableStringHash(dimensionId);
+				hash = hash * 397u ^ (ulong)WorldRandom.StableStringHash(structureId);
+				hash = hash * 397u ^ (ulong)worldX;
+
+				return (uint)(hash ^ (hash >> 32));
+			}
+		}
+
+		private TreeShape GenerateShape(TreeRandom rng)
+		{
+			var trunkHeight = rng.NextInt(7, 12);
+			var canopyHeight = rng.NextInt(5, 9);
+			var maxRadius = rng.NextInt(3, 6);
+			var trunkLean = rng.NextInt(-1, 1);
 
 			var radiusByRow = new int[canopyHeight];
 
@@ -67,8 +162,8 @@ namespace Jogo25D.Structures
 					taper = 1f;
 				}
 
-				var variation = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + row, 100, (-1, 1));
-				var radius = Mathf.RoundToInt(maxRadius * taper) + variation;
+				var variation = rng.NextInt(-1, 1);
+				var radius = RoundToEven(maxRadius * taper) + variation;
 
 				radiusByRow[row] = Mathf.Max(0, radius);
 			}
@@ -86,7 +181,7 @@ namespace Jogo25D.Structures
 		private static Vector2I TrunkPosition(TreeShape shape, int step)
 		{
 			var progress = shape.TrunkHeight <= 1 ? 0f : (float)step / shape.TrunkHeight;
-			var x = Mathf.RoundToInt(shape.TrunkLean * progress);
+			var x = RoundToEven(shape.TrunkLean * progress);
 
 			return new Vector2I(x, step);
 		}
@@ -105,18 +200,28 @@ namespace Jogo25D.Structures
 		// checagem de espaco/borda do ChunkGenerator nao esperava).
 		private void BuildTree(long worldSeed, string dimensionId, int worldX, int worldScale, List<Vector2I> trunkCells, List<Vector2I> canopyCells)
 		{
-			var shape = GenerateShape(worldSeed, dimensionId, worldX, worldScale);
+			_ = worldScale;
+
+			var rng = new TreeRandom(CombineTreeSeed(worldSeed, dimensionId, Id, worldX));
+			var shape = GenerateShape(rng);
+			var trunkCellSet = new HashSet<Vector2I>();
+			var canopyCellSet = new HashSet<Vector2I>();
 
 			for (int step = 1; step <= shape.TrunkHeight; step++)
 			{
-				trunkCells.Add(TrunkPosition(shape, step));
+				var trunkCell = TrunkPosition(shape, step);
+
+				if (trunkCellSet.Add(trunkCell))
+				{
+					trunkCells.Add(trunkCell);
+				}
 			}
 
 			for (int row = 0; row < shape.CanopyHeight; row++)
 			{
 				var radius = shape.RadiusByRow[row];
 				var normalized = shape.CanopyHeight <= 1 ? 0f : (float)row / (shape.CanopyHeight - 1);
-				var centerX = shape.TrunkLean + Mathf.RoundToInt(shape.TrunkLean * normalized);
+				var centerX = shape.TrunkLean + RoundToEven(shape.TrunkLean * normalized);
 				var y = shape.TrunkHeight + row;
 
 				for (int x = -radius; x <= radius; x++)
@@ -125,7 +230,7 @@ namespace Jogo25D.Structures
 
 					if (isEdge)
 					{
-						var edgeRoll = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + centerX + x, 500 + row, (0, 5));
+						var edgeRoll = rng.NextInt(0, 5);
 
 						if (edgeRoll == 0)
 						{
@@ -133,28 +238,38 @@ namespace Jogo25D.Structures
 						}
 					}
 
-					canopyCells.Add(new Vector2I(centerX + x, y));
+					var canopyCell = new Vector2I(centerX + x, y);
+
+					if (trunkCellSet.Contains(canopyCell) || !canopyCellSet.Add(canopyCell))
+					{
+						continue;
+					}
+
+					canopyCells.Add(canopyCell);
 				}
 			}
 
-			AddLeafClusters(canopyCells, shape, worldSeed, dimensionId, worldX, worldScale);
-			AddBranches(trunkCells, canopyCells, shape, worldSeed, dimensionId, worldX, worldScale);
+			AddLeafClusters(canopyCells, trunkCellSet, canopyCellSet, shape, rng, worldSeed, dimensionId, worldX, worldScale);
+			AddBranches(trunkCells, trunkCellSet, canopyCells, canopyCellSet, shape, rng, worldSeed, dimensionId, worldX, worldScale);
 		}
 
 		// Tufos redondos extras espalhados pela copa - dao a silhueta organica/irregular (menos
 		// "bola perfeita") que dominou a selecao.
-		private void AddLeafClusters(List<Vector2I> canopyCells, TreeShape shape, long worldSeed, string dimensionId, int worldX, int worldScale)
+		private void AddLeafClusters(List<Vector2I> canopyCells, HashSet<Vector2I> trunkCellSet, HashSet<Vector2I> canopyCellSet, TreeShape shape, TreeRandom rng, long worldSeed, string dimensionId, int worldX, int worldScale)
 		{
+			_ = worldSeed;
+			_ = dimensionId;
+			_ = worldX;
 			_ = worldScale;
-			var clusterCount = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 800, (3, 7));
+			var clusterCount = rng.NextInt(3, 7);
 
 			for (int cluster = 0; cluster < clusterCount; cluster++)
 			{
 				var salt = 810 + cluster * 10;
-				var row = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt, (0, shape.CanopyHeight - 1));
+				var row = rng.NextInt(0, shape.CanopyHeight - 1);
 				var radius = shape.RadiusByRow[row];
-				var x = radius > 0 ? WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt + 1, (-radius, radius)) : 0;
-				var clusterRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt + 2, (1, 3));
+				var x = radius > 0 ? rng.NextInt(-radius, radius) : 0;
+				var clusterRadius = rng.NextInt(1, 3);
 
 				var centerX = shape.TrunkLean + x;
 				var centerY = shape.TrunkHeight + row;
@@ -168,7 +283,14 @@ namespace Jogo25D.Structures
 							continue;
 						}
 
-						canopyCells.Add(new Vector2I(centerX + dx, centerY + dy));
+						var canopyCell = new Vector2I(centerX + dx, centerY + dy);
+
+						if (trunkCellSet.Contains(canopyCell) || !canopyCellSet.Add(canopyCell))
+						{
+							continue;
+						}
+
+						canopyCells.Add(canopyCell);
 					}
 				}
 			}
@@ -179,20 +301,23 @@ namespace Jogo25D.Structures
 		// tronco (onde a copa ja comeca), nunca no meio dele - foi exatamente esse o bug visual
 		// reportado: nascendo no meio do tronco (a "fracao da altura toda" usada antes), o galho
 		// ficava longe demais da copa e sobrava um vao vazio entre os dois.
-		private void AddBranches(List<Vector2I> trunkCells, List<Vector2I> canopyCells, TreeShape shape, long worldSeed, string dimensionId, int worldX, int worldScale)
+		private void AddBranches(List<Vector2I> trunkCells, HashSet<Vector2I> trunkCellSet, List<Vector2I> canopyCells, HashSet<Vector2I> canopyCellSet, TreeShape shape, TreeRandom rng, long worldSeed, string dimensionId, int worldX, int worldScale)
 		{
+			_ = worldSeed;
+			_ = dimensionId;
+			_ = worldX;
 			_ = worldScale;
-			var branchCount = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 700, (2, 4));
+			var branchCount = rng.NextInt(2, 4);
 
 			for (int branch = 0; branch < branchCount; branch++)
 			{
 				var branchSalt = 710 + branch * 10;
 
-				var drop = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt, (0, 2));
+				var drop = rng.NextInt(0, 2);
 				var step = Mathf.Max(1, shape.TrunkHeight - drop);
 
-				var direction = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt + 1, (0, 1)) == 0 ? -1 : 1;
-				var length = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt + 2, (2, 4));
+				var direction = rng.NextBool() ? 1 : -1;
+				var length = rng.NextInt(2, 4);
 
 				var start = TrunkPosition(shape, step);
 
@@ -200,16 +325,19 @@ namespace Jogo25D.Structures
 				{
 					// O galho sobe conforme se afasta do tronco, mirando de volta pra dentro
 					// da copa em vez de reto pro lado.
-					var verticalOffset = Mathf.RoundToInt(i * 0.35f);
+					var verticalOffset = RoundToEven(i * 0.35f);
 					var position = start + new Vector2I(direction * i, verticalOffset);
 
-					trunkCells.Add(position);
+					if (trunkCellSet.Add(position))
+					{
+						trunkCells.Add(position);
+					}
 
 					// Sorteado A CADA PASSO (igual ao Python) - nao uma vez so pro galho
 					// inteiro, senao os tufos ficam uniformes demais ao longo do galho. Varia
 					// por "worldX + i" (posicao), nao por salt, senao colidiria com o salt do
 					// proximo galho (branchSalt anda de 10 em 10).
-					var leafRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + i, branchSalt + 3, (1, 2));
+					var leafRadius = rng.NextInt(1, 2);
 
 					for (int lx = -leafRadius; lx <= leafRadius; lx++)
 					{
@@ -220,7 +348,14 @@ namespace Jogo25D.Structures
 								continue;
 							}
 
-							canopyCells.Add(position + new Vector2I(lx, ly));
+							var canopyCell = position + new Vector2I(lx, ly);
+
+							if (trunkCellSet.Contains(canopyCell) || !canopyCellSet.Add(canopyCell))
+							{
+								continue;
+							}
+
+							canopyCells.Add(canopyCell);
 						}
 					}
 				}
@@ -290,8 +425,7 @@ namespace Jogo25D.Structures
 
 		private static void ExportTreePreview(List<Vector2I> trunkCells, List<Vector2I> canopyCells, long worldSeed, string dimensionId, int worldX)
 		{
-#if DEBUG
-			if (!OS.IsDebugBuild())
+			if (!TreeDebugConstants.EnableTreePreviewExport || !OS.IsDebugBuild())
 			{
 				return;
 			}
@@ -356,7 +490,6 @@ namespace Jogo25D.Structures
 			{
 				GD.PrintErr($"[TreeStructureDefinition] Falha ao salvar preview {path}: {error}");
 			}
-#endif
 		}
 
 		private static void DrawOverlayText(Image image, string text, Vector2I position, Color color, Color background, int scale)

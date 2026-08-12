@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dlt7o0ekdjb87"
-path="res://.godot/imported/lime_grass_texture.png-ae4350f82945b9ed37121a47f31df0b3.ctex"
+uid="uid://pu0tgc5g8uk3"
+path="res://.godot/imported/sheet_texture.png-65cd6a8d88c94bf80d2e39456ade0898.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/lime/lime_grass_texture.png"
-dest_files=["res://.godot/imported/lime_grass_texture.png-ae4350f82945b9ed37121a47f31df0b3.ctex"]
+source_file="res://Assets/Textures/godot_export/lime_leaf/sheet_texture.png"
+dest_files=["res://.godot/imported/sheet_texture.png-65cd6a8d88c94bf80d2e39456ade0898.ctex"]
 
 [params]
 

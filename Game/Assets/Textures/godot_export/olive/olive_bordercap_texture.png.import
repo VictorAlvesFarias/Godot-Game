@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dlt7o0ekdjb87"
-path="res://.godot/imported/lime_grass_texture.png-ae4350f82945b9ed37121a47f31df0b3.ctex"
+uid="uid://r3npwgdgo0rg"
+path="res://.godot/imported/olive_bordercap_texture.png-f495807e3506813d2d60114a00ff6b51.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/lime/lime_grass_texture.png"
-dest_files=["res://.godot/imported/lime_grass_texture.png-ae4350f82945b9ed37121a47f31df0b3.ctex"]
+source_file="res://Assets/Textures/godot_export/olive/olive_bordercap_texture.png"
+dest_files=["res://.godot/imported/olive_bordercap_texture.png-f495807e3506813d2d60114a00ff6b51.ctex"]
 
 [params]
 
