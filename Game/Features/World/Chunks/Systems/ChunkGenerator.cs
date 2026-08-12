@@ -257,17 +257,9 @@ namespace Jogo25D.Chunks
             var baseCellY = chunkCoord.Y * chunkSize;
             var cellsByTerrainSet = new Dictionary<int, List<Vector2I>>();
 
-            // Cursor de espacamento POR ESTRUTURA - assim duas estruturas diferentes (ex: arvore
-            // e uma futura "pedra") nao competem pelo mesmo espacamento entre si, so instancias
-            // da MESMA estrutura ficam com a folga minima garantida entre elas.
+            // Cursor de espacamento POR ESTRUTURA - distancia minima entre caixas de estrutura.
             var lastRightEdgeByStructure = new Dictionary<string, int>();
-
-            // 1 celula de folga (no algoritmo original, a tile_size=32) - escala junto. A
-            // sobreposicao forcada (valor negativo) foi revertida: era compensacao pra trava de
-            // "caber dentro do proprio chunk" que existia na epoca - removida essa trava (ver
-            // GetHorizontalReach/GetVerticalReach), quase toda coluna elegivel ja consegue
-            // nascer, entao sobrepor de proposito so deixava a floresta grudada/ilegivel.
-            var minGapTiles = worldScale;
+            var minBoundsGapTiles = MinStructureBoundsGapTiles;
 
             foreach (var column in columnSurfaces)
             {
@@ -295,36 +287,30 @@ namespace Jogo25D.Chunks
                         continue;
                     }
 
+                    if (!lastRightEdgeByStructure.ContainsKey(structureId))
+                    {
+                        var spanLookback = Mathf.Max(MaxStructureSpacingLookback, structure.GetMaxRightExtent(worldScale));
+
+                        lastRightEdgeByStructure[structureId] = ResolveLastRightEdgeBefore(
+                            structure,
+                            worldSeed,
+                            dimensionId,
+                            baseCellX,
+                            spanLookback,
+                            minBoundsGapTiles,
+                            worldScale);
+                    }
+
                     if (WorldRandom.StructureRandom01(worldSeed, dimensionId, structureId, column.WorldX, 0) >= structure.Chance)
                     {
                         continue;
                     }
 
-                    // Caixa REAL (bloco mais a esquerda, mais a direita, mais ao topo entre
-                    // TODAS as celulas que essa instancia vai gerar - tronco, copa, tufo,
-                    // galho) - Left/Right nao sao simetricos, um galho puxando mais pra um lado
-                    // faz a arvore reservar mais espaco desse lado especificamente.
                     var bounds = structure.GetBounds(worldSeed, dimensionId, column.WorldX, worldScale);
-                    var leftEdge = column.WorldX - bounds.Left;
-                    var rightEdge = column.WorldX + bounds.Right;
+                    var candidateLeftX = column.WorldX - bounds.Left;
+                    var hasPreviousRightEdge = lastRightEdgeByStructure.TryGetValue(structureId, out var lastRightEdge) && lastRightEdge != int.MinValue;
 
-                    // NAO exige mais a estrutura inteira caber dentro da caixa 32x32 do proprio
-                    // chunk. Base/Bordercap/Texture sao UMA layer so por dimensao (compartilhada
-                    // por TODOS os chunks, ver ChunkStreamingManager.OverworldBaseLayer/
-                    // UpsidedownBaseLayer) - pintar uma celula fora da caixa do chunk que gerou a
-                    // arvore funciona perfeitamente, sem popup nem chunk faltando. So havia um
-                    // motivo pra essa trava: se um chunk VIZINHO descarregar enquanto o
-                    // chunk-raiz da arvore continua carregado, o Erase do vizinho (que limpa
-                    // cegamente a PROPRIA caixa 32x32) pode apagar a pontinha da arvore que vazou
-                    // pra dentro dele. Com arvores grandes essa trava rejeitava a MAIORIA dos
-                    // rolls sem chance nenhuma de nascer em lugar nenhum - trocar "quase nunca
-                    // aparece" por "raramente perde uma pontinha no vizinho descarregando" e uma
-                    // troca melhor.
-                    var hasPrevious = lastRightEdgeByStructure.TryGetValue(structureId, out var lastRightEdge);
-
-                    // Garante pelo menos "minGapTiles" celulas vazias de folga entre a caixa
-                    // dessa instancia e a caixa da ultima instancia da MESMA estrutura.
-                    if (hasPrevious && leftEdge <= lastRightEdge + minGapTiles)
+                    if (hasPreviousRightEdge && candidateLeftX <= lastRightEdge + minBoundsGapTiles)
                     {
                         continue;
                     }
@@ -342,7 +328,13 @@ namespace Jogo25D.Chunks
                         cells.AddRange(group.Cells);
                     }
 
-                    lastRightEdgeByStructure[structureId] = rightEdge;
+                    if (baseTarget != null)
+                    {
+                        var overlayText = structureId == "tree" ? column.WorldX.ToString() : $"{structureId}:{column.WorldX}";
+                        baseTarget.AddDebugOverlayAnnotation(new Vector2I(column.WorldX, column.GroundHeight), overlayText, Colors.White);
+                    }
+
+                    lastRightEdgeByStructure[structureId] = column.WorldX + bounds.Right;
                 }
             }
 
@@ -386,6 +378,49 @@ namespace Jogo25D.Chunks
             }
         }
 
+        // Folga minima entre caixas delimitadoras de duas instancias da mesma estrutura.
+            // Com valor 1, garante ao menos um bloco vazio entre a borda direita da arvore
+            // anterior e a borda esquerda da proxima.
+            private const int MinStructureBoundsGapTiles = 1;
+
+            // Limite conservador de quanto olhar pra tras ao retomar o cursor de espacamento entre
+            // chunks. O tamanho do lookback precisa ser maior ou igual ao maior alcance horizontal
+            // de uma estrutura, para nao perder uma arvore anterior cujo bloco direito ainda entra
+            // no chunk atual.
+            private const int MaxStructureSpacingLookback = 32;
+        private static int ResolveLastRightEdgeBefore(
+            StructureDefinition structure,
+            long worldSeed,
+            string dimensionId,
+            int chunkStartX,
+            int lookbackTiles,
+            int minBoundsGapTiles,
+            int worldScale)
+        {
+            var scanStart = chunkStartX - lookbackTiles;
+            var lastRightEdge = int.MinValue;
+
+            for (int worldX = scanStart; worldX < chunkStartX; worldX++)
+            {
+                if (WorldRandom.StructureRandom01(worldSeed, dimensionId, structure.Id, worldX, 0) >= structure.Chance)
+                {
+                    continue;
+                }
+
+                var bounds = structure.GetBounds(worldSeed, dimensionId, worldX, worldScale);
+                var candidateLeftX = worldX - bounds.Left;
+
+                if (lastRightEdge != int.MinValue && candidateLeftX <= lastRightEdge + minBoundsGapTiles)
+                {
+                    continue;
+                }
+
+                lastRightEdge = worldX + bounds.Right;
+            }
+
+            return lastRightEdge;
+        }
+
         private static void AddIfSolid(TileMapLayer target, List<Vector2I> solidCells, Vector2I cell, int terrainSet)
         {
             if (target.GetCellSourceId(cell) == -1)
@@ -418,6 +453,13 @@ namespace Jogo25D.Chunks
                     borderCapTarget?.SetCell(cell, -1);
                     baseTarget?.SetCell(cell, -1);
                 }
+            }
+
+            if (baseTarget is TerrainLayer terrainBaseLayer)
+            {
+                terrainBaseLayer.RemoveDebugOverlayAnnotationsInRegion(
+                    new Vector2I(baseCellX, baseCellY),
+                    new Vector2I(baseCellX + chunkSize - 1, baseCellY + chunkSize - 1));
             }
         }
 

@@ -347,6 +347,15 @@ namespace Jogo25D.Biomes
         private bool _showTerrainSetDebug;
         private DebugOverlay _debugOverlay;
 
+        private struct DebugOverlayAnnotation
+        {
+            public Vector2I Cell;
+            public string Text;
+            public Color Color;
+        }
+
+        private readonly List<DebugOverlayAnnotation> _debugOverlayAnnotations = new();
+
         private static readonly (TileSet.CellNeighbor Bit, Vector2I GridPos)[] PeeringBitGrid = new[]
         {
             (TileSet.CellNeighbor.TopLeftCorner, new Vector2I(0, 0)),
@@ -361,7 +370,7 @@ namespace Jogo25D.Biomes
 
         public void RedrawDebugOverlay()
         {
-            if (!_showTerrainSetDebug)
+            if (!_showTerrainSetDebug && _debugOverlayAnnotations.Count == 0)
             {
                 _debugOverlay?.QueueRedraw();
 
@@ -382,6 +391,45 @@ namespace Jogo25D.Biomes
             }
 
             _debugOverlay.QueueRedraw();
+        }
+
+        public void AddDebugOverlayAnnotation(Vector2I cell, string text, Color color)
+        {
+            _debugOverlayAnnotations.Add(new DebugOverlayAnnotation
+            {
+                Cell = cell,
+                Text = text,
+                Color = color,
+            });
+
+            RedrawDebugOverlay();
+        }
+
+        public void RemoveDebugOverlayAnnotationsInRegion(Vector2I minCell, Vector2I maxCell)
+        {
+            if (_debugOverlayAnnotations.Count == 0)
+            {
+                return;
+            }
+
+            _debugOverlayAnnotations.RemoveAll(annotation =>
+                annotation.Cell.X >= minCell.X &&
+                annotation.Cell.X <= maxCell.X &&
+                annotation.Cell.Y >= minCell.Y &&
+                annotation.Cell.Y <= maxCell.Y);
+
+            _debugOverlay?.QueueRedraw();
+        }
+
+        public void ClearDebugOverlayAnnotations()
+        {
+            if (_debugOverlayAnnotations.Count == 0)
+            {
+                return;
+            }
+
+            _debugOverlayAnnotations.Clear();
+            _debugOverlay?.QueueRedraw();
         }
 
         private void DrawTerrainSetDebug(CanvasItem target)
@@ -432,6 +480,23 @@ namespace Jogo25D.Biomes
                 target.DrawString(font, topLeft + new Vector2(2, 11), terrainSet.ToString(), HorizontalAlignment.Left, -1, 11, Colors.White);
                 target.DrawString(font, topLeft + new Vector2(2, tileSize.Y - 3), $"{sourceId}:{atlasCoord.X},{atlasCoord.Y}", HorizontalAlignment.Left, -1, 9, Colors.White);
             }
+
+            DrawStructureDebugAnnotations(target, font);
+        }
+
+        private void DrawStructureDebugAnnotations(CanvasItem target, Font font)
+        {
+            if (_debugOverlayAnnotations.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var annotation in _debugOverlayAnnotations)
+            {
+                var position = MapToLocal(annotation.Cell);
+                target.DrawCircle(position, 4f, annotation.Color);
+                target.DrawString(font, position + new Vector2(8f, 8f), annotation.Text, HorizontalAlignment.Left, -1, 14, annotation.Color);
+            }
         }
 
         private static Color ColorForTerrainSet(int terrainSet)
@@ -448,9 +513,18 @@ namespace Jogo25D.Biomes
 
             public override void _Draw()
             {
-                if (TerrainLayerOwner != null && TerrainLayerOwner._showTerrainSetDebug)
+                if (TerrainLayerOwner == null)
+                {
+                    return;
+                }
+
+                if (TerrainLayerOwner._showTerrainSetDebug)
                 {
                     TerrainLayerOwner.DrawTerrainSetDebug(this);
+                }
+                else
+                {
+                    TerrainLayerOwner.DrawStructureDebugAnnotations(this, ThemeDB.FallbackFont);
                 }
             }
         }

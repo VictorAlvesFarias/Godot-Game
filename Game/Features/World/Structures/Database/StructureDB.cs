@@ -10,12 +10,11 @@ namespace Jogo25D.Structures
             ["tree"] = new TreeStructureDefinition
             {
                 Id = "tree",
-                // ERA 0.97 - calibrado pro sistema antigo de arvore PEQUENA (raio fixo ate ~5
-                // tiles). A arvore hibrida atual e bem maior (raio de copa 6-12 tiles reais) e,
-                // com a trava de "caber dentro do proprio chunk" removida, quase toda coluna
-                // elegivel conseguia nascer - virava floresta grudada/infinita. Bem mais baixo
-                // agora que arvore grande realmente nasce a maior parte das vezes que rola.
-                Chance = 0.25f,
+                // ERA 0.97 (arvore pequena antiga) -> 0.25 (hibrida grande + espacamento por
+                // caixa completa da copa = quase nada spawnava). Com arvore calibrada 1:1 no
+                // Python e espacamento por coluna-ancora do tronco, 0.65 da floresta visivel
+                // sem grudar tronco em tronco.
+                Chance = 0.65f,
             },
         };
 

@@ -74,6 +74,12 @@ namespace Jogo25D.Structures
         // worldSeed/dimensionId/worldX/worldScale) - senao a validacao nao tem serventia.
         public abstract StructureBounds GetBounds(long worldSeed, string dimensionId, int worldX, int worldScale);
 
+        // Maior deslocamento possivel para a direita dessa estrutura, em celulas, independente
+        // de worldX. Usado para determinar quanto olhar pra tras ao retomar o cursor de
+        // espacamento entre chunks. O valor precisa ser conservador: de preferencia um limite
+        // maior que o alcance real.
+        public virtual int GetMaxRightExtent(int worldScale) => 0;
+
         // Gera as celulas (agrupadas por terrain_set) de uma instancia ancorada em groundCell -
         // so chamado depois que o ChunkGenerator ja confirmou que ela cabe (bounds + espacamento).
         public abstract List<StructureCellGroup> CollectCells(Vector2I groundCell, long worldSeed, string dimensionId, int worldScale);

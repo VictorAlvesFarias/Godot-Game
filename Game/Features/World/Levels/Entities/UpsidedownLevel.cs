@@ -30,6 +30,7 @@ namespace Jogo25D.Levels
         public long PreviewSeed { get; set; } = 1;
 
         private bool _generateEditorTerrain;
+        private bool _isReady;
 
         [Export]
         public bool GenerateEditorTerrain
@@ -44,11 +45,10 @@ namespace Jogo25D.Levels
 
                 _generateEditorTerrain = value;
 
-                // So faz alguma coisa dentro do editor - se essa flag ficar salva como true na
-                // cena (usuario esqueceu de desmarcar antes de salvar) e o jogo rodar de
-                // verdade, isso aqui NUNCA pode gerar/apagar tile por cima da geracao
-                // procedural real do jogo.
-                if (!Engine.IsEditorHint())
+                // So faz alguma coisa dentro do editor depois que a cena ja esta pronta.
+                // Durante a importacao/carregamento da cena, a propriedade pode ser definida
+                // automaticamente pelo Godot, e isso nao deve disparar geracao/restauro.
+                if (!Engine.IsEditorHint() || !_isReady)
                 {
                     return;
                 }
@@ -71,6 +71,11 @@ namespace Jogo25D.Levels
 
         [Export]
         public byte[] TextureBackup { get; set; } = System.Array.Empty<byte>();
+
+        public override void _Ready()
+        {
+            _isReady = true;
+        }
 
         private void ApplyGenerateState(bool generate)
         {

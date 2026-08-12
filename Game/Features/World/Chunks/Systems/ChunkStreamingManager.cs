@@ -447,6 +447,7 @@ namespace Jogo25D.Chunks
                 Name = name,
                 TileSet = ChunkGenerator.GetTileSet(),
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                ShowTerrainSetDebug = OS.IsDebugBuild(),
             };
 
             dimensionParent.AddChild(layer);

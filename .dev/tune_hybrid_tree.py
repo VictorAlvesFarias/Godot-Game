@@ -10,6 +10,9 @@ Os PARAMS abaixo sao os mesmos ranges usados no C# (comentado ao lado de cada um
 roda de novo, compara com .dev/tree_previews/selected/, e so depois de bater o olho eu aplico a
 mudanca de volta no TreeStructureDefinition.cs.
 
+Nota: 1 celula do preview = 1 tile no jogo. O C# NAO multiplica esses ranges pelo worldScale
+do ChunkGenerator (tile_size=16 -> worldScale=2); o preview e o jogo devem bater 1:1 em celulas.
+
 Uso:
     python .dev/tune_hybrid_tree.py [--count 30] [--seed-start 0] [--out .dev/tree_previews/hybrid]
 """
