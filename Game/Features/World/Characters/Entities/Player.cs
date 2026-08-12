@@ -742,9 +742,8 @@ namespace Jogo25D.Characters
 			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 		}
 
-		// Decoracoes como tronco/copa de arvore vivem so na layer Base (sem espelho na
-		// Texture) - mineracao/quebra/colocacao precisam checar essa camada tambem, senao uma
-		// celula que so existe aqui fica impossivel de mirar/quebrar/bloquear colocacao.
+		// Decoracoes e terreno visivel vivem na layer Compose; a Base guarda o terreno inferior
+		// do bioma. Mineracao/quebra/colocacao precisam checar as duas camadas.
 		public TileMapLayer GetActiveBaseLayer()
 		{
 			var parent = GetParent();

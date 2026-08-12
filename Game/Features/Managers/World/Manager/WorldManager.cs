@@ -225,7 +225,7 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-		// Base/Bordercap/Texture sao REUTILIZADAS pela geracao procedural (nunca recriadas) -
+		// Base/Compose sao REUTILIZADAS pela geracao procedural (nunca recriadas) -
 		// qualquer tile de teste pintado no editor precisa ser apagado aqui antes de gerar um
 		// mundo novo, senao sobreviveria misturado com o mundo gerado.
 		private void ClearWorldLayers()
@@ -233,7 +233,6 @@ namespace Jogo25D.Systems
 			foreach (var parent in new[] { OverworldParent, UpsidedownParent })
 			{
 				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME)?.Clear();
-				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME)?.Clear();
 				parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME)?.Clear();
 			}
 		}
@@ -903,16 +902,11 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - Blocks
 
-		// Base/Bordercap/Texture sao filhas DIRETAS da dimensao, cada uma com o script
+			// Base/Compose sao filhas DIRETAS da dimensao, cada uma com o script
 		// TerrainLayer anexado - sem node pai centralizador nenhum.
 		private TerrainLayer ResolveDimensionLayer(string dimensionId)
 		{
 			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
-		}
-
-		private TerrainLayer ResolveDimensionBorderCapLayer(string dimensionId)
-		{
-			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
 		}
 
 		private TerrainLayer ResolveDimensionBaseLayer(string dimensionId)
@@ -954,29 +948,16 @@ namespace Jogo25D.Systems
 
 			if (layer.GetCellSourceId(cell) == -1)
 			{
-				// Nao ha nada na Texture nessa celula - pode ser uma decoracao que so existe na
-				// Base (arvore: tronco e copa, sem espelho na Texture). Trata como uma quebra
-				// simples, isolada dessa camada, em vez do fluxo completo de bioma/dependencia.
-				var decorationLayer = ResolveDimensionBaseLayer(dimensionId);
-				var decorationTerrainSet = decorationLayer?.GetCellTileData(cell)?.TerrainSet;
+				var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
-				if (decorationLayer == null || decorationTerrainSet == null)
+				if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
 				{
 					return;
 				}
 
-				var decorationDropPosition = decorationLayer.ToGlobal(decorationLayer.MapToLocal(cell));
-
-				BreakDecorationOnly(decorationLayer, cell);
-
-				var decorationDropItemId = decorationTerrainSet == TreeStructureDefinition.LeafTerrainSet ? "item_leaf" : "item_wood";
-
-				SpawnWorldItemRequest(ItemFactory.CreateInstance(decorationDropItemId), decorationDropPosition, dimensionId);
-
+				EraseBlockAndReconnect(baseLayer, cell, dimensionId);
 				GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
-
 				Rpc(nameof(BreakBlockBroadcast), cell, dimensionId);
-
 				return;
 			}
 
@@ -1006,7 +987,14 @@ namespace Jogo25D.Systems
 
 			if (layer.GetCellSourceId(cell) == -1)
 			{
-				BreakDecorationOnly(ResolveDimensionBaseLayer(dimensionId), cell);
+				var baseLayer = ResolveDimensionBaseLayer(dimensionId);
+
+				if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
+				{
+					return;
+				}
+
+				EraseBlockAndReconnect(baseLayer, cell, dimensionId);
 
 				return;
 			}
@@ -1070,47 +1058,15 @@ namespace Jogo25D.Systems
 			PlaceBlockOnCorrectLayer(layer, baseLayer, cell, block, dimensionId);
 		}
 
-		// Blocos normais (ex: "grass") viram parte do terrain_set do bioma de chao, na Texture -
-		// blocos decorativos (ex: "wood"/"leaf") tem terrain_set proprio e vao pra camada Base,
-		// espelhando exatamente como TreeGenerator planta a arvore.
+		// Blocos normais e decorativos vivem na camada Compose; a Base fica so com o terreno
+		// inferior do bioma.
 		private bool PlaceBlockOnCorrectLayer(TerrainLayer layer, TerrainLayer baseLayer, Vector2I cell, BlockDefinition block, string dimensionId)
 		{
-			if (block.TerrainSet.HasValue)
-			{
-				if (baseLayer == null)
-				{
-					return false;
-				}
-
-				PaintDecorationBlockAndReconnect(baseLayer, cell, block.TerrainSet.Value);
-
-				return true;
-			}
+			_ = baseLayer;
 
 			PaintBlockAndReconnect(layer, cell, block, dimensionId);
 
 			return true;
-		}
-
-		private void PaintDecorationBlockAndReconnect(TerrainLayer decorationLayer, Vector2I cell, int terrainSet)
-		{
-			var neighbors = GetSolidNeighborCells(decorationLayer, cell);
-			var sameCells = new List<Vector2I> { cell };
-
-			foreach (var neighbor in neighbors)
-			{
-				var tileData = decorationLayer.GetCellTileData(neighbor);
-
-				if (tileData != null && tileData.TerrainSet == terrainSet)
-				{
-					sameCells.Add(neighbor);
-				}
-			}
-
-			decorationLayer.Connect(sameCells, terrainSet);
-			decorationLayer.ReconnectForeignBorder(sameCells, terrainSet);
-			ReconnectDecorationsNear(decorationLayer, cell);
-			decorationLayer.RedrawDebugOverlay();
 		}
 
 		public long NextPortalId { get; set; }
@@ -1345,22 +1301,14 @@ namespace Jogo25D.Systems
 				layer.ReconnectExistingCells(expandedNeighbors);
 			}
 
-			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
-
-			EraseCellWithTerrainConnect(borderCapLayer, cell);
-			borderCapLayer?.RedrawDebugOverlay();
-
-			RepaintDependentLayerForCells(layer, borderCapLayer, expandedNeighbors, def => def.BorderCapTerrainSet);
-
 			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
 			EraseCellWithTerrainConnect(baseLayer, cell);
 			baseLayer?.RedrawDebugOverlay();
 
-			RepaintDependentLayerForCells(layer, baseLayer, expandedNeighbors, def => def.BaseTerrainSet);
+			RepaintDependentLayerForCells(layer, baseLayer, expandedNeighbors, def => def.BorderCapTerrainSet);
 
 			ReconnectDecorationsNear(layer, cell);
-			ReconnectDecorationsNear(borderCapLayer, cell);
 			ReconnectDecorationsNear(baseLayer, cell);
 		}
 
@@ -1368,8 +1316,7 @@ namespace Jogo25D.Systems
 		// em CADA camada (agrupando por terrain_set atual - arvore, chao, o que for) - cobre
 		// decoracoes como tronco/copa de arvore (terrain_set 6/7) que colocar/quebrar bloco do
 		// lado nunca alcancava antes, porque o resto dessa funcao so segue a cadeia de vizinhos
-		// do PROPRIO bioma (0/1), nunca entra em celulas de outra natureza que so existem numa
-		// camada dependente (ex: tronco so existe no Bordercap, sem espelho na Texture).
+		// do PROPRIO bioma (0/1), nunca entra em celulas de outra natureza.
 		private static void ReconnectDecorationsNear(TerrainLayer layer, Vector2I originCell, int radius = 4)
 		{
 			if (layer == null)
@@ -1404,7 +1351,7 @@ namespace Jogo25D.Systems
 		// parametro, so pra o Godot saber quais regras de peering bit aplicar ao recalcular. Um
 		// SetCell cru so marca a celula como vazia sem passar pelo sistema de terreno - o
 		// resultado final costuma ser o mesmo, mas SetCellsTerrainConnect e o caminho "oficial"
-		// que o proprio Texture ja usava, entao Base/Bordercap passam a seguir o mesmo padrao.
+		// que a propria Compose ja usava, entao Base segue o mesmo padrao.
 		private static void EraseCellWithTerrainConnect(TerrainLayer layer, Vector2I cell)
 		{
 			if (layer == null || layer.GetCellSourceId(cell) == -1)
@@ -1455,24 +1402,15 @@ namespace Jogo25D.Systems
 				layer.ReconnectExistingCells(expandedForeignCells);
 			}
 
-			var borderCapLayer = ResolveDimensionBorderCapLayer(dimensionId);
-
-			if (borderCapLayer != null)
-			{
-				borderCapLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BorderCapTerrainSet);
-				RepaintDependentLayerForCells(layer, borderCapLayer, expandedForeignCells, def => def.BorderCapTerrainSet);
-			}
-
 			var baseLayer = ResolveDimensionBaseLayer(dimensionId);
 
 			if (baseLayer != null)
 			{
-				baseLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BaseTerrainSet);
-				RepaintDependentLayerForCells(layer, baseLayer, expandedForeignCells, def => def.BaseTerrainSet);
+				baseLayer.ConnectDependent(layer, sameBiomeCells, biomeDef.BorderCapTerrainSet);
+				RepaintDependentLayerForCells(layer, baseLayer, expandedForeignCells, def => def.BorderCapTerrainSet);
 			}
 
 			ReconnectDecorationsNear(layer, cell);
-			ReconnectDecorationsNear(borderCapLayer, cell);
 			ReconnectDecorationsNear(baseLayer, cell);
 		}
 

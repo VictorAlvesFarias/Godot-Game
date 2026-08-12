@@ -46,8 +46,6 @@ namespace Jogo25D.Chunks
 
         public TerrainLayer OverworldLayer { get; set; }
         public TerrainLayer UpsidedownLayer { get; set; }
-        public TerrainLayer OverworldBorderCapLayer { get; set; }
-        public TerrainLayer UpsidedownBorderCapLayer { get; set; }
         public TerrainLayer OverworldBaseLayer { get; set; }
         public TerrainLayer UpsidedownBaseLayer { get; set; }
 
@@ -256,7 +254,6 @@ namespace Jogo25D.Chunks
         private async Task LoadChunkAsync(string dimensionId, Node2D dimensionParent, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
         {
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
             // Marca como carregado JA, antes de pintar (que agora leva varios frames) - senao um
@@ -264,7 +261,7 @@ namespace Jogo25D.Chunks
             // veria esse chunk como "faltando" de novo e tentaria carregar duas vezes.
             loaded.Add(chunkCoord);
 
-            await ChunkGenerator.PaintAsync(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -305,10 +302,9 @@ namespace Jogo25D.Chunks
             // perto), senao um buraco cavado sumia assim que o chunk saia
             // de raio e voltava do jeito gerado original.
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await ChunkGenerator.EraseAsync(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -408,25 +404,22 @@ namespace Jogo25D.Chunks
                 return existing;
             }
 
-            // Base/Bordercap/Texture sao cada uma uma TileMapLayer com o script TerrainLayer
-            // anexado, ja pre-autoradas como filhas DIRETAS da dimensao (Overworld.tscn/
-            // Upsidedown.tscn) - sem node pai centralizador nenhum. Por isso REUTILIZA as 3
+            // Base/Compose sao duas TileMapLayer com o script TerrainLayer anexado,
+            // ja pre-autoradas como filhas DIRETAS da dimensao (Overworld.tscn/
+            // Upsidedown.tscn) - sem node pai centralizador nenhum. Por isso REUTILIZA as
             // camadas que ja existem na cena em vez de criar novas por cima - so cria a que
             // faltar, como rede de seguranca caso a cena nao tenha sido pre-autorada.
             var baseLayer = GetOrCreateChildLayer(dimensionParent, ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
-            var borderCapLayer = GetOrCreateChildLayer(dimensionParent, ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
             var layer = GetOrCreateChildLayer(dimensionParent, ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 
             if (dimensionId == ChunkStreamingConstants.OVERWORLD_ID)
             {
                 OverworldLayer = layer;
-                OverworldBorderCapLayer = borderCapLayer;
                 OverworldBaseLayer = baseLayer;
             }
             else
             {
                 UpsidedownLayer = layer;
-                UpsidedownBorderCapLayer = borderCapLayer;
                 UpsidedownBaseLayer = baseLayer;
             }
 
@@ -458,11 +451,6 @@ namespace Jogo25D.Chunks
         private TerrainLayer GetBaseLayer(string dimensionId)
         {
             return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldBaseLayer : UpsidedownBaseLayer;
-        }
-
-        private TerrainLayer GetBorderCapLayer(string dimensionId)
-        {
-            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldBorderCapLayer : UpsidedownBorderCapLayer;
         }
 
         private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
@@ -530,12 +518,11 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
             loaded.Add(chunkCoord);
 
-            await ChunkGenerator.PaintAsync(layer, borderCapLayer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -563,10 +550,9 @@ namespace Jogo25D.Chunks
             }
 
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
-            var borderCapLayer = GetBorderCapLayer(dimensionId);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await ChunkGenerator.EraseAsync(layer, borderCapLayer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await ChunkGenerator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion

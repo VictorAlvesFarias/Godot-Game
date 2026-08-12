@@ -1,17 +1,16 @@
-[gd_resource type="TileSet" format=3 uid="uid://u954oza61p804"]
+[gd_resource type="TileSet" format=3 uid="uid://bx4rqpow7pu8b"]
 
-[ext_resource type="Texture2D" uid="uid://phq3p6k79uq6b" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
-[ext_resource type="Texture2D" uid="uid://1vn8p05ce92en" path="res://Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
-[ext_resource type="Texture2D" uid="uid://mgqaoy3fo515k" path="res://Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
-[ext_resource type="Texture2D" uid="uid://yzgavkzfvum1q" path="res://Assets/Textures/Tiles/olive/olive_grass_texture.png" id="4_olive_grass"]
-[ext_resource type="Texture2D" uid="uid://h4gbma4zuxfv3" path="res://Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="5_olive_bordercap"]
-[ext_resource type="Texture2D" uid="uid://gyb84jrheejjk" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="6_olive_base"]
-[ext_resource type="Texture2D" uid="uid://vayfiiwpcddgj" path="res://Assets/Textures/Tiles/wood/wood_texture.png" id="7_wood"]
-[ext_resource type="Texture2D" uid="uid://uo8n54x8s55iv" path="res://Assets/Textures/Tiles/lime_leaf/sheet_texture.png" id="8_sheet"]
+[ext_resource type="Texture2D" uid="uid://dlt7o0ekdjb87" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
+[ext_resource type="Texture2D" uid="uid://dqyucf4kembgr" path="res://Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
+[ext_resource type="Texture2D" uid="uid://bhbq47o2ygnfu" path="res://Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
+[ext_resource type="Texture2D" uid="uid://cv827ufbcqwx0" path="res://Assets/Textures/Tiles/olive/olive_grass_texture.png" id="4_olive_grass"]
+[ext_resource type="Texture2D" uid="uid://borhah4c2gx2u" path="res://Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="5_olive_bordercap"]
+[ext_resource type="Texture2D" uid="uid://dv760pi5dknyi" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="6_olive_base"]
+[ext_resource type="Texture2D" uid="uid://b74rvrvxmymsv" path="res://Assets/Textures/Tiles/wood/wood_texture.png" id="7_wood"]
+[ext_resource type="Texture2D" uid="uid://ck0nti26ne2gb" path="res://Assets/Textures/Tiles/lime_leaf/sheet_texture.png" id="8_sheet"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_grass"]
 texture = ExtResource("1_lime_grass")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 0
 0:0/0/terrain = 0
@@ -344,7 +343,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_bordercap"]
 texture = ExtResource("2_lime_bordercap")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 2
 0:0/0/terrain = 0
@@ -724,7 +722,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_base"]
 texture = ExtResource("3_lime_base")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 4
 0:0/0/terrain = 0
@@ -1057,7 +1054,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_olive_grass"]
 texture = ExtResource("4_olive_grass")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 1
 0:0/0/terrain = 0
@@ -1390,7 +1386,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_olive_bordercap"]
 texture = ExtResource("5_olive_bordercap")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 3
 0:0/0/terrain = 0
@@ -1770,7 +1765,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_olive_base"]
 texture = ExtResource("6_olive_base")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 5
 0:0/0/terrain = 0
@@ -2103,7 +2097,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wood"]
 texture = ExtResource("7_wood")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 6
 0:0/0/terrain = 0
@@ -2436,7 +2429,6 @@ texture_region_size = Vector2i(16, 16)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_sheet"]
 texture = ExtResource("8_sheet")
-texture_region_size = Vector2i(16, 16)
 0:0/0 = 0
 0:0/0/terrain_set = 7
 0:0/0/terrain = 0
@@ -2815,32 +2807,31 @@ texture_region_size = Vector2i(16, 16)
 8:4/0/terrains_peering_bit/top_side = 0
 
 [resource]
-tile_size = Vector2i(16, 16)
 physics_layer_0/collision_layer = 1
 terrain_set_0/mode = 0
 terrain_set_0/terrain_0/name = "lime_grass"
-terrain_set_0/terrain_0/color = Color(0.775000, 0.738333, 0.225000, 1)
-terrain_set_2/mode = 0
-terrain_set_2/terrain_0/name = "lime_bordercap"
-terrain_set_2/terrain_0/color = Color(0.775000, 0.261667, 0.225000, 1)
-terrain_set_4/mode = 0
-terrain_set_4/terrain_0/name = "lime_base"
-terrain_set_4/terrain_0/color = Color(0.225000, 0.775000, 0.765833, 1)
+terrain_set_0/terrain_0/color = Color(0.775, 0.738333, 0.225, 1)
 terrain_set_1/mode = 0
 terrain_set_1/terrain_0/name = "olive_grass"
-terrain_set_1/terrain_0/color = Color(0.225000, 0.775000, 0.665000, 1)
+terrain_set_1/terrain_0/color = Color(0.225, 0.775, 0.665, 1)
+terrain_set_2/mode = 0
+terrain_set_2/terrain_0/name = "lime_bordercap"
+terrain_set_2/terrain_0/color = Color(0.775, 0.261667, 0.225, 1)
 terrain_set_3/mode = 0
 terrain_set_3/terrain_0/name = "olive_bordercap"
-terrain_set_3/terrain_0/color = Color(0.710833, 0.225000, 0.775000, 1)
+terrain_set_3/terrain_0/color = Color(0.710833, 0.225, 0.775, 1)
+terrain_set_4/mode = 0
+terrain_set_4/terrain_0/name = "lime_base"
+terrain_set_4/terrain_0/color = Color(0.225, 0.775, 0.765833, 1)
 terrain_set_5/mode = 0
 terrain_set_5/terrain_0/name = "olive_base"
-terrain_set_5/terrain_0/color = Color(0.775000, 0.225000, 0.564167, 1)
+terrain_set_5/terrain_0/color = Color(0.775, 0.225, 0.564167, 1)
 terrain_set_6/mode = 0
 terrain_set_6/terrain_0/name = "wood"
-terrain_set_6/terrain_0/color = Color(0.225000, 0.316667, 0.775000, 1)
+terrain_set_6/terrain_0/color = Color(0.225, 0.316667, 0.775, 1)
 terrain_set_7/mode = 0
 terrain_set_7/terrain_0/name = "sheet"
-terrain_set_7/terrain_0/color = Color(0.527500, 0.775000, 0.225000, 1)
+terrain_set_7/terrain_0/color = Color(0.5275, 0.775, 0.225, 1)
 navigation_layer_0/layers = 1
 sources/0 = SubResource("TileSetAtlasSource_lime_grass")
 sources/1 = SubResource("TileSetAtlasSource_lime_bordercap")

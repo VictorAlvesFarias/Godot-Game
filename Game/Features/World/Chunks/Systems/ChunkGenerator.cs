@@ -26,7 +26,7 @@ namespace Jogo25D.Chunks
 
         #region Core - Generation
 
-        public static void Paint(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
+        public static void Paint(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
         {
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
@@ -54,29 +54,16 @@ namespace Jogo25D.Chunks
                 {
                     foreach (var group in biomeGroups)
                     {
-                        baseTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet);
+                        baseTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
                     }
 
                     foreach (var group in biomeGroups)
                     {
-                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BaseTerrainSet, StructureDB.AllTerrainSets);
+                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, StructureDB.AllTerrainSets);
                     }
                 }
 
-                if (borderCapTarget != null)
-                {
-                    foreach (var group in biomeGroups)
-                    {
-                        borderCapTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
-                    }
-
-                    foreach (var group in biomeGroups)
-                    {
-                        borderCapTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, StructureDB.AllTerrainSets);
-                    }
-                }
-
-                PlaceStructures(target, borderCapTarget, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
+                PlaceStructures(target, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -98,7 +85,7 @@ namespace Jogo25D.Chunks
         // camadas) tudo de uma vez num unico frame - e essa a trava que o carregamento de chunk
         // causava. Usado pelo ChunkStreamingManager no lugar de Paint() pra carregar chunk sem
         // travar o jogo.
-        public static async Task PaintAsync(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
+        public static async Task PaintAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
@@ -122,29 +109,16 @@ namespace Jogo25D.Chunks
                 {
                     foreach (var group in biomeGroups)
                     {
-                        await baseTarget.ConnectDependentAsync(target, group.Cells, group.BiomeDef.BaseTerrainSet, cellsPerFrame);
+                        await baseTarget.ConnectDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame);
                     }
 
                     foreach (var group in biomeGroups)
                     {
-                        await baseTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BaseTerrainSet, cellsPerFrame, StructureDB.AllTerrainSets);
+                        await baseTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame, StructureDB.AllTerrainSets);
                     }
                 }
 
-                if (borderCapTarget != null)
-                {
-                    foreach (var group in biomeGroups)
-                    {
-                        await borderCapTarget.ConnectDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame);
-                    }
-
-                    foreach (var group in biomeGroups)
-                    {
-                        await borderCapTarget.ReconnectForeignBorderDependentAsync(target, group.Cells, group.BiomeDef.BorderCapTerrainSet, cellsPerFrame, StructureDB.AllTerrainSets);
-                    }
-                }
-
-                PlaceStructures(target, borderCapTarget, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
+                PlaceStructures(target, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
             }
             else
             {
@@ -246,9 +220,9 @@ namespace Jogo25D.Chunks
         // entao ganha bordas/cantos organicos em vez de bloco solido. Cada instancia fica inteira
         // dentro dos limites locais do proprio chunk pra nao depender de chunks vizinhos ainda
         // nao carregados nem sumir pela metade quando um vizinho descarrega.
-        private static void PlaceStructures(TerrainLayer target, TerrainLayer borderCapTarget, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
+        private static void PlaceStructures(TerrainLayer target, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
-            if (baseTarget == null)
+            if (target == null)
             {
                 return;
             }
@@ -308,7 +282,7 @@ namespace Jogo25D.Chunks
 
                     var bounds = structure.GetBounds(worldSeed, dimensionId, column.WorldX, worldScale);
 
-                    if (!IsStructureVolumeClear(target, borderCapTarget, column.WorldX, column.GroundHeight, bounds))
+                    if (!IsStructureVolumeClear(target, baseTarget, column.WorldX, column.GroundHeight, bounds))
                     {
                         continue;
                     }
@@ -334,12 +308,12 @@ namespace Jogo25D.Chunks
                         cells.AddRange(group.Cells);
                     }
 
-                    if (baseTarget != null)
+                    if (target != null)
                     {
                         if (structureId != "tree" || TreeDebugConstants.EnableTreeDebugOverlay)
                         {
                             var overlayText = structureId == "tree" ? column.WorldX.ToString() : $"{structureId}:{column.WorldX}";
-                            baseTarget.AddDebugOverlayAnnotation(new Vector2I(column.WorldX, column.GroundHeight), overlayText, Colors.White);
+                            target.AddDebugOverlayAnnotation(new Vector2I(column.WorldX, column.GroundHeight), overlayText, Colors.White);
                         }
                     }
 
@@ -349,7 +323,7 @@ namespace Jogo25D.Chunks
 
             foreach (var entry in cellsByTerrainSet)
             {
-                baseTarget.Connect(entry.Value, entry.Key);
+                target.Connect(entry.Value, entry.Key);
             }
         }
 
@@ -430,7 +404,7 @@ namespace Jogo25D.Chunks
             return lastRightEdge;
         }
 
-        private static bool IsStructureVolumeClear(TerrainLayer target, TerrainLayer borderCapTarget, int worldX, int groundHeight, StructureBounds bounds)
+        private static bool IsStructureVolumeClear(TerrainLayer target, TerrainLayer baseTarget, int worldX, int groundHeight, StructureBounds bounds)
         {
             var leftX = worldX - bounds.Left;
             var rightX = worldX + bounds.Right;
@@ -448,7 +422,7 @@ namespace Jogo25D.Chunks
                         return false;
                     }
 
-                    if (borderCapTarget != null && borderCapTarget.GetCellSourceId(cell) != -1)
+                    if (baseTarget != null && baseTarget.GetCellSourceId(cell) != -1)
                     {
                         return false;
                     }
@@ -475,7 +449,7 @@ namespace Jogo25D.Chunks
             solidCells.Add(cell);
         }
 
-        public static void Erase(TileMapLayer target, TileMapLayer borderCapTarget, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize)
+        public static void Erase(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -487,7 +461,6 @@ namespace Jogo25D.Chunks
                     var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
 
                     target.SetCell(cell, -1);
-                    borderCapTarget?.SetCell(cell, -1);
                     baseTarget?.SetCell(cell, -1);
                 }
             }
@@ -503,7 +476,7 @@ namespace Jogo25D.Chunks
         // Mesma coisa que Erase(), so que cede um frame a cada "cellsPerFrame" celulas apagadas -
         // descarregar um chunk tambem trava o jogo pelo mesmo motivo que carregar (ate
         // CHUNK_SIZE^2 SetCell(-1) x 3 camadas num frame so).
-        public static async Task EraseAsync(TileMapLayer target, TileMapLayer borderCapTarget, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
+        public static async Task EraseAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -516,7 +489,6 @@ namespace Jogo25D.Chunks
                     var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
 
                     target.SetCell(cell, -1);
-                    borderCapTarget?.SetCell(cell, -1);
                     baseTarget?.SetCell(cell, -1);
 
                     processedSinceYield++;

@@ -14,10 +14,7 @@ namespace Jogo25D.Biomes
         public int HeightOffset { get; init; }
         public int InteriorSourceId { get; init; }
         public Vector2I InteriorAtlasCoord { get; init; }
-        public int BorderCapSourceId { get; init; }
         public int BorderCapTerrainSet { get; init; }
-        public int BaseSourceId { get; init; }
-        public int BaseTerrainSet { get; init; }
 
         // Ids de StructureDefinition (StructureDB) que podem nascer sozinhas nesse bioma - cada
         // uma rola sua PROPRIA chance (StructureDefinition.Chance) por coluna elegivel. Lista

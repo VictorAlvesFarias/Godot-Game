@@ -11,11 +11,11 @@ namespace Jogo25D.Levels
     // Marca "Generate Editor Terrain" no Inspector -> gera um mapa de 1000x500 tiles (centrado
     // na origem) usando ChunkGenerator.Paint, o MESMO metodo que o jogo de verdade chama pra
     // gerar chunk (ChunkStreamingManager.LoadChunkAsync -> ChunkGenerator.PaintAsync usa a
-    // mesma logica, so cede frame por frame) - direto nas 3 layers (Base/Bordercap/Texture) da
+    // mesma logica, so cede frame por frame) - direto nas 2 layers (Base/Compose) da
     // cena, pra poder ver no editor sem precisar rodar o jogo.
     //
     // Desmarca -> restaura os tiles ORIGINAIS do projeto (o que estava desenhado a mao na cena
-    // antes da primeira geracao) - guardados em BaseBackup/BordercapBackup/TextureBackup
+    // antes da primeira geracao) - guardados em BaseBackup/ComposeBackup
     // (PackedByteArray, o mesmo formato binario que o proprio Godot usa pra serializar
     // tile_map_data no .tscn) na PRIMEIRA vez que gera, pra nao perder o desenho original
     // mesmo trocando de seed/gerando de novo varias vezes.
@@ -54,7 +54,7 @@ namespace Jogo25D.Levels
                 }
 
                 // Adiado - durante o carregamento da cena, essa propriedade pode ser aplicada
-                // ANTES dos filhos (Base/Bordercap/Texture) existirem ainda; CallDeferred roda
+                // ANTES dos filhos (Base/Compose) existirem ainda; CallDeferred roda
                 // depois que a arvore de nos termina de montar.
                 CallDeferred(nameof(ApplyGenerateState), value);
             }
@@ -65,6 +65,9 @@ namespace Jogo25D.Levels
 
         [Export]
         public byte[] BaseBackup { get; set; } = System.Array.Empty<byte>();
+
+        [Export]
+        public byte[] ComposeBackup { get; set; } = System.Array.Empty<byte>();
 
         [Export]
         public byte[] BordercapBackup { get; set; } = System.Array.Empty<byte>();
@@ -80,41 +83,38 @@ namespace Jogo25D.Levels
         private void ApplyGenerateState(bool generate)
         {
             var baseLayer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
-            var borderCapLayer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BORDER_CAP_LAYER_NAME);
-            var textureLayer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
+            var composeLayer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 
-            if (textureLayer == null || baseLayer == null)
+            if (composeLayer == null || baseLayer == null)
             {
-                GD.PrintErr("[UpsidedownLevel] Nao achei as layers Base/Texture - abortando.");
+                GD.PrintErr("[UpsidedownLevel] Nao achei as layers Base/Compose - abortando.");
 
                 return;
             }
 
             if (generate)
             {
-                GenerateInEditor(baseLayer, borderCapLayer, textureLayer);
+                GenerateInEditor(baseLayer, composeLayer);
             }
             else
             {
-                RestoreOriginal(baseLayer, borderCapLayer, textureLayer);
+                RestoreOriginal(baseLayer, composeLayer);
             }
         }
 
-        private void GenerateInEditor(TerrainLayer baseLayer, TerrainLayer borderCapLayer, TerrainLayer textureLayer)
+        private void GenerateInEditor(TerrainLayer baseLayer, TerrainLayer composeLayer)
         {
             // So guarda o desenho original NA PRIMEIRA VEZ - gerar de novo com outra seed nao
             // deve sobrescrever o backup com o resultado da geracao anterior.
             if (!BackupCaptured)
             {
                 BaseBackup = baseLayer.Get(TileMapDataProperty).AsByteArray();
-                BordercapBackup = borderCapLayer != null ? borderCapLayer.Get(TileMapDataProperty).AsByteArray() : System.Array.Empty<byte>();
-                TextureBackup = textureLayer.Get(TileMapDataProperty).AsByteArray();
+                ComposeBackup = composeLayer.Get(TileMapDataProperty).AsByteArray();
                 BackupCaptured = true;
             }
 
             baseLayer.Clear();
-            borderCapLayer?.Clear();
-            textureLayer.Clear();
+            composeLayer.Clear();
 
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
             var widthChunks = Mathf.CeilToInt(GeneratedWidthTiles / (float)chunkSize);
@@ -130,14 +130,14 @@ namespace Jogo25D.Levels
                     // (via PaintAsync, so que cedendo frame) pra gerar chunk de verdade em jogo -
                     // aqui roda tudo de uma vez soh porque nao precisa ceder frame num editor
                     // tool rodando fora do loop de jogo.
-                    ChunkGenerator.Paint(textureLayer, borderCapLayer, baseLayer, PreviewSeed, ChunkStreamingConstants.UPSIDEDOWN_ID, new Vector2I(cx, cy), chunkSize);
+                    ChunkGenerator.Paint(composeLayer, baseLayer, PreviewSeed, ChunkStreamingConstants.UPSIDEDOWN_ID, new Vector2I(cx, cy), chunkSize);
                 }
             }
 
             GD.Print($"[UpsidedownLevel] Terreno de preview gerado ({GeneratedWidthTiles}x{GeneratedHeightTiles} tiles, seed={PreviewSeed}).");
         }
 
-        private void RestoreOriginal(TerrainLayer baseLayer, TerrainLayer borderCapLayer, TerrainLayer textureLayer)
+        private void RestoreOriginal(TerrainLayer baseLayer, TerrainLayer composeLayer)
         {
             if (!BackupCaptured)
             {
@@ -145,8 +145,7 @@ namespace Jogo25D.Levels
             }
 
             baseLayer.Set(TileMapDataProperty, BaseBackup);
-            borderCapLayer?.Set(TileMapDataProperty, BordercapBackup);
-            textureLayer.Set(TileMapDataProperty, TextureBackup);
+            composeLayer.Set(TileMapDataProperty, ComposeBackup);
 
             GD.Print("[UpsidedownLevel] Tiles originais do projeto restaurados.");
         }
