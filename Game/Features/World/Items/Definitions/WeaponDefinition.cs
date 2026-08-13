@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
@@ -26,20 +26,20 @@ namespace Jogo25D.Items
             if (!CanUse(instance))
             {
                 GD.Print($"[WeaponDefinition.Use] Bloqueado - cooldown={instance.CooldownRemainingTimer:F2} reloading={IsReloading(instance)} charges={instance.CurrentCharges}");
-                
+
                 return;
             }
 
             var resolvedDamages = Resolver.Resolve(
                 Properties.OfType<DamagePropertyData>().ToList(),
                 instance.Properties.OfType<DamagePropertyData>().ToList(),
-                player.Data.Properties.OfType<DamagePropertyData>().ToList(), 
+                player.Data.Properties.OfType<DamagePropertyData>().ToList(),
                 player.Properties.OfType<DamagePropertyData>().ToList()
             );
             var weapon = Resolver.Resolve(
-                Properties.OfType<AttackPropertyData>().ToList(), 
-                instance.Properties.OfType<AttackPropertyData>().ToList(), 
-                player.Data.Properties.OfType<AttackPropertyData>().ToList(), 
+                Properties.OfType<AttackPropertyData>().ToList(),
+                instance.Properties.OfType<AttackPropertyData>().ToList(),
+                player.Data.Properties.OfType<AttackPropertyData>().ToList(),
                 player.Properties.OfType<AttackPropertyData>().ToList()
             );
             var charges = Resolver.Resolve(
@@ -47,9 +47,9 @@ namespace Jogo25D.Items
                 instance.Properties.OfType<ChargesPropertyData>().ToList()
             ).FirstOrDefault();
             var crit = Resolver.Resolve(
-                Properties.OfType<CritPropertyData>().ToList(), 
-                instance.Properties.OfType<CritPropertyData>().ToList(), 
-                player.Data.Properties.OfType<CritPropertyData>().ToList(), 
+                Properties.OfType<CritPropertyData>().ToList(),
+                instance.Properties.OfType<CritPropertyData>().ToList(),
+                player.Data.Properties.OfType<CritPropertyData>().ToList(),
                 player.Properties.OfType<CritPropertyData>().ToList()
             );
             var damages = resolvedDamages.ConvertAll(d => new DamageInfo
@@ -64,7 +64,7 @@ namespace Jogo25D.Items
             if (HitboxScene.Instantiate<Area2D>() is not BaseHitbox hitbox)
             {
                 GD.Print($"[WeaponDefinition.Use] Falha ao instanciar hitbox da cena '{HitboxScene.ResourcePath}'");
-                
+
                 return;
             }
 

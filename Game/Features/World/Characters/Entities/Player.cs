@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
@@ -24,7 +24,7 @@ namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-        #region Events 
+        #region Events
 
         [Signal]
 		public delegate void InventoryChangedEventHandler();
@@ -54,12 +54,6 @@ namespace Jogo25D.Characters
         public PlayerData Data { get; set; } = new PlayerData();
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = CreateBaseProperties();
 
-        // Velocidade/vida base do personagem, ANTES de qualquer bonus da arvore de
-        // habilidades. ApplySkillTree() reconstroi "Properties" a partir DESSAS aqui + o que a
-        // arvore concede - sem isso, ApplySkillTree() fazia Properties.Clear() e nunca
-        // devolvia essas duas entradas, entao QUALQUER jogador (novo ou carregado, arvore de
-        // habilidades vazia ou nao) nascia com Speed=0/JumpVelocity=0/MaxHealth=0: parado no
-        // lugar e com a barra de vida sempre em 0, mesmo sem ter morrido.
         private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
         {
             return new Godot.Collections.Array<BasePropertyData>
@@ -104,7 +98,7 @@ namespace Jogo25D.Characters
 		public bool FacingLeft ()
 		{
 			return Visuals != null && Visuals.Scale.X < 0f;
-		} 
+		}
 
 		public void SetFacing(bool faceLeft)
 		{
@@ -222,12 +216,6 @@ namespace Jogo25D.Characters
 
 			Inventory.EnsureSize(Data.Inventory);
 
-			// Reconstroi ItemDefinitions/ActionDefinitions a partir do que
-			// ja esta em Data - necessario mesmo pra quem nao e autoritativo,
-			// ja que pra esses clientes Data chega pronto via replicacao
-			// (SpawnPlayerReceive desserializa o Data inteiro direto, sem
-			// passar por GiveItem/GiveAbility) e os dois dicionarios sao
-			// cache local, nunca sincronizado pela rede.
 			foreach (var item in Data.Inventory.Items)
 			{
 				if (item != null)
@@ -329,7 +317,6 @@ namespace Jogo25D.Characters
             HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
         }
 
-
         protected void UpdateItems(float dt)
 		{
             foreach (var item in Data.Inventory.Items)
@@ -430,7 +417,7 @@ namespace Jogo25D.Characters
 
         #endregion
 
-        #region Animation 
+        #region Animation
 
         public void UpdateAnimation()
         {
@@ -742,8 +729,6 @@ namespace Jogo25D.Characters
 			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 		}
 
-		// Decoracoes e terreno visivel vivem na layer Compose; a Base guarda o terreno inferior
-		// do bioma. Mineracao/quebra/colocacao precisam checar as duas camadas.
 		public TileMapLayer GetActiveBaseLayer()
 		{
 			var parent = GetParent();
@@ -846,12 +831,12 @@ namespace Jogo25D.Characters
 		{
 			return Inventory.GetSlot(Data?.Inventory, index);
 		}
-		
+
 		public ItemData EquippedInstance()
 		{
 			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
 		}
-        
+
 		private void EnsureItemDefinition(ItemData item)
 		{
 			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
@@ -960,9 +945,7 @@ namespace Jogo25D.Characters
 
 		public void ApplySkillTree()
 		{
-			// Reconstroi a partir da base (velocidade/vida sem nenhum bonus) - NAO so
-			// Properties.Clear(), senao o jogador perde Speed/JumpVelocity/MaxHealth de
-			// vez sempre que isso roda (todo _Ready, novo personagem ou nao).
+
 			Properties.Clear();
 
 			foreach (var baseProperty in CreateBaseProperties())
@@ -1246,7 +1229,7 @@ namespace Jogo25D.Characters
 
         #endregion
 
-        #region Core - Rpc - Abilioties 
+        #region Core - Rpc - Abilioties
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void UnlockAbilityReceive(string actionId)
@@ -1327,7 +1310,7 @@ namespace Jogo25D.Characters
 
             ApplySkillTree();
         }
-        
+
 		private void SyncSkillTreeToRequest()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)

@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
@@ -135,7 +135,7 @@ namespace Jogo25D.Items
 
         #endregion
 
-        #region Core - Virtuals 
+        #region Core - Virtuals
 
         public virtual bool CanUse(ItemData data)
         {

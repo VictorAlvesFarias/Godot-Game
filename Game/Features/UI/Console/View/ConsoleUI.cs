@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -602,10 +602,6 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					// Mesmo caminho que o botao "Reviver" da tela de morte usa
-					// (DeathScreenUI.OnRevivePressed) - teleporta pro spawn (0,0), o que ja
-					// reseta vida/velocidade/sprite/bloqueio de input como efeito colateral
-					// (ver WorldManager.TeleportPlayer).
 					WorldManager.TeleportPlayerClientRequest(Vector2.Zero);
 
 					console.PrintSuccess("Jogador resetado.");

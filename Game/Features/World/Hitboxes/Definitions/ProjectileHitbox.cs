@@ -1,11 +1,11 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
 
 namespace Jogo25D.Hitboxes
 {
     public partial class ProjectileHitbox : BaseHitbox
     {
-        #region Properties 
+        #region Properties
 
         public float Timer { get; set; }
         public Vector2 Direction { get; set; }

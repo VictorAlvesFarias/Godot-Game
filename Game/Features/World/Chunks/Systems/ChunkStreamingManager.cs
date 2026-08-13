@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -79,10 +79,6 @@ namespace Jogo25D.Chunks
 
             EvaluateTimer = 0f;
 
-            // Fire-and-forget guardado por dimensao - Evaluate agora e assincrono (carregar/
-            // descarregar chunk fica espalhado ao longo de varios frames, ver PaintAsync/
-            // EraseAsync), entao pode ainda estar rodando quando o proximo _Process bateria o
-            // intervalo de novo. Sem essa guarda, chamadas se sobrepoem e disputam o mesmo chunk.
             if (!_isEvaluatingOverworld)
             {
                 _isEvaluatingOverworld = true;
@@ -171,9 +167,6 @@ namespace Jogo25D.Chunks
                 .OrderBy(c => playerChunks.Min(pc => Mathf.Max(Mathf.Abs(c.X - pc.X), Mathf.Abs(c.Y - pc.Y))))
                 .Take(ChunkStreamingConstants.MAX_CHUNK_LOADS_PER_TICK);
 
-            // Materializa a lista ANTES de comecar a carregar - LoadChunkAsync adiciona em
-            // "loaded" progressivamente, e como estamos num foreach com await no meio, mudar a
-            // colecao-fonte no meio da enumeracao seria fragil.
             var missingList = missing.ToList();
 
             foreach (var chunkCoord in missingList)
@@ -256,9 +249,6 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            // Marca como carregado JA, antes de pintar (que agora leva varios frames) - senao um
-            // Evaluate seguinte, batendo enquanto esse chunk ainda esta sendo pintado aos poucos,
-            // veria esse chunk como "faltando" de novo e tentaria carregar duas vezes.
             loaded.Add(chunkCoord);
 
             await ChunkGenerator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
@@ -295,12 +285,6 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            // "state" (mutacoes de bloco quebrado/colocado) NAO e limpo
-            // aqui de proposito - precisa sobreviver ao descarregamento pra
-            // ser reaplicado da proxima vez que esse chunk carregar (seja
-            // pelo mesmo player voltando, seja por outro peer chegando
-            // perto), senao um buraco cavado sumia assim que o chunk saia
-            // de raio e voltava do jeito gerado original.
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
@@ -330,11 +314,6 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // Chamado pelo WorldManager sempre que um bloco quebra/e colocado
-        // de verdade (autoritativo) - guarda a mutacao no ChunkStateData
-        // do chunk correspondente, pra ser reaplicada (ver ApplyMutations)
-        // toda vez que esse chunk for (re)pintado, incluindo pra peers que
-        // entram depois da mutacao ja ter acontecido.
         public void RecordMutation(string dimensionId, Vector2I cell, string type, string extraData)
         {
             var state = ResolveState(dimensionId);
@@ -404,11 +383,6 @@ namespace Jogo25D.Chunks
                 return existing;
             }
 
-            // Base/Compose sao duas TileMapLayer com o script TerrainLayer anexado,
-            // ja pre-autoradas como filhas DIRETAS da dimensao (Overworld.tscn/
-            // Upsidedown.tscn) - sem node pai centralizador nenhum. Por isso REUTILIZA as
-            // camadas que ja existem na cena em vez de criar novas por cima - so cria a que
-            // faltar, como rede de seguranca caso a cena nao tenha sido pre-autorada.
             var baseLayer = GetOrCreateChildLayer(dimensionParent, ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
             var layer = GetOrCreateChildLayer(dimensionParent, ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
 

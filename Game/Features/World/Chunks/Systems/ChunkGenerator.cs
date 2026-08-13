@@ -9,12 +9,7 @@ namespace Jogo25D.Chunks
 {
     public static class ChunkGenerator
     {
-        // Todo o algoritmo original (altura de arvore, amplitude de relevo, frequencia de ruido,
-        // espacamento minimo) foi desenhado e calibrado visualmente com tile_size=32 - continua
-        // usando esses mesmos numeros como referencia, so multiplicando (dimensoes em tiles) ou
-        // dividindo (frequencia, que e "ciclos por tile") pelo quanto o tile encolheu/cresceu
-        // desde entao. Assim o mundo fica proporcional ao PLAYER (cujo tamanho em pixels nao
-        // muda) em vez de proporcional ao tile, nao importa o tile_size escolhido no TileSet.
+
         private const int ReferenceTileSize = 32;
 
         private static int GetWorldScale(TileSet tileSet)
@@ -36,10 +31,6 @@ namespace Jogo25D.Chunks
             {
                 var biomeGroups = BuildBiomeGroups(target, solidCellsByBiome, chunkCoord, chunkSize);
 
-                // Conecta TODOS os grupos primeiro, so depois reconecta a fronteira estrangeira
-                // de cada um - senao o grupo processado primeiro veria os outros biomas (ainda
-                // nao pintados nessa mesma chamada) como vazio, tratando a divisa como
-                // precipicio de um lado so.
                 foreach (var group in biomeGroups)
                 {
                     target.Connect(group.Cells, group.BiomeDef.TerrainSet);
@@ -79,12 +70,6 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // Mesma coisa que Paint(), so que cede um frame (await ToSignal ProcessFrame, por dentro
-        // de cada Connect/ConnectDependent/ReconnectForeignBorder chamado) a cada "cellsPerFrame"
-        // celulas processadas, em vez de pintar o chunk inteiro (ate CHUNK_SIZE^2 celulas x 3
-        // camadas) tudo de uma vez num unico frame - e essa a trava que o carregamento de chunk
-        // causava. Usado pelo ChunkStreamingManager no lugar de Paint() pra carregar chunk sem
-        // travar o jogo.
         public static async Task PaintAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
@@ -134,11 +119,6 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // A altura do relevo de cada COLUNA usa um bioma "de referencia" (resolvido no centro
-        // vertical do chunk) - mantem o relevo suave, sem degrau quando a fronteira corta a
-        // coluna no meio. Ja o bioma de CADA CELULA solida (usado pra escolher a textura) e
-        // resolvido individualmente (X e Y), entao perto da fronteira algumas celulas divergem do
-        // bioma da coluna, criando a tendrilha organica em vez de uma faixa reta.
         private readonly struct ColumnSurface
         {
             public readonly int WorldX;
@@ -169,21 +149,19 @@ namespace Jogo25D.Chunks
 
                 if (!heightNoiseByBiome.TryGetValue(columnBiome, out var heightNoise))
                 {
+
+                    var noiseSeed = unchecked((long)worldSeed * 397 ^ WorldRandom.StableStringHash(dimensionId));
+
                     heightNoise = new FastNoiseLite
                     {
-                        Seed = (int)CombineSeed(worldSeed, dimensionId, chunkCoord),
-                        // Frequencia e "ciclos por tile" - com o tile menor, um mesmo passo de 1
-                        // tile percorre MENOS distancia em pixel, entao teria que andar mais
-                        // tiles pra completar o mesmo ciclo (mesma paisagem em pixels) que o
-                        // algoritmo original desenhava a tile_size=32.
+                        Seed = (int)noiseSeed,
+
                         Frequency = columnBiomeDef.NoiseFrequency / worldScale,
                     };
+
                     heightNoiseByBiome[columnBiome] = heightNoise;
                 }
 
-                // Amplitude/offset sao alturas em TILES - escala pra cima junto com o encolhimento
-                // do tile, senao o relevo (em pixels) fica achatado pela metade em vez de manter
-                // a mesma proporcao com o player que tinha no algoritmo original.
                 var groundHeight = columnBiomeDef.HeightOffset * worldScale + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude * worldScale);
 
                 columnSurfaces.Add(new ColumnSurface(worldX, groundHeight, columnBiome));
@@ -212,14 +190,6 @@ namespace Jogo25D.Chunks
             return (solidCellsByBiome, columnSurfaces);
         }
 
-        // Decoracao procedural (arvore, e qualquer estrutura futura registrada no StructureDB e
-        // listada em BiomeDefinition.StructureIds) - pintada na layer Base, que nao compete
-        // visualmente com nada, ja que as celulas de estrutura ficam todas no ar acima do chao
-        // (Base so tem chao onde Texture/Bordercap tambem tem, entao fica vazia exatamente onde
-        // a estrutura ocupa). Passa pelo mesmo mediator (Connect) usado pro resto do tileset,
-        // entao ganha bordas/cantos organicos em vez de bloco solido. Cada instancia fica inteira
-        // dentro dos limites locais do proprio chunk pra nao depender de chunks vizinhos ainda
-        // nao carregados nem sumir pela metade quando um vizinho descarrega.
         private static void PlaceStructures(TerrainLayer target, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
             if (target == null)
@@ -231,7 +201,6 @@ namespace Jogo25D.Chunks
             var baseCellY = chunkCoord.Y * chunkSize;
             var cellsByTerrainSet = new Dictionary<int, List<Vector2I>>();
 
-            // Cursor de espacamento POR ESTRUTURA - distancia minima entre caixas de estrutura.
             var lastRightEdgeByStructure = new Dictionary<string, int>();
             var minBoundsGapTiles = MinStructureBoundsGapTiles;
 
@@ -281,6 +250,15 @@ namespace Jogo25D.Chunks
                     }
 
                     var bounds = structure.GetBounds(worldSeed, dimensionId, column.WorldX, worldScale);
+
+                    var leftX = column.WorldX - bounds.Left;
+                    var rightX = column.WorldX + bounds.Right;
+
+                    if (leftX < baseCellX || rightX >= baseCellX + chunkSize)
+                    {
+
+                        continue;
+                    }
 
                     if (!IsStructureVolumeClear(target, baseTarget, column.WorldX, column.GroundHeight, bounds))
                     {
@@ -361,15 +339,8 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // Folga minima entre caixas delimitadoras de duas instancias da mesma estrutura.
-            // Com valor 1, garante ao menos um bloco vazio entre a borda direita da arvore
-            // anterior e a borda esquerda da proxima.
             private const int MinStructureBoundsGapTiles = 1;
 
-            // Limite conservador de quanto olhar pra tras ao retomar o cursor de espacamento entre
-            // chunks. O tamanho do lookback precisa ser maior ou igual ao maior alcance horizontal
-            // de uma estrutura, para nao perder uma arvore anterior cujo bloco direito ainda entra
-            // no chunk atual.
             private const int MaxStructureSpacingLookback = 32;
         private static int ResolveLastRightEdgeBefore(
             StructureDefinition structure,
@@ -473,9 +444,6 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // Mesma coisa que Erase(), so que cede um frame a cada "cellsPerFrame" celulas apagadas -
-        // descarregar um chunk tambem trava o jogo pelo mesmo motivo que carregar (ate
-        // CHUNK_SIZE^2 SetCell(-1) x 3 camadas num frame so).
         public static async Task EraseAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var baseCellX = chunkCoord.X * chunkSize;

@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
@@ -160,9 +160,6 @@ namespace Jogo25D.Items
             return layer.LocalToMap(layer.ToLocal(targetWorldPos));
         }
 
-        // Tronco/copa de arvore so existem na layer Base (sem espelho na Texture) - qualquer
-        // checagem de "tem bloco aqui" pra mineracao precisa olhar as duas camadas, senao uma
-        // celula que so existe na Base fica impossivel de mirar/quebrar.
         private static bool IsSolid(TileMapLayer layer, TileMapLayer baseLayer, Vector2I cell)
         {
             return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);

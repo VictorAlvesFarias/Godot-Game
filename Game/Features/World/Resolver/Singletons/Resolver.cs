@@ -99,7 +99,7 @@ namespace Jogo25D.Features.World.Resolver.Singletons
 
             return result;
         }
-        
+
         public static List<ChargesPropertyData> Resolve(params List<ChargesPropertyData>[] lists)
         {
             var result = new List<ChargesPropertyData>();

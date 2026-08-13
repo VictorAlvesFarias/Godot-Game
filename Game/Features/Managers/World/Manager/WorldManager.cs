@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Blocks;
 using Jogo25D.Characters;
@@ -225,9 +225,6 @@ namespace Jogo25D.Systems
 			loadingUi?.Close();
 		}
 
-		// Base/Compose sao REUTILIZADAS pela geracao procedural (nunca recriadas) -
-		// qualquer tile de teste pintado no editor precisa ser apagado aqui antes de gerar um
-		// mundo novo, senao sobreviveria misturado com o mundo gerado.
 		private void ClearWorldLayers()
 		{
 			foreach (var parent in new[] { OverworldParent, UpsidedownParent })
@@ -337,13 +334,13 @@ namespace Jogo25D.Systems
 			}
 			else
 			{
-				player.PeerId = 1; 
+				player.PeerId = 1;
 				player.Name = $"Player{player.PeerId}";
 
 				player.SetMultiplayerAuthority((int)player.PeerId);
 				player.AddToGroup("players");
 
-				GD.Print($"[WorldManager.CreateServer] set authority to {player.PeerId} and renamed to {player.Name}");				
+				GD.Print($"[WorldManager.CreateServer] set authority to {player.PeerId} and renamed to {player.Name}");
 			}
 
 			return port.ToString();
@@ -422,7 +419,7 @@ namespace Jogo25D.Systems
 
 			return $"{ip}:{port}";
 		}
-		
+
 		public void Disconnect()
 		{
 			GD.Print("[WorldManager.Disconnect] Disconnect()");
@@ -902,8 +899,6 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - Blocks
 
-			// Base/Compose sao filhas DIRETAS da dimensao, cada uma com o script
-		// TerrainLayer anexado - sem node pai centralizador nenhum.
 		private TerrainLayer ResolveDimensionLayer(string dimensionId)
 		{
 			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
@@ -1002,9 +997,6 @@ namespace Jogo25D.Systems
 			EraseBlockAndReconnect(layer, cell, dimensionId);
 		}
 
-		// Quebra uma celula que so existe numa camada DECORATIVA (Base - ex: tronco/copa de
-		// arvore), sem espelho na Texture. Nao passa pelo fluxo de bioma/dependencia porque nao
-		// e uma celula de chao - so apaga e reconecta as decoracoes ao redor.
 		private static void BreakDecorationOnly(TerrainLayer decorationLayer, Vector2I cell)
 		{
 			if (decorationLayer == null || decorationLayer.GetCellSourceId(cell) == -1)
@@ -1058,8 +1050,6 @@ namespace Jogo25D.Systems
 			PlaceBlockOnCorrectLayer(layer, baseLayer, cell, block, dimensionId);
 		}
 
-		// Blocos normais e decorativos vivem na camada Compose; a Base fica so com o terreno
-		// inferior do bioma.
 		private bool PlaceBlockOnCorrectLayer(TerrainLayer layer, TerrainLayer baseLayer, Vector2I cell, BlockDefinition block, string dimensionId)
 		{
 			_ = baseLayer;
@@ -1258,9 +1248,6 @@ namespace Jogo25D.Systems
 
 			var neighbors = GetSolidNeighborCells(layer, cell);
 
-			// Agrupa os vizinhos solidos por terrain_set e reconecta CADA grupo com o proprio
-			// terreno (Connect) E com quem encosta nele (ReconnectForeignBorder) - o mesmo padrao
-			// de PaintBlockAndReconnect (colocar bloco).
 			var biomeGroups = new Dictionary<int, List<Vector2I>>();
 
 			foreach (var neighbor in neighbors)
@@ -1312,11 +1299,6 @@ namespace Jogo25D.Systems
 			ReconnectDecorationsNear(baseLayer, cell);
 		}
 
-		// Recalcula, num raio pequeno ao redor da celula editada, TODAS as celulas ja existentes
-		// em CADA camada (agrupando por terrain_set atual - arvore, chao, o que for) - cobre
-		// decoracoes como tronco/copa de arvore (terrain_set 6/7) que colocar/quebrar bloco do
-		// lado nunca alcancava antes, porque o resto dessa funcao so segue a cadeia de vizinhos
-		// do PROPRIO bioma (0/1), nunca entra em celulas de outra natureza.
 		private static void ReconnectDecorationsNear(TerrainLayer layer, Vector2I originCell, int radius = 4)
 		{
 			if (layer == null)
@@ -1345,19 +1327,11 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		// Apaga UMA celula usando SetCellsTerrainConnect (terrain=-1, "essa celula nao tem
-		// terreno nenhum") em vez de um SetCell(cell, -1) cru - le o terrain_set QUE JA ESTAVA
-		// naquela celula NESSA MESMA camada (nunca o de outra camada) e usa ele como segundo
-		// parametro, so pra o Godot saber quais regras de peering bit aplicar ao recalcular. Um
-		// SetCell cru so marca a celula como vazia sem passar pelo sistema de terreno - o
-		// resultado final costuma ser o mesmo, mas SetCellsTerrainConnect e o caminho "oficial"
-		// que a propria Compose ja usava, entao Base segue o mesmo padrao.
 		private static void EraseCellWithTerrainConnect(TerrainLayer layer, Vector2I cell)
 		{
 			if (layer == null || layer.GetCellSourceId(cell) == -1)
 			{
-				// Nada pra apagar (ja vazia) - nao ha terrain_set de verdade pra ler aqui, entao
-				// nao ha porque chamar SetCellsTerrainConnect com um valor de fallback arbitrario.
+
 				return;
 			}
 
@@ -1414,10 +1388,6 @@ namespace Jogo25D.Systems
 			ReconnectDecorationsNear(baseLayer, cell);
 		}
 
-		// Reconecta uma camada DEPENDENTE do chao (Base ou Bordercap - ambas agora pintam
-		// exatamente as mesmas posicoes que o chao, cada uma com seu proprio terrain_set) pras
-		// celulas passadas - usado depois de quebrar/colocar bloco perto de uma fronteira, pra
-		// manter a camada consistente sem precisar repintar o chunk inteiro.
 		private void RepaintDependentLayerForCells(TileMapLayer layer, TerrainLayer dependentLayer, IEnumerable<Vector2I> cells, Func<BiomeDefinition, int> terrainSetSelector)
 		{
 			if (dependentLayer == null)
@@ -1464,17 +1434,9 @@ namespace Jogo25D.Systems
 				dependentLayer.ConnectDependent(layer, group.Value, terrainSetSelector(biomeDef));
 			}
 
-			// ConnectDependent() ja redesenha o overlay quando chama Connect() por baixo - mas se
-			// TODAS as celulas passadas cairem no ramo "SetCell(-1) cru" (linha 1316, sem grupo
-			// nenhum pra reconectar - ex.: perto de uma borda onde os vizinhos tambem estao
-			// vazios), nenhum Connect() roda e o overlay fica com dado velho mesmo a celula real
-			// ja estando certa. Redesenha de qualquer forma, garantindo que sempre reflete o
-			// estado atual.
 			dependentLayer.RedrawDebugOverlay();
 		}
 
-		// Amplia um conjunto de celulas pra incluir tambem os vizinhos solidos DELAS (2o grau a
-		// partir da celula original quebrada/colocada).
 		private Godot.Collections.Array<Vector2I> GetExpandedNeighborCells(TileMapLayer layer, IEnumerable<Vector2I> seedCells)
 		{
 			var seen = new HashSet<Vector2I>();
@@ -1527,13 +1489,6 @@ namespace Jogo25D.Systems
 			return result;
 		}
 
-		// Resolve o bioma pelo mesmo ruido global usado na geracao do mundo (BiomeResolver),
-		// nao pelos vizinhos locais - assim o bloco colocado sempre reflete o bioma "correto"
-		// daquela posicao, mesmo que ainda nao exista nenhum vizinho daquele bioma por perto
-		// (ex: cavando um tunel em direcao a fronteira antes de alcancar o outro bioma).
-		// IMPORTANTE: usa a propria celula (X e Y) - e exatamente assim que ChunkGenerator.Paint
-		// resolve o bioma de cada celula solida agora (por celula, nao por chunk inteiro), entao
-		// precisa ser identico aqui pra bater com o chao real perto da fronteira.
 		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
 			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
@@ -1678,14 +1633,14 @@ namespace Jogo25D.Systems
 			if (!Multiplayer.IsServer())
 			{
 				GD.Print("[WorldManager.ServerReceiveTradeRequest] not the server, ignoring request");
-				
+
 				return;
 			}
 
 			long senderId = Multiplayer.GetRemoteSenderId();
-			
+
 			GD.Print($"[WorldManager.ServerReceiveTradeRequest] SenderId={senderId}, sending SyncDimensionTrade RPC");
-			
+
 			Rpc(nameof(TradeDimension), senderId);
 		}
 

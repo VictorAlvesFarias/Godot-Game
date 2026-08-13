@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 
 namespace Jogo25D.Hitboxes
@@ -10,7 +10,6 @@ namespace Jogo25D.Hitboxes
         public float Lifetime { get; set; } = 0.2f;
 		public Vector2 Offset { get; set; } = Vector2.Zero;
 		public float Timer { get; set; }
-
 
 		#endregion
 

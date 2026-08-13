@@ -7,13 +7,7 @@ using System.IO;
 
 namespace Jogo25D.Structures
 {
-	// Arvore "hibrida" (copa base + tufos extras + galhos com tufo proprio) - formato calibrado
-	// batendo o olho num "treinamento" visual: o usuario gerou dezenas de arvores com varios
-	// algoritmos diferentes (.dev/generate_tree_variations.py), escolheu as que mais gostou
-	// (maioria "branching": copa densa dominando o visual, tronco curto mas visivel por baixo,
-	// riscos de galho marrom aparecendo POR DENTRO da copa), e os parametros abaixo foram
-	// tunados em .dev/tune_hybrid_tree.py ate bater com essa selecao antes de vir pra ca -
-	// reproduz a MESMA logica desse script Python, so traduzida pra C#.
+
 	public class TreeStructureDefinition : StructureDefinition
 	{
 		public const int WoodTerrainSet = 6;
@@ -30,7 +24,7 @@ namespace Jogo25D.Structures
 			public int TrunkHeight;
 			public int CanopyHeight;
 			public int TrunkLean;
-			public int[] RadiusByRow; // indice 0 = base da copa (encostada no tronco)
+			public int[] RadiusByRow;
 		}
 
 		private sealed class TreeRandom
@@ -111,10 +105,6 @@ namespace Jogo25D.Structures
 			}
 		}
 
-		// worldScale e ignorado aqui de proposito: os ranges abaixo foram calibrados 1:1 com
-		// .dev/tune_hybrid_tree.py (1 celula = 1 tile). Multiplicar pelo worldScale do
-		// ChunkGenerator (tile_size=16 -> 2) dobrava tronco/copa/galhos em relacao ao preview
-		// Python e quebrava a silhueta que foi escolhida visualmente.
 		private static int RoundToEven(float value)
 		{
 			return (int)Math.Round(value, MidpointRounding.ToEven);
@@ -144,8 +134,7 @@ namespace Jogo25D.Structures
 
 			for (int row = 0; row < canopyHeight; row++)
 			{
-				// Afunila nos dois extremos (20% de cima e de baixo) - meio da copa fica no
-				// raio maximo.
+
 				var normalized = canopyHeight <= 1 ? 0f : (float)row / (canopyHeight - 1);
 				float taper;
 
@@ -177,7 +166,6 @@ namespace Jogo25D.Structures
 			};
 		}
 
-		// (x, altura acima do chao - positivo pra cima) do tronco no degrau "step".
 		private static Vector2I TrunkPosition(TreeShape shape, int step)
 		{
 			var progress = shape.TrunkHeight <= 1 ? 0f : (float)step / shape.TrunkHeight;
@@ -192,12 +180,6 @@ namespace Jogo25D.Structures
 
 		private const int PreviewTileSize = 16;
 
-		// Gera a arvore inteira (tronco + copa base + tufos + galhos), em coordenadas RELATIVAS
-		// ao groundCell (Y positivo = pra cima) - usado tanto pelo calculo de alcance quanto
-		// pela pintura de verdade, pra garantir que os dois NUNCA divirjam (a causa do bug
-		// reportado: alcance calculado por formula aproximada, sem contar o quanto os galhos/
-		// tufos realmente se espalhavam, deixava a copa e os galhos brotarem em posicoes que a
-		// checagem de espaco/borda do ChunkGenerator nao esperava).
 		private void BuildTree(long worldSeed, string dimensionId, int worldX, int worldScale, List<Vector2I> trunkCells, List<Vector2I> canopyCells)
 		{
 			_ = worldScale;
@@ -253,8 +235,6 @@ namespace Jogo25D.Structures
 			AddBranches(trunkCells, trunkCellSet, canopyCells, canopyCellSet, shape, rng, worldSeed, dimensionId, worldX, worldScale);
 		}
 
-		// Tufos redondos extras espalhados pela copa - dao a silhueta organica/irregular (menos
-		// "bola perfeita") que dominou a selecao.
 		private void AddLeafClusters(List<Vector2I> canopyCells, HashSet<Vector2I> trunkCellSet, HashSet<Vector2I> canopyCellSet, TreeShape shape, TreeRandom rng, long worldSeed, string dimensionId, int worldX, int worldScale)
 		{
 			_ = worldSeed;
@@ -296,11 +276,6 @@ namespace Jogo25D.Structures
 			}
 		}
 
-		// Galhos diagonais saindo do tronco, cada um com seu proprio tufo na ponta - da o efeito
-		// de "graveto marrom aparecendo por dentro da folhagem rosa". Nascem colados no TOPO do
-		// tronco (onde a copa ja comeca), nunca no meio dele - foi exatamente esse o bug visual
-		// reportado: nascendo no meio do tronco (a "fracao da altura toda" usada antes), o galho
-		// ficava longe demais da copa e sobrava um vao vazio entre os dois.
 		private void AddBranches(List<Vector2I> trunkCells, HashSet<Vector2I> trunkCellSet, List<Vector2I> canopyCells, HashSet<Vector2I> canopyCellSet, TreeShape shape, TreeRandom rng, long worldSeed, string dimensionId, int worldX, int worldScale)
 		{
 			_ = worldSeed;
@@ -323,8 +298,7 @@ namespace Jogo25D.Structures
 
 				for (int i = 1; i <= length; i++)
 				{
-					// O galho sobe conforme se afasta do tronco, mirando de volta pra dentro
-					// da copa em vez de reto pro lado.
+
 					var verticalOffset = RoundToEven(i * 0.35f);
 					var position = start + new Vector2I(direction * i, verticalOffset);
 
@@ -333,10 +307,6 @@ namespace Jogo25D.Structures
 						trunkCells.Add(position);
 					}
 
-					// Sorteado A CADA PASSO (igual ao Python) - nao uma vez so pro galho
-					// inteiro, senao os tufos ficam uniformes demais ao longo do galho. Varia
-					// por "worldX + i" (posicao), nao por salt, senao colidiria com o salt do
-					// proximo galho (branchSalt anda de 10 em 10).
 					var leafRadius = rng.NextInt(1, 2);
 
 					for (int lx = -leafRadius; lx <= leafRadius; lx++)
@@ -366,12 +336,6 @@ namespace Jogo25D.Structures
 
 		#region StructureDefinition
 
-		// Caixa REAL - gera a arvore inteira (tronco + copa + tufos + galhos) e mede o bloco
-		// mais a esquerda, mais a direita e mais ao topo entre TODAS as celulas de verdade,
-		// exatamente como CollectCells vai desenhar (mesma chamada, mesmos parametros -
-		// BuildTree e deterministico por worldX, entao os dois SEMPRE concordam). Nao e mais
-		// uma aproximacao pelo raio da copa base (que ignorava o quanto galho/tufo podiam se
-		// esticar pra fora dela).
 		public override StructureBounds GetBounds(long worldSeed, string dimensionId, int worldX, int worldScale)
 		{
 			var trunkCells = new List<Vector2I>();
@@ -398,7 +362,7 @@ namespace Jogo25D.Structures
 
 		public override int GetMaxRightExtent(int worldScale)
 		{
-			// Valor conservador para garantir lookback suficiente no chunk anterior.
+
 			return 16;
 		}
 

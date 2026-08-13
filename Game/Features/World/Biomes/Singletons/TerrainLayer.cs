@@ -209,14 +209,6 @@ namespace Jogo25D.Biomes
         private Dictionary<int, Dictionary<int, TileMatch>> _tilesByTerrainSetAndSignature;
         private bool _isRecalculating;
 
-        // Godot agrupa tiles em "quadrantes" (rendering_quadrant_size, em NUMERO DE TILES, nao
-        // pixels) pra desenhar cada grupo como um unico mesh/draw call. O valor default (16) foi
-        // calibrado pra tile_size=32 (quadrante de 512px de lado) - se o tile_size diminui sem
-        // esse numero acompanhar, cada quadrante passa a cobrir uma area MENOR em pixels, entao
-        // a mesma tela visivel precisa de mais quadrantes (mais draw calls/meshes) pra ser
-        // desenhada - e um custo de renderizacao real, direto, que so aparece ao diminuir o
-        // tile_size. Recalcula aqui pra manter o tamanho do quadrante em PIXELS constante,
-        // independente do tile_size escolhido no TileSet.
         private const int ReferenceQuadrantSize = 16;
         private const int ReferenceTileSize = 32;
 
@@ -988,12 +980,6 @@ namespace Jogo25D.Biomes
             public int TerrainSet;
         }
 
-        // excludedForeignTerrainSets deixa de fora terrain_sets que NAO fazem parte do sistema
-        // de bioma ground/bordercap/base espelhado entre camadas (ex: madeira/folha de arvore) -
-        // sem isso, uma celula decorativa vizinha de uma borda de chunk era detectada como
-        // "vizinho estrangeiro" do bioma, reconectada via ConnectDependent, e apagada porque a
-        // camada dependencia (Texture) nunca teve tile nela pra comecar (arvore nao espelha nas
-        // 3 camadas do jeito que bioma espelha).
         private List<ForeignCellInfo> CollectForeignNeighbors(HashSet<Vector2I> cellSet, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
         {
             var result = new List<ForeignCellInfo>();

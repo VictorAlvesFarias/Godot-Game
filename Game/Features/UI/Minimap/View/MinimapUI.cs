@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
@@ -83,11 +83,6 @@ namespace Jogo25D.UI
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
-        // QueueRedraw() sem throttle rodava _Draw() (que varre a arvore INTEIRA da cena e, pras
-        // layers sem textura de "descoberto" em cache - Bordercap/Base - faz um loop celula por
-        // celula numa caixa de ~150x150) toda unica frame, sem nenhuma necessidade - minimapa nao
-        // precisa atualizar a 60fps. Redesenha so ~12x/s, imperceptivel visualmente pra um
-        // minimapa, mas corta esse custo por ~5x.
         private const float RedrawIntervalSeconds = 1f / 12f;
         private float _redrawTimer;
 
@@ -122,11 +117,7 @@ namespace Jogo25D.UI
         {
             if (node is TileMapLayer layer && IsInstanceValid(layer))
             {
-                // Nem todo TileMapLayer da arvore fica embaixo de um SubViewportContainer (ex.:
-                // um layer direto na raiz da dimensao) - GetParent<T>() do proprio Godot lanca
-                // InvalidCastException se o ancestral nesse nivel nao for do tipo pedido, entao
-                // usa GetParentOrNull e so desenha se o container realmente existir e existir e
-                // estiver visivel.
+
                 var container = layer.GetParent()?.GetParent()?.GetParentOrNull<SubViewportContainer>();
 
                 if (container != null && container.Visible)
@@ -163,11 +154,6 @@ namespace Jogo25D.UI
                 return;
             }
 
-            // Sem textura de "descoberto" em cache (Bordercap/Base, que so tem cache pra
-            // Texture) - NAO cai no fallback celula-por-celula aqui, ele varre uma caixa de
-            // ~150x150 celulas toda vez que o minimapa redesenha. Bordercap/Base mostram o mesmo
-            // chao que a Texture ja mostra (via textura em cache), entao pular eles nao muda o
-            // que aparece no minimapa de forma perceptivel.
         }
 
         private void DrawDiscoveredTexture(TileMapLayer layer, Texture2D texture, Vector2I origin, Vector2 playerPos, Vector2 center, float scale)

@@ -66,8 +66,7 @@ namespace Jogo25D.Systems
 
 				if (direction != Vector2.Zero)
 				{
-					// Quanto mais afastado (zoom out), mais rapido move a camera - senao fica
-					// lento demais pra atravessar o mapa vendo uma area grande.
+
 					GlobalPosition += direction.Normalized() * FreeCameraSpeed * (1f / Zoom.X) * (float)delta;
 				}
 
@@ -89,8 +88,6 @@ namespace Jogo25D.Systems
 		{
 			var newZoom = Zoom * factor;
 
-			// Sem limite minimo (zoom out infinito) - so evita o zoom chegar em zero/negativo,
-			// o que quebraria a renderizacao.
 			newZoom.X = Mathf.Max(newZoom.X, 0.0001f);
 			newZoom.Y = Mathf.Max(newZoom.Y, 0.0001f);
 

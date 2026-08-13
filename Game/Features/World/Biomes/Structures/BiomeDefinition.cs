@@ -16,9 +16,6 @@ namespace Jogo25D.Biomes
         public Vector2I InteriorAtlasCoord { get; init; }
         public int BorderCapTerrainSet { get; init; }
 
-        // Ids de StructureDefinition (StructureDB) que podem nascer sozinhas nesse bioma - cada
-        // uma rola sua PROPRIA chance (StructureDefinition.Chance) por coluna elegivel. Lista
-        // vazia/null = bioma sem decoracao procedural nenhuma.
         public List<string> StructureIds { get; init; } = new();
 
         #endregion
