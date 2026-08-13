@@ -10,8 +10,7 @@ namespace Jogo25D.Structures
             ["tree"] = new TreeStructureDefinition
             {
                 Id = "tree",
-
-                    Chance = 0.82f,
+                Chance = 0.82f,
             },
         };
 

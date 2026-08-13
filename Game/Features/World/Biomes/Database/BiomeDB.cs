@@ -5,11 +5,14 @@ namespace Jogo25D.Biomes
 {
     public static class BiomeDB
     {
-        private static readonly Dictionary<BiomeType, BiomeDefinition> _biomes = new()
+        public const string LimeGroundId = "lime_ground";
+        public const string OliveGroundId = "olive_ground";
+
+        private static readonly Dictionary<string, BiomeDefinition> _biomes = new()
         {
-            [BiomeType.LimeGround] = new BiomeDefinition
+            [LimeGroundId] = new BiomeDefinition
             {
-                Type = BiomeType.LimeGround,
+                Id = LimeGroundId,
                 TerrainSet = 0,
                 NoiseFrequency = 0.05f,
                 HeightAmplitude = 4f,
@@ -19,9 +22,9 @@ namespace Jogo25D.Biomes
                 BorderCapTerrainSet = 2,
                 StructureIds = new List<string> { "tree" },
             },
-            [BiomeType.OliveGround] = new BiomeDefinition
+            [OliveGroundId] = new BiomeDefinition
             {
-                Type = BiomeType.OliveGround,
+                Id = OliveGroundId,
                 TerrainSet = 1,
                 NoiseFrequency = 0.08f,
                 HeightAmplitude = 8f,
@@ -32,9 +35,9 @@ namespace Jogo25D.Biomes
             },
         };
 
-        public static BiomeDefinition Get(BiomeType type)
+        public static BiomeDefinition Get(string id)
         {
-            return _biomes.TryGetValue(type, out var definition) ? definition : _biomes[BiomeType.LimeGround];
+            return _biomes.TryGetValue(id, out var definition) ? definition : _biomes[LimeGroundId];
         }
 
         public static BiomeDefinition GetByTerrainSet(int terrainSet)

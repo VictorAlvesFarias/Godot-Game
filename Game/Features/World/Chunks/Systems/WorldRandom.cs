@@ -1,6 +1,5 @@
 namespace Jogo25D.Chunks
 {
-
     public static class WorldRandom
     {
         public static float Random01(long worldSeed, string ns, int worldX, int salt)

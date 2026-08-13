@@ -33,6 +33,7 @@ namespace Jogo25D.Chunks
         private readonly Dictionary<Vector2I, HashSet<long>> _upsidedownLoadedPeers = new();
         private readonly DiscoveredMapImage _discoveredOverworld = new();
         private readonly DiscoveredMapImage _discoveredUpsidedown = new();
+        private readonly ChunkGeneratorSystem _generator = new();
 
         #endregion
 
@@ -251,7 +252,7 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await ChunkGenerator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -288,7 +289,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await ChunkGenerator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -400,7 +401,7 @@ namespace Jogo25D.Chunks
             return layer;
         }
 
-        private static TerrainLayer GetOrCreateChildLayer(Node2D dimensionParent, string name)
+        private TerrainLayer GetOrCreateChildLayer(Node2D dimensionParent, string name)
         {
             var existing = dimensionParent.GetNodeOrNull<TerrainLayer>(name);
 
@@ -412,7 +413,7 @@ namespace Jogo25D.Chunks
             var layer = new TerrainLayer
             {
                 Name = name,
-                TileSet = ChunkGenerator.GetTileSet(),
+                TileSet = _generator.GetTileSet(),
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
                 ShowTerrainSetDebug = OS.IsDebugBuild(),
             };
@@ -425,6 +426,11 @@ namespace Jogo25D.Chunks
         private TerrainLayer GetBaseLayer(string dimensionId)
         {
             return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldBaseLayer : UpsidedownBaseLayer;
+        }
+
+        public BiomeDefinition ResolveBiome(string dimensionId, int worldX, int worldY)
+        {
+            return BiomeDB.Get(_generator.ResolveBiome(WorldSeed, dimensionId, worldX, worldY));
         }
 
         private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
@@ -496,7 +502,7 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await ChunkGenerator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -526,7 +532,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await ChunkGenerator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion

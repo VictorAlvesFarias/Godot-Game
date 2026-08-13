@@ -1492,10 +1492,8 @@ namespace Jogo25D.Systems
 		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
 			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
-			var worldSeed = chunkStreamingManager?.WorldSeed ?? 0;
-			var biome = BiomeResolver.Resolve(worldSeed, dimensionId, cell.X, cell.Y);
 
-			return BiomeDB.Get(biome);
+			return chunkStreamingManager?.ResolveBiome(dimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
 		}
 
 		#endregion
