@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 
@@ -11,21 +11,17 @@ namespace Jogo25D.Items
         public long WorldItemId { get; set; }
         public ItemData Data { get; set; }
         public float Gravity { get; set; }
-
-        private const float VisualScale = 0.7f;
-        private const float BobAmplitude = 4f;
-        private const float BobSpeed = 2.5f;
+        public float BobTime { get; set; }
+        public float SpriteRestY { get; set; }
 
         #endregion
 
-        #region Node references
+        #region Node children references
 
-        private Sprite2D _sprite;
-        private CollisionShape2D _collision;
-        private Area2D _pickupArea;
-        private CollisionShape2D _pickupCollision;
-        private float _bobTime;
-        private float _spriteRestY;
+        public Sprite2D Sprite { get; set; }
+        public CollisionShape2D Collision { get; set; }
+        public Area2D PickupArea { get; set; }
+        public CollisionShape2D PickupCollision { get; set; }
 
         #endregion
 
@@ -33,19 +29,19 @@ namespace Jogo25D.Items
 
         public override void _Ready()
         {
-            _sprite = GetNodeOrNull<Sprite2D>("Sprite");
-            _collision = GetNodeOrNull<CollisionShape2D>("Collision");
-            _pickupArea = GetNodeOrNull<Area2D>("PickupArea");
-            _pickupCollision = GetNodeOrNull<CollisionShape2D>("PickupArea/Collision");
+            Sprite = GetNodeOrNull<Sprite2D>("Sprite");
+            Collision = GetNodeOrNull<CollisionShape2D>("Collision");
+            PickupArea = GetNodeOrNull<Area2D>("PickupArea");
+            PickupCollision = GetNodeOrNull<CollisionShape2D>("PickupArea/Collision");
 
             Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-            _bobTime = (float)GD.RandRange(0f, Mathf.Tau);
+            BobTime = (float)GD.RandRange(0f, Mathf.Tau);
 
             UpdateVisual();
 
-            if (_pickupArea != null)
+            if (PickupArea != null)
             {
-                _pickupArea.BodyEntered += OnBodyEntered;
+                PickupArea.BodyEntered += OnBodyEntered;
             }
         }
 
@@ -69,49 +65,49 @@ namespace Jogo25D.Items
 
         public override void _Process(double delta)
         {
-            if (_sprite == null)
+            if (Sprite == null)
             {
                 return;
             }
 
-            _bobTime += (float)delta * BobSpeed;
+            BobTime += (float)delta * 2.5f;
 
-            var bobLift = Mathf.Abs(Mathf.Sin(_bobTime)) * BobAmplitude;
+            var bobLift = Mathf.Abs(Mathf.Sin(BobTime)) * 4f;
 
-            _sprite.Position = new Vector2(0f, _spriteRestY - bobLift);
+            Sprite.Position = new Vector2(0f, SpriteRestY - bobLift);
         }
 
         #endregion
 
-        #region Core
+        #region Core - Item
 
         public void UpdateVisual()
         {
-            if (_sprite == null || Data == null)
+            if (Sprite == null || Data == null)
             {
                 return;
             }
 
             var texture = ItemFactory.Create(Data.Id)?.Icon;
 
-            _sprite.Texture = texture;
-            _sprite.Scale = new Vector2(VisualScale, VisualScale);
+            Sprite.Texture = texture;
+            Sprite.Scale = new Vector2(0.7f, 0.7f);
 
             if (texture == null)
             {
                 return;
             }
 
-            var size = texture.GetSize() * VisualScale;
+            var size = texture.GetSize() * 0.7f;
 
-            if (_collision != null)
+            if (Collision != null)
             {
-                _collision.Shape = new RectangleShape2D { Size = size };
+                Collision.Shape = new RectangleShape2D { Size = size };
             }
 
-            if (_pickupCollision != null)
+            if (PickupCollision != null)
             {
-                _pickupCollision.Shape = new RectangleShape2D { Size = size };
+                PickupCollision.Shape = new RectangleShape2D { Size = size };
             }
         }
 

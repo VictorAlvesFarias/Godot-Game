@@ -9,7 +9,7 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 {
     public static class GodotDictionaryParser
     {
-        private const string TypeKey = "$type";
+        #region Core - Conversion
 
         public static Dictionary ToDictionary(Resource resource)
         {
@@ -20,7 +20,7 @@ namespace Jogo25D.Utils.GodotDictionaryParser
                 return dict;
             }
 
-            dict[TypeKey] = resource.GetType().AssemblyQualifiedName;
+            dict["$type"] = resource.GetType().AssemblyQualifiedName;
 
             foreach (var property in GetFields(resource.GetType()))
             {
@@ -63,6 +63,10 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
             return resource;
         }
+
+        #endregion
+
+        #region Core - Parsing
 
         private static PropertyInfo[] GetFields(Type type)
         {
@@ -140,6 +144,10 @@ namespace Jogo25D.Utils.GodotDictionaryParser
             throw new NotSupportedException($"[GodotDictionaryParser] Tipo nao suportado: {declaredType}");
         }
 
+        #endregion
+
+        #region Utils
+
         private static bool IsResourceArrayType(Type type, out Type elementType)
         {
             elementType = null;
@@ -156,7 +164,7 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         private static Type ResolveType(Dictionary dict, Type fallbackType)
         {
-            if (dict.TryGetValue(TypeKey, out var typeNameVariant))
+            if (dict.TryGetValue("$type", out var typeNameVariant))
             {
                 var typeName = typeNameVariant.AsString();
 
@@ -173,5 +181,7 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
             return fallbackType;
         }
+
+        #endregion
     }
 }

@@ -3,18 +3,10 @@ using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Items
 {
-    public enum DamageType
+    public partial class DamageInfo : Resource
     {
-        Physical,
-        Fire,
-        Ice,
-        Poison,
-        Electric,
-        True
-    }
+        #region Dinamic properties
 
-    public partial class DamageInfo: Resource
-    {
         [Export, GodotDictionaryField]
         public int Amount { get; set; }
 
@@ -29,5 +21,7 @@ namespace Jogo25D.Items
 
         [Export, GodotDictionaryField]
         public float CritDamage { get; set; }
+
+        #endregion
     }
 }

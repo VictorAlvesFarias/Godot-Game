@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Actions;
+using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
@@ -9,6 +10,7 @@ using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
+using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
@@ -22,7 +24,7 @@ namespace Jogo25D.Characters
 {
 	public partial class Player : CharacterBody2D
 	{
-        #region Events 
+        #region Events
 
         [Signal]
 		public delegate void InventoryChangedEventHandler();
@@ -50,7 +52,16 @@ namespace Jogo25D.Characters
         public float DamagePopupDuration { get; set; } = 0.8f;
 		public float DamagePopupRiseDistance { get; set; } = 26f;
         public PlayerData Data { get; set; } = new PlayerData();
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = CreateBaseProperties();
+
+        private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
+        {
+            return new Godot.Collections.Array<BasePropertyData>
+            {
+                new MovementPropertyData { Speed = 300f, JumpVelocity = -750f },
+                new HealthPropertyData(),
+            };
+        }
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
         public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
@@ -87,7 +98,7 @@ namespace Jogo25D.Characters
 		public bool FacingLeft ()
 		{
 			return Visuals != null && Visuals.Scale.X < 0f;
-		} 
+		}
 
 		public void SetFacing(bool faceLeft)
 		{
@@ -122,7 +133,7 @@ namespace Jogo25D.Characters
 			GD.Print("[Player._Ready] Trying get Nodes");
 
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNode<WorldManager>(StaticNodePathsConstants.WorldManager);
 			Visuals = GetNodeOrNull<Node2D>("Visuals");
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
 			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
@@ -139,9 +150,6 @@ namespace Jogo25D.Characters
 
 			GD.Print("[Player._Ready] Seting starter slot");
 
-			// Loaded = true significa que Data ja veio de um personagem salvo
-			// (RespawnLocalSoloPlayer/FinishPeerJoin) - nao sobrescreve com o
-			// arsenal de debug de novo a cada spawn.
 			if (IsAuthoritative() && !Loaded)
 			{
 				Data ??= new PlayerData();
@@ -208,12 +216,6 @@ namespace Jogo25D.Characters
 
 			Inventory.EnsureSize(Data.Inventory);
 
-			// Reconstroi ItemDefinitions/ActionDefinitions a partir do que
-			// ja esta em Data - necessario mesmo pra quem nao e autoritativo,
-			// ja que pra esses clientes Data chega pronto via replicacao
-			// (SpawnPlayerReceive desserializa o Data inteiro direto, sem
-			// passar por GiveItem/GiveAbility) e os dois dicionarios sao
-			// cache local, nunca sincronizado pela rede.
 			foreach (var item in Data.Inventory.Items)
 			{
 				if (item != null)
@@ -315,7 +317,6 @@ namespace Jogo25D.Characters
             HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
         }
 
-
         protected void UpdateItems(float dt)
 		{
             foreach (var item in Data.Inventory.Items)
@@ -416,7 +417,7 @@ namespace Jogo25D.Characters
 
         #endregion
 
-        #region Animation 
+        #region Animation
 
         public void UpdateAnimation()
         {
@@ -568,15 +569,21 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var label = new Label();
+			var template = Labels.GetNodeOrNull<Label>("FloatingTextTemplate");
 
+			if (template == null)
+			{
+				GD.PushError("[Player.ShowDamagePopup] Template 'FloatingTextTemplate' não encontrado em Player.tscn");
+
+				return;
+			}
+
+			template.Visible = false;
+
+			var label = (Label)template.Duplicate();
+
+			label.Visible = true;
 			label.Text = $"-{amount}";
-			label.HorizontalAlignment = HorizontalAlignment.Center;
-			label.Size = new Vector2(60, 20);
-			label.AddThemeFontSizeOverride("font_size", 16);
-			label.AddThemeColorOverride("font_color", new Color(1f, 0.25f, 0.25f, 1f));
-			label.AddThemeColorOverride("font_outline_color", Colors.Black);
-			label.AddThemeConstantOverride("outline_size", 3);
 
 			var offset = new Vector2(-30f + (float)GD.RandRange(-8, 8), -70f);
 
@@ -712,50 +719,26 @@ namespace Jogo25D.Characters
 
 		public string GetActiveDimensionId()
 		{
-			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingManager.OverworldId : ChunkStreamingManager.UpsidedownId;
+			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
 		}
 
 		public TileMapLayer GetActiveTileLayer()
 		{
 			var parent = GetParent();
-			var handAuthoredName = GetActiveDimensionId() == ChunkStreamingManager.OverworldId ? "Overworld-Tiles" : "Upsidedown-Tiles";
 
-			return parent?.GetNodeOrNull<TileMapLayer>("ProceduralTiles")
-				?? parent?.GetNodeOrNull<TileMapLayer>(handAuthoredName);
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
+		}
+
+		public TileMapLayer GetActiveBaseLayer()
+		{
+			var parent = GetParent();
+
+			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
 		}
 
 		#endregion
 
 		#region Core - Items system
-
-		public int CountAmmoByChargeType(string chargeType)
-		{
-			if (string.IsNullOrEmpty(chargeType))
-			{
-				return 0;
-			}
-
-			int count = 0;
-
-			for (int i = 0; i < Data.Inventory.Size; i++)
-			{
-				var slot = Data.Inventory.Items[i];
-
-				if (slot == null || slot.InstanceId == Data.EquippedItemId)
-				{
-					continue;
-				}
-
-				var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
-				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
-
-				if (chargesProp != null && chargesProp.ChargeItemId == chargeType)
-				{
-					count += slot.Quantity;
-				}
-			}
-			return count;
-		}
 
 		public int RemoveAmmoByChargeType(string chargeType, int quantity)
 		{
@@ -848,12 +831,12 @@ namespace Jogo25D.Characters
 		{
 			return Inventory.GetSlot(Data?.Inventory, index);
 		}
-		
+
 		public ItemData EquippedInstance()
 		{
 			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
 		}
-        
+
 		private void EnsureItemDefinition(ItemData item)
 		{
 			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
@@ -962,7 +945,13 @@ namespace Jogo25D.Characters
 
 		public void ApplySkillTree()
 		{
+
 			Properties.Clear();
+
+			foreach (var baseProperty in CreateBaseProperties())
+			{
+				Properties.Add(baseProperty);
+			}
 
 			var grantedAbilityIds = new HashSet<string>();
 			var grantedEffectIds = new HashSet<string>();
@@ -1238,21 +1227,9 @@ namespace Jogo25D.Characters
             GiveEffect(effectId);
         }
 
-        public void AddEffectRequest(string effectId)
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-            {
-                AddEffectReceive(effectId);
-
-                return;
-            }
-
-            RpcId(1, nameof(AddEffectReceive), effectId);
-        }
-
         #endregion
 
-        #region Core - Rpc - Abilioties 
+        #region Core - Rpc - Abilioties
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void UnlockAbilityReceive(string actionId)
@@ -1333,7 +1310,7 @@ namespace Jogo25D.Characters
 
             ApplySkillTree();
         }
-        
+
 		private void SyncSkillTreeToRequest()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
@@ -1537,7 +1514,7 @@ namespace Jogo25D.Characters
 			var dropQuantity = Mathf.Min(quantity, item.Quantity);
 			var dropData = (ItemData)item.Duplicate(true);
 
-			dropData.InstanceId = ItemFactory.NextInstanceId();
+			dropData.InstanceId = InstanceIdGenerator.NextInstanceId();
 			dropData.Quantity = dropQuantity;
 
 			RemoveItemRequest(instanceId, dropQuantity);

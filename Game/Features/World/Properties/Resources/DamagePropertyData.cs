@@ -6,6 +6,8 @@ namespace Jogo25D.Properties
 {
     public partial class DamagePropertyData : BasePropertyData
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public DamageType DamageType { get; set; }
 
@@ -14,5 +16,7 @@ namespace Jogo25D.Properties
 
         [Export, GodotDictionaryField]
         public float DamageMultiplier { get; set; } = 1f;
+
+        #endregion
     }
 }

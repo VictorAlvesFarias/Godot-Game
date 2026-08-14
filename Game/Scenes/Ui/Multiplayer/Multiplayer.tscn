@@ -8,6 +8,18 @@ content_margin_top = 8.0
 content_margin_right = 10.0
 content_margin_bottom = 8.0
 
+[sub_resource type="StyleBoxFlat" id="Style_ServerRow"]
+bg_color = Color(1, 1, 1, 0.06)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.15)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="MultiplayerMenu" type="CanvasLayer"]
 script = ExtResource("1")
 
@@ -60,6 +72,27 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
+
+[node name="ServerRowTemplate" type="PanelContainer" parent="MarginContainer/Root/ListScroll/ListContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_ServerRow")
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="WorldNameLabel" type="Label" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+vertical_alignment = 1
+text = "Mundo"
 
 [node name="ConnectRow" type="HBoxContainer" parent="MarginContainer/Root"]
 layout_mode = 2

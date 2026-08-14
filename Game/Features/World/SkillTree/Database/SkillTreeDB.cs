@@ -9,7 +9,7 @@ namespace Jogo25D.SkillTree
 {
     public static class SkillTreeDB
     {
-        #region Properties
+        #region Dinamic properties
 
         public static Dictionary<string, SkillTreeNode> Nodes { get; set; }
         public static bool Initialized { get; set; }

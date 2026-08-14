@@ -1,5 +1,6 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
@@ -53,7 +54,7 @@ namespace Jogo25D.UI
 
         public void FindLocalPlayer()
         {
-            NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+            NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
             LocalPlayer = NetworkManager?.GetLocalPlayer();
         }
 

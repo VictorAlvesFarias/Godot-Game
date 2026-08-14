@@ -1,16 +1,12 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class FullscreenMapUI : CanvasLayer
     {
-        public const float DefaultViewRadius = 4000f;
-        public const float MinViewRadius = 400f;
-        public const float MaxViewRadius = 12000f;
-        public const float ZoomStep = 300f;
-
         public MinimapUI MapView { get; set; }
         public MinimapUI HudMinimap { get; set; }
         public Player LocalPlayer { get; set; }
@@ -24,7 +20,7 @@ namespace Jogo25D.UI
             Visible = false;
 
             MapView = GetNode<MinimapUI>("Background/MapPanel/MapView");
-            MapView.ViewRadius = DefaultViewRadius;
+            MapView.ViewRadius = 4000f;
         }
 
         public override void _Input(InputEvent @event)
@@ -66,13 +62,13 @@ namespace Jogo25D.UI
             {
                 if (mouseEvent.ButtonIndex == MouseButton.WheelUp)
                 {
-                    Zoom(-ZoomStep);
+                    Zoom(-300f);
 
                     GetViewport().SetInputAsHandled();
                 }
                 else if (mouseEvent.ButtonIndex == MouseButton.WheelDown)
                 {
-                    Zoom(ZoomStep);
+                    Zoom(300f);
 
                     GetViewport().SetInputAsHandled();
                 }
@@ -99,7 +95,7 @@ namespace Jogo25D.UI
 
         public void FindLocalPlayer()
         {
-            var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+            var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
             LocalPlayer = worldManager?.GetLocalPlayer();
 
@@ -146,7 +142,7 @@ namespace Jogo25D.UI
 
         public void Zoom(float delta)
         {
-            MapView.ViewRadius = Mathf.Clamp(MapView.ViewRadius + delta, MinViewRadius, MaxViewRadius);
+            MapView.ViewRadius = Mathf.Clamp(MapView.ViewRadius + delta, 400f, 12000f);
         }
 
         public void PanDrag(Vector2 screenDelta)

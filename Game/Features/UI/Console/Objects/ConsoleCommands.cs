@@ -5,10 +5,14 @@ namespace Jogo25D.UI
 {
 	public class ConsoleCommands
 	{
-		public string Name;
-		public string Usage;
-		public string Description;
-		public Action<string[], ConsoleUI> Execute;
-		public Func<string, List<string>> GetCompletions;
+		#region Dinamic properties
+
+		public string Name { get; set; }
+		public string Usage { get; set; }
+		public string Description { get; set; }
+		public Action<string[], ConsoleUI> Execute { get; set; }
+		public Func<string, List<string>> GetCompletions { get; set; }
+
+		#endregion
 	}
 }

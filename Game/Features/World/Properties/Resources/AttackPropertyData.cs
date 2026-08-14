@@ -5,6 +5,8 @@ namespace Jogo25D.Properties
 {
     public partial class AttackPropertyData : BasePropertyData
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public float AttackRange { get; set; } = 80f;
 
@@ -16,5 +18,7 @@ namespace Jogo25D.Properties
 
         [Export, GodotDictionaryField]
         public float ProjectileSpeed { get; set; } = 500f;
+
+        #endregion
     }
 }

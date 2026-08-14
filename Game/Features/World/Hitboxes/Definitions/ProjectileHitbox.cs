@@ -1,13 +1,18 @@
 using Godot;
+using Jogo25D.Constants;
 
 namespace Jogo25D.Hitboxes
 {
     public partial class ProjectileHitbox : BaseHitbox
     {
-        public float Speed { get; set; } = 600f;
-        public Vector2 Direction { get; set; }
-        public float Lifetime { get; set; } = 2f;
+        #region Properties
+
         public float Timer { get; set; }
+        public Vector2 Direction { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _PhysicsProcess(double delta)
         {
@@ -19,5 +24,7 @@ namespace Jogo25D.Hitboxes
                 QueueFree();
             }
         }
+
+        #endregion
     }
 }

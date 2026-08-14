@@ -5,14 +5,11 @@ namespace Jogo25D.Properties
 {
     public partial class BasePropertyData : Resource
     {
-        private static long _nextInstanceId { get; set; } = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
-
-        public static long NextInstanceId()
-        {
-            return ++_nextInstanceId;
-        }
+        #region Dinamic properties
 
         [Export, GodotDictionaryField]
         public long InstanceId { get; set; }
+
+        #endregion
     }
 }

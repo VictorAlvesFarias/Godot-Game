@@ -1,11 +1,14 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
+using Jogo25D.Constants;
 
 namespace Jogo25D.UI
 {
     public partial class MinimapUI : Control
     {
+        #region Dinamic properties
+
         public string PlayerGroupName { get; set; } = "players";
         public float ViewRadius { get; set; } = 1200f;
         public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
@@ -17,17 +20,25 @@ namespace Jogo25D.UI
         public Node LocalPlayer { get; set; }
         public int LocalPeerId { get; set; } = 1;
 
-        private ChunkStreamingManager _chunkStreamingManager;
-
         public Vector2 PanOffset { get; set; } = Vector2.Zero;
 
         public float LastScale { get; private set; }
+
+        #endregion
+
+        #region Node references
+
+        public ChunkStreamingManager ChunkStreamingManager { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
             CustomMinimumSize = new Vector2(160, 160);
 
-            _chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(ChunkStreamingManager.DEFAULT_NODE_PATH);
+            ChunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
             if (Multiplayer != null &&
                 Multiplayer.MultiplayerPeer != null &&
@@ -35,11 +46,6 @@ namespace Jogo25D.UI
             {
                 LocalPeerId = Multiplayer.GetUniqueId();
             }
-        }
-
-        public void SetLocalPlayer(Node player)
-        {
-            LocalPlayer = player;
         }
 
         public override void _Draw()
@@ -77,11 +83,47 @@ namespace Jogo25D.UI
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
+        private const float RedrawIntervalSeconds = 1f / 12f;
+        private float _redrawTimer;
+
+        public override void _Process(double delta)
+        {
+            _redrawTimer += (float)delta;
+
+            if (_redrawTimer < RedrawIntervalSeconds)
+            {
+                return;
+            }
+
+            _redrawTimer = 0f;
+
+            QueueRedraw();
+        }
+
+        #endregion
+
+        #region Core - Player tracking
+
+        public void SetLocalPlayer(Node player)
+        {
+            LocalPlayer = player;
+        }
+
+        #endregion
+
+        #region Core - Rendering
+
         public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
         {
-            if (node is TileMapLayer layer && IsInstanceValid(layer) && layer.GetParent().GetParent().GetParent<SubViewportContainer>().Visible)
+            if (node is TileMapLayer layer && IsInstanceValid(layer))
             {
-                DrawTileMapLayer(layer, playerPos, center, scale);
+
+                var container = layer.GetParent()?.GetParent()?.GetParentOrNull<SubViewportContainer>();
+
+                if (container != null && container.Visible)
+                {
+                    DrawTileMapLayer(layer, playerPos, center, scale);
+                }
             }
 
             foreach (Node child in node.GetChildren())
@@ -100,9 +142,9 @@ namespace Jogo25D.UI
             Texture2D texture = null;
             var origin = Vector2I.Zero;
 
-            if (_chunkStreamingManager != null)
+            if (ChunkStreamingManager != null)
             {
-                texture = _chunkStreamingManager.GetDiscoveredTexture(layer, out origin);
+                texture = ChunkStreamingManager.GetDiscoveredTexture(layer, out origin);
             }
 
             if (texture != null)
@@ -112,7 +154,6 @@ namespace Jogo25D.UI
                 return;
             }
 
-            DrawStaticLayerCells(layer, playerPos, center, scale);
         }
 
         private void DrawDiscoveredTexture(TileMapLayer layer, Texture2D texture, Vector2I origin, Vector2 playerPos, Vector2 center, float scale)
@@ -134,59 +175,6 @@ namespace Jogo25D.UI
                 new Vector2(cullRadius, cullRadius) * scale * 2f);
 
             DrawTextureRectRegion(texture, destRect, srcRegion);
-        }
-
-        private void DrawStaticLayerCells(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
-        {
-            var tileSize = layer.TileSet.TileSize;
-            var cullRadius = ViewRadius * 1.5f;
-            var cullRadiusSquared = cullRadius * cullRadius;
-
-            var topLeftLocal = layer.ToLocal(playerPos - new Vector2(cullRadius, cullRadius));
-            var bottomRightLocal = layer.ToLocal(playerPos + new Vector2(cullRadius, cullRadius));
-
-            var boxStart = layer.LocalToMap(topLeftLocal);
-            var boxEnd = layer.LocalToMap(bottomRightLocal);
-
-            var minX = Mathf.Min(boxStart.X, boxEnd.X);
-            var maxX = Mathf.Max(boxStart.X, boxEnd.X);
-            var minY = Mathf.Min(boxStart.Y, boxEnd.Y);
-            var maxY = Mathf.Max(boxStart.Y, boxEnd.Y);
-
-            const int maxSamplesPerAxis = 160;
-            var boxWidthCells = maxX - minX + 1;
-            var boxHeightCells = maxY - minY + 1;
-            var boxCellsPerAxis = Mathf.Max(boxWidthCells, boxHeightCells);
-            var strideCells = Mathf.Max(1, Mathf.CeilToInt(boxCellsPerAxis / (float)maxSamplesPerAxis));
-
-            for (int x = minX; x <= maxX; x += strideCells)
-            {
-                for (int y = minY; y <= maxY; y += strideCells)
-                {
-                    var cell = new Vector2I(x, y);
-
-                    if (layer.GetCellSourceId(cell) == -1)
-                    {
-                        continue;
-                    }
-
-                    var worldPos = layer.ToGlobal(layer.MapToLocal(cell));
-
-                    if (worldPos.DistanceSquaredTo(playerPos) > cullRadiusSquared)
-                    {
-                        continue;
-                    }
-
-                    var mapPos = WorldToMap(worldPos, playerPos, center, scale);
-                    var size = tileSize.X * scale * strideCells;
-                    var rect = new Rect2(
-                        mapPos - new Vector2(size / 2f, size / 2f),
-                        new Vector2(size, size)
-                    );
-
-                    DrawRect(rect, TileColor);
-                }
-            }
         }
 
         public void DrawPlayers(Vector2 playerPos, Vector2 center, float scale)
@@ -218,9 +206,6 @@ namespace Jogo25D.UI
             return center + relative * scale;
         }
 
-        public override void _Process(double delta)
-        {
-            QueueRedraw();
-        }
+        #endregion
     }
 }

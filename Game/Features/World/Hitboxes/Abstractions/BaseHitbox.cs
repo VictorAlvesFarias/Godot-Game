@@ -1,27 +1,27 @@
 using Godot;
-using System.Collections.Generic;
-using Jogo25D.Items;
-using Jogo25D.Effects;
 using Jogo25D.Characters;
-using System;
+using Jogo25D.Effects;
+using Jogo25D.Items;
 
 namespace Jogo25D.Hitboxes
 {
     public partial class BaseHitbox : Area2D
     {
-        #region Properties
+        #region Dinamic properties
 
         public Godot.Collections.Array<DamageInfo> Damages { get; set; } = new();
         public Godot.Collections.Array<EffectDefinitionData> Effects { get; set; } = new();
         public float KnockbackForce { get; set; } = 0f;
-        public Player Owner { get; set; }
-        public AnimatedSprite2D Sprite { get; set; }
+        public float DirectionAngle { get; set; }
+        public float Speed { get; set; } = 600f;
+        public float Lifetime { get; set; } = 0.2f;
         public int Perfuracao { get; set; } = 0;
+        public int HitCount { get; set; } = 0;
         public bool DestroyInAllBodies { get; set; } = true;
         public bool HitCountInAllBodies { get; set; } = true;
         public bool StopDamageOnMaxPerfuracao { get; set; } = false;
-        public int HitCount { get; set; } = 0;
-        public float DirectionAngle { get; set; }
+        public Player Owner { get; set; }
+        public AnimatedSprite2D Sprite { get; set; }
 
         #endregion
 
@@ -57,7 +57,10 @@ namespace Jogo25D.Hitboxes
 
         public virtual void OnBodyEntered(Node body)
         {
-            if (body == Owner) return;
+            if (body == Owner)
+            {
+                return;
+            }
 
             if (body is Player target)
             {
@@ -71,38 +74,38 @@ namespace Jogo25D.Hitboxes
                     ApplyImpact(target);
                 }
 
-                if (StopDamageOnMaxPerfuracao)
-                {
-                    if (HitCount >= Perfuracao)
-                    {
-                        QueueFree();
-                    }
-                }
-                else
-                {
-                    HitCount++;
-                }
+                RegisterHitOrDestroy();
+
+                return;
             }
-            else if(DestroyInAllBodies)
+
+            if (!DestroyInAllBodies)
             {
-                if (HitCountInAllBodies)
-                {
-                    if (StopDamageOnMaxPerfuracao)
-                    {
-                        if (HitCount >= Perfuracao)
-                        {
-                            QueueFree();
-                        }
-                    }
-                    else
-                    {
-                        HitCount++;
-                    }
-                }
-                else
+                return;
+            }
+
+            if (!HitCountInAllBodies)
+            {
+                QueueFree();
+
+                return;
+            }
+
+            RegisterHitOrDestroy();
+        }
+
+        private void RegisterHitOrDestroy()
+        {
+            if (StopDamageOnMaxPerfuracao)
+            {
+                if (HitCount >= Perfuracao)
                 {
                     QueueFree();
                 }
+            }
+            else
+            {
+                HitCount++;
             }
         }
 

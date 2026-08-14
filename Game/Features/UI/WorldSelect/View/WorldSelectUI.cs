@@ -1,8 +1,9 @@
-using Godot;
-using System.Collections.Generic;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Systems;
+using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
@@ -16,7 +17,7 @@ namespace Jogo25D.UI
 		public Button MultiplayerButton { get; set; }
 		public Button BackButton { get; set; }
 		public WorldManager NetworkManager { get; set; }
-		public Jogo25D.Systems.SaveManager Saves { get; set; }
+		public SaveManager Saves { get; set; }
 
 		#endregion
 
@@ -32,8 +33,8 @@ namespace Jogo25D.UI
 			CreateWorldButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateWorldButton");
 			MultiplayerButton = GetNode<Button>("MarginContainer/Root/ButtonRow/MultiplayerButton");
 			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-			Saves = GetTree().Root.GetNodeOrNull<Jogo25D.Systems.SaveManager>(Jogo25D.Systems.SaveManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
 
 			CreateWorldButton.Pressed += OnCreateWorldPressed;
 			MultiplayerButton.Pressed += OnMultiplayerPressed;
@@ -46,38 +47,20 @@ namespace Jogo25D.UI
 
 		private Button CreateWorldRow(string title, string subtitle, System.Action onPressed)
 		{
-			var row = new Button();
+			var template = ListContainer.GetNodeOrNull<Button>("WorldRowTemplate");
 
+			if (template == null)
+			{
+				GD.PushError("WorldSelectUI: WorldRowTemplate não encontrado em ListContainer.");
+
+				return null;
+			}
+
+			template.Visible = false;
+
+			var row = (Button)template.Duplicate();
+			row.Visible = true;
 			row.Text = subtitle == null ? title : $"{title}\n{subtitle}";
-			row.Alignment = HorizontalAlignment.Left;
-			row.FocusMode = Control.FocusModeEnum.None;
-			row.CustomMinimumSize = new Vector2(0, 44);
-			row.AddThemeFontSizeOverride("font_size", 16);
-			row.AddThemeColorOverride("font_color", Colors.White);
-
-			var normalStyle = new StyleBoxFlat();
-			normalStyle.BgColor = new Color(1f, 1f, 1f, 0.06f);
-			normalStyle.BorderColor = new Color(1f, 1f, 1f, 0.15f);
-			normalStyle.SetBorderWidthAll(1);
-			normalStyle.SetCornerRadiusAll(4);
-			normalStyle.ContentMarginLeft = 14;
-			normalStyle.ContentMarginRight = 14;
-			normalStyle.ContentMarginTop = 10;
-			normalStyle.ContentMarginBottom = 10;
-
-			row.AddThemeStyleboxOverride("normal", normalStyle);
-			row.AddThemeStyleboxOverride("disabled", normalStyle);
-
-			var hoverStyle = (StyleBoxFlat)normalStyle.Duplicate();
-			hoverStyle.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.15f);
-			hoverStyle.BorderColor = new Color(0.62f, 0.36f, 0.92f, 0.4f);
-
-			var pressedStyle = (StyleBoxFlat)normalStyle.Duplicate();
-			pressedStyle.BgColor = new Color(0.62f, 0.36f, 0.92f, 0.25f);
-
-			row.AddThemeStyleboxOverride("hover", hoverStyle);
-			row.AddThemeStyleboxOverride("pressed", pressedStyle);
-			row.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
 
 			if (onPressed != null)
 			{
@@ -87,34 +70,28 @@ namespace Jogo25D.UI
 			return row;
 		}
 
-		// Mundos salvos (ao contrario de "Mundo Padrão", que nao tem save
-		// nenhum pra excluir) ganham um botao "Excluir" ao lado da linha,
-		// mesmo padrao usado em CharacterSelectUI.
 		private Control CreateWorldRowWithDelete(string title, string subtitle, System.Action onSelect, System.Action onDelete)
 		{
-			var wrapper = new HBoxContainer();
+			var template = ListContainer.GetNodeOrNull<HBoxContainer>("WorldRowWithDeleteTemplate");
 
-			wrapper.AddThemeConstantOverride("separation", 8);
-
-			var selectButton = CreateWorldRow(title, subtitle, onSelect);
-
-			selectButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-
-			wrapper.AddChild(selectButton);
-
-			var deleteButton = new Button
+			if (template == null)
 			{
-				Text = "Excluir",
-				CustomMinimumSize = new Vector2(90, 44),
-				FocusMode = Control.FocusModeEnum.None,
-				MouseDefaultCursorShape = Control.CursorShape.PointingHand,
-			};
+				GD.PushError("WorldSelectUI: WorldRowWithDeleteTemplate não encontrado em ListContainer.");
 
-			deleteButton.AddThemeFontSizeOverride("font_size", 14);
-			deleteButton.AddThemeColorOverride("font_color", new Color(1f, 0.55f, 0.55f, 1f));
+				return null;
+			}
+
+			template.Visible = false;
+
+			var wrapper = (HBoxContainer)template.Duplicate();
+			wrapper.Visible = true;
+
+			var selectButton = wrapper.GetNode<Button>("SelectButton");
+			selectButton.Text = subtitle == null ? title : $"{title}\n{subtitle}";
+			selectButton.Pressed += onSelect;
+
+			var deleteButton = wrapper.GetNode<Button>("DeleteButton");
 			deleteButton.Pressed += onDelete;
-
-			wrapper.AddChild(deleteButton);
 
 			return wrapper;
 		}
@@ -123,10 +100,20 @@ namespace Jogo25D.UI
 		{
 			foreach (var child in ListContainer.GetChildren())
 			{
+				if (child.Name == "WorldRowTemplate" || child.Name == "WorldRowWithDeleteTemplate")
+				{
+					continue;
+				}
+
 				child.QueueFree();
 			}
 
-			ListContainer.AddChild(CreateWorldRow("Mundo Padrão", "Mapa fixo, sem save de terreno", OnDefaultWorldPressed));
+			var defaultRow = CreateWorldRow("Mundo Padrão", "Mapa fixo, sem save de terreno", OnDefaultWorldPressed);
+
+			if (defaultRow != null)
+			{
+				ListContainer.AddChild(defaultRow);
+			}
 
 			var worlds = Saves?.ListWorlds() ?? new List<WorldSaveData>();
 
@@ -136,7 +123,7 @@ namespace Jogo25D.UI
 					? $"Servidor (chave: {world.MultiplayerKey})"
 					: "Local";
 
-				ListContainer.AddChild(CreateWorldRowWithDelete(
+				var row = CreateWorldRowWithDelete(
 					world.Name,
 					$"{modeLabel} · autosave a cada {world.AutosaveIntervalMinutes} min",
 					() => OnWorldRowPressed(world),
@@ -145,7 +132,12 @@ namespace Jogo25D.UI
 						Saves?.DeleteWorld(world.WorldId);
 
 						PopulateWorldRows();
-					}));
+					});
+
+				if (row != null)
+				{
+					ListContainer.AddChild(row);
+				}
 			}
 		}
 
@@ -169,10 +161,6 @@ namespace Jogo25D.UI
 
 		#region Core - Actions - Mundos
 
-		// Selecionar/criar um mundo so guarda a escolha (PendingWorld*) e
-		// manda pra tela de personagem - so depois de escolher o personagem
-		// (CharacterSelectUI -> WorldManager.EnterPendingWorld) e que o
-		// mundo de fato carrega e o player entra. Ver .docs/spec-sistema-de-save.md.
 		public void OnDefaultWorldPressed()
 		{
 			NetworkManager.PendingWorld = null;

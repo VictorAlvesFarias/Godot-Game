@@ -1,12 +1,6 @@
 using Godot;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Jogo25D.Characters;
-using Jogo25D.Items;
-using Jogo25D.Properties;
-using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Items;
 
 namespace Jogo25D.Systems
 {

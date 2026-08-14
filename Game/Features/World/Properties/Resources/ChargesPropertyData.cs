@@ -1,11 +1,12 @@
 using Godot;
 using Jogo25D.Utils.GodotDictionaryParser;
-using System.Collections.Generic;
 
 namespace Jogo25D.Properties
 {
     public partial class ChargesPropertyData : BasePropertyData
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public int MaxCharges { get; set; } = 1;
 
@@ -17,5 +18,7 @@ namespace Jogo25D.Properties
 
         [Export, GodotDictionaryField]
         public float ReloadCooldown { get; set; } = 1.0f;
+
+        #endregion
     }
 }

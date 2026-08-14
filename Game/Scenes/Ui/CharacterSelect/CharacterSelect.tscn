@@ -8,6 +8,54 @@ content_margin_top = 8.0
 content_margin_right = 10.0
 content_margin_bottom = 8.0
 
+[sub_resource type="StyleBoxFlat" id="Style_Row_Normal"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(1, 1, 1, 0.06)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.15)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="Style_Row_Hover"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.62, 0.36, 0.92, 0.15)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.36, 0.92, 0.4)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="Style_Row_Pressed"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.62, 0.36, 0.92, 0.25)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.15)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="CharacterSelectMenu" type="CanvasLayer"]
 script = ExtResource("1")
 
@@ -60,6 +108,34 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
+
+[node name="CharacterRowTemplate" type="HBoxContainer" parent="MarginContainer/Root/ListScroll/ListContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SelectButton" type="Button" parent="MarginContainer/Root/ListScroll/ListContainer/CharacterRowTemplate"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 44)
+focus_mode = 0
+mouse_default_cursor_shape = 2
+alignment = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("Style_Row_Normal")
+theme_override_styles/disabled = SubResource("Style_Row_Normal")
+theme_override_styles/hover = SubResource("Style_Row_Hover")
+theme_override_styles/pressed = SubResource("Style_Row_Pressed")
+text = "Personagem"
+
+[node name="DeleteButton" type="Button" parent="MarginContainer/Root/ListScroll/ListContainer/CharacterRowTemplate"]
+layout_mode = 2
+custom_minimum_size = Vector2(90, 44)
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Excluir"
 
 [node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root"]
 layout_mode = 2

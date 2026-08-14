@@ -1,4 +1,5 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Utils.GodotDictionaryParser;
 
@@ -6,6 +7,8 @@ namespace Jogo25D.Features.Managers.Save.Resources
 {
     public partial class WorldSaveData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public string WorldId { get; set; } = "";
 
@@ -18,12 +21,11 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public WorldCharacterMode CharacterMode { get; set; } = WorldCharacterMode.LocalCharacters;
 
-        // So usado quando CharacterMode == ServerCharacters.
         [Export, GodotDictionaryField]
         public string MultiplayerKey { get; set; } = "";
 
         [Export, GodotDictionaryField]
-        public int AutosaveIntervalMinutes { get; set; } = 5;
+        public int AutosaveIntervalMinutes { get; set; } = SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES;
 
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<PortalSaveData> Portals { get; set; } = new();
@@ -33,5 +35,7 @@ namespace Jogo25D.Features.Managers.Save.Resources
 
         [Export, GodotDictionaryField]
         public long LastPlayedUtc { get; set; }
+
+        #endregion
     }
 }

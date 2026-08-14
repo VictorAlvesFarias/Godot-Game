@@ -1,22 +1,11 @@
-using Godot;
-using System.Collections.Generic;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
 	public partial class MultiplayerUI : CanvasLayer
 	{
-		#region Properties
-
-		private readonly List<string> _mockWorlds = new()
-		{
-			"Servidor da Guilda",
-			"Mundo dos Amigos",
-			"Arena PvP",
-		};
-
-		#endregion
-
 		#region Node references
 
 		public LineEdit SearchInput { get; set; }
@@ -33,8 +22,7 @@ namespace Jogo25D.UI
 
 		#region Systems
 
-		private Timer _connectTimeoutTimer;
-		private const float ConnectTimeoutSeconds = 8f;
+		public Timer ConnectTimeoutTimer { get; set; }
 
 		#endregion
 
@@ -52,7 +40,7 @@ namespace Jogo25D.UI
 			WorldsButton = GetNode<Button>("MarginContainer/Root/ButtonRow/WorldsButton");
 			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
 			StatusLabel = GetNode<Label>("MarginContainer/Root/StatusLabel");
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 			ErrorModal = GetTree().Root.GetNodeOrNull<ErrorModalUI>("Main/Ui/ErrorModalUI");
 
 			ConnectButton.Pressed += OnConnectPressed;
@@ -61,11 +49,11 @@ namespace Jogo25D.UI
 
 			NetworkManager.ServerCharacterListAvailable += OnServerCharacterListAvailable;
 
-			_connectTimeoutTimer = new Timer();
-			_connectTimeoutTimer.OneShot = true;
-			_connectTimeoutTimer.WaitTime = ConnectTimeoutSeconds;
-			_connectTimeoutTimer.Timeout += OnConnectTimeout;
-			AddChild(_connectTimeoutTimer);
+			ConnectTimeoutTimer = new Timer();
+			ConnectTimeoutTimer.OneShot = true;
+			ConnectTimeoutTimer.WaitTime = 8f;
+			ConnectTimeoutTimer.Timeout += OnConnectTimeout;
+			AddChild(ConnectTimeoutTimer);
 
 			PopulateMockList();
 		}
@@ -76,33 +64,24 @@ namespace Jogo25D.UI
 
 		private void PopulateMockList()
 		{
-			foreach (var worldName in _mockWorlds)
+			var template = ListContainer.GetNodeOrNull<PanelContainer>("ServerRowTemplate");
+
+			if (template == null)
 			{
-				var row = new PanelContainer();
+				GD.PushError("MultiplayerUI: ServerRowTemplate não encontrado em ListContainer.");
 
-				var rowStyle = new StyleBoxFlat();
-				rowStyle.BgColor = new Color(1f, 1f, 1f, 0.06f);
-				rowStyle.BorderColor = new Color(1f, 1f, 1f, 0.15f);
-				rowStyle.SetBorderWidthAll(1);
-				rowStyle.SetCornerRadiusAll(4);
-				row.AddThemeStyleboxOverride("panel", rowStyle);
+				return;
+			}
 
-				var margin = new MarginContainer();
-				margin.AddThemeConstantOverride("margin_left", 14);
-				margin.AddThemeConstantOverride("margin_top", 10);
-				margin.AddThemeConstantOverride("margin_right", 14);
-				margin.AddThemeConstantOverride("margin_bottom", 10);
-				row.AddChild(margin);
+			template.Visible = false;
 
-				var hbox = new HBoxContainer();
-				hbox.AddThemeConstantOverride("separation", 12);
-				margin.AddChild(hbox);
+			foreach (var worldName in new[] { "Servidor da Guilda", "Mundo dos Amigos", "Arena PvP" })
+			{
+				var row = (PanelContainer)template.Duplicate();
+				row.Visible = true;
 
-				var label = new Label();
+				var label = row.GetNode<Label>("MarginContainer/HBoxContainer/WorldNameLabel");
 				label.Text = worldName;
-				label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-				label.VerticalAlignment = VerticalAlignment.Center;
-				hbox.AddChild(label);
 
 				ListContainer.AddChild(row);
 			}
@@ -159,7 +138,7 @@ namespace Jogo25D.UI
 			NetworkManager.ConnectionSucceeded += OnConnectionSucceeded;
 			NetworkManager.ConnectionAttemptFailed += OnConnectionAttemptFailed;
 
-			_connectTimeoutTimer.Start();
+			ConnectTimeoutTimer.Start();
 		}
 
 		private void OnConnectionSucceeded()
@@ -191,7 +170,7 @@ namespace Jogo25D.UI
 
 		private void StopWaitingForConnection()
 		{
-			_connectTimeoutTimer.Stop();
+			ConnectTimeoutTimer.Stop();
 
 			if (NetworkManager != null)
 			{
@@ -209,10 +188,6 @@ namespace Jogo25D.UI
 			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
 		}
 
-		// So dispara quando o mundo do host esta em modo "Personagem de
-		// Servidor" (ver WorldManager.RequestServerCharacterListServerReceive).
-		// No modo "Personagem Local" o handshake e automatico (o
-		// PendingCharacter ja escolhido na tela de mundos e mandado sozinho).
 		private void OnServerCharacterListAvailable(string multiplayerKey, Godot.Collections.Array summaries)
 		{
 			Close();

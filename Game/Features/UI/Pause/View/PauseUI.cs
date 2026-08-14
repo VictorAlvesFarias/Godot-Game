@@ -1,18 +1,30 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
 	public partial class PauseUI : CanvasLayer
 	{
+		#region Node references
+
+		public WorldManager NetworkManager { get; set; }
+
+		#endregion
+
+		#region Node children references
+
 		public Button ResumeButton { get; set; }
 		public Button ExitButton { get; set; }
 		public Button HostButton { get; set; }
 		public Button PvpButton { get; set; }
 		public Button MenuButton { get; set; }
 		public LineEdit PortInput { get; set; }
-		public WorldManager NetworkManager { get; set; }
+
+		#endregion
+
+		#region Godot implementation
 
 		public override void _Ready()
 		{
@@ -24,7 +36,7 @@ namespace Jogo25D.UI
 			PvpButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PvpButton");
 			MenuButton = GetNode<Button>("MarginContainer/Root/MenuColumn/MenuButton");
 			PortInput = GetNode<LineEdit>("MarginContainer/Root/MenuColumn/PortInput");
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
 			ResumeButton.Pressed += OnResumePressed;
 			ExitButton.Pressed += OnExitPressed;
@@ -56,6 +68,10 @@ namespace Jogo25D.UI
 				UpdatePvpStatus();
 			}
 		}
+
+		#endregion
+
+		#region Core - Pause
 
 		public void TogglePause()
 		{
@@ -112,6 +128,10 @@ namespace Jogo25D.UI
 			}
 		}
 
+		#endregion
+
+		#region Core - Network
+
 		public void OnHostPressed()
 		{
 			if (NetworkManager == null)
@@ -149,6 +169,10 @@ namespace Jogo25D.UI
 			HostButton.Text = connected && isServer ? "Stop server" : "Host";
 		}
 
+		#endregion
+
+		#region Core - Pvp
+
 		public void OnPvpPressed()
 		{
 			var localPlayer = NetworkManager?.GetLocalPlayer();
@@ -169,5 +193,7 @@ namespace Jogo25D.UI
 
 			PvpButton.Text = localPlayer != null && localPlayer.Data.PvpEnabled ? "PvP" : "PvE";
 		}
+
+		#endregion
 	}
 }

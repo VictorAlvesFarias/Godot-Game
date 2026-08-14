@@ -5,6 +5,8 @@ namespace Jogo25D.Features.Managers.Save.Resources
 {
     public partial class PortalSaveData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public float PositionX { get; set; }
 
@@ -13,5 +15,7 @@ namespace Jogo25D.Features.Managers.Save.Resources
 
         [Export, GodotDictionaryField]
         public string DimensionId { get; set; } = "";
+
+        #endregion
     }
 }

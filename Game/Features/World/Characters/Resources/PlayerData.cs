@@ -7,15 +7,10 @@ using Jogo25D.Properties;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
 using Jogo25D.Utils.GodotDictionaryParser;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jogo25D.Features.World.Characters.Resources
 {
-    public partial class  PlayerData : Resource
+    public partial class PlayerData : Resource
     {
         #region Properties
 
@@ -35,11 +30,7 @@ namespace Jogo25D.Features.World.Characters.Resources
         public bool PvpEnabled { get; set; } = false;
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new()
-        {
-            new MovementPropertyData { Speed = 300f, JumpVelocity = -750f },
-            new HealthPropertyData()
-        };
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new() { };
 
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();

@@ -1,23 +1,37 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Constants;
 using Jogo25D.Systems;
 
 namespace Jogo25D.Portals
 {
     public partial class Portal : Area2D
     {
-        private const float CooldownSeconds = 1.5f;
-        private const string PromptText = "Pressione [E] para viajar";
+        #region Dinamic properties
 
-        private WorldManager _worldManager;
-        private Label _promptLabel;
-        private ulong _cooldownUntilMsec;
-        private Player _overlappingLocalPlayer;
+        public ulong CooldownUntilMsec { get; set; }
+        public Player OverlappingLocalPlayer { get; set; }
+
+        #endregion
+
+        #region Node references
+
+        public WorldManager WorldManager { get; set; }
+
+        #endregion
+
+        #region Node children references
+
+        public Label PromptLabel { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
-            _worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
-            _promptLabel = GetNodeOrNull<Label>("Labels/PromptLabel");
+            WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+            PromptLabel = GetNodeOrNull<Label>("Labels/PromptLabel");
 
             BodyEntered += OnBodyEntered;
             BodyExited += OnBodyExited;
@@ -25,31 +39,35 @@ namespace Jogo25D.Portals
 
         public override void _PhysicsProcess(double delta)
         {
-            if (_overlappingLocalPlayer == null || _overlappingLocalPlayer.Input == null || !_overlappingLocalPlayer.Input.Interact)
+            if (OverlappingLocalPlayer == null || OverlappingLocalPlayer.Input == null || !OverlappingLocalPlayer.Input.Interact)
             {
                 return;
             }
 
             var now = Time.GetTicksMsec();
 
-            if (now < _cooldownUntilMsec)
+            if (now < CooldownUntilMsec)
             {
                 return;
             }
 
-            if (now - _overlappingLocalPlayer.LastDimensionTradeMsec < (ulong)(CooldownSeconds * 1000))
+            if (now - OverlappingLocalPlayer.LastDimensionTradeMsec < (ulong)(1.5f * 1000))
             {
                 return;
             }
 
-            _cooldownUntilMsec = now + (ulong)(CooldownSeconds * 1000);
+            CooldownUntilMsec = now + (ulong)(1.5f * 1000);
 
             GetTree().CreateTimer(0.0).Timeout += RequestTrade;
         }
 
+        #endregion
+
+        #region Core - Trade
+
         private void RequestTrade()
         {
-            _worldManager?.TradeDimensionClientRequest();
+            WorldManager?.TradeDimensionClientRequest();
         }
 
         private void OnBodyEntered(Node2D body)
@@ -59,28 +77,30 @@ namespace Jogo25D.Portals
                 return;
             }
 
-            _overlappingLocalPlayer = player;
+            OverlappingLocalPlayer = player;
 
-            if (_promptLabel != null)
+            if (PromptLabel != null)
             {
-                _promptLabel.Text = PromptText;
-                _promptLabel.Visible = true;
+                PromptLabel.Text = "Pressione [E] para viajar";
+                PromptLabel.Visible = true;
             }
         }
 
         private void OnBodyExited(Node2D body)
         {
-            if (body is not Player player || player != _overlappingLocalPlayer)
+            if (body is not Player player || player != OverlappingLocalPlayer)
             {
                 return;
             }
 
-            if (_promptLabel != null)
+            if (PromptLabel != null)
             {
-                _promptLabel.Visible = false;
+                PromptLabel.Visible = false;
             }
 
-            _overlappingLocalPlayer = null;
+            OverlappingLocalPlayer = null;
         }
+
+        #endregion
     }
 }

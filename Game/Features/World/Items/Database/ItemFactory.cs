@@ -4,6 +4,7 @@ using Jogo25D.Constants;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Instances;
 using Jogo25D.Properties;
 using System;
 using System.Collections.Generic;
@@ -92,6 +93,18 @@ namespace Jogo25D.Items
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
+                ["pickaxe_onehit"] = () => new ToolDefinition
+                {
+                    Id = "pickaxe_onehit",
+                    Name = "Picareta Onehit",
+                    Type = ItemType.Tool,
+                    Description = "Destroi qualquer bloco em um unico golpe",
+                    Cooldown = 0.35f,
+                    BreakTimeSeconds = 0.01f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON),
+                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                },
+
                 ["block_grass"] = () => new BlockItemDefinition
                 {
                     Id = "block_grass",
@@ -103,6 +116,32 @@ namespace Jogo25D.Items
                     MaxStackSize = 999,
                     Cooldown = 0.25f,
                     Icon = GD.Load<Texture2D>(Textures.Items.BLOCK_GRASS_ICON),
+                },
+
+                ["item_wood"] = () => new BlockItemDefinition
+                {
+                    Id = "item_wood",
+                    Name = "Madeira",
+                    Type = ItemType.Material,
+                    Description = "Madeira retirada do tronco de uma árvore, pode ser colocada no mundo",
+                    BlockId = "wood",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                    Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.ITEM_WOOD_ICON),
+                },
+
+                ["item_leaf"] = () => new BlockItemDefinition
+                {
+                    Id = "item_leaf",
+                    Name = "Folha",
+                    Type = ItemType.Material,
+                    Description = "Folhas retiradas da copa de uma árvore, pode ser colocada no mundo",
+                    BlockId = "leaf",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                    Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.ITEM_LEAF_ICON),
                 },
 
                 ["portal"] = () => new PortalItemDefinition
@@ -410,19 +449,12 @@ namespace Jogo25D.Items
 
         #region Core - Instancing
 
-        private static long _nextInstanceId = System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(), 0) & 0x7FFFFFFFFFFFFFFL;
-
-        public static long NextInstanceId()
-        {
-            return ++_nextInstanceId;
-        }
-
         public static ItemData CreateInstance(string id)
         {
-            var def = Create(id) ?? throw new System.Exception($"[ItemFactory] Item '{id}' nao encontrado.");
+            var def = Create(id) ?? throw new Exception($"[ItemFactory] Item '{id}' nao encontrado.");
             var instance = new ItemData(id)
             {
-                InstanceId = NextInstanceId(),
+                InstanceId = InstanceIdGenerator.NextInstanceId(),
                 Quantity = 1,
             };
 

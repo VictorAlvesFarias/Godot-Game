@@ -1,22 +1,20 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Characters;
+using Jogo25D.Constants;
+using Jogo25D.Features.World.Properties.Resources;
+using Jogo25D.Features.World.Resolver.Singletons;
+using Jogo25D.Items;
+using Jogo25D.Properties;
+using Jogo25D.Systems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jogo25D.Characters;
-using Jogo25D.Systems;
-using Jogo25D.Items;
-using Jogo25D.Features.World.Properties.Resources;
-using Jogo25D.Features.World.Resolver.Singletons;
-using Jogo25D.Properties;
 
 namespace Jogo25D.UI
 {
 	public partial class InventoryUI : CanvasLayer
 	{
 		#region Properties
-
-		public const int TotalSlots = 128;
-		public const int HotbarSlots = 8;
 
 		public Player LocalPlayer { get; set; }
 		public Inventory Inventory => LocalPlayer?.Inventory;
@@ -26,11 +24,11 @@ namespace Jogo25D.UI
 		public Panel DropSlot { get; set; }
 		public Panel ContextMenu { get; set; }
 		public VBoxContainer ContextMenuContainer { get; set; }
-		public Panel[] SlotPanels { get; set; } = new Panel[TotalSlots];
-		public TextureRect[] IconRects { get; set; } = new TextureRect[TotalSlots];
-		public Label[] QuantityLabels { get; set; } = new Label[TotalSlots];
-		public Label[] NameLabels { get; set; } = new Label[TotalSlots];
-		public Label[] NumLabels { get; set; } = new Label[TotalSlots];
+		public Panel[] SlotPanels { get; set; } = new Panel[128];
+		public TextureRect[] IconRects { get; set; } = new TextureRect[128];
+		public Label[] QuantityLabels { get; set; } = new Label[128];
+		public Label[] NameLabels { get; set; } = new Label[128];
+		public Label[] NumLabels { get; set; } = new Label[128];
 		public int SelectedSlotIndex { get; set; } = -1;
 		public Control MainControl { get; set; }
 
@@ -40,16 +38,17 @@ namespace Jogo25D.UI
 		public Control DragPreview { get; set; }
 		public Vector2 DragOffset { get; set; }
 
-		public const float DragThreshold = 5.0f;
-
 		#endregion
 
-		#region Systems - Character panel
+		#region Node children references
 
 		public AnimatedSprite2D CharacterSprite { get; set; }
 		public Label CharacterNameLabel { get; set; }
 		public Label CharacterHealthLabel { get; set; }
 		public VBoxContainer BuffsListContainer { get; set; }
+		public Button EquiparButtonTemplate { get; set; }
+		public Label EmptyPropertyLabelTemplate { get; set; }
+		public Label PropertyLabelTemplate { get; set; }
 
 		#endregion
 
@@ -87,12 +86,41 @@ namespace Jogo25D.UI
 			DropSlot = MainControl.FindChild("DropSlot", true, false) as Panel;
 			HotbarRow = mainRow.GetNode<HBoxContainer>("InventoryColumn/HotbarRow");
 			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridScroll/GridContainer");
-			GridContainer.Columns = HotbarSlots;
-
+			GridContainer.Columns = 8;
 			CharacterSprite = mainRow.GetNode<AnimatedSprite2D>("StatsColumn/SpriteBox2/VBoxContainer/CenterContainer/CharacterSprite");
 			CharacterNameLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterNameLabel");
 			CharacterHealthLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterHealthLabel");
 			BuffsListContainer = mainRow.GetNode<VBoxContainer>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/BuffsScroll/BuffsListContainer");
+			EquiparButtonTemplate = ContextMenuContainer.GetNodeOrNull<Button>("EquiparButtonTemplate");
+			EmptyPropertyLabelTemplate = BuffsListContainer.GetNodeOrNull<Label>("EmptyPropertyLabelTemplate");
+			PropertyLabelTemplate = BuffsListContainer.GetNodeOrNull<Label>("PropertyLabelTemplate");
+
+			if (EquiparButtonTemplate == null)
+			{
+				GD.PushError("InventoryUI: EquiparButtonTemplate não encontrado em ContextMenuContainer.");
+			}
+			else
+			{
+				EquiparButtonTemplate.Visible = false;
+			}
+
+			if (EmptyPropertyLabelTemplate == null)
+			{
+				GD.PushError("InventoryUI: EmptyPropertyLabelTemplate não encontrado em BuffsListContainer.");
+			}
+			else
+			{
+				EmptyPropertyLabelTemplate.Visible = false;
+			}
+
+			if (PropertyLabelTemplate == null)
+			{
+				GD.PushError("InventoryUI: PropertyLabelTemplate não encontrado em BuffsListContainer.");
+			}
+			else
+			{
+				PropertyLabelTemplate.Visible = false;
+			}
 
 			CharacterSprite.Play("idle");
 
@@ -188,28 +216,18 @@ namespace Jogo25D.UI
 
 		public void CreateDragPreview()
 		{
-			DragPreview = new Panel();
-			DragPreview.CustomMinimumSize = new Vector2(64, 64);
+			var template = MainControl.GetNodeOrNull<Panel>("DragPreviewTemplate");
+
+			if (template == null)
+			{
+				GD.PushError("InventoryUI: DragPreviewTemplate não encontrado em Root.");
+				return;
+			}
+
+			template.Visible = false;
+
+			DragPreview = (Panel)template.Duplicate();
 			DragPreview.Visible = false;
-			DragPreview.ZIndex = 100;
-			DragPreview.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-			var styleBox = new StyleBoxFlat();
-			styleBox.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-			styleBox.BorderColor = Colors.White;
-			styleBox.BorderWidthLeft = 2;
-			styleBox.BorderWidthRight = 2;
-			styleBox.BorderWidthTop = 2;
-			styleBox.BorderWidthBottom = 2;
-			DragPreview.AddThemeStyleboxOverride("panel", styleBox);
-
-			var iconRect = new TextureRect();
-			iconRect.Name = "Icon";
-			iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-			iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-			iconRect.TextureFilter = Control.TextureFilterEnum.Nearest;
-			iconRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-			DragPreview.AddChild(iconRect);
 
 			MainControl.AddChild(DragPreview);
 		}
@@ -222,7 +240,7 @@ namespace Jogo25D.UI
 			}
 			LocalPlayer = null;
 
-			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(WorldManager.DEFAULT_NODE_PATH);
+			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
 			if (worldManager != null)
 			{
@@ -263,9 +281,9 @@ namespace Jogo25D.UI
 				child.QueueFree();
 			}
 
-			for (int i = 0; i < TotalSlots; i++)
+			for (int i = 0; i < 128; i++)
 			{
-				SetupSlot(i, i < HotbarSlots ? hotbarTemplate : gridTemplate);
+				SetupSlot(i, i < 8 ? hotbarTemplate : gridTemplate);
 			}
 
 			hotbarTemplate.QueueFree();
@@ -280,7 +298,7 @@ namespace Jogo25D.UI
 
 		public int GetSlotAtPosition(Vector2 globalPosition)
 		{
-			for (int i = 0; i < TotalSlots; i++)
+			for (int i = 0; i < 128; i++)
 			{
 				if (SlotPanels[i] != null && SlotPanels[i].GetGlobalRect().HasPoint(globalPosition))
 				{
@@ -294,7 +312,7 @@ namespace Jogo25D.UI
 		{
 			SlotPanels[index] = (Panel)template.Duplicate();
 
-			if (index < HotbarSlots)
+			if (index < 8)
 			{
 				HotbarRow.AddChild(SlotPanels[index]);
 			}
@@ -394,7 +412,7 @@ namespace Jogo25D.UI
 				DragPreview.Visible = false;
 			}
 
-			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < TotalSlots && IconRects[DraggedSlotIndex] != null)
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < 128 && IconRects[DraggedSlotIndex] != null)
 			{
 				IconRects[DraggedSlotIndex].Modulate = Colors.White;
 			}
@@ -421,7 +439,7 @@ namespace Jogo25D.UI
 				DragPreview.Visible = false;
 			}
 
-			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < TotalSlots && IconRects[DraggedSlotIndex] != null)
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < 128 && IconRects[DraggedSlotIndex] != null)
 			{
 				IconRects[DraggedSlotIndex].Modulate = Colors.White;
 			}
@@ -448,7 +466,7 @@ namespace Jogo25D.UI
 				DragPreview.Visible = false;
 			}
 
-			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < TotalSlots && IconRects[DraggedSlotIndex] != null)
+			if (DraggedSlotIndex >= 0 && DraggedSlotIndex < 128 && IconRects[DraggedSlotIndex] != null)
 			{
 				IconRects[DraggedSlotIndex].Modulate = Colors.White;
 			}
@@ -469,7 +487,7 @@ namespace Jogo25D.UI
 			{
 				return;
 			}
-			if (instanceId <= 0 || toIndex < 0 || toIndex >= TotalSlots)
+			if (instanceId <= 0 || toIndex < 0 || toIndex >= 128)
 			{
 				return;
 			}
@@ -563,25 +581,33 @@ namespace Jogo25D.UI
 
 			foreach (Node child in ContextMenuContainer.GetChildren())
 			{
+				if (child == EquiparButtonTemplate)
+				{
+					continue;
+				}
+
 				ContextMenuContainer.RemoveChild(child);
 				child.QueueFree();
 			}
 
 			if (definition != null)
 			{
-				var button = new Button();
+				if (EquiparButtonTemplate == null)
+				{
+					GD.PushError("InventoryUI: EquiparButtonTemplate não encontrado, não é possível montar o menu de contexto.");
+				}
+				else
+				{
+					var button = (Button)EquiparButtonTemplate.Duplicate();
+					button.Visible = true;
+					button.Pressed += () => OnContextMenuOption("Equipar");
 
-				button.Text = "Equipar";
-				button.CustomMinimumSize = new Vector2(120, 30);
-				button.Alignment = HorizontalAlignment.Center;
-				button.MouseFilter = Control.MouseFilterEnum.Stop;
-				button.Pressed += () => OnContextMenuOption("Equipar");
-
-				ContextMenuContainer.AddChild(button);
+					ContextMenuContainer.AddChild(button);
+				}
 			}
 
 			var minSize = ContextMenuContainer.GetCombinedMinimumSize();
-			ContextMenu.CustomMinimumSize = new Vector2(Mathf.Max(120, (float)minSize.X), (float)minSize.Y);
+			ContextMenu.CustomMinimumSize = new Vector2(Mathf.Max(120f, (float)minSize.X), (float)minSize.Y);
 			ContextMenu.Size = ContextMenu.CustomMinimumSize;
 
 			ContextMenu.GlobalPosition = position;
@@ -622,7 +648,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			for (int i = 0; i < TotalSlots; i++)
+			for (int i = 0; i < 128; i++)
 			{
 				UpdateSlot(i);
 			}
@@ -697,6 +723,11 @@ namespace Jogo25D.UI
 
 			foreach (Node child in BuffsListContainer.GetChildren())
 			{
+				if (child == EmptyPropertyLabelTemplate || child == PropertyLabelTemplate)
+				{
+					continue;
+				}
+
 				BuffsListContainer.RemoveChild(child);
 
 				child.QueueFree();
@@ -788,11 +819,15 @@ namespace Jogo25D.UI
 
 			if (lines.Count == 0)
 			{
-				var empty = new Label();
+				if (EmptyPropertyLabelTemplate == null)
+				{
+					GD.PushError("InventoryUI: EmptyPropertyLabelTemplate não encontrado, não é possível mostrar a lista de propriedades.");
 
-				empty.Text = "Nenhum";
-				empty.AddThemeFontSizeOverride("font_size", 11);
-				empty.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f, 1f));
+					return;
+				}
+
+				var empty = (Label)EmptyPropertyLabelTemplate.Duplicate();
+				empty.Visible = true;
 
 				BuffsListContainer.AddChild(empty);
 
@@ -801,14 +836,17 @@ namespace Jogo25D.UI
 
 			foreach (var text in lines)
 			{
-				var label = new Label();
+				if (PropertyLabelTemplate == null)
+				{
+					GD.PushError("InventoryUI: PropertyLabelTemplate não encontrado, não é possível mostrar a lista de propriedades.");
+
+					continue;
+				}
+
+				var label = (Label)PropertyLabelTemplate.Duplicate();
 
 				label.Text = text;
-
-				label.AddThemeFontSizeOverride("font_size", 11);
-
-				label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-				label.AutowrapMode = TextServer.AutowrapMode.Word;
+				label.Visible = true;
 
 				BuffsListContainer.AddChild(label);
 			}
@@ -816,19 +854,7 @@ namespace Jogo25D.UI
 
 		public string DescribeProperty(BasePropertyData property)
 		{
-			return property switch
-			{
-				DamageResistencePropertyData r => $"Resistência a {r.DamageType}: {r.ResistanceFactor:P0}",
-				DamageResistenceMultiplierPropertyData m => $"Mult. resistência a {m.DamageType}: x{m.Multiplier:F2}",
-				DamagePropertyData d => $"+{d.DamageAmount} dano {d.DamageType} (x{d.DamageMultiplier:F2})",
-				CritPropertyData c => $"Crítico: +{c.CritChance:P0} chance, +{c.CritDamage:P0} dano",
-				AttackPropertyData => "Bônus de ataque",
-				DashPropertyData => "Bônus de dash",
-				MovementPropertyData mv => $"+{mv.Speed:F0} velocidade de movimento",
-				HealthPropertyData h => $"+{h.MaxHealth} vida máxima",
-				null => "",
-				_ => property.GetType().Name
-			};
+			return PropertyDescriptionFactory.Describe(property);
 		}
 
 		#endregion

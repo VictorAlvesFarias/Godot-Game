@@ -1,59 +1,51 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
+using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Items;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Jogo25D.Systems
 {
-    // Persistencia em disco do sistema de save (ver .docs/sistema-de-save.md e
-    // .docs/spec-sistema-de-save.md). Tudo em Resource/.tres via
-    // ResourceSaver/ResourceLoader - os tipos ja sao [Export] Resource,
-    // entao nao existe camada de serializacao propria aqui.
     public partial class SaveManager : Node
     {
-        public static string DEFAULT_NODE_PATH = "/root/Main/Managers/SaveManager";
-
-        private const string ProfilePath = "user://profile.tres";
-        private const string CharactersDir = "user://saves/characters";
-        private const string ServerCharactersDir = "user://saves/server_characters";
-        private const string PeerBackupsDir = "user://saves/peer_backups";
-        private const string WorldsDir = "user://saves/worlds";
-
-        private ProfileData _cachedProfile;
+        public ProfileData CachedProfile { get; set; }
 
         #region Core - Perfil
 
         public ProfileData GetOrCreateLocalProfile()
         {
-            if (_cachedProfile != null)
+            if (CachedProfile != null)
             {
-                return _cachedProfile;
+                return CachedProfile;
             }
 
-            if (ResourceLoader.Exists(ProfilePath))
+            if (ResourceLoader.Exists(SavesConstants.PROFILE_PATH))
             {
-                _cachedProfile = ResourceLoader.Load<ProfileData>(ProfilePath, cacheMode: ResourceLoader.CacheMode.Ignore);
+                CachedProfile = ResourceLoader.Load<ProfileData>(SavesConstants.PROFILE_PATH, cacheMode: ResourceLoader.CacheMode.Ignore);
             }
 
-            if (_cachedProfile == null)
+            if (CachedProfile == null)
             {
-                _cachedProfile = new ProfileData { ProfileId = Guid.NewGuid().ToString() };
+                CachedProfile = new ProfileData { ProfileId = Guid.NewGuid().ToString() };
 
-                ResourceSaver.Save(_cachedProfile, ProfilePath);
+                ResourceSaver.Save(CachedProfile, SavesConstants.PROFILE_PATH);
             }
 
-            return _cachedProfile;
+            return CachedProfile;
         }
 
         #endregion
 
         #region Core - Personagens locais
 
-        public System.Collections.Generic.List<CharacterSaveData> ListLocalCharacters()
+        public List<CharacterSaveData> ListLocalCharacters()
         {
-            return ListCharactersAt(CharactersDir);
+            return ListCharactersAt(SavesConstants.CHARACTERS_DIR);
         }
 
         public CharacterSaveData CreateLocalCharacter(string name)
@@ -76,28 +68,23 @@ namespace Jogo25D.Systems
             return character;
         }
 
-        public CharacterSaveData LoadLocalCharacter(string characterId)
-        {
-            return LoadCharacterAt($"{CharactersDir}/{characterId}.tres");
-        }
-
         public void SaveLocalCharacter(CharacterSaveData character)
         {
-            EnsureDir(CharactersDir);
+            EnsureDir(SavesConstants.CHARACTERS_DIR);
 
-            ResourceSaver.Save(character, $"{CharactersDir}/{character.CharacterId}.tres");
+            ResourceSaver.Save(character, $"{SavesConstants.CHARACTERS_DIR}/{character.CharacterId}.tres");
         }
 
         public void DeleteLocalCharacter(string characterId)
         {
-            DeleteIfExists($"{CharactersDir}/{characterId}.tres");
+            DeleteIfExists($"{SavesConstants.CHARACTERS_DIR}/{characterId}.tres");
         }
 
         #endregion
 
         #region Core - Personagens de servidor
 
-        public System.Collections.Generic.List<CharacterSaveData> ListServerCharacters(string multiplayerKey)
+        public List<CharacterSaveData> ListServerCharacters(string multiplayerKey)
         {
             return ListCharactersAt(ServerCharactersDirFor(multiplayerKey));
         }
@@ -143,8 +130,6 @@ namespace Jogo25D.Systems
 
         #region Core - Backup de personagem "por Peer"
 
-        // Nunca e a fonte de verdade - so uma copia de seguranca guardada
-        // pelo host, indexada pelo ProfileId do dono do personagem local.
         public void SaveBackup(string ownerProfileId, CharacterSaveData character)
         {
             if (string.IsNullOrEmpty(ownerProfileId) || character == null)
@@ -152,7 +137,7 @@ namespace Jogo25D.Systems
                 return;
             }
 
-            var dir = $"{PeerBackupsDir}/{ownerProfileId}";
+            var dir = $"{SavesConstants.PEER_BACKUPS_DIR}/{ownerProfileId}";
 
             EnsureDir(dir);
 
@@ -163,11 +148,11 @@ namespace Jogo25D.Systems
 
         #region Core - Mundos
 
-        public System.Collections.Generic.List<WorldSaveData> ListWorlds()
+        public List<WorldSaveData> ListWorlds()
         {
-            var result = new System.Collections.Generic.List<WorldSaveData>();
+            var result = new List<WorldSaveData>();
 
-            using var dir = DirAccess.Open(WorldsDir);
+            using var dir = DirAccess.Open(SavesConstants.WORLDS_DIR);
 
             if (dir == null)
             {
@@ -183,7 +168,7 @@ namespace Jogo25D.Systems
                     continue;
                 }
 
-                var metaPath = $"{WorldsDir}/{folderName}/world.tres";
+                var metaPath = $"{SavesConstants.WORLDS_DIR}/{folderName}/world.tres";
 
                 if (ResourceLoader.Exists(metaPath))
                 {
@@ -218,18 +203,9 @@ namespace Jogo25D.Systems
             return world;
         }
 
-        public WorldSaveData LoadWorldMeta(string worldId)
-        {
-            var path = $"{WorldsDir}/{worldId}/world.tres";
-
-            return ResourceLoader.Exists(path)
-                ? ResourceLoader.Load<WorldSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
-                : null;
-        }
-
         public void SaveWorldMeta(WorldSaveData world)
         {
-            var dir = $"{WorldsDir}/{world.WorldId}";
+            var dir = $"{SavesConstants.WORLDS_DIR}/{world.WorldId}";
 
             EnsureDir(dir);
 
@@ -238,7 +214,7 @@ namespace Jogo25D.Systems
 
         public DimensionSaveData LoadDimensionState(string worldId, string dimensionId)
         {
-            var path = $"{WorldsDir}/{worldId}/{dimensionId}.tres";
+            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/{dimensionId}.tres";
 
             return ResourceLoader.Exists(path)
                 ? ResourceLoader.Load<DimensionSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
@@ -247,7 +223,7 @@ namespace Jogo25D.Systems
 
         public void SaveDimensionState(string worldId, string dimensionId, DimensionSaveData state)
         {
-            var dir = $"{WorldsDir}/{worldId}";
+            var dir = $"{SavesConstants.WORLDS_DIR}/{worldId}";
 
             EnsureDir(dir);
 
@@ -256,7 +232,7 @@ namespace Jogo25D.Systems
 
         public void DeleteWorld(string worldId)
         {
-            DeleteDirectoryRecursive($"{WorldsDir}/{worldId}");
+            DeleteDirectoryRecursive($"{SavesConstants.WORLDS_DIR}/{worldId}");
         }
 
         #endregion
@@ -268,18 +244,14 @@ namespace Jogo25D.Systems
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
 
-        // Personagem novo ganha o mesmo "kit" inicial que o WorldManager
-        // hoje da na mao (portal + arco inicial) - assim o fluxo autoritativo
-        // de entrada so precisa marcar Player.Loaded = true e nunca precisa
-        // saber se o personagem "acabou de nascer" ou ja tinha progresso.
         private static PlayerData BuildStarterPlayerData()
         {
             var data = new PlayerData();
 
-            data.Inventory ??= new Jogo25D.Features.World.Items.Resources.InventoryData();
+            data.Inventory ??= new InventoryData();
 
-            var portal = Jogo25D.Items.ItemFactory.CreateInstance("portal");
-            var bow = Jogo25D.Items.ItemFactory.CreateInstance("bow_starting2");
+            var portal = ItemFactory.CreateInstance("portal");
+            var bow = ItemFactory.CreateInstance("bow_starting2");
 
             new Inventory().AddItem(data.Inventory, portal);
             new Inventory().AddItem(data.Inventory, bow);
@@ -291,12 +263,12 @@ namespace Jogo25D.Systems
 
         private static string ServerCharactersDirFor(string multiplayerKey)
         {
-            return $"{ServerCharactersDir}/{multiplayerKey}";
+            return $"{SavesConstants.SERVER_CHARACTERS_DIR}/{multiplayerKey}";
         }
 
-        private static System.Collections.Generic.List<CharacterSaveData> ListCharactersAt(string dirPath)
+        private static List<CharacterSaveData> ListCharactersAt(string dirPath)
         {
-            var result = new System.Collections.Generic.List<CharacterSaveData>();
+            var result = new List<CharacterSaveData>();
 
             using var dir = DirAccess.Open(dirPath);
 
@@ -348,11 +320,6 @@ namespace Jogo25D.Systems
             }
         }
 
-        // DirAccess nao tem um "remover recursivo" pronto - remove todo
-        // arquivo/subpasta antes de remover a pasta em si (world.tres,
-        // overworld.tres, upsidedown.tres, ficam todos direto dentro de
-        // saves/worlds/{WorldId}/, sem subpastas, mas isso cobre o caso
-        // geral mesmo assim).
         private static void DeleteDirectoryRecursive(string dirPath)
         {
             using var dir = DirAccess.Open(dirPath);
