@@ -5,7 +5,11 @@ namespace Jogo25D.Features.World.Chunks.Resources
 {
     public partial class ChunkStateData : Resource
     {
+        #region Dinamic properties
+
         [Export, GodotDictionaryField]
         public Godot.Collections.Array<ChunkMutationData> Mutations { get; set; } = new();
+
+        #endregion
     }
 }
