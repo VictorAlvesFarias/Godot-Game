@@ -190,13 +190,11 @@ namespace Jogo25D.Biomes
         private Dictionary<int, Dictionary<int, TerrainTileMatch>> _tilesByTerrainSetAndSignature;
         private bool _isRecalculating;
 
-        private const int ReferenceQuadrantSize = 16;
-
         public override void _Ready()
         {
             var tileSize = TileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
 
-            RenderingQuadrantSize = Mathf.Max(1, Mathf.RoundToInt(ReferenceQuadrantSize * ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
+            RenderingQuadrantSize = Mathf.Max(1, Mathf.RoundToInt(TerrainLayerConstants.REFERENCE_QUADRANT_SIZE * ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
 
             BuildTerrainMap();
             BuildRelationSet();

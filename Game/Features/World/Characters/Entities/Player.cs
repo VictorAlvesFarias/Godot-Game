@@ -1219,16 +1219,6 @@ namespace Jogo25D.Characters
 
         #endregion
 
-        #region Core - Rpc - Effects
-
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void AddEffectReceive(string effectId)
-        {
-            GiveEffect(effectId);
-        }
-
-        #endregion
-
         #region Core - Rpc - Abilioties
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

@@ -83,14 +83,13 @@ namespace Jogo25D.UI
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
-        private const float RedrawIntervalSeconds = 1f / 12f;
         private float _redrawTimer;
 
         public override void _Process(double delta)
         {
             _redrawTimer += (float)delta;
 
-            if (_redrawTimer < RedrawIntervalSeconds)
+            if (_redrawTimer < MinimapConstants.REDRAW_INTERVAL_SECONDS)
             {
                 return;
             }

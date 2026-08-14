@@ -52,12 +52,6 @@ namespace Jogo25D.Systems
 
 		#endregion
 
-		#region Systems
-
-		private Inventory Inventory { get; set; } = new Inventory();
-
-		#endregion
-
 		#region Godot implementation
 
 		public override void _Ready()

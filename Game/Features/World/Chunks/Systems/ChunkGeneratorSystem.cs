@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Constants;
 using Jogo25D.Structures;
@@ -10,55 +10,6 @@ namespace Jogo25D.Chunks
     public class ChunkGeneratorSystem
     {
         #region Core - Generation
-
-        public void Paint(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize)
-        {
-            var tileSet = target.TileSet;
-            var worldScale = GetWorldScale(tileSet);
-            var (solidCellsByBiome, columnSurfaces) = ResolveSolidCellsByBiome(worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
-
-            if (tileSet.GetTerrainSetsCount() > 0)
-            {
-                var biomeGroups = BuildBiomeGroups(target, solidCellsByBiome, chunkCoord, chunkSize);
-
-                foreach (var group in biomeGroups)
-                {
-                    target.Connect(group.Cells, group.BiomeDef.TerrainSet);
-                }
-
-                foreach (var group in biomeGroups)
-                {
-                    target.ReconnectForeignBorder(group.Cells, group.BiomeDef.TerrainSet);
-                }
-
-                if (baseTarget != null)
-                {
-                    foreach (var group in biomeGroups)
-                    {
-                        baseTarget.ConnectDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
-                    }
-
-                    foreach (var group in biomeGroups)
-                    {
-                        baseTarget.ReconnectForeignBorderDependent(target, group.Cells, group.BiomeDef.BorderCapTerrainSet);
-                    }
-                }
-
-                PlaceStructures(target, baseTarget, columnSurfaces, worldSeed, dimensionId, chunkCoord, chunkSize, worldScale);
-            }
-            else
-            {
-                var (sourceId, atlasCoord) = GetFallbackTile(tileSet);
-
-                foreach (var cells in solidCellsByBiome.Values)
-                {
-                    foreach (var cell in cells)
-                    {
-                        target.SetCell(cell, sourceId, atlasCoord);
-                    }
-                }
-            }
-        }
 
         public async Task PaintAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
@@ -113,20 +64,10 @@ namespace Jogo25D.Chunks
 
         #region Core - Biome resolution
 
-        private const float BiomeNoiseFrequency = 0.004f;
-        private const float MinBiomeBandWidth = 64f;
-        private const int BiomeSmoothingSampleCount = 5;
-        private const float WarpNoiseFrequency = 0.04f;
-        private const float WarpAmplitude = 48f;
-        private const int WarpFractalOctaves = 2;
-        private const float WarpFractalLacunarity = 2.3f;
-        private const float WarpFractalGain = 0.55f;
-        private const float FadeRange = 0.2f;
-
         public string ResolveBiome(long worldSeed, string dimensionId, int worldX, int worldY)
         {
             var baseValue = GetSmoothedBaseNoiseValue(worldSeed, dimensionId, worldX);
-            var proximity = Mathf.Clamp(1f - Mathf.Abs(baseValue) / FadeRange, 0f, 1f);
+            var proximity = Mathf.Clamp(1f - Mathf.Abs(baseValue) / ChunkGenerationConstants.FADE_RANGE, 0f, 1f);
 
             if (proximity <= 0f)
             {
@@ -136,14 +77,14 @@ namespace Jogo25D.Chunks
             var warpNoise = new FastNoiseLite
             {
                 Seed = (int)CombineBiomeSeed(worldSeed, dimensionId, "biome_warp"),
-                Frequency = WarpNoiseFrequency,
+                Frequency = ChunkGenerationConstants.WARP_NOISE_FREQUENCY,
                 FractalType = FastNoiseLite.FractalTypeEnum.Fbm,
-                FractalOctaves = WarpFractalOctaves,
-                FractalLacunarity = WarpFractalLacunarity,
-                FractalGain = WarpFractalGain,
+                FractalOctaves = ChunkGenerationConstants.WARP_FRACTAL_OCTAVES,
+                FractalLacunarity = ChunkGenerationConstants.WARP_FRACTAL_LACUNARITY,
+                FractalGain = ChunkGenerationConstants.WARP_FRACTAL_GAIN,
             };
 
-            var warpOffset = Mathf.RoundToInt(warpNoise.GetNoise1D(worldY) * WarpAmplitude * proximity);
+            var warpOffset = Mathf.RoundToInt(warpNoise.GetNoise1D(worldY) * ChunkGenerationConstants.WARP_AMPLITUDE * proximity);
             var shiftedValue = GetSmoothedBaseNoiseValue(worldSeed, dimensionId, worldX + warpOffset);
 
             return shiftedValue < 0f ? BiomeDB.LimeGroundId : BiomeDB.OliveGroundId;
@@ -151,8 +92,8 @@ namespace Jogo25D.Chunks
 
         private static float GetSmoothedBaseNoiseValue(long worldSeed, string dimensionId, int worldX)
         {
-            var half = BiomeSmoothingSampleCount / 2;
-            var step = MinBiomeBandWidth / BiomeSmoothingSampleCount;
+            var half = ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT / 2;
+            var step = ChunkGenerationConstants.MIN_BIOME_BAND_WIDTH / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
             var sum = 0f;
 
             for (int i = -half; i <= half; i++)
@@ -160,7 +101,7 @@ namespace Jogo25D.Chunks
                 sum += GetBaseNoiseValue(worldSeed, dimensionId, worldX + Mathf.RoundToInt(i * step));
             }
 
-            return sum / BiomeSmoothingSampleCount;
+            return sum / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
         }
 
         private static float GetBaseNoiseValue(long worldSeed, string dimensionId, int worldX)
@@ -168,7 +109,7 @@ namespace Jogo25D.Chunks
             var noise = new FastNoiseLite
             {
                 Seed = (int)CombineBiomeSeed(worldSeed, dimensionId, "biome"),
-                Frequency = BiomeNoiseFrequency,
+                Frequency = ChunkGenerationConstants.BIOME_NOISE_FREQUENCY,
             };
 
             return noise.GetNoise1D(worldX);
@@ -470,23 +411,6 @@ namespace Jogo25D.Chunks
         #endregion
 
         #region Core - Chunk lifecycle
-
-        public void Erase(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize)
-        {
-            var baseCellX = chunkCoord.X * chunkSize;
-            var baseCellY = chunkCoord.Y * chunkSize;
-
-            for (int localX = 0; localX < chunkSize; localX++)
-            {
-                for (int localY = 0; localY < chunkSize; localY++)
-                {
-                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
-
-                    target.SetCell(cell, -1);
-                    baseTarget?.SetCell(cell, -1);
-                }
-            }
-        }
 
         public async Task EraseAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
