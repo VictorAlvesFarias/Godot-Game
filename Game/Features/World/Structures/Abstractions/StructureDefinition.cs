@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Jogo25D.Structures
 {
-
     public readonly struct StructureCellGroup
     {
         public readonly int TerrainSet;

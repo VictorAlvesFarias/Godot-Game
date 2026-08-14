@@ -2,7 +2,6 @@ using Godot;
 
 namespace Jogo25D.Props
 {
-
     public class PropDefinition
     {
         #region Dinamic properties

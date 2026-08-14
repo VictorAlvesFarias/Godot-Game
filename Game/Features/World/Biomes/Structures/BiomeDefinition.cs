@@ -7,7 +7,7 @@ namespace Jogo25D.Biomes
     {
         #region Dinamic properties
 
-        public BiomeType Type { get; init; }
+        public string Id { get; init; }
         public int TerrainSet { get; init; }
         public float NoiseFrequency { get; init; }
         public float HeightAmplitude { get; init; }
