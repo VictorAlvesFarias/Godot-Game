@@ -13,7 +13,11 @@ namespace Jogo25D.Systems
 {
     public partial class SaveManager : Node
     {
+        #region Dinamic properties
+
         public ProfileData CachedProfile { get; set; }
+
+        #endregion
 
         #region Core - Perfil
 
@@ -239,12 +243,12 @@ namespace Jogo25D.Systems
 
         #region Utils
 
-        public static long NowUtc()
+        public long NowUtc()
         {
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
 
-        private static PlayerData BuildStarterPlayerData()
+        private PlayerData BuildStarterPlayerData()
         {
             var data = new PlayerData();
 
@@ -261,12 +265,12 @@ namespace Jogo25D.Systems
             return data;
         }
 
-        private static string ServerCharactersDirFor(string multiplayerKey)
+        private string ServerCharactersDirFor(string multiplayerKey)
         {
             return $"{SavesConstants.SERVER_CHARACTERS_DIR}/{multiplayerKey}";
         }
 
-        private static List<CharacterSaveData> ListCharactersAt(string dirPath)
+        private List<CharacterSaveData> ListCharactersAt(string dirPath)
         {
             var result = new List<CharacterSaveData>();
 
@@ -297,14 +301,14 @@ namespace Jogo25D.Systems
             return result.OrderByDescending(c => c.LastPlayedUtc).ToList();
         }
 
-        private static CharacterSaveData LoadCharacterAt(string path)
+        private CharacterSaveData LoadCharacterAt(string path)
         {
             return ResourceLoader.Exists(path)
                 ? ResourceLoader.Load<CharacterSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
                 : null;
         }
 
-        private static void EnsureDir(string dirPath)
+        private void EnsureDir(string dirPath)
         {
             if (!DirAccess.DirExistsAbsolute(dirPath))
             {
@@ -312,7 +316,7 @@ namespace Jogo25D.Systems
             }
         }
 
-        private static void DeleteIfExists(string path)
+        private void DeleteIfExists(string path)
         {
             if (FileAccess.FileExists(path))
             {
@@ -320,7 +324,7 @@ namespace Jogo25D.Systems
             }
         }
 
-        private static void DeleteDirectoryRecursive(string dirPath)
+        private void DeleteDirectoryRecursive(string dirPath)
         {
             using var dir = DirAccess.Open(dirPath);
 
