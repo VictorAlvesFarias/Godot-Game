@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://Features/World/Screen/Managers/ScreenManager.cs" id="1_7ktwl"]
 [ext_resource type="Script" path="res://Features/World/Core/Managers/WorldManager.cs" id="3_b871k"]
-[ext_resource type="Script" path="res://Features/World/Chunks/Systems/ChunkStreamingManager.cs" id="4_chunkstream"]
+[ext_resource type="Script" path="res://Features/World/Chunks/Managers/ChunkStreamingManager.cs" id="4_chunkstream"]
 [ext_resource type="Script" path="res://Features/World/Save/Managers/SaveManager.cs" id="5_savemanager"]
 
 [node name="Managers" type="Node" unique_id=940605774]
