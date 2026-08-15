@@ -1,9 +1,9 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/Managers/Screen/Manager/ScreenManager.cs" id="1_7ktwl"]
-[ext_resource type="Script" path="res://Features/Managers/World/Manager/WorldManager.cs" id="3_b871k"]
+[ext_resource type="Script" path="res://Features/World/Screen/Managers/ScreenManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" path="res://Features/World/Core/Managers/WorldManager.cs" id="3_b871k"]
 [ext_resource type="Script" path="res://Features/World/Chunks/Systems/ChunkStreamingManager.cs" id="4_chunkstream"]
-[ext_resource type="Script" path="res://Features/Managers/Save/Manager/SaveManager.cs" id="5_savemanager"]
+[ext_resource type="Script" path="res://Features/World/Save/Managers/SaveManager.cs" id="5_savemanager"]
 
 [node name="Managers" type="Node" unique_id=940605774]
 

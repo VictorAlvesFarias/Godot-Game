@@ -73,15 +73,15 @@ root/
 
 ## Feature Layers
 
-### Features/Managers/
+### Features/World/&lt;Domain&gt;/Managers/
 
-Global game services. Each Manager lives in its own folder inside `Managers/`.
+Global service for that domain. Lives in a `Managers/` folder directly inside its domain, all nested under `Features/World/` (e.g. `Features/World/Core/Managers/` for `WorldManager`, `Features/World/Save/Managers/` for `SaveManager`, `Features/World/Screen/Managers/` for `ScreenManager`) instead of a separate top-level feature. `Core` holds the central/main manager of the World feature; other domains (`Save`, `Screen`, ...) sit as siblings of `Core`, each with its own `Managers/` folder.
 
 **Sublayers:**
 
-- **Manager:** Main service script. Contains the class that manages a global aspect of the game (input, screen, networking, etc.).
-- **Structures:** Structs, simple and immutable data passed between systems (damage info, inputs, etc.).
-- **Objects:** DTOs, data models used as arguments or to facilitate data transport.
+- The manager script itself sits directly inside `Managers/` (e.g. `WorldManager.cs`).
+- **Resources:** Godot `Resource` subclasses owned by that manager (save data models, etc.).
+- **Types:** Enums. Categorize variants within the manager's domain.
 
 ---
 
