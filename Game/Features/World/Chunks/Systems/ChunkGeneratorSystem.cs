@@ -1,5 +1,4 @@
-﻿using Game.Features.World.Chunks.Singletons;
-using Godot;
+﻿using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Constants;
 using Jogo25D.Structures;
@@ -12,7 +11,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public async Task PainTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
+        public async Task PaintTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
@@ -108,6 +107,42 @@ namespace Jogo25D.Chunks
             return PickBiomeIdForAxisValue(axisValue, biomeIds);
         }
 
+        private float GetSmoothedBiomeAxisValue(long worldSeed, string dimensionId, int worldX)
+        {
+            var half = ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT / 2;
+            var step = ChunkGenerationConstants.MIN_BIOME_BAND_WIDTH / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
+            var sum = 0f;
+
+            for (int i = -half; i <= half; i++)
+            {
+                sum += SampleBiomeAxisNoise(worldSeed, dimensionId, worldX + Mathf.RoundToInt(i * step));
+            }
+
+            return sum / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
+        }
+
+        private float SampleBiomeAxisNoise(long worldSeed, string dimensionId, int worldX)
+        {
+            var noise = new FastNoiseLite
+            {
+                Seed = (int)CombineBiomeSeed(worldSeed, dimensionId, "biome"),
+                Frequency = ChunkGenerationConstants.BIOME_NOISE_FREQUENCY,
+            };
+
+            return noise.GetNoise1D(worldX);
+        }
+
+        private long CombineBiomeSeed(long worldSeed, string dimensionId, string tag)
+        {
+            unchecked
+            {
+                long hash = worldSeed;
+                hash = hash * 397 ^ WorldRandom.StableStringHash(dimensionId);
+                hash = hash * 397 ^ WorldRandom.StableStringHash(tag);
+                return hash;
+            }
+        }
+
         private float GetProximityToNearestBiomeBoundary(float axisValue, int biomeCount)
         {
             if (biomeCount <= 1)
@@ -149,42 +184,6 @@ namespace Jogo25D.Chunks
             var index = Mathf.Clamp((int)(normalized * biomeIds.Count), 0, biomeIds.Count - 1);
 
             return biomeIds[index];
-        }
-
-        private float GetSmoothedBiomeAxisValue(long worldSeed, string dimensionId, int worldX)
-        {
-            var half = ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT / 2;
-            var step = ChunkGenerationConstants.MIN_BIOME_BAND_WIDTH / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
-            var sum = 0f;
-
-            for (int i = -half; i <= half; i++)
-            {
-                sum += SampleBiomeAxisNoise(worldSeed, dimensionId, worldX + Mathf.RoundToInt(i * step));
-            }
-
-            return sum / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
-        }
-
-        private float SampleBiomeAxisNoise(long worldSeed, string dimensionId, int worldX)
-        {
-            var noise = new FastNoiseLite
-            {
-                Seed = (int)CombineBiomeSeed(worldSeed, dimensionId, "biome"),
-                Frequency = ChunkGenerationConstants.BIOME_NOISE_FREQUENCY,
-            };
-
-            return noise.GetNoise1D(worldX);
-        }
-
-        private long CombineBiomeSeed(long worldSeed, string dimensionId, string tag)
-        {
-            unchecked
-            {
-                long hash = worldSeed;
-                hash = hash * 397 ^ WorldRandom.StableStringHash(dimensionId);
-                hash = hash * 397 ^ WorldRandom.StableStringHash(tag);
-                return hash;
-            }
         }
 
         #endregion
@@ -404,7 +403,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private int ResolveLastRightEdgeBefore( StructureDefinition structure, long worldSeed, string dimensionId, int chunkStartX, int lookbackTiles, int minBoundsGapTiles, int worldScale)
+        private int ResolveLastRightEdgeBefore(StructureDefinition structure, long worldSeed, string dimensionId, int chunkStartX, int lookbackTiles, int minBoundsGapTiles, int worldScale)
         {
             var scanStart = chunkStartX - lookbackTiles;
             var lastRightEdge = int.MinValue;

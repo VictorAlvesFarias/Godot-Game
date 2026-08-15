@@ -910,7 +910,7 @@ namespace Jogo25D.Systems
 		{
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
 			{
-				BreakBlockReceive(cell, dimensionId);
+				ProcessBreakBlock(cell, dimensionId);
 
 				return;
 			}
@@ -926,10 +926,10 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			BreakBlockReceive(cell, dimensionId);
+			ProcessBreakBlock(cell, dimensionId);
 		}
 
-		private void BreakBlockReceive(Vector2I cell, string dimensionId)
+		private void ProcessBreakBlock(Vector2I cell, string dimensionId)
 		{
 			var layer = ResolveDimensionLayer(dimensionId);
 
@@ -1159,7 +1159,7 @@ namespace Jogo25D.Systems
 		{
 			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
 			{
-				BreakPortalReceive(portalName, dimensionId);
+				ProcessBreakPortal(portalName, dimensionId);
 
 				return;
 			}
@@ -1175,10 +1175,10 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			BreakPortalReceive(portalName, dimensionId);
+			ProcessBreakPortal(portalName, dimensionId);
 		}
 
-		private void BreakPortalReceive(string portalName, string dimensionId)
+		private void ProcessBreakPortal(string portalName, string dimensionId)
 		{
 			var parent = ResolveDimensionParent(dimensionId);
 			var portal = parent?.GetNodeOrNull<Portal>(portalName);

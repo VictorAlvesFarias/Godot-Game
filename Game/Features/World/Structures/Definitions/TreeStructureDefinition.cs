@@ -1,6 +1,5 @@
-using Game.Constants;
-using Game.Features.World.Chunks.Singletons;
 using Godot;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using System.Collections.Generic;
 

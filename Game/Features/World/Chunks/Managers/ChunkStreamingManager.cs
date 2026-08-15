@@ -33,6 +33,11 @@ namespace Jogo25D.Chunks
         private readonly Dictionary<Vector2I, HashSet<long>> _upsidedownLoadedPeers = new();
         private readonly DiscoveredMapImage _discoveredOverworld = new();
         private readonly DiscoveredMapImage _discoveredUpsidedown = new();
+
+        #endregion
+
+        #region Systems
+
         private readonly ChunkGeneratorSystem _generator = new();
 
         #endregion
@@ -200,6 +205,20 @@ namespace Jogo25D.Chunks
             }
         }
 
+        private Vector2I WorldToCell(Vector2 globalPosition)
+        {
+            return new Vector2I(
+                Mathf.FloorToInt(globalPosition.X / TileSize),
+                Mathf.FloorToInt(globalPosition.Y / TileSize));
+        }
+
+        private static Vector2I CellToChunk(Vector2I cell)
+        {
+            return new Vector2I(
+                Mathf.FloorToInt(cell.X / (float)ChunkStreamingConstants.CHUNK_SIZE),
+                Mathf.FloorToInt(cell.Y / (float)ChunkStreamingConstants.CHUNK_SIZE));
+        }
+
         public async Task PreloadSpawnAreaAsync(string dimensionId, Node2D dimensionParent, Vector2 worldPosition)
         {
             if (dimensionParent == null)
@@ -227,93 +246,9 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private Vector2I WorldToCell(Vector2 globalPosition)
-        {
-            return new Vector2I(
-                Mathf.FloorToInt(globalPosition.X / TileSize),
-                Mathf.FloorToInt(globalPosition.Y / TileSize));
-        }
-
-        private static Vector2I CellToChunk(Vector2I cell)
-        {
-            return new Vector2I(
-                Mathf.FloorToInt(cell.X / (float)ChunkStreamingConstants.CHUNK_SIZE),
-                Mathf.FloorToInt(cell.Y / (float)ChunkStreamingConstants.CHUNK_SIZE));
-        }
-
         #endregion
 
         #region Core - Load/Unload (server-side)
-
-        private async Task LoadChunkAsync(string dimensionId, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
-        {
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
-
-            loaded.Add(chunkCoord);
-
-            await _generator.PainTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
-
-            if (!state.TryGetValue(chunkCoord, out var chunkState))
-            {
-                chunkState = new ChunkStateData();
-                state[chunkCoord] = chunkState;
-            }
-
-            ApplyMutations(layer, chunkState, dimensionId);
-            RecordDiscovered(dimensionId, layer, chunkCoord);
-
-            loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
-
-            var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
-            var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
-
-            foreach (var peerId in requestingPeers)
-            {
-                if (peerId == ownPeerId)
-                {
-                    continue;
-                }
-
-                BroadcastLoadChunk(peerId, dimensionId, chunkCoord, stateDict);
-            }
-        }
-
-        private async Task UnloadChunkAsync(string dimensionId, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
-        {
-            if (!loaded.Remove(chunkCoord))
-            {
-                return;
-            }
-
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
-
-            await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
-
-            if (loadedPeers.TryGetValue(chunkCoord, out var peers))
-            {
-                var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
-
-                foreach (var peerId in peers)
-                {
-                    if (peerId != ownPeerId)
-                    {
-                        BroadcastUnloadChunk(peerId, dimensionId, chunkCoord);
-                    }
-                }
-
-                loadedPeers.Remove(chunkCoord);
-            }
-        }
-
-        private void ApplyMutations(TerrainLayer layer, ChunkStateData chunkState, string dimensionId)
-        {
-            foreach (var mutation in chunkState.Mutations)
-            {
-                WorldManager?.ApplyChunkMutation(layer, mutation, dimensionId);
-            }
-        }
 
         public void RecordMutation(string dimensionId, Vector2I cell, string type, string extraData)
         {
@@ -332,26 +267,6 @@ namespace Jogo25D.Chunks
                 Position = new Vector2(cell.X, cell.Y),
                 ExtraData = extraData ?? "",
             });
-        }
-
-        private void RecordDiscovered(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
-        {
-            var discovered = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? _discoveredOverworld : _discoveredUpsidedown;
-            var baseCellX = chunkCoord.X * ChunkStreamingConstants.CHUNK_SIZE;
-            var baseCellY = chunkCoord.Y * ChunkStreamingConstants.CHUNK_SIZE;
-
-            for (int localX = 0; localX < ChunkStreamingConstants.CHUNK_SIZE; localX++)
-            {
-                for (int localY = 0; localY < ChunkStreamingConstants.CHUNK_SIZE; localY++)
-                {
-                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
-
-                    if (layer.GetCellSourceId(cell) != -1)
-                    {
-                        discovered.SetCell(cell, new Color(0.4f, 0.4f, 0.45f, 1f));
-                    }
-                }
-            }
         }
 
         public Texture2D GetDiscoveredTexture(TileMapLayer layer, out Vector2I origin)
@@ -417,7 +332,69 @@ namespace Jogo25D.Chunks
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(WorldSeed, dimensionId, worldX, worldY));
         }
 
-        private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
+        private async Task LoadChunkAsync(string dimensionId, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
+        {
+            var layer = ResolveLayer(dimensionId);
+            var baseLayer = ResolveBaseLayer(dimensionId);
+
+            loaded.Add(chunkCoord);
+
+            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+
+            if (!state.TryGetValue(chunkCoord, out var chunkState))
+            {
+                chunkState = new ChunkStateData();
+                state[chunkCoord] = chunkState;
+            }
+
+            ApplyMutations(layer, chunkState, dimensionId);
+            RecordDiscovered(dimensionId, layer, chunkCoord);
+
+            loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
+
+            var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
+            var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
+
+            foreach (var peerId in requestingPeers)
+            {
+                if (peerId == ownPeerId)
+                {
+                    continue;
+                }
+
+                LoadChunkRequest(peerId, dimensionId, chunkCoord, stateDict);
+            }
+        }
+
+        private void ApplyMutations(TerrainLayer layer, ChunkStateData chunkState, string dimensionId)
+        {
+            foreach (var mutation in chunkState.Mutations)
+            {
+                WorldManager?.ApplyChunkMutation(layer, mutation, dimensionId);
+            }
+        }
+
+        private void RecordDiscovered(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
+        {
+            var discovered = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? _discoveredOverworld : _discoveredUpsidedown;
+            var baseCellX = chunkCoord.X * ChunkStreamingConstants.CHUNK_SIZE;
+            var baseCellY = chunkCoord.Y * ChunkStreamingConstants.CHUNK_SIZE;
+
+            for (int localX = 0; localX < ChunkStreamingConstants.CHUNK_SIZE; localX++)
+            {
+                for (int localY = 0; localY < ChunkStreamingConstants.CHUNK_SIZE; localY++)
+                {
+                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
+
+                    if (layer.GetCellSourceId(cell) != -1)
+                    {
+                        discovered.SetCell(cell, new Color(0.4f, 0.4f, 0.45f, 1f));
+                    }
+                }
+            }
+        }
+
+        private void LoadChunkRequest(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
         {
             if (!IsPeerConnected(peerId))
             {
@@ -425,16 +402,6 @@ namespace Jogo25D.Chunks
             }
 
             RpcId(peerId, nameof(LoadChunkReceive), dimensionId, chunkCoord, stateDict);
-        }
-
-        private void BroadcastUnloadChunk(long peerId, string dimensionId, Vector2I chunkCoord)
-        {
-            if (!IsPeerConnected(peerId))
-            {
-                return;
-            }
-
-            RpcId(peerId, nameof(UnloadChunkReceive), dimensionId, chunkCoord);
         }
 
         private bool IsPeerConnected(long peerId)
@@ -458,6 +425,44 @@ namespace Jogo25D.Chunks
             }
 
             return false;
+        }
+
+        private async Task UnloadChunkAsync(string dimensionId, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers)
+        {
+            if (!loaded.Remove(chunkCoord))
+            {
+                return;
+            }
+
+            var layer = ResolveLayer(dimensionId);
+            var baseLayer = ResolveBaseLayer(dimensionId);
+
+            await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+
+            if (loadedPeers.TryGetValue(chunkCoord, out var peers))
+            {
+                var ownPeerId = Multiplayer != null && Multiplayer.HasMultiplayerPeer() ? Multiplayer.GetUniqueId() : 1;
+
+                foreach (var peerId in peers)
+                {
+                    if (peerId != ownPeerId)
+                    {
+                        UnloadChunkRequest(peerId, dimensionId, chunkCoord);
+                    }
+                }
+
+                loadedPeers.Remove(chunkCoord);
+            }
+        }
+
+        private void UnloadChunkRequest(long peerId, string dimensionId, Vector2I chunkCoord)
+        {
+            if (!IsPeerConnected(peerId))
+            {
+                return;
+            }
+
+            RpcId(peerId, nameof(UnloadChunkReceive), dimensionId, chunkCoord);
         }
 
         #endregion
@@ -486,7 +491,7 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await _generator.PainTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -525,10 +530,15 @@ namespace Jogo25D.Chunks
 
         public void CatchUpPeer(long targetPeerId)
         {
-            RpcId(targetPeerId, nameof(SetWorldSeedReceive), WorldSeed);
+            SetWorldSeedRequest(targetPeerId);
 
             CatchUpDimension(ChunkStreamingConstants.OVERWORLD_ID, _loadedOverworld, _overworldState, _overworldLoadedPeers, targetPeerId);
             CatchUpDimension(ChunkStreamingConstants.UPSIDEDOWN_ID, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, targetPeerId);
+        }
+
+        private void SetWorldSeedRequest(long targetPeerId)
+        {
+            RpcId(targetPeerId, nameof(SetWorldSeedReceive), WorldSeed);
         }
 
         private void CatchUpDimension(string dimensionId, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, long targetPeerId)
@@ -537,7 +547,7 @@ namespace Jogo25D.Chunks
             {
                 var chunkState = state.TryGetValue(chunkCoord, out var s) ? s : new ChunkStateData();
 
-                RpcId(targetPeerId, nameof(LoadChunkReceive), dimensionId, chunkCoord, GodotDictionaryParser.ToDictionary(chunkState));
+                LoadChunkRequest(targetPeerId, dimensionId, chunkCoord, GodotDictionaryParser.ToDictionary(chunkState));
 
                 if (!loadedPeers.TryGetValue(chunkCoord, out var peers))
                 {
