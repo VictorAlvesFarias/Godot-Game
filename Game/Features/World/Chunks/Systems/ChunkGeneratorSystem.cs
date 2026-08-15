@@ -1,4 +1,5 @@
-﻿using Godot;
+﻿using Game.Features.World.Chunks.Singletons;
+using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Constants;
 using Jogo25D.Structures;
@@ -353,7 +354,7 @@ namespace Jogo25D.Chunks
                             worldScale);
                     }
 
-                    if (WorldRandom.StructureRandom01(worldSeed, dimensionId, structureId, column.WorldX, 0) >= structure.Chance)
+                    if (WorldRandom.StructureRandom(worldSeed, dimensionId, structureId, column.WorldX, 0) >= structure.Chance)
                     {
                         continue;
                     }
@@ -410,7 +411,7 @@ namespace Jogo25D.Chunks
 
             for (int worldX = scanStart; worldX < chunkStartX; worldX++)
             {
-                if (WorldRandom.StructureRandom01(worldSeed, dimensionId, structure.Id, worldX, 0) >= structure.Chance)
+                if (WorldRandom.StructureRandom(worldSeed, dimensionId, structure.Id, worldX, 0) >= structure.Chance)
                 {
                     continue;
                 }
@@ -481,11 +482,6 @@ namespace Jogo25D.Chunks
             }
 
             return (0, Vector2I.Zero);
-        }
-
-        public TileSet GetTileSet()
-        {
-            return GD.Load<TileSet>(Textures.Tiles.WORLD_TILE_SET);
         }
 
         #endregion

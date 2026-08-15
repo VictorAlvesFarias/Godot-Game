@@ -31,6 +31,7 @@ namespace Jogo25D.Systems
 		public Node2D UpsidedownParent { get; set; }
 		public SubViewportContainer OverContainer { get; set; }
 		public SubViewportContainer UpContainer { get; set; }
+		public ChunkStreamingManager ChunkStreamingManager { get; set; }
 
 		#endregion
 
@@ -57,6 +58,8 @@ namespace Jogo25D.Systems
 		public override void _Ready()
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
+
+			ChunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
 			Multiplayer.PeerConnected += OnPeerConnected;
 			Multiplayer.PeerDisconnected += OnPeerDisconnected;
@@ -190,7 +193,7 @@ namespace Jogo25D.Systems
 
 			ClearWorldLayers();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null && save != null)
 			{
@@ -236,7 +239,7 @@ namespace Jogo25D.Systems
 
 		private void SetChunkStreamingEnabled(bool enabled)
 		{
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null)
 			{
@@ -481,7 +484,7 @@ namespace Jogo25D.Systems
 			OverContainer = null;
 			UpContainer = null;
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.ResetState();
+			ChunkStreamingManager?.ResetState();
 		}
 
 		public void ReturnToMainMenu()
@@ -589,7 +592,7 @@ namespace Jogo25D.Systems
 			player.Data = (PlayerData)character.Data.Duplicate(true);
 			player.Loaded = true;
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
 			{
@@ -666,7 +669,7 @@ namespace Jogo25D.Systems
 			_peerCharacters.Remove(id);
 			_pendingProfileByPeer.Remove(id);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RemovePeer(id);
+			ChunkStreamingManager?.RemovePeer(id);
 		}
 
 		private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
@@ -809,7 +812,7 @@ namespace Jogo25D.Systems
 
 		#region Core - Rpc - World items
 
-		private Node2D ResolveDimensionParent(string dimensionId)
+		public Node2D ResolveDimensionParent(string dimensionId)
 		{
 			return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldParent : UpsidedownParent;
 		}
@@ -895,12 +898,12 @@ namespace Jogo25D.Systems
 
 		private TerrainLayer ResolveDimensionLayer(string dimensionId)
 		{
-			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
+			return ChunkStreamingManager?.ResolveLayer(dimensionId);
 		}
 
 		private TerrainLayer ResolveDimensionBaseLayer(string dimensionId)
 		{
-			return ResolveDimensionParent(dimensionId)?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
+			return ChunkStreamingManager?.ResolveBaseLayer(dimensionId);
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -945,14 +948,14 @@ namespace Jogo25D.Systems
 				}
 
 				EraseBlockAndReconnect(baseLayer, cell, dimensionId);
-				GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
+				ChunkStreamingManager?.RecordMutation(dimensionId, cell, "break", "");
 				Rpc(nameof(BreakBlockBroadcast), cell, dimensionId);
 				return;
 			}
 
 			EraseBlockAndReconnect(layer, cell, dimensionId);
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "break", "");
+			ChunkStreamingManager?.RecordMutation(dimensionId, cell, "break", "");
 
 			var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
 
@@ -1023,7 +1026,7 @@ namespace Jogo25D.Systems
 				return false;
 			}
 
-			GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager)?.RecordMutation(dimensionId, cell, "place", blockId);
+			ChunkStreamingManager?.RecordMutation(dimensionId, cell, "place", blockId);
 
 			Rpc(nameof(PlaceBlockBroadcast), cell, blockId, dimensionId);
 
@@ -1483,7 +1486,7 @@ namespace Jogo25D.Systems
 
 		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			return chunkStreamingManager?.ResolveBiome(dimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
 		}
@@ -1556,7 +1559,7 @@ namespace Jogo25D.Systems
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null)
 			{
@@ -1655,7 +1658,7 @@ namespace Jogo25D.Systems
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null)
 			{
@@ -1926,7 +1929,7 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
+			var chunkStreamingManager = ChunkStreamingManager;
 
 			if (chunkStreamingManager != null)
 			{

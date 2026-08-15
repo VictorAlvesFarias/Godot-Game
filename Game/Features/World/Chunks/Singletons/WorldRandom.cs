@@ -1,8 +1,8 @@
-namespace Jogo25D.Chunks
+namespace Game.Features.World.Chunks.Singletons
 {
     public static class WorldRandom
     {
-        public static float Random01(long worldSeed, string ns, int worldX, int salt)
+        public static float Random(long worldSeed, string ns, int worldX, int salt)
         {
             unchecked
             {
@@ -17,21 +17,21 @@ namespace Jogo25D.Chunks
             }
         }
 
-        public static int RandomInt(long worldSeed, string ns, int worldX, int salt, (int Min, int Max) range)
+        public static int Random(long worldSeed, string ns, int worldX, int salt, (int Min, int Max) range)
         {
             var span = range.Max - range.Min + 1;
 
-            return range.Min + System.Math.Min(span - 1, (int)(Random01(worldSeed, ns, worldX, salt) * span));
+            return range.Min + System.Math.Min(span - 1, (int)(Random(worldSeed, ns, worldX, salt) * span));
         }
 
-        public static float StructureRandom01(long worldSeed, string dimensionId, string structureId, int worldX, int salt)
+        public static float StructureRandom(long worldSeed, string dimensionId, string structureId, int worldX, int salt)
         {
-            return Random01(worldSeed, dimensionId + "|" + structureId, worldX, salt);
+            return Random(worldSeed, dimensionId + "|" + structureId, worldX, salt);
         }
 
-        public static int StructureRandomInt(long worldSeed, string dimensionId, string structureId, int worldX, int salt, (int Min, int Max) range)
+        public static int StructureRandom(long worldSeed, string dimensionId, string structureId, int worldX, int salt, (int Min, int Max) range)
         {
-            return RandomInt(worldSeed, dimensionId + "|" + structureId, worldX, salt, range);
+            return Random(worldSeed, dimensionId + "|" + structureId, worldX, salt, range);
         }
 
         public static long StableStringHash(string value)

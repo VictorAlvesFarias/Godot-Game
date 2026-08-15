@@ -1,6 +1,6 @@
 using Game.Constants;
+using Game.Features.World.Chunks.Singletons;
 using Godot;
-using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using System.Collections.Generic;
 
@@ -65,10 +65,10 @@ namespace Jogo25D.Structures
 
 		private TreeShape GenerateShape(long worldSeed, string dimensionId, int worldX)
 		{
-			var trunkHeight = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 0, (7, 12));
-			var canopyHeight = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 1, (5, 9));
-			var maxRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 2, (3, 6));
-			var trunkLean = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 3, (-1, 1));
+			var trunkHeight = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 0, (7, 12));
+			var canopyHeight = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 1, (5, 9));
+			var maxRadius = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 2, (3, 6));
+			var trunkLean = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 3, (-1, 1));
 
 			var radiusByRow = new int[canopyHeight];
 
@@ -90,7 +90,7 @@ namespace Jogo25D.Structures
 					taper = 1f;
 				}
 
-				var variation = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + row, 100, (-1, 1));
+				var variation = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX + row, 100, (-1, 1));
 				var radius = Mathf.RoundToInt(maxRadius * taper) + variation;
 
 				radiusByRow[row] = Mathf.Max(0, radius);
@@ -146,7 +146,7 @@ namespace Jogo25D.Structures
 
 					if (isEdge)
 					{
-						var edgeRoll = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + centerX + x, 500 + row, (0, 5));
+						var edgeRoll = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX + centerX + x, 500 + row, (0, 5));
 
 						if (edgeRoll == 0)
 						{
@@ -171,15 +171,15 @@ namespace Jogo25D.Structures
 
 		private void AddLeafClusters(List<Vector2I> canopyCells, HashSet<Vector2I> trunkCellSet, HashSet<Vector2I> canopyCellSet, TreeShape shape, long worldSeed, string dimensionId, int worldX)
 		{
-			var clusterCount = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 800, (3, 7));
+			var clusterCount = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 800, (3, 7));
 
 			for (int cluster = 0; cluster < clusterCount; cluster++)
 			{
 				var salt = 810 + cluster * 10;
-				var row = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt, (0, shape.CanopyHeight - 1));
+				var row = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, salt, (0, shape.CanopyHeight - 1));
 				var radius = shape.RadiusByRow[row];
-				var x = radius > 0 ? WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt + 1, (-radius, radius)) : 0;
-				var clusterRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, salt + 2, (1, 3));
+				var x = radius > 0 ? WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, salt + 1, (-radius, radius)) : 0;
+				var clusterRadius = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, salt + 2, (1, 3));
 				var centerX = shape.TrunkLean + x;
 				var centerY = shape.TrunkHeight + row;
 
@@ -207,15 +207,15 @@ namespace Jogo25D.Structures
 
 		private void AddBranches(List<Vector2I> trunkCells, HashSet<Vector2I> trunkCellSet, List<Vector2I> canopyCells, HashSet<Vector2I> canopyCellSet, TreeShape shape, long worldSeed, string dimensionId, int worldX)
 		{
-			var branchCount = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, 700, (2, 4));
+			var branchCount = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, 700, (2, 4));
 
 			for (int branch = 0; branch < branchCount; branch++)
 			{
 				var branchSalt = 710 + branch * 10;
-				var drop = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt, (0, 2));
+				var drop = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, branchSalt, (0, 2));
 				var step = Mathf.Max(1, shape.TrunkHeight - drop);
-				var direction = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt + 1, (0, 1)) == 0 ? -1 : 1;
-				var length = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX, branchSalt + 2, (2, 4));
+				var direction = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, branchSalt + 1, (0, 1)) == 0 ? -1 : 1;
+				var length = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX, branchSalt + 2, (2, 4));
 				var start = TrunkPosition(shape, step);
 
 				for (int i = 1; i <= length; i++)
@@ -228,7 +228,7 @@ namespace Jogo25D.Structures
 						trunkCells.Add(position);
 					}
 
-					var leafRadius = WorldRandom.StructureRandomInt(worldSeed, dimensionId, Id, worldX + i, branchSalt + 3, (1, 2));
+					var leafRadius = WorldRandom.StructureRandom(worldSeed, dimensionId, Id, worldX + i, branchSalt + 3, (1, 2));
 
 					for (int lx = -leafRadius; lx <= leafRadius; lx++)
 					{
