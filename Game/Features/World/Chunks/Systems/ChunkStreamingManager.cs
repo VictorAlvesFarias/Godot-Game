@@ -252,7 +252,7 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await _generator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.PainTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (!state.TryGetValue(chunkCoord, out var chunkState))
             {
@@ -289,7 +289,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await _generator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             if (loadedPeers.TryGetValue(chunkCoord, out var peers))
             {
@@ -430,7 +430,7 @@ namespace Jogo25D.Chunks
 
         public BiomeDefinition ResolveBiome(string dimensionId, int worldX, int worldY)
         {
-            return BiomeDB.Get(_generator.ResolveBiome(WorldSeed, dimensionId, worldX, worldY));
+            return BiomeDB.Get(_generator.GetBiomeIdAtPosition(WorldSeed, dimensionId, worldX, worldY));
         }
 
         private void BroadcastLoadChunk(long peerId, string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
@@ -502,7 +502,7 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await _generator.PaintAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.PainTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
 
@@ -532,7 +532,7 @@ namespace Jogo25D.Chunks
             var layer = GetOrCreateLayer(dimensionId, dimensionParent);
             var baseLayer = GetBaseLayer(dimensionId);
 
-            await _generator.EraseAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
+            await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
 
         #endregion

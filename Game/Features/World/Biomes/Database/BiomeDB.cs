@@ -35,6 +35,15 @@ namespace Jogo25D.Biomes
             },
         };
 
+        // Ordem usada pelo ChunkGeneratorSystem pra dividir o eixo de ruido em faixas de bioma.
+        // Adicionar um novo bioma aqui automaticamente ganha uma faixa no mundo, sem precisar
+        // mexer no algoritmo de geracao.
+        public static readonly IReadOnlyList<string> OrderedIds = new List<string>
+        {
+            LimeGroundId,
+            OliveGroundId,
+        };
+
         public static BiomeDefinition Get(string id)
         {
             return _biomes.TryGetValue(id, out var definition) ? definition : _biomes[LimeGroundId];

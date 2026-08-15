@@ -11,7 +11,7 @@ namespace Jogo25D.Chunks
     {
         #region Core - Generation
 
-        public async Task PaintAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
+        public async Task PainTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
@@ -60,20 +60,75 @@ namespace Jogo25D.Chunks
             }
         }
 
+        public async Task EraseTilesAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
+        {
+            var baseCellX = chunkCoord.X * chunkSize;
+            var baseCellY = chunkCoord.Y * chunkSize;
+            var processedSinceYield = 0;
+
+            for (int localX = 0; localX < chunkSize; localX++)
+            {
+                for (int localY = 0; localY < chunkSize; localY++)
+                {
+                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
+
+                    target.SetCell(cell, -1);
+                    baseTarget?.SetCell(cell, -1);
+
+                    processedSinceYield++;
+
+                    if (processedSinceYield >= cellsPerFrame)
+                    {
+                        processedSinceYield = 0;
+
+                        await target.ToSignal(target.GetTree(), SceneTree.SignalName.ProcessFrame);
+                    }
+                }
+            }
+        }
+
         #endregion
 
         #region Core - Biome resolution
 
-        public string ResolveBiome(long worldSeed, string dimensionId, int worldX, int worldY)
+        public string GetBiomeIdAtPosition(long worldSeed, string dimensionId, int worldX, int worldY)
         {
-            var baseValue = GetSmoothedBaseNoiseValue(worldSeed, dimensionId, worldX);
-            var proximity = Mathf.Clamp(1f - Mathf.Abs(baseValue) / ChunkGenerationConstants.FADE_RANGE, 0f, 1f);
+            var biomeIds = BiomeDB.OrderedIds;
+            var axisValue = GetSmoothedBiomeAxisValue(worldSeed, dimensionId, worldX);
+            var proximityToBoundary = GetProximityToNearestBiomeBoundary(axisValue, biomeIds.Count);
 
-            if (proximity <= 0f)
+            if (proximityToBoundary > 0f)
             {
-                return baseValue < 0f ? BiomeDB.LimeGroundId : BiomeDB.OliveGroundId;
+                var warpOffset = GetBiomeBoundaryWarpOffset(worldSeed, dimensionId, worldY, proximityToBoundary);
+
+                axisValue = GetSmoothedBiomeAxisValue(worldSeed, dimensionId, worldX + warpOffset);
             }
 
+            return PickBiomeIdForAxisValue(axisValue, biomeIds);
+        }
+
+        private float GetProximityToNearestBiomeBoundary(float axisValue, int biomeCount)
+        {
+            if (biomeCount <= 1)
+            {
+                return 0f;
+            }
+
+            var bandWidth = 2f / biomeCount;
+            var distanceToNearestBoundary = float.MaxValue;
+
+            for (int i = 1; i < biomeCount; i++)
+            {
+                var boundary = -1f + i * bandWidth;
+
+                distanceToNearestBoundary = Mathf.Min(distanceToNearestBoundary, Mathf.Abs(axisValue - boundary));
+            }
+
+            return Mathf.Clamp(1f - distanceToNearestBoundary / ChunkGenerationConstants.FADE_RANGE, 0f, 1f);
+        }
+
+        private int GetBiomeBoundaryWarpOffset(long worldSeed, string dimensionId, int worldY, float proximityToBoundary)
+        {
             var warpNoise = new FastNoiseLite
             {
                 Seed = (int)CombineBiomeSeed(worldSeed, dimensionId, "biome_warp"),
@@ -84,13 +139,18 @@ namespace Jogo25D.Chunks
                 FractalGain = ChunkGenerationConstants.WARP_FRACTAL_GAIN,
             };
 
-            var warpOffset = Mathf.RoundToInt(warpNoise.GetNoise1D(worldY) * ChunkGenerationConstants.WARP_AMPLITUDE * proximity);
-            var shiftedValue = GetSmoothedBaseNoiseValue(worldSeed, dimensionId, worldX + warpOffset);
-
-            return shiftedValue < 0f ? BiomeDB.LimeGroundId : BiomeDB.OliveGroundId;
+            return Mathf.RoundToInt(warpNoise.GetNoise1D(worldY) * ChunkGenerationConstants.WARP_AMPLITUDE * proximityToBoundary);
         }
 
-        private static float GetSmoothedBaseNoiseValue(long worldSeed, string dimensionId, int worldX)
+        private string PickBiomeIdForAxisValue(float axisValue, IReadOnlyList<string> biomeIds)
+        {
+            var normalized = Mathf.Clamp((axisValue + 1f) * 0.5f, 0f, 0.999999f);
+            var index = Mathf.Clamp((int)(normalized * biomeIds.Count), 0, biomeIds.Count - 1);
+
+            return biomeIds[index];
+        }
+
+        private float GetSmoothedBiomeAxisValue(long worldSeed, string dimensionId, int worldX)
         {
             var half = ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT / 2;
             var step = ChunkGenerationConstants.MIN_BIOME_BAND_WIDTH / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
@@ -98,13 +158,13 @@ namespace Jogo25D.Chunks
 
             for (int i = -half; i <= half; i++)
             {
-                sum += GetBaseNoiseValue(worldSeed, dimensionId, worldX + Mathf.RoundToInt(i * step));
+                sum += SampleBiomeAxisNoise(worldSeed, dimensionId, worldX + Mathf.RoundToInt(i * step));
             }
 
             return sum / ChunkGenerationConstants.BIOME_SMOOTHING_SAMPLE_COUNT;
         }
 
-        private static float GetBaseNoiseValue(long worldSeed, string dimensionId, int worldX)
+        private float SampleBiomeAxisNoise(long worldSeed, string dimensionId, int worldX)
         {
             var noise = new FastNoiseLite
             {
@@ -115,7 +175,7 @@ namespace Jogo25D.Chunks
             return noise.GetNoise1D(worldX);
         }
 
-        private static long CombineBiomeSeed(long worldSeed, string dimensionId, string tag)
+        private long CombineBiomeSeed(long worldSeed, string dimensionId, string tag)
         {
             unchecked
             {
@@ -141,7 +201,7 @@ namespace Jogo25D.Chunks
             for (int localX = 0; localX < chunkSize; localX++)
             {
                 var worldX = baseCellX + localX;
-                var columnBiome = ResolveBiome(worldSeed, dimensionId, worldX, baseCellY + chunkSize / 2);
+                var columnBiome = GetBiomeIdAtPosition(worldSeed, dimensionId, worldX, baseCellY + chunkSize / 2);
                 var columnBiomeDef = BiomeDB.Get(columnBiome);
 
                 if (!heightNoiseByBiome.TryGetValue(columnBiome, out var heightNoise))
@@ -170,7 +230,7 @@ namespace Jogo25D.Chunks
                         continue;
                     }
 
-                    var cellBiome = ResolveBiome(worldSeed, dimensionId, worldX, worldY);
+                    var cellBiome = GetBiomeIdAtPosition(worldSeed, dimensionId, worldX, worldY);
 
                     if (!solidCellsByBiome.TryGetValue(cellBiome, out var cells))
                     {
@@ -185,7 +245,7 @@ namespace Jogo25D.Chunks
             return (solidCellsByBiome, columnSurfaces);
         }
 
-        private static List<(BiomeDefinition BiomeDef, List<Vector2I> Cells)> BuildBiomeGroups(TerrainLayer target, Dictionary<string, List<Vector2I>> solidCellsByBiome, Vector2I chunkCoord, int chunkSize)
+        private List<(BiomeDefinition BiomeDef, List<Vector2I> Cells)> BuildBiomeGroups(TerrainLayer target, Dictionary<string, List<Vector2I>> solidCellsByBiome, Vector2I chunkCoord, int chunkSize)
         {
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
@@ -204,7 +264,7 @@ namespace Jogo25D.Chunks
             return biomeGroups;
         }
 
-        private static void AddSolidBorderNeighbors(TileMapLayer target, List<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize, int terrainSet)
+        private void AddSolidBorderNeighbors(TileMapLayer target, List<Vector2I> solidCells, int baseCellX, int baseCellY, int chunkSize, int terrainSet)
         {
             for (int x = baseCellX - 1; x <= baseCellX + chunkSize; x++)
             {
@@ -219,7 +279,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private static void AddIfSolid(TileMapLayer target, List<Vector2I> solidCells, Vector2I cell, int terrainSet)
+        private void AddIfSolid(TileMapLayer target, List<Vector2I> solidCells, Vector2I cell, int terrainSet)
         {
             if (target.GetCellSourceId(cell) == -1)
             {
@@ -240,7 +300,7 @@ namespace Jogo25D.Chunks
 
         #region Core - Structure placement
 
-        private static void PlaceStructures(TerrainLayer target, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
+        private void PlaceStructures(TerrainLayer target, TerrainLayer baseTarget, List<ColumnSurface> columnSurfaces, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int worldScale)
         {
             if (target == null)
             {
@@ -343,18 +403,7 @@ namespace Jogo25D.Chunks
             }
         }
 
-        // Escaneia pra tras do inicio do chunk (fora do range de colunas desse chunk) pra achar
-        // a ultima instancia dessa estrutura que ficaria proxima o bastante pra ainda contar no
-        // espacamento minimo - sem isso, o cursor de espacamento resetava a cada chunk novo e
-        // duas instancias em chunks vizinhos podiam nascer coladas.
-        private static int ResolveLastRightEdgeBefore(
-            StructureDefinition structure,
-            long worldSeed,
-            string dimensionId,
-            int chunkStartX,
-            int lookbackTiles,
-            int minBoundsGapTiles,
-            int worldScale)
+        private int ResolveLastRightEdgeBefore( StructureDefinition structure, long worldSeed, string dimensionId, int chunkStartX, int lookbackTiles, int minBoundsGapTiles, int worldScale)
         {
             var scanStart = chunkStartX - lookbackTiles;
             var lastRightEdge = int.MinValue;
@@ -380,7 +429,7 @@ namespace Jogo25D.Chunks
             return lastRightEdge;
         }
 
-        private static bool IsStructureVolumeClear(TerrainLayer target, TerrainLayer baseTarget, int worldX, int groundHeight, StructureBounds bounds)
+        private bool IsStructureVolumeClear(TerrainLayer target, TerrainLayer baseTarget, int worldX, int groundHeight, StructureBounds bounds)
         {
             var leftX = worldX - bounds.Left;
             var rightX = worldX + bounds.Right;
@@ -410,47 +459,16 @@ namespace Jogo25D.Chunks
 
         #endregion
 
-        #region Core - Chunk lifecycle
-
-        public async Task EraseAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
-        {
-            var baseCellX = chunkCoord.X * chunkSize;
-            var baseCellY = chunkCoord.Y * chunkSize;
-            var processedSinceYield = 0;
-
-            for (int localX = 0; localX < chunkSize; localX++)
-            {
-                for (int localY = 0; localY < chunkSize; localY++)
-                {
-                    var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
-
-                    target.SetCell(cell, -1);
-                    baseTarget?.SetCell(cell, -1);
-
-                    processedSinceYield++;
-
-                    if (processedSinceYield >= cellsPerFrame)
-                    {
-                        processedSinceYield = 0;
-
-                        await target.ToSignal(target.GetTree(), SceneTree.SignalName.ProcessFrame);
-                    }
-                }
-            }
-        }
-
-        #endregion
-
         #region Utils
 
-        private static int GetWorldScale(TileSet tileSet)
+        private int GetWorldScale(TileSet tileSet)
         {
             var tileSize = tileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
 
             return Mathf.Max(1, Mathf.RoundToInt(ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
         }
 
-        private static (int sourceId, Vector2I atlasCoord) GetFallbackTile(TileSet tileSet)
+        private (int sourceId, Vector2I atlasCoord) GetFallbackTile(TileSet tileSet)
         {
             for (int i = 0; i < tileSet.GetSourceCount(); i++)
             {
