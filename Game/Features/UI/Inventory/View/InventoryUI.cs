@@ -1,6 +1,7 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Items;
@@ -19,18 +20,12 @@ namespace Jogo25D.UI
 		public Player LocalPlayer { get; set; }
 		public Inventory Inventory => LocalPlayer?.Inventory;
 		public PlayerInput PlayerInput => LocalPlayer?.Input;
-		public GridContainer GridContainer { get; set; }
-		public HBoxContainer HotbarRow { get; set; }
-		public Panel DropSlot { get; set; }
-		public Panel ContextMenu { get; set; }
-		public VBoxContainer ContextMenuContainer { get; set; }
 		public Panel[] SlotPanels { get; set; } = new Panel[128];
 		public TextureRect[] IconRects { get; set; } = new TextureRect[128];
 		public Label[] QuantityLabels { get; set; } = new Label[128];
 		public Label[] NameLabels { get; set; } = new Label[128];
 		public Label[] NumLabels { get; set; } = new Label[128];
 		public int SelectedSlotIndex { get; set; } = -1;
-		public Control MainControl { get; set; }
 
 		public bool IsDragging { get; set; } = false;
 		public int DraggedSlotIndex { get; set; } = -1;
@@ -42,13 +37,6 @@ namespace Jogo25D.UI
 
 		#region Node children references
 
-		public AnimatedSprite2D CharacterSprite { get; set; }
-		public Label CharacterNameLabel { get; set; }
-		public Label CharacterHealthLabel { get; set; }
-		public VBoxContainer BuffsListContainer { get; set; }
-		public Button EquiparButtonTemplate { get; set; }
-		public Label EmptyPropertyLabelTemplate { get; set; }
-		public Label PropertyLabelTemplate { get; set; }
 
 		#endregion
 
@@ -56,80 +44,54 @@ namespace Jogo25D.UI
 
 		public override void _UnhandledInput(InputEvent @event)
 		{
-			if (ContextMenu == null)
+			if (Game.Ui.InventoryUI.ContextMenu.Node == null)
 			{
 				return;
 			}
 
-			if (ContextMenu.Visible &&
+			if (Game.Ui.InventoryUI.ContextMenu.Node.Visible &&
 				@event is InputEventMouseButton mouseEvent &&
 				mouseEvent.Pressed &&
 				mouseEvent.ButtonIndex == MouseButton.Left)
 			{
-				var rect = ContextMenu.GetGlobalRect();
+				var rect = Game.Ui.InventoryUI.ContextMenu.Node.GetGlobalRect();
 
 				if (!rect.HasPoint(mouseEvent.GlobalPosition))
 				{
-					ContextMenu.Visible = false;
+					Game.Ui.InventoryUI.ContextMenu.Node.Visible = false;
 				}
 			}
 		}
 
 		public override void _Ready()
 		{
-			MainControl = GetNode<Control>("Root");
-			ContextMenu = GetNode<Panel>("ContextMenu");
-			ContextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
+			Visible = false;
 
-			var mainRow = MainControl.GetNode<HBoxContainer>("Panel/MainPanel/MarginContainer/MainRow");
+			Game.WhenReady(Initialize);
+		}
 
-			DropSlot = MainControl.FindChild("DropSlot", true, false) as Panel;
-			HotbarRow = mainRow.GetNode<HBoxContainer>("InventoryColumn/HotbarRow");
-			GridContainer = mainRow.GetNode<GridContainer>("InventoryColumn/GridScroll/GridContainer");
-			GridContainer.Columns = 8;
-			CharacterSprite = mainRow.GetNode<AnimatedSprite2D>("StatsColumn/SpriteBox2/VBoxContainer/CenterContainer/CharacterSprite");
-			CharacterNameLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterNameLabel");
-			CharacterHealthLabel = mainRow.GetNode<Label>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/CharacterHealthLabel");
-			BuffsListContainer = mainRow.GetNode<VBoxContainer>("StatsColumn/SpriteBox/MarginContainer/VBoxContainer/BuffsScroll/BuffsListContainer");
-			EquiparButtonTemplate = ContextMenuContainer.GetNodeOrNull<Button>("EquiparButtonTemplate");
-			EmptyPropertyLabelTemplate = BuffsListContainer.GetNodeOrNull<Label>("EmptyPropertyLabelTemplate");
-			PropertyLabelTemplate = BuffsListContainer.GetNodeOrNull<Label>("PropertyLabelTemplate");
+		#endregion
 
-			if (EquiparButtonTemplate == null)
-			{
-				GD.PushError("InventoryUI: EquiparButtonTemplate não encontrado em ContextMenuContainer.");
-			}
-			else
-			{
-				EquiparButtonTemplate.Visible = false;
-			}
+		#region Core - Setup
 
-			if (EmptyPropertyLabelTemplate == null)
-			{
-				GD.PushError("InventoryUI: EmptyPropertyLabelTemplate não encontrado em BuffsListContainer.");
-			}
-			else
-			{
-				EmptyPropertyLabelTemplate.Visible = false;
-			}
+		private void Initialize()
+		{
+			Game.Ui.InventoryUI.GridContainer.Node.Columns = 8;
 
-			if (PropertyLabelTemplate == null)
-			{
-				GD.PushError("InventoryUI: PropertyLabelTemplate não encontrado em BuffsListContainer.");
-			}
-			else
-			{
-				PropertyLabelTemplate.Visible = false;
-			}
+			Game.Ui.InventoryUI.EquiparButtonTemplate.Node.Visible = false;
+			Game.Ui.InventoryUI.EmptyPropertyLabelTemplate.Node.Visible = false;
+			Game.Ui.InventoryUI.PropertyLabelTemplate.Node.Visible = false;
 
-			CharacterSprite.Play("idle");
+			Game.Ui.InventoryUI.CharacterSprite.Node.Play("idle");
 
 			CreateDragPreview();
 
-			CallDeferred(nameof(FindLocalPlayerInventorySystem));
-
-			Visible = false;
+			FindLocalPlayerInventorySystem();
 		}
+
+		#endregion
+
+		#region Godot implementation
 
 		public override void _ExitTree()
 		{
@@ -164,7 +126,7 @@ namespace Jogo25D.UI
 				{
 					EndDrag(targetSlot);
 				}
-				else if (DropSlot != null && DropSlot.GetGlobalRect().HasPoint(mouseEvent.GlobalPosition))
+				else if (Game.Ui.InventoryUI.DropSlot.Node != null && Game.Ui.InventoryUI.DropSlot.Node.GetGlobalRect().HasPoint(mouseEvent.GlobalPosition))
 				{
 					DropDraggedItem();
 				}
@@ -216,7 +178,7 @@ namespace Jogo25D.UI
 
 		public void CreateDragPreview()
 		{
-			var template = MainControl.GetNodeOrNull<Panel>("DragPreviewTemplate");
+			var template = Game.Ui.InventoryUI.DragPreviewTemplate.Node;
 
 			if (template == null)
 			{
@@ -229,7 +191,7 @@ namespace Jogo25D.UI
 			DragPreview = (Panel)template.Duplicate();
 			DragPreview.Visible = false;
 
-			MainControl.AddChild(DragPreview);
+			Game.Ui.InventoryUI.MainControl.Node.AddChild(DragPreview);
 		}
 
 		public void FindLocalPlayerInventorySystem()
@@ -240,7 +202,7 @@ namespace Jogo25D.UI
 			}
 			LocalPlayer = null;
 
-			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			var worldManager = Game.Managers.WorldManager.Node;
 
 			if (worldManager != null)
 			{
@@ -266,18 +228,18 @@ namespace Jogo25D.UI
 
 		public void InitializeSlots()
 		{
-			var hotbarTemplate = (Panel)HotbarRow.GetChild(0).Duplicate();
-			var gridTemplate = (Panel)GridContainer.GetChild(0).Duplicate();
+			var hotbarTemplate = (Panel)Game.Ui.InventoryUI.HotbarRow.Node.GetChild(0).Duplicate();
+			var gridTemplate = (Panel)Game.Ui.InventoryUI.GridContainer.Node.GetChild(0).Duplicate();
 
-			foreach (Node child in HotbarRow.GetChildren())
+			foreach (Node child in Game.Ui.InventoryUI.HotbarRow.Node.GetChildren())
 			{
-				HotbarRow.RemoveChild(child);
+				Game.Ui.InventoryUI.HotbarRow.Node.RemoveChild(child);
 				child.QueueFree();
 			}
 
-			foreach (Node child in GridContainer.GetChildren())
+			foreach (Node child in Game.Ui.InventoryUI.GridContainer.Node.GetChildren())
 			{
-				GridContainer.RemoveChild(child);
+				Game.Ui.InventoryUI.GridContainer.Node.RemoveChild(child);
 				child.QueueFree();
 			}
 
@@ -314,11 +276,11 @@ namespace Jogo25D.UI
 
 			if (index < 8)
 			{
-				HotbarRow.AddChild(SlotPanels[index]);
+				Game.Ui.InventoryUI.HotbarRow.Node.AddChild(SlotPanels[index]);
 			}
 			else
 			{
-				GridContainer.AddChild(SlotPanels[index]);
+				Game.Ui.InventoryUI.GridContainer.Node.AddChild(SlotPanels[index]);
 			}
 
 			IconRects[index] = SlotPanels[index].GetNode<TextureRect>("MarginContainer/CenterContainer/Icon");
@@ -579,40 +541,40 @@ namespace Jogo25D.UI
 
 			SelectedSlotIndex = slotIndex;
 
-			foreach (Node child in ContextMenuContainer.GetChildren())
+			foreach (Node child in Game.Ui.InventoryUI.ContextMenuContainer.Node.GetChildren())
 			{
-				if (child == EquiparButtonTemplate)
+				if (child == Game.Ui.InventoryUI.EquiparButtonTemplate.Node)
 				{
 					continue;
 				}
 
-				ContextMenuContainer.RemoveChild(child);
+				Game.Ui.InventoryUI.ContextMenuContainer.Node.RemoveChild(child);
 				child.QueueFree();
 			}
 
 			if (definition != null)
 			{
-				if (EquiparButtonTemplate == null)
+				if (Game.Ui.InventoryUI.EquiparButtonTemplate.Node == null)
 				{
-					GD.PushError("InventoryUI: EquiparButtonTemplate não encontrado, não é possível montar o menu de contexto.");
+					GD.PushError("InventoryUI: Game.Ui.InventoryUI.EquiparButtonTemplate.Node não encontrado, não é possível montar o menu de contexto.");
 				}
 				else
 				{
-					var button = (Button)EquiparButtonTemplate.Duplicate();
+					var button = (Button)Game.Ui.InventoryUI.EquiparButtonTemplate.Node.Duplicate();
 					button.Visible = true;
 					button.Pressed += () => OnContextMenuOption("Equipar");
 
-					ContextMenuContainer.AddChild(button);
+					Game.Ui.InventoryUI.ContextMenuContainer.Node.AddChild(button);
 				}
 			}
 
-			var minSize = ContextMenuContainer.GetCombinedMinimumSize();
-			ContextMenu.CustomMinimumSize = new Vector2(Mathf.Max(120f, (float)minSize.X), (float)minSize.Y);
-			ContextMenu.Size = ContextMenu.CustomMinimumSize;
+			var minSize = Game.Ui.InventoryUI.ContextMenuContainer.Node.GetCombinedMinimumSize();
+			Game.Ui.InventoryUI.ContextMenu.Node.CustomMinimumSize = new Vector2(Mathf.Max(120f, (float)minSize.X), (float)minSize.Y);
+			Game.Ui.InventoryUI.ContextMenu.Node.Size = Game.Ui.InventoryUI.ContextMenu.Node.CustomMinimumSize;
 
-			ContextMenu.GlobalPosition = position;
-			ContextMenu.Visible = true;
-			ContextMenu.MoveToFront();
+			Game.Ui.InventoryUI.ContextMenu.Node.GlobalPosition = position;
+			Game.Ui.InventoryUI.ContextMenu.Node.Visible = true;
+			Game.Ui.InventoryUI.ContextMenu.Node.MoveToFront();
 		}
 
 		public void OnContextMenuOption(string option)
@@ -634,7 +596,7 @@ namespace Jogo25D.UI
 				LocalPlayer.EquipItemRequest(slot.InstanceId);
 			}
 
-			ContextMenu.Visible = false;
+			Game.Ui.InventoryUI.ContextMenu.Node.Visible = false;
 		}
 
 		#endregion
@@ -692,8 +654,8 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			CharacterNameLabel.Text = $"Jogador #{LocalPlayer.PeerId}";
-			CharacterHealthLabel.Text = $"Vida: {LocalPlayer.Data.CurrentHealth}/{LocalPlayer.GetMaxHealth()}";
+			Game.Ui.InventoryUI.CharacterNameLabel.Node.Text = $"Jogador #{LocalPlayer.PeerId}";
+			Game.Ui.InventoryUI.CharacterHealthLabel.Node.Text = $"Vida: {LocalPlayer.Data.CurrentHealth}/{LocalPlayer.GetMaxHealth()}";
 		}
 
 		public void UpdateCharacterSprite()
@@ -705,30 +667,30 @@ namespace Jogo25D.UI
 
 			var playerAnimation = LocalPlayer.Sprite.Animation;
 
-			if (CharacterSprite.Animation != playerAnimation || !CharacterSprite.IsPlaying())
+			if (Game.Ui.InventoryUI.CharacterSprite.Node.Animation != playerAnimation || !Game.Ui.InventoryUI.CharacterSprite.Node.IsPlaying())
 			{
-				CharacterSprite.Play(playerAnimation);
+				Game.Ui.InventoryUI.CharacterSprite.Node.Play(playerAnimation);
 			}
 
-			CharacterSprite.Frame = LocalPlayer.Sprite.Frame;
-			CharacterSprite.FlipH = LocalPlayer.FacingLeft();
+			Game.Ui.InventoryUI.CharacterSprite.Node.Frame = LocalPlayer.Sprite.Frame;
+			Game.Ui.InventoryUI.CharacterSprite.Node.FlipH = LocalPlayer.FacingLeft();
 		}
 
 		public void UpdatePropertiesList()
 		{
-			if (BuffsListContainer == null)
+			if (Game.Ui.InventoryUI.BuffsListContainer.Node == null)
 			{
 				return;
 			}
 
-			foreach (Node child in BuffsListContainer.GetChildren())
+			foreach (Node child in Game.Ui.InventoryUI.BuffsListContainer.Node.GetChildren())
 			{
-				if (child == EmptyPropertyLabelTemplate || child == PropertyLabelTemplate)
+				if (child == Game.Ui.InventoryUI.EmptyPropertyLabelTemplate.Node || child == Game.Ui.InventoryUI.PropertyLabelTemplate.Node)
 				{
 					continue;
 				}
 
-				BuffsListContainer.RemoveChild(child);
+				Game.Ui.InventoryUI.BuffsListContainer.Node.RemoveChild(child);
 
 				child.QueueFree();
 			}
@@ -819,36 +781,36 @@ namespace Jogo25D.UI
 
 			if (lines.Count == 0)
 			{
-				if (EmptyPropertyLabelTemplate == null)
+				if (Game.Ui.InventoryUI.EmptyPropertyLabelTemplate.Node == null)
 				{
-					GD.PushError("InventoryUI: EmptyPropertyLabelTemplate não encontrado, não é possível mostrar a lista de propriedades.");
+					GD.PushError("InventoryUI: Game.Ui.InventoryUI.EmptyPropertyLabelTemplate.Node não encontrado, não é possível mostrar a lista de propriedades.");
 
 					return;
 				}
 
-				var empty = (Label)EmptyPropertyLabelTemplate.Duplicate();
+				var empty = (Label)Game.Ui.InventoryUI.EmptyPropertyLabelTemplate.Node.Duplicate();
 				empty.Visible = true;
 
-				BuffsListContainer.AddChild(empty);
+				Game.Ui.InventoryUI.BuffsListContainer.Node.AddChild(empty);
 
 				return;
 			}
 
 			foreach (var text in lines)
 			{
-				if (PropertyLabelTemplate == null)
+				if (Game.Ui.InventoryUI.PropertyLabelTemplate.Node == null)
 				{
-					GD.PushError("InventoryUI: PropertyLabelTemplate não encontrado, não é possível mostrar a lista de propriedades.");
+					GD.PushError("InventoryUI: Game.Ui.InventoryUI.PropertyLabelTemplate.Node não encontrado, não é possível mostrar a lista de propriedades.");
 
 					continue;
 				}
 
-				var label = (Label)PropertyLabelTemplate.Duplicate();
+				var label = (Label)Game.Ui.InventoryUI.PropertyLabelTemplate.Node.Duplicate();
 
 				label.Text = text;
 				label.Visible = true;
 
-				BuffsListContainer.AddChild(label);
+				Game.Ui.InventoryUI.BuffsListContainer.Node.AddChild(label);
 			}
 		}
 

@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 
 namespace Jogo25D.Systems
 {
@@ -17,7 +18,6 @@ namespace Jogo25D.Systems
 
 		#region Node references
 
-		public WorldManager WorldManager { get; set; }
 
 		#endregion
 
@@ -29,9 +29,8 @@ namespace Jogo25D.Systems
 
 			AddToGroup("cameras");
 
-			WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
-            PlayerRef = WorldManager?.GetLocalPlayer();
+            Game.WhenReady(() => PlayerRef = Game.Managers.WorldManager.Node.GetLocalPlayer());
         }
 
 		public override void _Input(InputEvent @event)
@@ -75,7 +74,7 @@ namespace Jogo25D.Systems
 
 			if (PlayerRef == null || !IsInstanceValid(PlayerRef))
 			{
-                PlayerRef = WorldManager?.GetLocalPlayer();
+                PlayerRef = Game.Managers.WorldManager.Node?.GetLocalPlayer();
             }
 
             if (PlayerRef != null && IsInstanceValid(PlayerRef))

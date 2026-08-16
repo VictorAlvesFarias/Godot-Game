@@ -1,19 +1,14 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
-using Jogo25D.Constants;
-using Jogo25D.Systems;
+using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
     public partial class DeathScreenUI : CanvasLayer
     {
-        #region Properties
+        #region Dinamic properties
 
         public Player LocalPlayer { get; set; }
-        public WorldManager NetworkManager { get; set; }
-
-        public Panel Background { get; set; }
-        public Button ReviveButton { get; set; }
 
         #endregion
 
@@ -25,12 +20,7 @@ namespace Jogo25D.UI
             ProcessMode = ProcessModeEnum.Always;
             Visible = false;
 
-            Background = GetNode<Panel>("Background");
-            ReviveButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/ReviveButton");
-
-            ReviveButton.Pressed += OnRevivePressed;
-
-            CallDeferred(nameof(FindLocalPlayer));
+            Game.WhenReady(Initialize);
         }
 
         public override void _Process(double delta)
@@ -52,10 +42,16 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void Initialize()
+        {
+            Game.Ui.DeathScreenUI.ReviveButton.Node.Pressed += OnRevivePressed;
+
+            FindLocalPlayer();
+        }
+
         public void FindLocalPlayer()
         {
-            NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-            LocalPlayer = NetworkManager?.GetLocalPlayer();
+            LocalPlayer = Game.Managers.WorldManager.Node.GetLocalPlayer();
         }
 
         #endregion
@@ -64,7 +60,7 @@ namespace Jogo25D.UI
 
         public void OnRevivePressed()
         {
-            NetworkManager?.TeleportPlayerClientRequest(Vector2.Zero);
+            Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(Vector2.Zero);
         }
 
         #endregion

@@ -2,8 +2,10 @@
 
 [ext_resource type="PackedScene" path="res://Scenes/Managers/Managers.tscn" id="1_kln2b"]
 [ext_resource type="PackedScene" uid="uid://bongjw55be786" path="res://Scenes/Ui/Ui.tscn" id="2_rgh2o"]
+[ext_resource type="Script" path="res://Features/World/Core/Entities/Bootstrap.cs" id="3_bootstrap"]
 
 [node name="Main" type="Node2D" unique_id=756475699]
+script = ExtResource("3_bootstrap")
 
 [node name="Managers" parent="." unique_id=940605774 instance=ExtResource("1_kln2b")]
 

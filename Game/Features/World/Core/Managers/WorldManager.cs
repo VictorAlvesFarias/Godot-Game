@@ -4,6 +4,7 @@ using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
@@ -48,13 +49,6 @@ namespace Jogo25D.Systems
 
 		#region Node references
 
-		public Node Main { get; set; }
-		public ChunkStreamingManager ChunkStreamingManager { get; set; }
-		public SaveManager SaveManager { get; set; }
-		public LoadingUI LoadingUI { get; set; }
-		public CanvasLayer PauseUI { get; set; }
-		public CanvasLayer StartUI { get; set; }
-		public CharacterSelectUI CharacterSelectUI { get; set; }
 
 		#endregion
 
@@ -73,13 +67,6 @@ namespace Jogo25D.Systems
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
 
-			Main = GetTree().Root.GetNodeOrNull<Node>("Main");
-			ChunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
-			SaveManager = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
-			LoadingUI = GetTree().Root.GetNodeOrNull<LoadingUI>("Main/Ui/LoadingUI");
-			PauseUI = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/Ui/PauseUI");
-			StartUI = GetTree().Root.GetNodeOrNull<CanvasLayer>("Main/Ui/StartUI");
-			CharacterSelectUI = GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI");
 
 			Multiplayer.PeerConnected += OnPeerConnected;
 			Multiplayer.PeerDisconnected += OnPeerDisconnected;
@@ -155,8 +142,8 @@ namespace Jogo25D.Systems
 			{
 				return;
 			}
-
-			var main = Main;
+			
+			var main = Game.Main.Node;
 
 			if (main == null || main.HasNode("World"))
 			{
@@ -202,7 +189,7 @@ namespace Jogo25D.Systems
 		{
 			if(save == null)
 			{
-				save = SaveManager.CreateWorld("Mundo sem nome", (long)GD.Randi(), WorldCharacterMode.LocalCharacters, "", SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES);
+				save = Game.Managers.SaveManager.Node.CreateWorld("Mundo sem nome", (long)GD.Randi(), WorldCharacterMode.LocalCharacters, "", SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES);
 			}	
 
 			CurrentWorldSave = save;
@@ -210,17 +197,17 @@ namespace Jogo25D.Systems
 			SpawnWorld();
 			ClearWorldLayers();
 
-            ChunkStreamingManager.SetWorldSeed(save.Seed);
-            ChunkStreamingManager.ImportState(ChunkStreamingConstants.OVERWORLD_ID, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingConstants.OVERWORLD_ID));
-            ChunkStreamingManager.ImportState(ChunkStreamingConstants.UPSIDEDOWN_ID, saveManager?.LoadDimensionState(save.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID));
+            Game.Managers.ChunkStreamingManager.Node.SetWorldSeed(save.Seed);
+            Game.Managers.ChunkStreamingManager.Node.ImportState(ChunkStreamingConstants.OVERWORLD_ID, Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, ChunkStreamingConstants.OVERWORLD_ID));
+            Game.Managers.ChunkStreamingManager.Node.ImportState(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID));
 
 			SetChunkStreamingEnabled(true);
 
-			var loadingUi = LoadingUI;
+			var loadingUi = Game.Ui.LoadingUI.Node;
 
 			loadingUi?.Open();
 
-			await ChunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, UpsidedownParent, Vector2.Zero);
+			await Game.Managers.ChunkStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, UpsidedownParent, Vector2.Zero);
 		
 			RestorePortals(save);
 			RespawnLocalSoloPlayer();
@@ -246,7 +233,7 @@ namespace Jogo25D.Systems
 
 		private void SetChunkStreamingEnabled(bool enabled)
 		{
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			if (chunkStreamingManager != null)
 			{
@@ -476,7 +463,7 @@ namespace Jogo25D.Systems
 				GD.Print("[WorldManager.LeaveWorld] peer closed");
 			}
 
-			var main = Main;
+			var main = Game.Main.Node;
 			var world = main?.GetNodeOrNull("World");
 
 			if (world != null)
@@ -491,7 +478,7 @@ namespace Jogo25D.Systems
 			OverContainer = null;
 			UpContainer = null;
 
-			ChunkStreamingManager?.ResetState();
+			Game.Managers.ChunkStreamingManager.Node?.ResetState();
 		}
 
 		public void ReturnToMainMenu()
@@ -500,7 +487,7 @@ namespace Jogo25D.Systems
 
 			GetTree().Paused = false;
 
-			var pauseUi = PauseUI;
+			var pauseUi = Game.Ui.PauseUI.Node;
 
 			if (pauseUi != null)
 			{
@@ -509,7 +496,7 @@ namespace Jogo25D.Systems
 
 			LeaveWorld();
 
-			var startUi = StartUI;
+			var startUi = Game.Ui.StartUI.Node;
 
 			if (startUi != null)
 			{
@@ -599,7 +586,7 @@ namespace Jogo25D.Systems
 			player.Data = (PlayerData)character.Data.Duplicate(true);
 			player.Loaded = true;
 
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			if (chunkStreamingManager != null && chunkStreamingManager.Enabled)
 			{
@@ -676,7 +663,7 @@ namespace Jogo25D.Systems
 			_peerCharacters.Remove(id);
 			_pendingProfileByPeer.Remove(id);
 
-			ChunkStreamingManager?.RemovePeer(id);
+			Game.Managers.ChunkStreamingManager.Node?.RemovePeer(id);
 		}
 
 		private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
@@ -686,7 +673,7 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var saveManager = SaveManager;
+			var saveManager = Game.Managers.SaveManager.Node;
 
 			if (saveManager == null)
 			{
@@ -694,7 +681,7 @@ namespace Jogo25D.Systems
 			}
 
 			character.Data = playerNode.Data;
-			character.LastPlayedUtc = SaveManager.NowUtc();
+			character.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
 
 			if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
 			{
@@ -902,12 +889,12 @@ namespace Jogo25D.Systems
 
 		private TerrainLayer ResolveDimensionLayer(string dimensionId)
 		{
-			return ChunkStreamingManager?.ResolveLayer(dimensionId);
+			return Game.Managers.ChunkStreamingManager.Node?.ResolveLayer(dimensionId);
 		}
 
 		private TerrainLayer ResolveDimensionBaseLayer(string dimensionId)
 		{
-			return ChunkStreamingManager?.ResolveBaseLayer(dimensionId);
+			return Game.Managers.ChunkStreamingManager.Node?.ResolveBaseLayer(dimensionId);
 		}
 
 		public void BreakBlockClientRequest(Vector2I cell, string dimensionId)
@@ -952,14 +939,14 @@ namespace Jogo25D.Systems
 				}
 
 				EraseBlockAndReconnect(baseLayer, cell, dimensionId);
-				ChunkStreamingManager?.RecordMutation(dimensionId, cell, "break", "");
+				Game.Managers.ChunkStreamingManager.Node?.RecordMutation(dimensionId, cell, "break", "");
 				Rpc(nameof(BreakBlockBroadcast), cell, dimensionId);
 				return;
 			}
 
 			EraseBlockAndReconnect(layer, cell, dimensionId);
 
-			ChunkStreamingManager?.RecordMutation(dimensionId, cell, "break", "");
+			Game.Managers.ChunkStreamingManager.Node?.RecordMutation(dimensionId, cell, "break", "");
 
 			var dropPosition = layer.ToGlobal(layer.MapToLocal(cell));
 
@@ -1030,7 +1017,7 @@ namespace Jogo25D.Systems
 				return false;
 			}
 
-			ChunkStreamingManager?.RecordMutation(dimensionId, cell, "place", blockId);
+			Game.Managers.ChunkStreamingManager.Node?.RecordMutation(dimensionId, cell, "place", blockId);
 
 			Rpc(nameof(PlaceBlockBroadcast), cell, blockId, dimensionId);
 
@@ -1490,7 +1477,7 @@ namespace Jogo25D.Systems
 
 		private BiomeDefinition ResolveBiomeForCell(Vector2I cell, string dimensionId)
 		{
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			return chunkStreamingManager?.ResolveBiome(dimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
 		}
@@ -1559,11 +1546,11 @@ namespace Jogo25D.Systems
 		{
 			GD.Print($"[WorldManager.TeleportPlayerClientRequest] sending teleport request to {position} (Peer 1)");
 
-			var loadingUi = LoadingUI;
+			var loadingUi = Game.Ui.LoadingUI.Node;
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			if (chunkStreamingManager != null)
 			{
@@ -1658,11 +1645,11 @@ namespace Jogo25D.Systems
 			var targetDimensionId = currentParent == OverworldParent ? ChunkStreamingConstants.UPSIDEDOWN_ID : ChunkStreamingConstants.OVERWORLD_ID;
 			var targetParent = currentParent == OverworldParent ? UpsidedownParent : OverworldParent;
 
-			var loadingUi = LoadingUI;
+			var loadingUi = Game.Ui.LoadingUI.Node;
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			if (chunkStreamingManager != null)
 			{
@@ -1698,12 +1685,12 @@ namespace Jogo25D.Systems
 
 			if (mode == WorldCharacterMode.LocalCharacters)
 			{
-				CharacterSelectUI?.OpenForPeerJoin();
+				Game.Ui.CharacterSelectUI.Node?.OpenForPeerJoin();
 
 				return;
 			}
 
-			var profile = SaveManager?.GetOrCreateLocalProfile();
+			var profile = Game.Managers.SaveManager.Node?.GetOrCreateLocalProfile();
 
 			RpcId(1, nameof(RequestServerCharacterListServerReceive), profile?.ProfileId ?? "");
 		}
@@ -1717,7 +1704,7 @@ namespace Jogo25D.Systems
 
 			PendingCharacter = character;
 
-			var profile = SaveManager?.GetOrCreateLocalProfile();
+			var profile = Game.Managers.SaveManager.Node?.GetOrCreateLocalProfile();
 
 			RpcId(1, nameof(SubmitLocalCharacterServerReceive), profile?.ProfileId ?? "", GodotDictionaryParser.ToDictionary(character));
 		}
@@ -1735,7 +1722,7 @@ namespace Jogo25D.Systems
 
 			if (character == null)
 			{
-				character = SaveManager?.CreateLocalCharacter("Sem nome");
+				character = Game.Managers.SaveManager.Node?.CreateLocalCharacter("Sem nome");
 			}
 
 			if (character == null)
@@ -1775,8 +1762,8 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var saveManager = SaveManager;
-			var characters = saveManager?.ListServerCharacters(CurrentWorldSave.MultiplayerKey)
+			var saveManager = Game.Managers.SaveManager.Node;
+			var characters = Game.Managers.SaveManager.Node.ListServerCharacters(CurrentWorldSave.MultiplayerKey)
 				.Where(c => c.OwnerProfileId == profileId)
 				.ToList() ?? new List<CharacterSaveData>();
 
@@ -1804,7 +1791,7 @@ namespace Jogo25D.Systems
 
 			var senderId = Multiplayer.GetRemoteSenderId();
 
-			SaveManager?.DeleteServerCharacter(CurrentWorldSave.MultiplayerKey, characterId);
+			Game.Managers.SaveManager.Node?.DeleteServerCharacter(CurrentWorldSave.MultiplayerKey, characterId);
 
 			SendServerCharacterListTo(senderId);
 		}
@@ -1839,7 +1826,7 @@ namespace Jogo25D.Systems
 			}
 
 			var senderId = Multiplayer.GetRemoteSenderId();
-			var character = SaveManager?.LoadServerCharacter(CurrentWorldSave.MultiplayerKey, characterId);
+			var character = Game.Managers.SaveManager.Node?.LoadServerCharacter(CurrentWorldSave.MultiplayerKey, characterId);
 
 			if (character == null)
 			{
@@ -1860,9 +1847,9 @@ namespace Jogo25D.Systems
 			}
 
 			var senderId = Multiplayer.GetRemoteSenderId();
-			var saveManager = SaveManager;
+			var saveManager = Game.Managers.SaveManager.Node;
 			var ownerProfileId = _pendingProfileByPeer.TryGetValue(senderId, out var profileId) ? profileId : "";
-			var character = saveManager?.CreateServerCharacter(CurrentWorldSave.MultiplayerKey, name, ownerProfileId);
+			var character = Game.Managers.SaveManager.Node.CreateServerCharacter(CurrentWorldSave.MultiplayerKey, name, ownerProfileId);
 
 			if (character == null)
 			{
@@ -1922,14 +1909,14 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var saveManager = SaveManager;
+			var saveManager = Game.Managers.SaveManager.Node;
 
 			if (saveManager == null)
 			{
 				return;
 			}
 
-			var chunkStreamingManager = ChunkStreamingManager;
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
 
 			if (chunkStreamingManager != null)
 			{
@@ -1938,7 +1925,7 @@ namespace Jogo25D.Systems
 			}
 
 			CurrentWorldSave.Portals = CollectPortals();
-			CurrentWorldSave.LastPlayedUtc = SaveManager.NowUtc();
+			CurrentWorldSave.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
 
 			saveManager.SaveWorldMeta(CurrentWorldSave);
 
@@ -1953,7 +1940,7 @@ namespace Jogo25D.Systems
 				return;
 			}
 
-			var saveManager = SaveManager;
+			var saveManager = Game.Managers.SaveManager.Node;
 			var localPlayer = GetLocalPlayer();
 
 			if (saveManager == null || localPlayer == null)
@@ -1962,7 +1949,7 @@ namespace Jogo25D.Systems
 			}
 
 			PendingCharacter.Data = localPlayer.Data;
-			PendingCharacter.LastPlayedUtc = SaveManager.NowUtc();
+			PendingCharacter.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
 
 			saveManager.SaveLocalCharacter(PendingCharacter);
 		}
@@ -1982,7 +1969,7 @@ namespace Jogo25D.Systems
 				}
 
 				character.Data = player.Data;
-				character.LastPlayedUtc = SaveManager.NowUtc();
+				character.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
 
 				if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
 				{

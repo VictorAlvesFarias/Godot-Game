@@ -1,55 +1,40 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
 	public partial class PauseUI : CanvasLayer
 	{
-		#region Node references
-
-		public WorldManager NetworkManager { get; set; }
-
-		#endregion
-
-		#region Node children references
-
-		public Button ResumeButton { get; set; }
-		public Button ExitButton { get; set; }
-		public Button HostButton { get; set; }
-		public Button PvpButton { get; set; }
-		public Button MenuButton { get; set; }
-		public LineEdit PortInput { get; set; }
-
-		#endregion
-
 		#region Godot implementation
 
 		public override void _Ready()
 		{
 			Visible = false;
 
-			ResumeButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ResumeButton");
-			ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
-			HostButton = GetNode<Button>("MarginContainer/Root/MenuColumn/HostButton");
-			PvpButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PvpButton");
-			MenuButton = GetNode<Button>("MarginContainer/Root/MenuColumn/MenuButton");
-			PortInput = GetNode<LineEdit>("MarginContainer/Root/MenuColumn/PortInput");
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			Game.WhenReady(Initialize);
+		}
 
-			ResumeButton.Pressed += OnResumePressed;
-			ExitButton.Pressed += OnExitPressed;
-			HostButton.Pressed += OnHostPressed;
-			PvpButton.Pressed += OnPvpPressed;
-			MenuButton.Pressed += OnMenuPressed;
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.PauseUI.ResumeButton.Node.Pressed += OnResumePressed;
+			Game.Ui.PauseUI.ExitButton.Node.Pressed += OnExitPressed;
+			Game.Ui.PauseUI.HostButton.Node.Pressed += OnHostPressed;
+			Game.Ui.PauseUI.PvpButton.Node.Pressed += OnPvpPressed;
+			Game.Ui.PauseUI.MenuButton.Node.Pressed += OnMenuPressed;
 		}
 
 		public override void _Input(InputEvent @event)
 		{
 			if (@event.IsActionPressed("pause") && !@event.IsEcho())
 			{
-				var input = NetworkManager?.GetLocalPlayer()?.Input;
+				var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
 
 				if (!Visible && (input?.IsBlockedByOther("pause") ?? false))
 				{
@@ -82,7 +67,7 @@ namespace Jogo25D.UI
 				GetTree().Paused = Visible;
 			}
 
-			var input = NetworkManager?.GetLocalPlayer()?.Input;
+			var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
 
 			if (Visible)
 			{
@@ -109,7 +94,7 @@ namespace Jogo25D.UI
 			Visible = false;
 			GetTree().Paused = false;
 
-			NetworkManager?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
 		}
 
 		public void OnMenuPressed()
@@ -117,10 +102,10 @@ namespace Jogo25D.UI
 			Visible = false;
 			GetTree().Paused = false;
 
-			NetworkManager?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
-			NetworkManager?.LeaveWorld();
+			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+			Game.Managers.WorldManager.Node?.LeaveWorld();
 
-			var startUi = GetTree().Root.GetNodeOrNull<StartUI>("Main/Ui/StartUI");
+			var startUi = Game.Ui.StartUI.Node;
 
 			if (startUi != null)
 			{
@@ -134,20 +119,20 @@ namespace Jogo25D.UI
 
 		public void OnHostPressed()
 		{
-			if (NetworkManager == null)
+			if (Game.Managers.WorldManager.Node == null)
 			{
 				return;
 			}
 
-			if (NetworkManager.IsConnected())
+			if (Game.Managers.WorldManager.Node.IsConnected())
 			{
-				NetworkManager.Disconnect();
+				Game.Managers.WorldManager.Node.Disconnect();
 			}
 			else
 			{
-				var portText = PortInput.Text.Trim();
+				var portText = Game.Ui.PauseUI.PortInput.Node.Text.Trim();
 
-				NetworkManager.CreateServer(portText);
+				Game.Managers.WorldManager.Node.CreateServer(portText);
 			}
 
 			UpdateNetworkStatus();
@@ -155,18 +140,18 @@ namespace Jogo25D.UI
 
 		public void UpdateNetworkStatus()
 		{
-			if (NetworkManager == null)
+			if (Game.Managers.WorldManager.Node == null)
 			{
 				return;
 			}
 
-			bool connected = NetworkManager.IsConnected();
+			bool connected = Game.Managers.WorldManager.Node.IsConnected();
 			bool isServer = Multiplayer.IsServer();
 
-			HostButton.Visible = !connected || isServer;
-			PortInput.Visible = HostButton.Visible;
+			Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;
+			Game.Ui.PauseUI.PortInput.Node.Visible = Game.Ui.PauseUI.HostButton.Node.Visible;
 
-			HostButton.Text = connected && isServer ? "Stop server" : "Host";
+			Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer ? "Stop server" : "Host";
 		}
 
 		#endregion
@@ -175,7 +160,7 @@ namespace Jogo25D.UI
 
 		public void OnPvpPressed()
 		{
-			var localPlayer = NetworkManager?.GetLocalPlayer();
+			var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
 			if (localPlayer == null)
 			{
@@ -189,9 +174,9 @@ namespace Jogo25D.UI
 
 		public void UpdatePvpStatus()
 		{
-			var localPlayer = NetworkManager?.GetLocalPlayer();
+			var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
-			PvpButton.Text = localPlayer != null && localPlayer.Data.PvpEnabled ? "PvP" : "PvE";
+			Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.Data.PvpEnabled ? "PvP" : "PvE";
 		}
 
 		#endregion

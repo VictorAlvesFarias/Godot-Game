@@ -1,27 +1,30 @@
 using Godot;
+using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
 	public partial class StartUI : CanvasLayer
 	{
-		#region Node references
-
-		public Button PlayButton { get; set; }
-		public Button ExitButton { get; set; }
-
-		#endregion
-
 		#region Godot implementation
 
 		public override void _Ready()
 		{
 			Layer = 20;
 
-			PlayButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PlayButton");
-			ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
+			// Fica escondida ate o Bootstrap validar todos os nodes estaticos - e ele quem abre.
+			Visible = false;
 
-			PlayButton.Pressed += OnPlayPressed;
-			ExitButton.Pressed += OnExitPressed;
+			Game.WhenReady(Initialize);
+		}
+
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.StartUI.PlayButton.Node.Pressed += OnPlayPressed;
+			Game.Ui.StartUI.ExitButton.Node.Pressed += OnExitPressed;
 		}
 
 		#endregion
@@ -32,7 +35,7 @@ namespace Jogo25D.UI
 		{
 			Visible = false;
 
-			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
+			Game.Ui.WorldSelectUI.Node.Open();
 		}
 
 		public void OnExitPressed()

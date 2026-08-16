@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Systems;
@@ -44,7 +45,6 @@ namespace Jogo25D.Chunks
 
         #region Node references
 
-        public WorldManager WorldManager { get; set; }
 
         #endregion
 
@@ -61,7 +61,6 @@ namespace Jogo25D.Chunks
 
         public override void _Ready()
         {
-            WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
 
             if (IsServerAuthoritative())
             {
@@ -71,7 +70,7 @@ namespace Jogo25D.Chunks
 
         public override void _Process(double delta)
         {
-            if (!Enabled || !IsServerAuthoritative() || WorldManager == null)
+            if (!Enabled || !IsServerAuthoritative() || Game.Managers.WorldManager.Node == null)
             {
                 return;
             }
@@ -89,14 +88,14 @@ namespace Jogo25D.Chunks
             {
                 _isEvaluatingOverworld = true;
 
-                _ = EvaluateAsync(ChunkStreamingConstants.OVERWORLD_ID, WorldManager.OverworldParent, _loadedOverworld, _overworldState, _overworldLoadedPeers, () => _isEvaluatingOverworld = false);
+                _ = EvaluateAsync(ChunkStreamingConstants.OVERWORLD_ID, Game.Managers.WorldManager.Node.OverworldParent, _loadedOverworld, _overworldState, _overworldLoadedPeers, () => _isEvaluatingOverworld = false);
             }
 
             if (!_isEvaluatingUpsidedown)
             {
                 _isEvaluatingUpsidedown = true;
 
-                _ = EvaluateAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, WorldManager.UpsidedownParent, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, () => _isEvaluatingUpsidedown = false);
+                _ = EvaluateAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.WorldManager.Node.UpsidedownParent, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, () => _isEvaluatingUpsidedown = false);
             }
         }
 
@@ -302,7 +301,7 @@ namespace Jogo25D.Chunks
                 return cached;
             }
 
-            var dimensionParent = WorldManager?.ResolveDimensionParent(dimensionId);
+            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
             var layer = dimensionParent?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
             var baseLayer = dimensionParent?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
 
@@ -370,7 +369,7 @@ namespace Jogo25D.Chunks
         {
             foreach (var mutation in chunkState.Mutations)
             {
-                WorldManager?.ApplyChunkMutation(layer, mutation, dimensionId);
+                Game.Managers.WorldManager.Node?.ApplyChunkMutation(layer, mutation, dimensionId);
             }
         }
 
@@ -478,7 +477,7 @@ namespace Jogo25D.Chunks
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public async void LoadChunkReceive(string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
         {
-            var dimensionParent = WorldManager?.ResolveDimensionParent(dimensionId);
+            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
             var loaded = ResolveLoaded(dimensionId);
 
             if (dimensionParent == null || loaded.Contains(chunkCoord))
@@ -511,7 +510,7 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            var dimensionParent = WorldManager?.ResolveDimensionParent(dimensionId);
+            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
 
             if (dimensionParent == null)
             {

@@ -1,6 +1,7 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
 using System.Collections.Generic;
@@ -22,16 +23,11 @@ namespace Jogo25D.UI
 
 		#region Node references
 
-		public WorldManager NetworkManager { get; set; }
 
 		#endregion
 
 		#region Node children references
 
-		public GridContainer GridContainer { get; set; }
-		public LineEdit SearchInput { get; set; }
-		public Button ResetButton { get; set; }
-		public Label PointsLabel { get; set; }
 
 		#endregion
 
@@ -42,17 +38,8 @@ namespace Jogo25D.UI
 			Visible = false;
 			Layer = 20;
 			ProcessMode = ProcessModeEnum.Always;
-			PointsLabel = GetNode<Label>("Background/MainPanel/MarginContainer/Root/PointsLabel");
-			SearchInput = GetNode<LineEdit>("Background/MainPanel/MarginContainer/Root/Toolbar/SearchInput");
-			ResetButton = GetNode<Button>("Background/MainPanel/MarginContainer/Root/Toolbar/ResetButton");
-			GridContainer = GetNode<GridContainer>("Background/MainPanel/MarginContainer/Root/Scroll/GridContainer");
 
-			SearchInput.TextChanged += OnSearchTextChanged;
-			ResetButton.Pressed += OnResetPressed;
-
-			BuildGrid();
-
-			CallDeferred(nameof(FindLocalPlayer));
+			Game.WhenReady(Initialize);
 		}
 
 		public override void _Input(InputEvent @event)
@@ -93,19 +80,32 @@ namespace Jogo25D.UI
 
 		#region Core - Setup
 
+		private void Initialize()
+		{
+			Game.Ui.SkillTreeUI.SearchInput.Node.TextChanged += OnSearchTextChanged;
+			Game.Ui.SkillTreeUI.ResetButton.Node.Pressed += OnResetPressed;
+
+			BuildGrid();
+
+			FindLocalPlayer();
+		}
+
+		#endregion
+
+		#region Core - Setup
+
 		public void FindLocalPlayer()
 		{
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-			LocalPlayer = NetworkManager?.GetLocalPlayer();
+			LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 		}
 
 		private void BuildGrid()
 		{
-			var template = (Button)GridContainer.GetChild(0);
+			var template = (Button)Game.Ui.SkillTreeUI.GridContainer.Node.GetChild(0);
 
 			LockedStyle = template.GetThemeStylebox("disabled") as StyleBoxFlat;
 
-			var maxedStyleHolder = GetNodeOrNull<Panel>("Background/MaxedStyleHolder");
+			var maxedStyleHolder = Game.Ui.SkillTreeUI.MaxedStyleHolder.Node;
 
 			if (maxedStyleHolder == null)
 			{
@@ -143,7 +143,7 @@ namespace Jogo25D.UI
 
 			button.Pressed += delegate { OnNodePressed(nodeId); };
 
-			GridContainer.AddChild(button);
+			Game.Ui.SkillTreeUI.GridContainer.Node.AddChild(button);
 
 			NodeButtons[node.Id] = button;
 			NodeLevelLabels[node.Id] = levelLabel;
@@ -239,7 +239,7 @@ namespace Jogo25D.UI
 
 			var progress = LocalPlayer?.Data?.SkillTree;
 
-			PointsLabel.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
+			Game.Ui.SkillTreeUI.PointsLabel.Node.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
 
 			foreach (var nodeId in SkillTreeDB.GetAllIds())
 			{

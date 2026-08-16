@@ -1,7 +1,8 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Items;
@@ -36,15 +37,6 @@ namespace Jogo25D.UI
 
 		#region Node children references
 
-		public Label FpsLabel { get; set; }
-		public PanelContainer HealthBar { get; set; }
-		public PhysicalSizeTextureRect HealthBarBack { get; set; }
-		public RatioFillRect HealthBarFill { get; set; }
-		public ProgressBar LegacyHealthBar { get; set; }
-		public HBoxContainer AbilitiesContainer { get; set; }
-		public HBoxContainer EffectsContainer { get; set; }
-		public MinimapUI Minimap { get; set; }
-		public VBoxContainer HotkeysContainer { get; set; }
 		public Panel MiningHint { get; set; }
 		public Panel[] HotbarSlotPanels { get; } = new Panel[8];
 		public TextureRect[] HotbarIconRects { get; } = new TextureRect[8];
@@ -66,26 +58,22 @@ namespace Jogo25D.UI
 
         public override void _Ready()
 		{
-			FpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
-			LegacyHealthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/LegacyHealthBar");
-			HealthBar = GetNode<PanelContainer>("MarginContainer/VBoxContainer/HealthBar");
-			HealthBarBack = HealthBar.GetNode<PhysicalSizeTextureRect>("BarBack");
-			HealthBarFill = HealthBar.GetNode<RatioFillRect>("BarFill");
+			Game.WhenReady(Initialize);
+		}
 
-			AbilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
+        #endregion
 
-			var abilityTemplate = AbilitiesContainer.GetNodeOrNull<Panel>("AbilityTemplate");
+        #region Core - Setup
 
-			if (abilityTemplate != null)
-			{
-				abilityTemplate.Visible = false;
-			}
+        private void Initialize()
+		{
 
-			Minimap = GetNode<MinimapUI>("MarginContainer/TopRightColumn/MinimapPanel/Minimap");
 
-			HotkeysContainer = GetNode<VBoxContainer>("MarginContainer/TopRightColumn/HotkeysContainer");
+			Game.Ui.HudUI.AbilityTemplate.Node.Visible = false;
 
-			var hotkeySlot0 = HotkeysContainer.GetNode<Panel>("HotkeySlot0");
+
+
+			var hotkeySlot0 = Game.Ui.HudUI.HotkeySlot0.Node;
 
 			ConfigureHotkeyHint(hotkeySlot0, "I", CreateInventoryIcon());
 			ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "M", CreateMapIcon());
@@ -97,18 +85,12 @@ namespace Jogo25D.UI
 
 			MiningHint.Visible = false;
 
-			EffectsContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/EffectsContainer");
 
-			var effectTemplate = EffectsContainer.GetNodeOrNull<Panel>("EffectTemplate");
+			Game.Ui.HudUI.EffectTemplate.Node.Visible = false;
 
-			if (effectTemplate != null)
-			{
-				effectTemplate.Visible = false;
-			}
-
-			var hotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
-			var slot0 = hotbarContainer.GetNode<Panel>("Slot0");
-			var slot0Selected = hotbarContainer.GetNode<Panel>("Slot0Selected");
+			var hotbarContainer = Game.Ui.HudUI.HotbarContainer.Node;
+			var slot0 = Game.Ui.HudUI.Slot0.Node;
+			var slot0Selected = Game.Ui.HudUI.Slot0Selected.Node;
 
 			HotbarNormalStyle = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
 			HotbarSelectedStyle = slot0Selected.GetThemeStylebox("panel") as StyleBoxFlat;
@@ -136,6 +118,11 @@ namespace Jogo25D.UI
 			}
 			CallDeferred(nameof(FindLocalPlayer));
 		}
+
+        #endregion
+
+        #region Godot implementation
+
 		public override void _ExitTree()
 		{
 			if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
@@ -185,21 +172,21 @@ namespace Jogo25D.UI
 							RpcId(1, nameof(PingPong));
 						}
 
-						FpsLabel.Text = $"{fpsText} | Ping: {CurrentPing}ms";
+						Game.Ui.HudUI.FpsLabel.Node.Text = $"{fpsText} | Ping: {CurrentPing}ms";
 					}
 					else
 					{
-						FpsLabel.Text = $"{fpsText} | Ping: 0ms";
+						Game.Ui.HudUI.FpsLabel.Node.Text = $"{fpsText} | Ping: 0ms";
 					}
 				}
 				catch
 				{
-					FpsLabel.Text = fpsText;
+					Game.Ui.HudUI.FpsLabel.Node.Text = fpsText;
 				}
 			}
 			else
 			{
-				FpsLabel.Text = fpsText;
+				Game.Ui.HudUI.FpsLabel.Node.Text = fpsText;
 			}
 		}
 
@@ -242,28 +229,28 @@ namespace Jogo25D.UI
 
 		private void UpdateLegacyHealthBar(int maxHealth, int currentHealth)
 		{
-			LegacyHealthBar.MaxValue = maxHealth;
-			LegacyHealthBar.Value = currentHealth;
+			Game.Ui.HudUI.LegacyHealthBar.Node.MaxValue = maxHealth;
+			Game.Ui.HudUI.LegacyHealthBar.Node.Value = currentHealth;
 
 			var barWidth = maxHealth * 10f;
 
-			LegacyHealthBar.CustomMinimumSize = new Vector2(barWidth, 30f);
+			Game.Ui.HudUI.LegacyHealthBar.Node.CustomMinimumSize = new Vector2(barWidth, 30f);
 		}
 
 		private void LayoutHealthBar(int maxHealth, int currentHealth)
 		{
 			if (!HealthBarBaselineCaptured)
 			{
-				HealthBarBackBaselineSize = HealthBarBack.PhysicalSize;
+				HealthBarBackBaselineSize = Game.Ui.HudUI.HealthBarBack.Node.PhysicalSize;
 				HealthBarBaselineCaptured = true;
 			}
 
 			var pxPerHealth = HealthBarBackBaselineSize.X / 50f;
 			var growthPx = Mathf.Max(0f, maxHealth - 50f) * pxPerHealth;
 
-			HealthBarBack.PhysicalSize = HealthBarBackBaselineSize + new Vector2(growthPx, 0f);
+			Game.Ui.HudUI.HealthBarBack.Node.PhysicalSize = HealthBarBackBaselineSize + new Vector2(growthPx, 0f);
 
-			HealthBarFill.Ratio = maxHealth > 0 ? Mathf.Clamp((float)currentHealth / maxHealth, 0f, 1f) : 0f;
+			Game.Ui.HudUI.HealthBarFill.Node.Ratio = maxHealth > 0 ? Mathf.Clamp((float)currentHealth / maxHealth, 0f, 1f) : 0f;
 		}
 
 		public void FindLocalPlayer()
@@ -274,7 +261,7 @@ namespace Jogo25D.UI
 				LocalPlayer.InventoryChanged -= UpdateHotbar;
 			}
 
-			var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+			var worldManager = Game.Managers.WorldManager.Node;
 
 			LocalPlayer = worldManager?.GetLocalPlayer();
 
@@ -283,9 +270,9 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (Minimap != null && IsInstanceValid(Minimap))
+			if (Game.Ui.HudUI.Minimap.Node != null && IsInstanceValid(Game.Ui.HudUI.Minimap.Node))
 			{
-				Minimap.SetLocalPlayer(LocalPlayer);
+				Game.Ui.HudUI.Minimap.Node.SetLocalPlayer(LocalPlayer);
 			}
 
 			LocalPlayer.ItemEquipped += OnItemEquipped;
@@ -305,7 +292,7 @@ namespace Jogo25D.UI
 
 		public void BuildAbilitySlots()
 		{
-			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || AbilitiesContainer == null || AbilityTemplateMissing)
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || Game.Ui.HudUI.AbilitiesContainer.Node == null || AbilityTemplateMissing)
 			{
 				return;
 			}
@@ -321,9 +308,9 @@ namespace Jogo25D.UI
 				AbilityTimerLabels.Clear();
 				AbilityChargesLabels.Clear();
 
-				for (int i = AbilitiesContainer.GetChildCount() - 1; i >= 0; i--)
+				for (int i = Game.Ui.HudUI.AbilitiesContainer.Node.GetChildCount() - 1; i >= 0; i--)
 				{
-					if (AbilitiesContainer.GetChild(i) is Control c)
+					if (Game.Ui.HudUI.AbilitiesContainer.Node.GetChild(i) is Control c)
 					{
 						c.Visible = false;
 					}
@@ -339,16 +326,16 @@ namespace Jogo25D.UI
 			AbilityTimerLabels.Clear();
 			AbilityChargesLabels.Clear();
 
-			for (int i = AbilitiesContainer.GetChildCount() - 1; i >= 0; i--)
+			for (int i = Game.Ui.HudUI.AbilitiesContainer.Node.GetChildCount() - 1; i >= 0; i--)
 			{
-				var old = AbilitiesContainer.GetChild(i);
+				var old = Game.Ui.HudUI.AbilitiesContainer.Node.GetChild(i);
 
 				if (old.Name == "AbilityTemplate")
 				{
 					continue;
 				}
 
-				AbilitiesContainer.RemoveChild(old);
+				Game.Ui.HudUI.AbilitiesContainer.Node.RemoveChild(old);
 
 				old.QueueFree();
 			}
@@ -363,7 +350,7 @@ namespace Jogo25D.UI
 					break;
 				}
 
-				AbilitiesContainer.AddChild(slotViews.Panel);
+				Game.Ui.HudUI.AbilitiesContainer.Node.AddChild(slotViews.Panel);
 
 				var fillBar = slotViews.FillBar;
 
@@ -383,7 +370,7 @@ namespace Jogo25D.UI
 
 		public AbilitySlotViews CreateAbilitySlot()
 		{
-			var template = AbilitiesContainer.GetNodeOrNull<Panel>("AbilityTemplate");
+			var template = Game.Ui.HudUI.AbilityTemplate.Node;
 
 			if (template == null)
 			{
@@ -515,7 +502,7 @@ namespace Jogo25D.UI
 
 		public EffectSlotViews CreateEffectSlot()
 		{
-			var template = EffectsContainer.GetNodeOrNull<Panel>("EffectTemplate");
+			var template = Game.Ui.HudUI.EffectTemplate.Node;
 
 			if (template == null)
 			{
@@ -531,14 +518,14 @@ namespace Jogo25D.UI
 			var iconRect = panel.GetNode<TextureRect>("IconRect");
 			var timerLabel = panel.GetNode<Label>("TimerLabel");
 
-			EffectsContainer.AddChild(panel);
+			Game.Ui.HudUI.EffectsContainer.Node.AddChild(panel);
 
 			return new EffectSlotViews(panel, iconRect, timerLabel);
 		}
 
 		public void UpdateEffectIcons()
 		{
-			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || EffectsContainer == null || EffectTemplateMissing)
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || Game.Ui.HudUI.EffectsContainer.Node == null || EffectTemplateMissing)
 			{
 				return;
 			}
@@ -598,7 +585,7 @@ namespace Jogo25D.UI
 		{
 			var panel = (Panel)template.Duplicate();
 
-			HotkeysContainer.AddChild(panel);
+			Game.Ui.HudUI.HotkeysContainer.Node.AddChild(panel);
 
 			return panel;
 		}

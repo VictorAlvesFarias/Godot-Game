@@ -1,6 +1,7 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.Portals
@@ -16,7 +17,6 @@ namespace Jogo25D.Portals
 
         #region Node references
 
-        public WorldManager WorldManager { get; set; }
 
         #endregion
 
@@ -30,7 +30,6 @@ namespace Jogo25D.Portals
 
         public override void _Ready()
         {
-            WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
             PromptLabel = GetNodeOrNull<Label>("Labels/PromptLabel");
 
             BodyEntered += OnBodyEntered;
@@ -67,7 +66,7 @@ namespace Jogo25D.Portals
 
         private void RequestTrade()
         {
-            WorldManager?.TradeDimensionClientRequest();
+            Game.Managers.WorldManager.Node.TradeDimensionClientRequest();
         }
 
         private void OnBodyEntered(Node2D body)

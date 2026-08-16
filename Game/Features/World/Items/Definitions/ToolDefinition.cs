@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Core;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
@@ -119,11 +120,11 @@ namespace Jogo25D.Items
 
             if (portal != null)
             {
-                player.NetworkManager?.BreakPortalClientRequest(portal.Name, player.GetActiveDimensionId());
+                Game.Managers.WorldManager.Node.BreakPortalClientRequest(portal.Name, player.GetActiveDimensionId());
             }
             else
             {
-                player.NetworkManager?.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
+                Game.Managers.WorldManager.Node.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
             }
         }
 

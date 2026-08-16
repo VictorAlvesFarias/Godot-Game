@@ -4,6 +4,7 @@ using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
@@ -77,7 +78,6 @@ namespace Jogo25D.Characters
 
         #region Node references
 
-        public WorldManager NetworkManager { get; set; }
 
 		#endregion
 
@@ -133,7 +133,6 @@ namespace Jogo25D.Characters
 			GD.Print("[Player._Ready] Trying get Nodes");
 
 			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			NetworkManager = GetTree().Root.GetNode<WorldManager>(StaticNodePathsConstants.WorldManager);
 			Visuals = GetNodeOrNull<Node2D>("Visuals");
 			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
 			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
@@ -719,7 +718,7 @@ namespace Jogo25D.Characters
 
 		public string GetActiveDimensionId()
 		{
-			return GetParent() == NetworkManager?.OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
+			return GetParent() == Game.Managers.WorldManager.Node?.OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
 		}
 
 		public TileMapLayer GetActiveTileLayer()
@@ -1129,7 +1128,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (NetworkManager == null || !NetworkManager.PlaceBlockAuthoritative(cell, blockItemDef.BlockId, GetActiveDimensionId()))
+            if (Game.Managers.WorldManager.Node == null || !Game.Managers.WorldManager.Node.PlaceBlockAuthoritative(cell, blockItemDef.BlockId, GetActiveDimensionId()))
             {
                 return;
             }
@@ -1173,7 +1172,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (NetworkManager == null || !NetworkManager.PlacePortalAuthoritative(position, GetActiveDimensionId()))
+            if (Game.Managers.WorldManager.Node == null || !Game.Managers.WorldManager.Node.PlacePortalAuthoritative(position, GetActiveDimensionId()))
             {
                 return;
             }
@@ -1511,7 +1510,7 @@ namespace Jogo25D.Characters
 
 			var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
-			NetworkManager.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
+			Game.Managers.WorldManager.Node.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
 		}
 
 		public void DropItemRequest(long instanceId, int quantity)
@@ -1534,7 +1533,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var worldItem = NetworkManager.FindWorldItem(worldItemId);
+			var worldItem = Game.Managers.WorldManager.Node.FindWorldItem(worldItemId);
 
 			if (worldItem == null)
 			{
@@ -1548,7 +1547,7 @@ namespace Jogo25D.Characters
 				EmitSignal(SignalName.InventoryChanged);
 			}
 
-			NetworkManager.RemoveWorldItemRequest(worldItemId);
+			Game.Managers.WorldManager.Node.RemoveWorldItemRequest(worldItemId);
 		}
 
 		public void PickupItemRequest(long worldItemId)

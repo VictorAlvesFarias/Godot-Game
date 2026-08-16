@@ -1,14 +1,13 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class FullscreenMapUI : CanvasLayer
     {
-        public MinimapUI MapView { get; set; }
-        public MinimapUI HudMinimap { get; set; }
         public Player LocalPlayer { get; set; }
         public PlayerInput PlayerInput => LocalPlayer?.Input;
 
@@ -19,8 +18,7 @@ namespace Jogo25D.UI
             Layer = 15;
             Visible = false;
 
-            MapView = GetNode<MinimapUI>("Background/MapPanel/MapView");
-            MapView.ViewRadius = 4000f;
+            Game.WhenReady(() => Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = 4000f);
         }
 
         public override void _Input(InputEvent @event)
@@ -95,13 +93,13 @@ namespace Jogo25D.UI
 
         public void FindLocalPlayer()
         {
-            var worldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
+            var worldManager = Game.Managers.WorldManager.Node;
 
             LocalPlayer = worldManager?.GetLocalPlayer();
 
             if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
             {
-                MapView.SetLocalPlayer(LocalPlayer);
+                Game.Ui.FullscreenMapUI.MapView.Node.SetLocalPlayer(LocalPlayer);
             }
         }
 
@@ -109,21 +107,16 @@ namespace Jogo25D.UI
         {
             Visible = !Visible;
 
-            if (HudMinimap == null || !IsInstanceValid(HudMinimap))
-            {
-                HudMinimap = GetTree().Root.GetNodeOrNull<MinimapUI>("Main/Ui/HudUI/MarginContainer/MinimapPanel/Minimap");
-            }
-
             if (Visible)
             {
-                MapView.PanOffset = Vector2.Zero;
+                Game.Ui.FullscreenMapUI.MapView.Node.PanOffset = Vector2.Zero;
 
                 PlayerInput?.AddBlocker("map");
 
-                if (HudMinimap != null)
+                if (Game.Ui.HudUI.Minimap.Node != null)
                 {
-                    HudMinimap.SetProcess(false);
-                    HudMinimap.Visible = false;
+                    Game.Ui.HudUI.Minimap.Node.SetProcess(false);
+                    Game.Ui.HudUI.Minimap.Node.Visible = false;
                 }
             }
             else
@@ -132,27 +125,27 @@ namespace Jogo25D.UI
 
                 PlayerInput?.RemoveBlocker("map");
 
-                if (HudMinimap != null)
+                if (Game.Ui.HudUI.Minimap.Node != null)
                 {
-                    HudMinimap.SetProcess(true);
-                    HudMinimap.Visible = true;
+                    Game.Ui.HudUI.Minimap.Node.SetProcess(true);
+                    Game.Ui.HudUI.Minimap.Node.Visible = true;
                 }
             }
         }
 
         public void Zoom(float delta)
         {
-            MapView.ViewRadius = Mathf.Clamp(MapView.ViewRadius + delta, 400f, 12000f);
+            Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = Mathf.Clamp(Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius + delta, 400f, 12000f);
         }
 
         public void PanDrag(Vector2 screenDelta)
         {
-            if (MapView.LastScale <= 0f)
+            if (Game.Ui.FullscreenMapUI.MapView.Node.LastScale <= 0f)
             {
                 return;
             }
 
-            MapView.PanOffset -= screenDelta / MapView.LastScale;
+            Game.Ui.FullscreenMapUI.MapView.Node.PanOffset -= screenDelta / Game.Ui.FullscreenMapUI.MapView.Node.LastScale;
         }
     }
 }

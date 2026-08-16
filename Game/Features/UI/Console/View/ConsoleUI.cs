@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Items;
 using Jogo25D.Systems;
 using System;
@@ -28,23 +29,11 @@ namespace Jogo25D.UI
 
 		#region Node references
 
-		public WorldManager WorldManager { get; set; }
 
 		#endregion
 
 		#region Node children references
 
-		public ScrollContainer HistoryScroll { get; set; }
-		public VBoxContainer HistoryContainer { get; set; }
-		public Panel SuggestionsPanel { get; set; }
-		public HBoxContainer SuggestionsBar { get; set; }
-		public LineEdit InputField { get; set; }
-		public Label TemplateNormal { get; set; }
-		public Label TemplateEcho { get; set; }
-		public Label TemplateInfo { get; set; }
-		public Label TemplateError { get; set; }
-		public Label TemplateSuccess { get; set; }
-		public Button SuggestionTemplate { get; set; }
 
 		#endregion
 
@@ -52,59 +41,40 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			HistoryScroll = GetNode<ScrollContainer>("Background/Margin/VBoxContainer/HistoryScroll");
-			HistoryContainer = GetNode<VBoxContainer>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer");
-			SuggestionsPanel = GetNode<Panel>("Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel");
-			SuggestionsBar = GetNode<HBoxContainer>("Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel/Margin/SuggestionsBar");
-			InputField = GetNode<LineEdit>("Background/Margin/VBoxContainer/InputContainer/InputPanel/Margin/InputRow/Input");
+			Game.WhenReady(Initialize);
+		}
 
-			TemplateNormal = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Normal");
-			TemplateEcho = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Echo");
-			TemplateInfo = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Info");
-			TemplateError = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Error");
-			TemplateSuccess = GetNode<Label>("Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer/Success");
-			SuggestionTemplate = GetNodeOrNull<Button>("Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel/Margin/SuggestionsBar/SuggestionTemplate");
+		#endregion
 
-			TemplateNormal.Visible = false;
-			TemplateEcho.Visible = false;
-			TemplateInfo.Visible = false;
-			TemplateError.Visible = false;
-			TemplateSuccess.Visible = false;
+		#region Core - Setup
 
-			if (SuggestionTemplate == null)
-			{
-				GD.PushError("ConsoleUI: SuggestionTemplate não encontrado em SuggestionsBar.");
-			}
-			else
-			{
-				SuggestionTemplate.Visible = false;
-			}
+		private void Initialize()
+		{
+			Game.Ui.ConsoleUI.TemplateNormal.Node.Visible = false;
+			Game.Ui.ConsoleUI.TemplateEcho.Node.Visible = false;
+			Game.Ui.ConsoleUI.TemplateInfo.Node.Visible = false;
+			Game.Ui.ConsoleUI.TemplateError.Node.Visible = false;
+			Game.Ui.ConsoleUI.TemplateSuccess.Node.Visible = false;
+			Game.Ui.ConsoleUI.SuggestionTemplate.Node.Visible = false;
 
-			var suggestionHighlightHolder = GetNodeOrNull<Panel>("Background/SuggestionHighlightHolder");
+			SuggestionHighlightStyle = Game.Ui.ConsoleUI.SuggestionHighlightHolder.Node.GetThemeStylebox("panel") as StyleBoxFlat;
+			Game.Ui.ConsoleUI.SuggestionHighlightHolder.Node.Visible = false;
 
-			if (suggestionHighlightHolder == null)
-			{
-				GD.PushError("ConsoleUI: SuggestionHighlightHolder não encontrado em Background.");
-			}
-			else
-			{
-				SuggestionHighlightStyle = suggestionHighlightHolder.GetThemeStylebox("panel") as StyleBoxFlat;
-				suggestionHighlightHolder.Visible = false;
-			}
+			Game.Ui.ConsoleUI.InputField.Node.TextChanged += OnInputChanged;
+			Game.Ui.ConsoleUI.InputField.Node.TextSubmitted += OnInputSubmitted;
 
-			InputField.TextChanged   += OnInputChanged;
-			InputField.TextSubmitted += OnInputSubmitted;
+			SuggestionNormalStyle = Game.Ui.ConsoleUI.InputField.Node.GetThemeStylebox("normal");
 
-			SuggestionNormalStyle = InputField.GetThemeStylebox("normal");
-
-			WorldManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-
-			LocalPlayer = WorldManager?.GetLocalPlayer();
+			LocalPlayer = Game.Managers.WorldManager.Node.GetLocalPlayer();
 
 			RegisterCommands();
 
 			PrintInfo("Console carregado. Digite 'help' para listar os comandos.");
 		}
+
+		#endregion
+
+		#region Godot implementation
 
 		public override void _Input(InputEvent @event)
 		{
@@ -139,14 +109,14 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (key.Keycode == Key.Right && SuggestionsPanel.Visible)
+			if (key.Keycode == Key.Right && Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible)
 			{
 				NavigateSuggestions(1);
 				GetViewport().SetInputAsHandled();
 				return;
 			}
 
-			if (key.Keycode == Key.Left && SuggestionsPanel.Visible)
+			if (key.Keycode == Key.Left && Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible)
 			{
 				NavigateSuggestions(-1);
 				GetViewport().SetInputAsHandled();
@@ -181,7 +151,7 @@ namespace Jogo25D.UI
 			if (IsOpen)
 			{
 				LocalPlayer?.Input?.AddBlocker("console");
-				InputField.CallDeferred(LineEdit.MethodName.GrabFocus);
+				Game.Ui.ConsoleUI.InputField.Node.CallDeferred(LineEdit.MethodName.GrabFocus);
 			}
 			else
 			{
@@ -193,7 +163,7 @@ namespace Jogo25D.UI
 		{
 			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
-				LocalPlayer = WorldManager?.GetLocalPlayer();
+				LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 			}
 		}
 
@@ -221,9 +191,9 @@ namespace Jogo25D.UI
 
 			ExecuteRaw(text.Trim());
 
-			InputField.Text = "";
-			SuggestionsPanel.Visible = false;
-			InputField.CallDeferred(LineEdit.MethodName.GrabFocus);
+			Game.Ui.ConsoleUI.InputField.Node.Text = "";
+			Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible = false;
+			Game.Ui.ConsoleUI.InputField.Node.CallDeferred(LineEdit.MethodName.GrabFocus);
 		}
 
 		public void ExecuteRaw(string raw)
@@ -252,9 +222,9 @@ namespace Jogo25D.UI
 
 		public void RefreshSuggestions(string text)
 		{
-			foreach (Node child in SuggestionsBar.GetChildren())
+			foreach (Node child in Game.Ui.ConsoleUI.SuggestionsBar.Node.GetChildren())
 			{
-				if (child == SuggestionTemplate)
+				if (child == Game.Ui.ConsoleUI.SuggestionTemplate.Node)
 				{
 					continue;
 				}
@@ -265,32 +235,32 @@ namespace Jogo25D.UI
 			var suggestions = ComputeSuggestions(text);
 			if (suggestions.Count == 0)
 			{
-				SuggestionsPanel.Visible = false;
+				Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible = false;
 				return;
 			}
 
-			if (SuggestionTemplate == null)
+			if (Game.Ui.ConsoleUI.SuggestionTemplate.Node == null)
 			{
-				GD.PushError("ConsoleUI: SuggestionTemplate não encontrado, não é possível montar sugestões.");
-				SuggestionsPanel.Visible = false;
+				GD.PushError("ConsoleUI: Game.Ui.ConsoleUI.SuggestionTemplate.Node não encontrado, não é possível montar sugestões.");
+				Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible = false;
 				return;
 			}
 
 			SuggestionIndex = 0;
-			SuggestionsPanel.Visible = true;
+			Game.Ui.ConsoleUI.SuggestionsPanel.Node.Visible = true;
 
 			var newButtons = new List<Button>();
 			foreach (string s in suggestions.Take(8))
 			{
-				var btn = (Button)SuggestionTemplate.Duplicate();
+				var btn = (Button)Game.Ui.ConsoleUI.SuggestionTemplate.Node.Duplicate();
 				btn.Text = s;
 				btn.Visible = true;
 				btn.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f));
 				btn.AddThemeFontSizeOverride("font_size", 13);
 
 				string captured = s;
-				btn.Pressed += () => ApplySuggestion(captured, InputField.Text);
-				SuggestionsBar.AddChild(btn);
+				btn.Pressed += () => ApplySuggestion(captured, Game.Ui.ConsoleUI.InputField.Node.Text);
+				Game.Ui.ConsoleUI.SuggestionsBar.Node.AddChild(btn);
 				newButtons.Add(btn);
 			}
 
@@ -299,7 +269,7 @@ namespace Jogo25D.UI
 
 		public void NavigateSuggestions(int dir)
 		{
-			var buttons = SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
+			var buttons = Game.Ui.ConsoleUI.SuggestionsBar.Node.GetChildren().OfType<Button>().Where(b => b != Game.Ui.ConsoleUI.SuggestionTemplate.Node).ToList();
 			if (buttons.Count == 0)
 			{
 				return;
@@ -311,7 +281,7 @@ namespace Jogo25D.UI
 
 		public void UpdateSuggestionHighlight(List<Button> buttons = null)
 		{
-			buttons ??= SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
+			buttons ??= Game.Ui.ConsoleUI.SuggestionsBar.Node.GetChildren().OfType<Button>().Where(b => b != Game.Ui.ConsoleUI.SuggestionTemplate.Node).ToList();
 			for (int i = 0; i < buttons.Count; i++)
 			{
 				bool selected = i == SuggestionIndex;
@@ -347,7 +317,7 @@ namespace Jogo25D.UI
 
 		public void ApplySelectedSuggestion()
 		{
-			var buttons = SuggestionsBar.GetChildren().OfType<Button>().Where(b => b != SuggestionTemplate).ToList();
+			var buttons = Game.Ui.ConsoleUI.SuggestionsBar.Node.GetChildren().OfType<Button>().Where(b => b != Game.Ui.ConsoleUI.SuggestionTemplate.Node).ToList();
 			if (buttons.Count == 0)
 			{
 				return;
@@ -356,7 +326,7 @@ namespace Jogo25D.UI
 			int idx = SuggestionIndex >= 0 ? SuggestionIndex : 0;
 			if (idx < buttons.Count)
 			{
-				ApplySuggestion(buttons[idx].Text, InputField.Text);
+				ApplySuggestion(buttons[idx].Text, Game.Ui.ConsoleUI.InputField.Node.Text);
 			}
 		}
 
@@ -366,18 +336,18 @@ namespace Jogo25D.UI
 
 			if (parts.Length == 0 || (parts.Length == 1 && !currentText.EndsWith(' ')))
 			{
-				InputField.Text = suggestion + " ";
+				Game.Ui.ConsoleUI.InputField.Node.Text = suggestion + " ";
 			}
 			else
 			{
 				string prefix = currentText.EndsWith(' ')
 					? string.Join(" ", parts) + " "
 					: string.Join(" ", parts.SkipLast(1)) + " ";
-				InputField.Text = prefix + suggestion + " ";
+				Game.Ui.ConsoleUI.InputField.Node.Text = prefix + suggestion + " ";
 			}
 
-			InputField.CaretColumn = InputField.Text.Length;
-			RefreshSuggestions(InputField.Text);
+			Game.Ui.ConsoleUI.InputField.Node.CaretColumn = Game.Ui.ConsoleUI.InputField.Node.Text.Length;
+			RefreshSuggestions(Game.Ui.ConsoleUI.InputField.Node.Text);
 		}
 
 		#endregion
@@ -393,13 +363,13 @@ namespace Jogo25D.UI
 
 			if (HistoryIndex == -1)
 			{
-				SavedInput = InputField.Text;
+				SavedInput = Game.Ui.ConsoleUI.InputField.Node.Text;
 			}
 
 			HistoryIndex = Math.Clamp(HistoryIndex + dir, -1, CommandHistory.Count - 1);
 
-			InputField.Text = HistoryIndex == -1 ? SavedInput : CommandHistory[HistoryIndex];
-			InputField.CaretColumn = InputField.Text.Length;
+			Game.Ui.ConsoleUI.InputField.Node.Text = HistoryIndex == -1 ? SavedInput : CommandHistory[HistoryIndex];
+			Game.Ui.ConsoleUI.InputField.Node.CaretColumn = Game.Ui.ConsoleUI.InputField.Node.Text.Length;
 		}
 
 		#endregion
@@ -416,16 +386,16 @@ namespace Jogo25D.UI
 			var label = template.Duplicate() as Label;
 			label.Text = text;
 			label.Visible = true;
-			HistoryContainer.AddChild(label);
+			Game.Ui.ConsoleUI.HistoryContainer.Node.AddChild(label);
 
-			Callable.From(() => { HistoryScroll.ScrollVertical = int.MaxValue; }).CallDeferred();
+			Callable.From(() => { Game.Ui.ConsoleUI.HistoryScroll.Node.ScrollVertical = int.MaxValue; }).CallDeferred();
 		}
 
-		internal void PrintNormal(string text) => PrintWith(TemplateNormal,  text);
-		internal void PrintEcho(string text) => PrintWith(TemplateEcho,    text);
-		internal void PrintInfo(string text) => PrintWith(TemplateInfo,    text);
-		internal void PrintError(string text) => PrintWith(TemplateError,   text);
-		internal void PrintSuccess(string text) => PrintWith(TemplateSuccess, text);
+		internal void PrintNormal(string text) => PrintWith(Game.Ui.ConsoleUI.TemplateNormal.Node,  text);
+		internal void PrintEcho(string text) => PrintWith(Game.Ui.ConsoleUI.TemplateEcho.Node,    text);
+		internal void PrintInfo(string text) => PrintWith(Game.Ui.ConsoleUI.TemplateInfo.Node,    text);
+		internal void PrintError(string text) => PrintWith(Game.Ui.ConsoleUI.TemplateError.Node,   text);
+		internal void PrintSuccess(string text) => PrintWith(Game.Ui.ConsoleUI.TemplateSuccess.Node, text);
 
 		#endregion
 
@@ -470,7 +440,7 @@ namespace Jogo25D.UI
 				description: "Limpa o histÃ³rico do console",
 				execute: (_, _) =>
 				{
-					foreach (Node child in HistoryContainer.GetChildren())
+					foreach (Node child in Game.Ui.ConsoleUI.HistoryContainer.Node.GetChildren())
 					{
 						if (child is CanvasItem ci && ci.Visible)
 						{
@@ -558,7 +528,7 @@ namespace Jogo25D.UI
 				description: "Teleporta o jogador local para (x, y) e reseta a vida - padrÃ£o (0, 0)",
 				execute: (args, console) =>
 				{
-					if (WorldManager == null)
+					if (Game.Managers.WorldManager.Node == null)
 					{
 						console.PrintError("WorldManager nÃ£o encontrado.");
 
@@ -582,7 +552,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					WorldManager.TeleportPlayerClientRequest(new Vector2(x, y));
+					Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(new Vector2(x, y));
 
 					console.PrintSuccess($"Teleportando para ({x}, {y})...");
 				},
@@ -595,14 +565,14 @@ namespace Jogo25D.UI
 				description: "Reseta o jogador local (mesma coisa que morrer e reviver - vida cheia, de volta pro spawn)",
 				execute: (_, console) =>
 				{
-					if (WorldManager == null)
+					if (Game.Managers.WorldManager.Node == null)
 					{
 						console.PrintError("WorldManager nÃ£o encontrado.");
 
 						return;
 					}
 
-					WorldManager.TeleportPlayerClientRequest(Vector2.Zero);
+					Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(Vector2.Zero);
 
 					console.PrintSuccess("Jogador resetado.");
 				},
@@ -675,14 +645,14 @@ namespace Jogo25D.UI
 				description: "Troca o jogador local para a prÃ³xima dimensÃ£o",
 				execute: (_, console) =>
 				{
-					if (WorldManager == null)
+					if (Game.Managers.WorldManager.Node == null)
 					{
 						console.PrintError("WorldManager nÃ£o encontrado.");
 
 						return;
 					}
 
-					WorldManager.TradeDimensionClientRequest();
+					Game.Managers.WorldManager.Node.TradeDimensionClientRequest();
 
 					console.PrintSuccess("Trocando de dimensÃ£o.");
 				},

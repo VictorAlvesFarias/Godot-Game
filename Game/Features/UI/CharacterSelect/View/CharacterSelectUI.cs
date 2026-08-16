@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Systems;
 using System.Collections.Generic;
@@ -16,12 +17,6 @@ namespace Jogo25D.UI
 
 		#region Node references
 
-		public LineEdit SearchInput { get; set; }
-		public VBoxContainer ListContainer { get; set; }
-		public Button BackButton { get; set; }
-		public Button CreateCharacterButton { get; set; }
-		public WorldManager NetworkManager { get; set; }
-		public SaveManager Saves { get; set; }
 
 		#endregion
 
@@ -32,15 +27,18 @@ namespace Jogo25D.UI
 			Layer = 20;
 			Visible = false;
 
-			SearchInput = GetNode<LineEdit>("MarginContainer/Root/SearchInput");
-			ListContainer = GetNode<VBoxContainer>("MarginContainer/Root/ListScroll/ListContainer");
-			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
-			CreateCharacterButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateCharacterButton");
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
 
-			BackButton.Pressed += OnBackPressed;
-			CreateCharacterButton.Pressed += OnCreateCharacterPressed;
+			Game.WhenReady(Initialize);
+		}
+
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.CharacterSelectUI.BackButton.Node.Pressed += OnBackPressed;
+			Game.Ui.CharacterSelectUI.CreateCharacterButton.Node.Pressed += OnCreateCharacterPressed;
 		}
 
 		#endregion
@@ -52,9 +50,9 @@ namespace Jogo25D.UI
 			CurrentContext = CharacterSelectContext.OwnWorld;
 			OnLocalSelected = character =>
 			{
-				NetworkManager.PendingCharacter = character;
+				Game.Managers.WorldManager.Node.PendingCharacter = character;
 
-				NetworkManager.EnterPendingWorld();
+				Game.Managers.WorldManager.Node.EnterPendingWorld();
 			};
 
 			ShowLocal();
@@ -63,7 +61,7 @@ namespace Jogo25D.UI
 		public void OpenForPeerJoin()
 		{
 			CurrentContext = CharacterSelectContext.PeerJoinLocal;
-			OnLocalSelected = character => NetworkManager.SubmitLocalCharacterForJoin(character);
+			OnLocalSelected = character => Game.Managers.WorldManager.Node.SubmitLocalCharacterForJoin(character);
 
 			ShowLocal();
 		}
@@ -114,7 +112,7 @@ namespace Jogo25D.UI
 
 			ClearList();
 
-			var characters = Saves?.ListLocalCharacters() ?? new List<CharacterSaveData>();
+			var characters = Game.Managers.SaveManager.Node?.ListLocalCharacters() ?? new List<CharacterSaveData>();
 
 			foreach (var character in characters)
 			{
@@ -128,11 +126,11 @@ namespace Jogo25D.UI
 					},
 					() =>
 					{
-						Saves?.DeleteLocalCharacter(character.CharacterId);
+						Game.Managers.SaveManager.Node?.DeleteLocalCharacter(character.CharacterId);
 
-						if (NetworkManager.PendingCharacter?.CharacterId == character.CharacterId)
+						if (Game.Managers.WorldManager.Node.PendingCharacter?.CharacterId == character.CharacterId)
 						{
-							NetworkManager.PendingCharacter = null;
+							Game.Managers.WorldManager.Node.PendingCharacter = null;
 						}
 
 						ShowLocal();
@@ -140,7 +138,7 @@ namespace Jogo25D.UI
 
 				if (row != null)
 				{
-					ListContainer.AddChild(row);
+					Game.Ui.CharacterSelectUI.ListContainer.Node.AddChild(row);
 				}
 			}
 		}
@@ -161,22 +159,22 @@ namespace Jogo25D.UI
 					name,
 					() =>
 					{
-						NetworkManager.SelectServerCharacterRequest(characterId);
+						Game.Managers.WorldManager.Node.SelectServerCharacterRequest(characterId);
 
 						Close();
 					},
-					() => NetworkManager.DeleteServerCharacterRequest(characterId));
+					() => Game.Managers.WorldManager.Node.DeleteServerCharacterRequest(characterId));
 
 				if (row != null)
 				{
-					ListContainer.AddChild(row);
+					Game.Ui.CharacterSelectUI.ListContainer.Node.AddChild(row);
 				}
 			}
 		}
 
 		private void ClearList()
 		{
-			foreach (var child in ListContainer.GetChildren())
+			foreach (var child in Game.Ui.CharacterSelectUI.ListContainer.Node.GetChildren())
 			{
 				if (child.Name == "CharacterRowTemplate")
 				{
@@ -189,11 +187,11 @@ namespace Jogo25D.UI
 
 		private Control CreateCharacterRow(string title, System.Action onSelect, System.Action onDelete)
 		{
-			var template = ListContainer.GetNodeOrNull<HBoxContainer>("CharacterRowTemplate");
+			var template = Game.Ui.CharacterSelectUI.CharacterRowTemplate.Node;
 
 			if (template == null)
 			{
-				GD.PushError("CharacterSelectUI: CharacterRowTemplate não encontrado em ListContainer.");
+				GD.PushError("CharacterSelectUI: CharacterRowTemplate não encontrado em Game.Ui.CharacterSelectUI.ListContainer.Node.");
 
 				return null;
 			}
@@ -221,7 +219,7 @@ namespace Jogo25D.UI
 		{
 			Close();
 
-			var createUi = GetTree().Root.GetNodeOrNull<CreateCharacterUI>("Main/Ui/CreateCharacterUI");
+			var createUi = Game.Ui.CreateCharacterUI.Node;
 
 			if (CurrentContext == CharacterSelectContext.PeerJoinServer)
 			{
@@ -240,17 +238,17 @@ namespace Jogo25D.UI
 			switch (CurrentContext)
 			{
 				case CharacterSelectContext.OwnWorld:
-					NetworkManager.PendingWorld = null;
+					Game.Managers.WorldManager.Node.PendingWorld = null;
 
-					GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
+					Game.Ui.WorldSelectUI.Node?.Open();
 
 					break;
 
 				case CharacterSelectContext.PeerJoinLocal:
 				case CharacterSelectContext.PeerJoinServer:
-					NetworkManager.Disconnect();
+					Game.Managers.WorldManager.Node.Disconnect();
 
-					GetTree().Root.GetNodeOrNull<MultiplayerUI>("Main/Ui/MultiplayerUI")?.Open();
+					Game.Ui.MultiplayerUI.Node?.Open();
 
 					break;
 			}

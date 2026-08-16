@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
@@ -8,16 +9,6 @@ namespace Jogo25D.UI
 	{
 		public bool IsServerMode { get; set; }
 
-		#region Node references
-
-		public LineEdit NameInput { get; set; }
-		public Button BackButton { get; set; }
-		public Button CreateButton { get; set; }
-		public WorldManager NetworkManager { get; set; }
-		public SaveManager Saves { get; set; }
-
-		#endregion
-
 		#region Godot implementation
 
 		public override void _Ready()
@@ -25,14 +16,17 @@ namespace Jogo25D.UI
 			Layer = 20;
 			Visible = false;
 
-			NameInput = GetNode<LineEdit>("MarginContainer/Root/NameInput");
-			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
-			CreateButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateButton");
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
+			Game.WhenReady(Initialize);
+		}
 
-			BackButton.Pressed += OnBackPressed;
-			CreateButton.Pressed += OnCreatePressed;
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.CreateCharacterUI.BackButton.Node.Pressed += OnBackPressed;
+			Game.Ui.CreateCharacterUI.CreateButton.Node.Pressed += OnCreatePressed;
 		}
 
 		#endregion
@@ -66,32 +60,32 @@ namespace Jogo25D.UI
 		{
 			Visible = true;
 
-			NameInput.Text = "";
+			Game.Ui.CreateCharacterUI.NameInput.Node.Text = "";
 		}
 
 		private void OnCreatePressed()
 		{
-			var name = string.IsNullOrWhiteSpace(NameInput.Text) ? "Sem nome" : NameInput.Text.Trim();
+			var name = string.IsNullOrWhiteSpace(Game.Ui.CreateCharacterUI.NameInput.Node.Text) ? "Sem nome" : Game.Ui.CreateCharacterUI.NameInput.Node.Text.Trim();
 
 			Close();
 
 			if (IsServerMode)
 			{
-				NetworkManager.CreateServerCharacterRequest(name);
+				Game.Managers.WorldManager.Node.CreateServerCharacterRequest(name);
 
 				return;
 			}
 
-			var character = Saves?.CreateLocalCharacter(name);
+			var character = Game.Managers.SaveManager.Node?.CreateLocalCharacter(name);
 
-			GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI")?.CompleteLocalCreation(character);
+			Game.Ui.CharacterSelectUI.Node?.CompleteLocalCreation(character);
 		}
 
 		private void OnBackPressed()
 		{
 			Close();
 
-			var characterSelect = GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI");
+			var characterSelect = Game.Ui.CharacterSelectUI.Node;
 
 			if (IsServerMode)
 			{

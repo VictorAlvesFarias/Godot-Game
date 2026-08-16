@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
@@ -28,7 +29,6 @@ namespace Jogo25D.UI
 
         #region Node references
 
-        public ChunkStreamingManager ChunkStreamingManager { get; set; }
 
         #endregion
 
@@ -38,7 +38,6 @@ namespace Jogo25D.UI
         {
             CustomMinimumSize = new Vector2(160, 160);
 
-            ChunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
 
             if (Multiplayer != null &&
                 Multiplayer.MultiplayerPeer != null &&
@@ -141,9 +140,9 @@ namespace Jogo25D.UI
             Texture2D texture = null;
             var origin = Vector2I.Zero;
 
-            if (ChunkStreamingManager != null)
+            if (Game.Managers.ChunkStreamingManager.Node != null)
             {
-                texture = ChunkStreamingManager.GetDiscoveredTexture(layer, out origin);
+                texture = Game.Managers.ChunkStreamingManager.Node.GetDiscoveredTexture(layer, out origin);
             }
 
             if (texture != null)

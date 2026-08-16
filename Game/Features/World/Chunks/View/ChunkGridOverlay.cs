@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 
 namespace Jogo25D.Chunks
 {
@@ -7,7 +8,6 @@ namespace Jogo25D.Chunks
     {
         public static bool Enabled { get; set; }
 
-        private ChunkStreamingManager _chunkStreamingManager;
         private float _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * 32f;
 
         #region Godot implementation
@@ -17,7 +17,6 @@ namespace Jogo25D.Chunks
             Visible = Enabled;
             ZIndex = 100;
 
-            _chunkStreamingManager = GetTree().Root.GetNodeOrNull<ChunkStreamingManager>(StaticNodePathsConstants.ChunkStreamingManager);
         }
 
         public override void _UnhandledInput(InputEvent @event)
@@ -48,9 +47,9 @@ namespace Jogo25D.Chunks
         {
             var center = GlobalPosition;
 
-            if (_chunkStreamingManager != null)
+            if (Game.Managers.ChunkStreamingManager.Node != null)
             {
-                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * _chunkStreamingManager.TileSize;
+                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * Game.Managers.ChunkStreamingManager.Node.TileSize;
             }
 
             var ChunkPixels = _chunkPixels;

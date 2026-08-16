@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Systems;
 
@@ -9,15 +10,6 @@ namespace Jogo25D.UI
 	{
 		#region Node references
 
-		public LineEdit NameInput { get; set; }
-		public SpinBox AutosaveInput { get; set; }
-		public OptionButton ModeOption { get; set; }
-		public Label KeyLabel { get; set; }
-		public LineEdit KeyInput { get; set; }
-		public Button BackButton { get; set; }
-		public Button CreateButton { get; set; }
-		public WorldManager NetworkManager { get; set; }
-		public SaveManager Saves { get; set; }
 
 		#endregion
 
@@ -28,23 +20,23 @@ namespace Jogo25D.UI
 			Layer = 20;
 			Visible = false;
 
-			NameInput = GetNode<LineEdit>("MarginContainer/Root/NameInput");
-			AutosaveInput = GetNode<SpinBox>("MarginContainer/Root/AutosaveInput");
-			ModeOption = GetNode<OptionButton>("MarginContainer/Root/ModeOption");
-			KeyLabel = GetNode<Label>("MarginContainer/Root/KeyLabel");
-			KeyInput = GetNode<LineEdit>("MarginContainer/Root/KeyInput");
-			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
-			CreateButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateButton");
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-			Saves = GetTree().Root.GetNodeOrNull<SaveManager>(StaticNodePathsConstants.SaveManager);
 
-			ModeOption.Clear();
-			ModeOption.AddItem("Personagem Local", (int)WorldCharacterMode.LocalCharacters);
-			ModeOption.AddItem("Personagem de Servidor", (int)WorldCharacterMode.ServerCharacters);
-			ModeOption.ItemSelected += OnModeSelected;
+			Game.WhenReady(Initialize);
+		}
 
-			BackButton.Pressed += OnBackPressed;
-			CreateButton.Pressed += OnCreatePressed;
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.CreateWorldUI.ModeOption.Node.Clear();
+			Game.Ui.CreateWorldUI.ModeOption.Node.AddItem("Personagem Local", (int)WorldCharacterMode.LocalCharacters);
+			Game.Ui.CreateWorldUI.ModeOption.Node.AddItem("Personagem de Servidor", (int)WorldCharacterMode.ServerCharacters);
+			Game.Ui.CreateWorldUI.ModeOption.Node.ItemSelected += OnModeSelected;
+
+			Game.Ui.CreateWorldUI.BackButton.Node.Pressed += OnBackPressed;
+			Game.Ui.CreateWorldUI.CreateButton.Node.Pressed += OnCreatePressed;
 		}
 
 		#endregion
@@ -55,14 +47,14 @@ namespace Jogo25D.UI
 		{
 			Visible = true;
 
-			NameInput.Text = "";
-			AutosaveInput.Value = 5;
-			KeyInput.Text = "";
+			Game.Ui.CreateWorldUI.NameInput.Node.Text = "";
+			Game.Ui.CreateWorldUI.AutosaveInput.Node.Value = 5;
+			Game.Ui.CreateWorldUI.KeyInput.Node.Text = "";
 
-			ModeOption.Select(0);
+			Game.Ui.CreateWorldUI.ModeOption.Node.Select(0);
 
-			KeyLabel.Visible = false;
-			KeyInput.Visible = false;
+			Game.Ui.CreateWorldUI.KeyLabel.Node.Visible = false;
+			Game.Ui.CreateWorldUI.KeyInput.Node.Visible = false;
 		}
 
 		public void Close()
@@ -76,38 +68,38 @@ namespace Jogo25D.UI
 
 		private void OnModeSelected(long index)
 		{
-			var isServerMode = (WorldCharacterMode)ModeOption.GetItemId((int)index) == WorldCharacterMode.ServerCharacters;
+			var isServerMode = (WorldCharacterMode)Game.Ui.CreateWorldUI.ModeOption.Node.GetItemId((int)index) == WorldCharacterMode.ServerCharacters;
 
-			KeyLabel.Visible = isServerMode;
-			KeyInput.Visible = isServerMode;
+			Game.Ui.CreateWorldUI.KeyLabel.Node.Visible = isServerMode;
+			Game.Ui.CreateWorldUI.KeyInput.Node.Visible = isServerMode;
 		}
 
 		private void OnCreatePressed()
 		{
-			var name = string.IsNullOrWhiteSpace(NameInput.Text) ? "Mundo sem nome" : NameInput.Text.Trim();
-			var mode = (WorldCharacterMode)ModeOption.GetSelectedId();
-			var key = mode == WorldCharacterMode.ServerCharacters ? KeyInput.Text.Trim() : "";
+			var name = string.IsNullOrWhiteSpace(Game.Ui.CreateWorldUI.NameInput.Node.Text) ? "Mundo sem nome" : Game.Ui.CreateWorldUI.NameInput.Node.Text.Trim();
+			var mode = (WorldCharacterMode)Game.Ui.CreateWorldUI.ModeOption.Node.GetSelectedId();
+			var key = mode == WorldCharacterMode.ServerCharacters ? Game.Ui.CreateWorldUI.KeyInput.Node.Text.Trim() : "";
 
-			var world = Saves?.CreateWorld(name, (long)GD.Randi(), mode, key, (int)AutosaveInput.Value);
+			var world = Game.Managers.SaveManager.Node?.CreateWorld(name, (long)GD.Randi(), mode, key, (int)Game.Ui.CreateWorldUI.AutosaveInput.Node.Value);
 
 			if (world == null)
 			{
 				return;
 			}
 
-			NetworkManager.PendingWorld = world;
-			NetworkManager.PendingWorldIsDefault = false;
+			Game.Managers.WorldManager.Node.PendingWorld = world;
+			Game.Managers.WorldManager.Node.PendingWorldIsDefault = false;
 
 			Close();
 
-			GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI")?.OpenForOwnWorld();
+			Game.Ui.CharacterSelectUI.Node?.OpenForOwnWorld();
 		}
 
 		private void OnBackPressed()
 		{
 			Close();
 
-			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
+			Game.Ui.WorldSelectUI.Node?.Open();
 		}
 
 		#endregion

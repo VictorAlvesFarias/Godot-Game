@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
@@ -8,15 +9,6 @@ namespace Jogo25D.UI
 	{
 		#region Node references
 
-		public LineEdit SearchInput { get; set; }
-		public VBoxContainer ListContainer { get; set; }
-		public LineEdit AddressInput { get; set; }
-		public Button ConnectButton { get; set; }
-		public Button WorldsButton { get; set; }
-		public Button BackButton { get; set; }
-		public Label StatusLabel { get; set; }
-		public WorldManager NetworkManager { get; set; }
-		public ErrorModalUI ErrorModal { get; set; }
 
 		#endregion
 
@@ -33,27 +25,27 @@ namespace Jogo25D.UI
 			Layer = 20;
 			Visible = false;
 
-			SearchInput = GetNode<LineEdit>("MarginContainer/Root/SearchInput");
-			ListContainer = GetNode<VBoxContainer>("MarginContainer/Root/ListScroll/ListContainer");
-			AddressInput = GetNode<LineEdit>("MarginContainer/Root/ConnectRow/AddressInput");
-			ConnectButton = GetNode<Button>("MarginContainer/Root/ConnectRow/ConnectButton");
-			WorldsButton = GetNode<Button>("MarginContainer/Root/ButtonRow/WorldsButton");
-			BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
-			StatusLabel = GetNode<Label>("MarginContainer/Root/StatusLabel");
-			NetworkManager = GetTree().Root.GetNodeOrNull<WorldManager>(StaticNodePathsConstants.WorldManager);
-			ErrorModal = GetTree().Root.GetNodeOrNull<ErrorModalUI>("Main/Ui/ErrorModalUI");
-
-			ConnectButton.Pressed += OnConnectPressed;
-			WorldsButton.Pressed += OnWorldsPressed;
-			BackButton.Pressed += OnBackPressed;
-
-			NetworkManager.ServerCharacterListAvailable += OnServerCharacterListAvailable;
 
 			ConnectTimeoutTimer = new Timer();
 			ConnectTimeoutTimer.OneShot = true;
 			ConnectTimeoutTimer.WaitTime = 8f;
 			ConnectTimeoutTimer.Timeout += OnConnectTimeout;
 			AddChild(ConnectTimeoutTimer);
+
+			Game.WhenReady(Initialize);
+		}
+
+		#endregion
+
+		#region Core - Setup
+
+		private void Initialize()
+		{
+			Game.Ui.MultiplayerUI.ConnectButton.Node.Pressed += OnConnectPressed;
+			Game.Ui.MultiplayerUI.WorldsButton.Node.Pressed += OnWorldsPressed;
+			Game.Ui.MultiplayerUI.BackButton.Node.Pressed += OnBackPressed;
+
+			Game.Managers.WorldManager.Node.ServerCharacterListAvailable += OnServerCharacterListAvailable;
 
 			PopulateMockList();
 		}
@@ -64,11 +56,11 @@ namespace Jogo25D.UI
 
 		private void PopulateMockList()
 		{
-			var template = ListContainer.GetNodeOrNull<PanelContainer>("ServerRowTemplate");
+			var template = Game.Ui.MultiplayerUI.ServerRowTemplate.Node;
 
 			if (template == null)
 			{
-				GD.PushError("MultiplayerUI: ServerRowTemplate não encontrado em ListContainer.");
+				GD.PushError("MultiplayerUI: ServerRowTemplate não encontrado em Game.Ui.MultiplayerUI.ListContainer.Node.");
 
 				return;
 			}
@@ -83,7 +75,7 @@ namespace Jogo25D.UI
 				var label = row.GetNode<Label>("MarginContainer/HBoxContainer/WorldNameLabel");
 				label.Text = worldName;
 
-				ListContainer.AddChild(row);
+				Game.Ui.MultiplayerUI.ListContainer.Node.AddChild(row);
 			}
 		}
 
@@ -97,10 +89,7 @@ namespace Jogo25D.UI
 
 			StopWaitingForConnection();
 
-			if (StatusLabel != null)
-			{
-				StatusLabel.Text = "";
-			}
+			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "";
 		}
 
 		public void Close()
@@ -114,29 +103,29 @@ namespace Jogo25D.UI
 
 		public void OnConnectPressed()
 		{
-			if (NetworkManager == null)
+			if (Game.Managers.WorldManager.Node == null)
 			{
 				return;
 			}
 
-			var address = NetworkManager.SpawnWorldAndJoin(AddressInput.Text.Trim());
+			var address = Game.Managers.WorldManager.Node.SpawnWorldAndJoin(Game.Ui.MultiplayerUI.AddressInput.Node.Text.Trim());
 
 			if (string.IsNullOrEmpty(address))
 			{
-				var reason = string.IsNullOrEmpty(NetworkManager.LastJoinError)
+				var reason = string.IsNullOrEmpty(Game.Managers.WorldManager.Node.LastJoinError)
 					? "Não foi possível conectar."
-					: NetworkManager.LastJoinError;
+					: Game.Managers.WorldManager.Node.LastJoinError;
 
-				ErrorModal?.ShowError(reason);
+				Game.Ui.ErrorModalUI.Node?.ShowError(reason);
 
 				return;
 			}
 
-			ConnectButton.Disabled = true;
-			StatusLabel.Text = "Conectando...";
+			Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = true;
+			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "Conectando...";
 
-			NetworkManager.ConnectionSucceeded += OnConnectionSucceeded;
-			NetworkManager.ConnectionAttemptFailed += OnConnectionAttemptFailed;
+			Game.Managers.WorldManager.Node.ConnectionSucceeded += OnConnectionSucceeded;
+			Game.Managers.WorldManager.Node.ConnectionAttemptFailed += OnConnectionAttemptFailed;
 
 			ConnectTimeoutTimer.Start();
 		}
@@ -152,54 +141,54 @@ namespace Jogo25D.UI
 		{
 			StopWaitingForConnection();
 
-			StatusLabel.Text = "";
+			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "";
 
-			ErrorModal?.ShowError("Falha ao conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
+			Game.Ui.ErrorModalUI.Node?.ShowError("Falha ao conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
 		}
 
 		private void OnConnectTimeout()
 		{
-			NetworkManager?.Disconnect();
+			Game.Managers.WorldManager.Node?.Disconnect();
 
 			StopWaitingForConnection();
 
-			StatusLabel.Text = "";
+			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "";
 
-			ErrorModal?.ShowError("Tempo esgotado tentando conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
+			Game.Ui.ErrorModalUI.Node?.ShowError("Tempo esgotado tentando conectar. Verifique o IP:Porta, e se a porta está liberada no firewall/roteador de quem está hospedando.");
 		}
 
 		private void StopWaitingForConnection()
 		{
 			ConnectTimeoutTimer.Stop();
 
-			if (NetworkManager != null)
+			if (Game.Managers.WorldManager.Node != null)
 			{
-				NetworkManager.ConnectionSucceeded -= OnConnectionSucceeded;
-				NetworkManager.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
+				Game.Managers.WorldManager.Node.ConnectionSucceeded -= OnConnectionSucceeded;
+				Game.Managers.WorldManager.Node.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
 			}
 
-			ConnectButton.Disabled = false;
+			Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = false;
 		}
 
 		public void OnWorldsPressed()
 		{
 			Close();
 
-			GetTree().Root.GetNodeOrNull<WorldSelectUI>("Main/Ui/WorldSelectUI")?.Open();
+			Game.Ui.WorldSelectUI.Node?.Open();
 		}
 
 		private void OnServerCharacterListAvailable(string multiplayerKey, Godot.Collections.Array summaries)
 		{
 			Close();
 
-			GetTree().Root.GetNodeOrNull<CharacterSelectUI>("Main/Ui/CharacterSelectUI")?.OpenServer(multiplayerKey, summaries);
+			Game.Ui.CharacterSelectUI.Node?.OpenServer(multiplayerKey, summaries);
 		}
 
 		public void OnBackPressed()
 		{
 			Close();
 
-			var startUi = GetTree().Root.GetNodeOrNull<StartUI>("Main/Ui/StartUI");
+			var startUi = Game.Ui.StartUI.Node;
 
 			if (startUi != null)
 			{

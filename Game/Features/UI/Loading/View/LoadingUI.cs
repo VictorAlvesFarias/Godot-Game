@@ -1,20 +1,23 @@
 using Godot;
+using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
     public partial class LoadingUI : CanvasLayer
     {
-        public Label StatusLabel { get; set; }
+        #region Dinamic properties
 
         public float DotsTimer { get; set; }
         public int DotsCount { get; set; }
+
+        #endregion
+
+        #region Godot implementation
 
         public override void _Ready()
         {
             Layer = 30;
             Visible = false;
-
-            StatusLabel = GetNode<Label>("Background/CenterContainer/StatusLabel");
         }
 
         public override void _Process(double delta)
@@ -34,14 +37,20 @@ namespace Jogo25D.UI
             DotsTimer = 0f;
             DotsCount = (DotsCount + 1) % 4;
 
-            StatusLabel.Text = "Carregando" + new string('.', DotsCount);
+            Game.Ui.LoadingUI.StatusLabel.Node.Text = "Carregando" + new string('.', DotsCount);
         }
+
+        #endregion
+
+        #region Public API
 
         public void Open()
         {
             DotsTimer = 0f;
             DotsCount = 0;
-            StatusLabel.Text = "Carregando";
+
+            Game.Ui.LoadingUI.StatusLabel.Node.Text = "Carregando";
+
             Visible = true;
         }
 
@@ -49,5 +58,7 @@ namespace Jogo25D.UI
         {
             Visible = false;
         }
+
+        #endregion
     }
 }
