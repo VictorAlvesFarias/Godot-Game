@@ -1,4 +1,5 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Core;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
@@ -120,11 +121,11 @@ namespace Jogo25D.Items
 
             if (portal != null)
             {
-                Game.Managers.WorldManager.Node.BreakPortalClientRequest(portal.Name, player.GetActiveDimensionId());
+                portal.BreakClientRequest();
             }
             else
             {
-                Game.Managers.WorldManager.Node.BreakBlockClientRequest(targetCell, player.GetActiveDimensionId());
+                (layer as TerrainLayer)?.BreakBlockClientRequest(targetCell);
             }
         }
 

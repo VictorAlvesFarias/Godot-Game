@@ -1,8 +1,8 @@
-using Godot;
+﻿using Godot;
 
 namespace Jogo25D.UI
 {
-	public partial class ScreenManager : Node
+	public partial class WindowManager : Node
 	{
 		public override void _Input(InputEvent @event)
 		{

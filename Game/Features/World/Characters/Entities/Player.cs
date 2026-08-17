@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
@@ -718,7 +718,7 @@ namespace Jogo25D.Characters
 
 		public string GetActiveDimensionId()
 		{
-			return GetParent() == Game.Managers.WorldManager.Node?.OverworldParent ? ChunkStreamingConstants.OVERWORLD_ID : ChunkStreamingConstants.UPSIDEDOWN_ID;
+			return Game.Managers.DimensionManager.Node.ResolveDimensionIdOf(this);
 		}
 
 		public TileMapLayer GetActiveTileLayer()
@@ -1128,7 +1128,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (Game.Managers.WorldManager.Node == null || !Game.Managers.WorldManager.Node.PlaceBlockAuthoritative(cell, blockItemDef.BlockId, GetActiveDimensionId()))
+            if (GetActiveTileLayer() is not TerrainLayer activeLayer || !activeLayer.PlaceBlockAuthoritative(cell, blockItemDef.BlockId))
             {
                 return;
             }
@@ -1172,7 +1172,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (Game.Managers.WorldManager.Node == null || !Game.Managers.WorldManager.Node.PlacePortalAuthoritative(position, GetActiveDimensionId()))
+            if (Game.Managers.DimensionManager.Node == null || !Game.Managers.DimensionManager.Node.SpawnPropAuthoritative("portal", position, GetActiveDimensionId()))
             {
                 return;
             }
@@ -1510,7 +1510,7 @@ namespace Jogo25D.Characters
 
 			var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
-			Game.Managers.WorldManager.Node.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
+			Game.Managers.DimensionManager.Node.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
 		}
 
 		public void DropItemRequest(long instanceId, int quantity)
@@ -1533,7 +1533,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var worldItem = Game.Managers.WorldManager.Node.FindWorldItem(worldItemId);
+			var worldItem = Game.Managers.DimensionManager.Node.FindWorldItem(worldItemId);
 
 			if (worldItem == null)
 			{
@@ -1547,7 +1547,7 @@ namespace Jogo25D.Characters
 				EmitSignal(SignalName.InventoryChanged);
 			}
 
-			Game.Managers.WorldManager.Node.RemoveWorldItemRequest(worldItemId);
+			Game.Managers.DimensionManager.Node.RemoveWorldItemRequest(worldItemId);
 		}
 
 		public void PickupItemRequest(long worldItemId)
@@ -1687,6 +1687,142 @@ namespace Jogo25D.Characters
 		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
 		{
 			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
+		}
+
+		#endregion
+		#region Core - Rpc - Teleporte e dimensao
+
+		// O alvo do RPC e o proprio player: nao precisa procurar ninguem no grupo.
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void TeleportReceive(Vector2 position)
+		{
+			var dimensions = Game.Managers.DimensionManager.Node;
+			var upsidedownParent = dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID);
+
+			if (GetParent<Node2D>() != upsidedownParent && upsidedownParent != null)
+			{
+				Reparent(upsidedownParent, true);
+
+				if (Data.EquippedItemId > 0)
+				{
+					EquipItemRequest(Data.EquippedItemId);
+				}
+			}
+
+			GlobalPosition = position;
+			Velocity = Vector2.Zero;
+			Data.CurrentHealth = GetMaxHealth();
+			Sprite?.Play("idle");
+			Input?.RemoveBlocker("dead");
+
+			if (IsOwner())
+			{
+				dimensions.ShowOnly(ChunkStreamingConstants.UPSIDEDOWN_ID);
+			}
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void TeleportServerReceive(Vector2 position)
+		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			Rpc(nameof(TeleportReceive), position);
+		}
+
+		public async void TeleportClientRequest(Vector2 position)
+		{
+			var loadingUi = Game.Ui.LoadingUI.Node;
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), position);
+			}
+
+			RpcId(1, nameof(TeleportServerReceive), position);
+
+			loadingUi?.Close();
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void TradeDimensionReceive()
+		{
+			var dimensions = Game.Managers.DimensionManager.Node;
+			var currentDimensionId = dimensions.ResolveDimensionIdOf(this);
+			var nextDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
+				? ChunkStreamingConstants.UPSIDEDOWN_ID
+				: ChunkStreamingConstants.OVERWORLD_ID;
+
+			var nextParent = dimensions.ResolveParent(nextDimensionId);
+
+			if (nextParent == null)
+			{
+				return;
+			}
+
+			Reparent(nextParent, true);
+
+			LastDimensionTradeMsec = Time.GetTicksMsec();
+
+			if (Data.EquippedItemId > 0)
+			{
+				EquipItemRequest(Data.EquippedItemId);
+			}
+
+			if (IsOwner())
+			{
+				dimensions.ShowOnly(nextDimensionId);
+			}
+		}
+
+		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+		public void TradeDimensionServerReceive()
+		{
+			if (!Multiplayer.IsServer())
+			{
+				return;
+			}
+
+			Rpc(nameof(TradeDimensionReceive));
+		}
+
+		public async void TradeDimensionClientRequest()
+		{
+			var dimensions = Game.Managers.DimensionManager.Node;
+			var currentDimensionId = dimensions.ResolveDimensionIdOf(this);
+			var targetDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
+				? ChunkStreamingConstants.UPSIDEDOWN_ID
+				: ChunkStreamingConstants.OVERWORLD_ID;
+
+			var loadingUi = Game.Ui.LoadingUI.Node;
+
+			loadingUi?.Open();
+
+			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+
+			if (chunkStreamingManager != null)
+			{
+				await chunkStreamingManager.PreloadSpawnAreaAsync(targetDimensionId, dimensions.ResolveParent(targetDimensionId), Position);
+			}
+
+			RpcId(1, nameof(TradeDimensionServerReceive));
+
+			loadingUi?.Close();
+		}
+
+		#endregion
+
+		#region Core - Busca
+
+		public static Player FindByPeerId(SceneTree tree, long peerId)
+		{
+			return tree?.GetNodesInGroup("players").OfType<Player>().FirstOrDefault(player => player.PeerId == peerId);
 		}
 
 		#endregion

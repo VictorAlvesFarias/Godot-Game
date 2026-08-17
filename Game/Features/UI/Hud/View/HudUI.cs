@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace Jogo25D.UI
 {
-	public partial class HudUI : CanvasLayer
+	public partial class HudUI : ScreenUI
 	{
 		#region Dinamic properties
 
@@ -56,7 +56,9 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
-        public override void _Ready()
+        public override bool IsOverlay => true;
+
+		public override void _Ready()
 		{
 			Game.WhenReady(Initialize);
 		}

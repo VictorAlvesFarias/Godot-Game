@@ -1,8 +1,9 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Systems;
@@ -18,7 +19,9 @@ namespace Jogo25D.Chunks
         #region Dinamic properties
 
         public bool Enabled { get; set; } = false;
-        public int TileSize => OverworldLayer?.TileSet?.TileSize.X ?? UpsidedownLayer?.TileSet?.TileSize.X ?? 32;
+        public int TileSize => Dimensions.TileSize;
+
+        private static DimensionManager Dimensions => Game.Managers.DimensionManager.Node;
         public float EvaluateTimer { get; set; }
         public long WorldSeed { get; set; }
 
@@ -45,15 +48,6 @@ namespace Jogo25D.Chunks
 
         #region Node references
 
-
-        #endregion
-
-        #region Node children references
-
-        public TerrainLayer OverworldLayer { get; set; }
-        public TerrainLayer UpsidedownLayer { get; set; }
-        public TerrainLayer OverworldBaseLayer { get; set; }
-        public TerrainLayer UpsidedownBaseLayer { get; set; }
 
         #endregion
 
@@ -88,14 +82,14 @@ namespace Jogo25D.Chunks
             {
                 _isEvaluatingOverworld = true;
 
-                _ = EvaluateAsync(ChunkStreamingConstants.OVERWORLD_ID, Game.Managers.WorldManager.Node.OverworldParent, _loadedOverworld, _overworldState, _overworldLoadedPeers, () => _isEvaluatingOverworld = false);
+                _ = EvaluateAsync(ChunkStreamingConstants.OVERWORLD_ID, Dimensions.ResolveParent(ChunkStreamingConstants.OVERWORLD_ID), _loadedOverworld, _overworldState, _overworldLoadedPeers, () => _isEvaluatingOverworld = false);
             }
 
             if (!_isEvaluatingUpsidedown)
             {
                 _isEvaluatingUpsidedown = true;
 
-                _ = EvaluateAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.WorldManager.Node.UpsidedownParent, _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, () => _isEvaluatingUpsidedown = false);
+                _ = EvaluateAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), _loadedUpsidedown, _upsidedownState, _upsidedownLoadedPeers, () => _isEvaluatingUpsidedown = false);
             }
         }
 
@@ -270,14 +264,14 @@ namespace Jogo25D.Chunks
 
         public Texture2D GetDiscoveredTexture(TileMapLayer layer, out Vector2I origin)
         {
-            if (layer == OverworldLayer)
+            if (layer == Dimensions.ResolveLayer(ChunkStreamingConstants.OVERWORLD_ID))
             {
                 origin = _discoveredOverworld.Origin;
 
                 return _discoveredOverworld.GetTexture();
             }
 
-            if (layer == UpsidedownLayer)
+            if (layer == Dimensions.ResolveLayer(ChunkStreamingConstants.UPSIDEDOWN_ID))
             {
                 origin = _discoveredUpsidedown.Origin;
 
@@ -292,40 +286,6 @@ namespace Jogo25D.Chunks
         // Ponto único de resolução de layer: Base/Compose sempre existem por padrão (pré-criadas
         // em Overworld.tscn/Upsidedown.tscn, com TileSet e script já atribuídos), então aqui é só
         // resolver e cachear - nunca cria layer em runtime.
-        public TerrainLayer ResolveLayer(string dimensionId)
-        {
-            var cached = dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldLayer : UpsidedownLayer;
-
-            if (cached != null && IsInstanceValid(cached))
-            {
-                return cached;
-            }
-
-            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
-            var layer = dimensionParent?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
-            var baseLayer = dimensionParent?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
-
-            if (dimensionId == ChunkStreamingConstants.OVERWORLD_ID)
-            {
-                OverworldLayer = layer;
-                OverworldBaseLayer = baseLayer;
-            }
-            else
-            {
-                UpsidedownLayer = layer;
-                UpsidedownBaseLayer = baseLayer;
-            }
-
-            return layer;
-        }
-
-        public TerrainLayer ResolveBaseLayer(string dimensionId)
-        {
-            ResolveLayer(dimensionId);
-
-            return dimensionId == ChunkStreamingConstants.OVERWORLD_ID ? OverworldBaseLayer : UpsidedownBaseLayer;
-        }
-
         public BiomeDefinition ResolveBiome(string dimensionId, int worldX, int worldY)
         {
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(WorldSeed, dimensionId, worldX, worldY));
@@ -333,8 +293,8 @@ namespace Jogo25D.Chunks
 
         private async Task LoadChunkAsync(string dimensionId, Vector2I chunkCoord, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, HashSet<long> requestingPeers)
         {
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
+            var layer = Dimensions.ResolveLayer(dimensionId);
+            var baseLayer = Dimensions.ResolveBaseLayer(dimensionId);
 
             loaded.Add(chunkCoord);
 
@@ -369,7 +329,7 @@ namespace Jogo25D.Chunks
         {
             foreach (var mutation in chunkState.Mutations)
             {
-                Game.Managers.WorldManager.Node?.ApplyChunkMutation(layer, mutation, dimensionId);
+                layer.ApplyChunkMutation(mutation);
             }
         }
 
@@ -433,8 +393,8 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
+            var layer = Dimensions.ResolveLayer(dimensionId);
+            var baseLayer = Dimensions.ResolveBaseLayer(dimensionId);
 
             await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
@@ -477,7 +437,7 @@ namespace Jogo25D.Chunks
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public async void LoadChunkReceive(string dimensionId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
         {
-            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
+            var dimensionParent = Dimensions.ResolveParent(dimensionId);
             var loaded = ResolveLoaded(dimensionId);
 
             if (dimensionParent == null || loaded.Contains(chunkCoord))
@@ -485,8 +445,8 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
+            var layer = Dimensions.ResolveLayer(dimensionId);
+            var baseLayer = Dimensions.ResolveBaseLayer(dimensionId);
 
             loaded.Add(chunkCoord);
 
@@ -510,15 +470,15 @@ namespace Jogo25D.Chunks
                 return;
             }
 
-            var dimensionParent = Game.Managers.WorldManager.Node?.ResolveDimensionParent(dimensionId);
+            var dimensionParent = Dimensions.ResolveParent(dimensionId);
 
             if (dimensionParent == null)
             {
                 return;
             }
 
-            var layer = ResolveLayer(dimensionId);
-            var baseLayer = ResolveBaseLayer(dimensionId);
+            var layer = Dimensions.ResolveLayer(dimensionId);
+            var baseLayer = Dimensions.ResolveBaseLayer(dimensionId);
 
             await _generator.EraseTilesAsync(layer, baseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
         }
@@ -636,8 +596,6 @@ namespace Jogo25D.Chunks
             _upsidedownLoadedPeers.Clear();
             _discoveredOverworld.Reset();
             _discoveredUpsidedown.Reset();
-            OverworldLayer = null;
-            UpsidedownLayer = null;
             EvaluateTimer = 0f;
         }
 

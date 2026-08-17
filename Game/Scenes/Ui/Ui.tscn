@@ -8,7 +8,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/WorldSelect/WorldSelect.tscn" id="8_worldselect"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Multiplayer/Multiplayer.tscn" id="9_multiplayer"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Common/ErrorModal.tscn" id="10_errormodal"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/SkillTree/SkillTree.tscn" id="11_skilltree"]
+[ext_resource type="PackedScene" uid="uid://bli0n422x5i74" path="res://Scenes/Ui/SkillTree/SkillTree.tscn" id="11_skilltree"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/DeathScreen/DeathScreen.tscn" id="12_deathscreen"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Loading/Loading.tscn" id="13_loading"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Map/Map.tscn" id="14_map"]
@@ -20,10 +20,13 @@
 
 [node name="PauseUI" parent="." unique_id=512637494 instance=ExtResource("1_0nsdw")]
 layer = 8
+visible = false
 
 [node name="HudUI" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
+visible = false
 
 [node name="InventoryUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
+visible = false
 
 [node name="ConsoleUI" parent="." unique_id=1263919536 instance=ExtResource("4_console")]
 visible = false
@@ -31,21 +34,31 @@ visible = false
 [node name="StartUI" parent="." unique_id=1015168659 instance=ExtResource("7_start")]
 
 [node name="WorldSelectUI" parent="." unique_id=857368935 instance=ExtResource("8_worldselect")]
+visible = false
 
 [node name="MultiplayerUI" parent="." unique_id=2144691780 instance=ExtResource("9_multiplayer")]
+visible = false
 
-[node name="ErrorModalUI" parent="." instance=ExtResource("10_errormodal")]
+[node name="ErrorModalUI" parent="." unique_id=1186814461 instance=ExtResource("10_errormodal")]
+visible = false
 
-[node name="SkillTreeUI" parent="." instance=ExtResource("11_skilltree")]
+[node name="SkillTreeUI" parent="." unique_id=814967282 instance=ExtResource("11_skilltree")]
+visible = false
 
-[node name="DeathScreenUI" parent="." instance=ExtResource("12_deathscreen")]
+[node name="DeathScreenUI" parent="." unique_id=50380233 instance=ExtResource("12_deathscreen")]
+visible = false
 
-[node name="LoadingUI" parent="." instance=ExtResource("13_loading")]
+[node name="LoadingUI" parent="." unique_id=1340005292 instance=ExtResource("13_loading")]
+visible = false
 
-[node name="FullscreenMapUI" parent="." instance=ExtResource("14_map")]
+[node name="FullscreenMapUI" parent="." unique_id=1636432684 instance=ExtResource("14_map")]
+visible = false
 
-[node name="CreateWorldUI" parent="." instance=ExtResource("15_createworld")]
+[node name="CreateWorldUI" parent="." unique_id=1064203936 instance=ExtResource("15_createworld")]
+visible = false
 
-[node name="CharacterSelectUI" parent="." instance=ExtResource("16_characterselect")]
+[node name="CharacterSelectUI" parent="." unique_id=1504689848 instance=ExtResource("16_characterselect")]
+visible = false
 
-[node name="CreateCharacterUI" parent="." instance=ExtResource("17_createcharacter")]
+[node name="CreateCharacterUI" parent="." unique_id=1773230627 instance=ExtResource("17_createcharacter")]
+visible = false

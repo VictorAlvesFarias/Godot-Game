@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-	public partial class SkillTreeUI : CanvasLayer
+	public partial class SkillTreeUI : ScreenUI
 	{
 		#region Dinamic properties
 
@@ -33,10 +33,10 @@ namespace Jogo25D.UI
 
 		#region Godot implementation
 
+		public override bool IsOverlay => true;
+
 		public override void _Ready()
 		{
-			Visible = false;
-			Layer = 20;
 			ProcessMode = ProcessModeEnum.Always;
 
 			Game.WhenReady(Initialize);
@@ -175,7 +175,14 @@ namespace Jogo25D.UI
 
 		public void ToggleSkillTree()
 		{
-			Visible = !Visible;
+			if (Visible)
+			{
+				Game.Managers.RouterManager.Node.Close(this);
+			}
+			else
+			{
+				Game.Managers.RouterManager.Node.Open(this);
+			}
 
 			if (Visible)
 			{

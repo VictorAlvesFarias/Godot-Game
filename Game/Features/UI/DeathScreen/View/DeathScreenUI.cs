@@ -1,10 +1,10 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-    public partial class DeathScreenUI : CanvasLayer
+    public partial class DeathScreenUI : ScreenUI
     {
         #region Dinamic properties
 
@@ -14,11 +14,11 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
-        public override void _Ready()
+        public override bool IsOverlay => true;
+
+		public override void _Ready()
         {
-            Layer = 25;
             ProcessMode = ProcessModeEnum.Always;
-            Visible = false;
 
             Game.WhenReady(Initialize);
         }
@@ -32,10 +32,19 @@ namespace Jogo25D.UI
                 return;
             }
 
-            Visible = LocalPlayer.Data.CurrentHealth <= 0
+            var isDead = LocalPlayer.Data.CurrentHealth <= 0
                 && LocalPlayer.Sprite != null
                 && LocalPlayer.Sprite.Animation == "dead"
                 && !LocalPlayer.Sprite.IsPlaying();
+
+            if (isDead)
+            {
+                Game.Managers.RouterManager.Node.Open(this);
+            }
+            else
+            {
+                Game.Managers.RouterManager.Node.Close(this);
+            }
         }
 
         #endregion
@@ -60,7 +69,7 @@ namespace Jogo25D.UI
 
         public void OnRevivePressed()
         {
-            Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(Vector2.Zero);
+            Game.Managers.WorldManager.Node.GetLocalPlayer()?.TeleportClientRequest(Vector2.Zero);
         }
 
         #endregion

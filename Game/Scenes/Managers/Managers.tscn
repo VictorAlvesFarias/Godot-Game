@@ -1,17 +1,33 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/World/Screen/Managers/ScreenManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" path="res://Features/UI/Window/Managers/WindowManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" path="res://Features/UI/Router/Managers/RouterManager.cs" id="9_router"]
 [ext_resource type="Script" path="res://Features/World/Core/Managers/WorldManager.cs" id="3_b871k"]
 [ext_resource type="Script" path="res://Features/World/Chunks/Managers/ChunkStreamingManager.cs" id="4_chunkstream"]
+[ext_resource type="Script" path="res://Features/World/Dimensions/Managers/DimensionManager.cs" id="6_dimension"]
+[ext_resource type="Script" path="res://Features/World/Network/Managers/NetworkManager.cs" id="7_network"]
+[ext_resource type="Script" path="res://Features/World/Session/Managers/SessionManager.cs" id="8_session"]
 [ext_resource type="Script" path="res://Features/World/Save/Managers/SaveManager.cs" id="5_savemanager"]
 
 [node name="Managers" type="Node" unique_id=940605774]
 
-[node name="ScreenManager" type="Node" parent="." unique_id=1758854771]
+[node name="WindowManager" type="Node" parent="." unique_id=1758854771]
 script = ExtResource("1_7ktwl")
+
+[node name="RouterManager" type="Node" parent="." unique_id=1758854772]
+script = ExtResource("9_router")
 
 [node name="WorldManager" type="Node" parent="." unique_id=1007702761]
 script = ExtResource("3_b871k")
+
+[node name="NetworkManager" type="Node" parent="." unique_id=1007702765]
+script = ExtResource("7_network")
+
+[node name="SessionManager" type="Node" parent="." unique_id=1007702766]
+script = ExtResource("8_session")
+
+[node name="DimensionManager" type="Node" parent="." unique_id=1007702764]
+script = ExtResource("6_dimension")
 
 [node name="ChunkStreamingManager" type="Node" parent="." unique_id=1007702762]
 script = ExtResource("4_chunkstream")

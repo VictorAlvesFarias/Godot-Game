@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -101,7 +101,7 @@ namespace Jogo25D.Core
 
         private void OpenStartScreen()
         {
-            Game.Ui.StartUI.Node.Visible = true;
+            Game.Managers.RouterManager.Node.Open(Game.Ui.StartUI.Node);
         }
 
         #endregion

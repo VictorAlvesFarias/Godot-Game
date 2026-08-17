@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Jogo25D.Core
 {
@@ -53,10 +53,13 @@ namespace Jogo25D.Core
             callbacks?.Invoke();
         }
 
+        // Chamado pelo Bootstrap no inicio do registro. NAO pode limpar ReadyCallbacks: o _Ready
+        // das telas roda ANTES do _Ready do Bootstrap (o Godot propaga de baixo pra cima), entao
+        // quando isso aqui executa a fila ja esta cheia de Initialize esperando. Limpar aqui
+        // descarta todos - e nenhum botao chega a ser ligado.
         internal static void Reset()
         {
             IsReady = false;
-            ReadyCallbacks = null;
         }
 
         #endregion
@@ -76,11 +79,18 @@ namespace Jogo25D.Core
 
             public static Godot.Node Node { get; internal set; }
 
-            public static class ScreenManager
+            public static class WindowManager
             {
-                public const string Path = "/root/Main/Managers/ScreenManager";
+                public const string Path = "/root/Main/Managers/WindowManager";
 
-                public static global::Jogo25D.UI.ScreenManager Node { get; internal set; }
+                public static global::Jogo25D.UI.WindowManager Node { get; internal set; }
+            }
+
+            public static class RouterManager
+            {
+                public const string Path = "/root/Main/Managers/RouterManager";
+
+                public static global::Jogo25D.UI.RouterManager Node { get; internal set; }
             }
 
             public static class WorldManager
@@ -88,6 +98,27 @@ namespace Jogo25D.Core
                 public const string Path = "/root/Main/Managers/WorldManager";
 
                 public static global::Jogo25D.Systems.WorldManager Node { get; internal set; }
+            }
+
+            public static class NetworkManager
+            {
+                public const string Path = "/root/Main/Managers/NetworkManager";
+
+                public static global::Jogo25D.Network.NetworkManager Node { get; internal set; }
+            }
+
+            public static class SessionManager
+            {
+                public const string Path = "/root/Main/Managers/SessionManager";
+
+                public static global::Jogo25D.Session.SessionManager Node { get; internal set; }
+            }
+
+            public static class DimensionManager
+            {
+                public const string Path = "/root/Main/Managers/DimensionManager";
+
+                public static global::Jogo25D.Dimensions.DimensionManager Node { get; internal set; }
             }
 
             public static class ChunkStreamingManager
@@ -745,6 +776,13 @@ namespace Jogo25D.Core
                     public const string Path = "/root/Main/Ui/CreateWorldUI/MarginContainer/Root/AutosaveInput";
 
                     public static Godot.SpinBox Node { get; internal set; }
+                }
+
+                public static class ProceduralCheck
+                {
+                    public const string Path = "/root/Main/Ui/CreateWorldUI/MarginContainer/Root/ProceduralCheck";
+
+                    public static Godot.CheckBox Node { get; internal set; }
                 }
 
                 public static class ModeOption

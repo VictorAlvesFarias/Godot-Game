@@ -1,12 +1,13 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Props;
 using Jogo25D.Systems;
 
 namespace Jogo25D.Portals
 {
-    public partial class Portal : Area2D
+    public partial class Portal : Prop
     {
         #region Dinamic properties
 
@@ -66,7 +67,7 @@ namespace Jogo25D.Portals
 
         private void RequestTrade()
         {
-            Game.Managers.WorldManager.Node.TradeDimensionClientRequest();
+            OverlappingLocalPlayer?.TradeDimensionClientRequest();
         }
 
         private void OnBodyEntered(Node2D body)

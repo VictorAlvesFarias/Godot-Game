@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -6,17 +6,17 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-    public partial class FullscreenMapUI : CanvasLayer
+    public partial class FullscreenMapUI : ScreenUI
     {
         public Player LocalPlayer { get; set; }
         public PlayerInput PlayerInput => LocalPlayer?.Input;
 
         public bool IsPanning { get; set; }
 
-        public override void _Ready()
+        public override bool IsOverlay => true;
+
+		public override void _Ready()
         {
-            Layer = 15;
-            Visible = false;
 
             Game.WhenReady(() => Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = 4000f);
         }
@@ -105,7 +105,14 @@ namespace Jogo25D.UI
 
         public void ToggleMap()
         {
-            Visible = !Visible;
+            if (Visible)
+            {
+                Game.Managers.RouterManager.Node.Close(this);
+            }
+            else
+            {
+                Game.Managers.RouterManager.Node.Open(this);
+            }
 
             if (Visible)
             {

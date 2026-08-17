@@ -1,9 +1,9 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-    public partial class LoadingUI : CanvasLayer
+    public partial class LoadingUI : ScreenUI
     {
         #region Dinamic properties
 
@@ -14,10 +14,12 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
-        public override void _Ready()
+        public override bool IsOverlay => true;
+
+		public override void _Ready()
         {
-            Layer = 30;
-            Visible = false;
+
+
         }
 
         public override void _Process(double delta)
@@ -51,12 +53,12 @@ namespace Jogo25D.UI
 
             Game.Ui.LoadingUI.StatusLabel.Node.Text = "Carregando";
 
-            Visible = true;
+            Game.Managers.RouterManager.Node.Open(this);
         }
 
         public void Close()
         {
-            Visible = false;
+            Game.Managers.RouterManager.Node.Close(this);
         }
 
         #endregion

@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Jogo25D.UI
 {
-	public partial class ConsoleUI : CanvasLayer
+	public partial class ConsoleUI : ScreenUI
 	{
 		#region Dinamic properties
 
@@ -38,6 +38,8 @@ namespace Jogo25D.UI
 		#endregion
 
 		#region Godot implementation
+
+		public override bool IsOverlay => true;
 
 		public override void _Ready()
 		{
@@ -146,7 +148,14 @@ namespace Jogo25D.UI
 			RefreshLocalPlayer();
 
 			IsOpen = !IsOpen;
-			Visible = IsOpen;
+			if (IsOpen)
+			{
+				Game.Managers.RouterManager.Node.Open(this);
+			}
+			else
+			{
+				Game.Managers.RouterManager.Node.Close(this);
+			}
 
 			if (IsOpen)
 			{
@@ -552,7 +561,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(new Vector2(x, y));
+					Game.Managers.WorldManager.Node.GetLocalPlayer()?.TeleportClientRequest(new Vector2(x, y));
 
 					console.PrintSuccess($"Teleportando para ({x}, {y})...");
 				},
@@ -572,7 +581,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					Game.Managers.WorldManager.Node.TeleportPlayerClientRequest(Vector2.Zero);
+					Game.Managers.WorldManager.Node.GetLocalPlayer()?.TeleportClientRequest(Vector2.Zero);
 
 					console.PrintSuccess("Jogador resetado.");
 				},
@@ -652,7 +661,7 @@ namespace Jogo25D.UI
 						return;
 					}
 
-					Game.Managers.WorldManager.Node.TradeDimensionClientRequest();
+					Game.Managers.WorldManager.Node.GetLocalPlayer()?.TradeDimensionClientRequest();
 
 					console.PrintSuccess("Trocando de dimensÃ£o.");
 				},

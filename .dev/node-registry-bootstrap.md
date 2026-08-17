@@ -133,6 +133,17 @@ public override void _Ready()
 
 A `StartUI` nasce com `Visible = false` (no próprio `_Ready`) e **só o Bootstrap a abre**. Se qualquer nó faltar: `IsReady` fica `false`, nenhum callback de `WhenReady` dispara, a tela inicial nunca aparece, e o erro sai listando exatamente o que faltou.
 
+### Armadilha: `Game.Reset()` não pode limpar a fila
+
+`Bootstrap._Ready` começa com `Game.Reset()`. Como o `_Ready` propaga **de baixo pra cima**, quando essa linha executa a fila do `WhenReady` **já está cheia** — todo `Initialize` de tela foi enfileirado antes. Se o `Reset()` zerar `ReadyCallbacks`, todos são descartados em silêncio: nenhum botão é ligado, e clicar no menu não faz nada (sem erro, sem log).
+
+```csharp
+internal static void Reset()
+{
+    IsReady = false;   // e so isso - a fila sobrevive
+}
+```
+
 ### O gancho `Game.WhenReady`
 
 O `_Ready` das telas roda **antes** do `Bootstrap._Ready`, então nenhuma classe pode tocar no registro dentro do próprio `_Ready`. Em vez de null-check, a classe declara *quando* quer agir:

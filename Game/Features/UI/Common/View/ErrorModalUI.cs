@@ -1,16 +1,16 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-	public partial class ErrorModalUI : CanvasLayer
+	public partial class ErrorModalUI : ScreenUI
 	{
 		#region Godot implementation
 
+		public override bool IsOverlay => true;
+
 		public override void _Ready()
 		{
-			Layer = 30;
-			Visible = false;
 
 			Game.WhenReady(Initialize);
 		}
@@ -32,7 +32,7 @@ namespace Jogo25D.UI
 		{
 			Game.Ui.ErrorModalUI.MessageLabel.Node.Text = message;
 
-			Visible = true;
+			Game.Managers.RouterManager.Node.Open(this);
 		}
 
 		#endregion
@@ -41,7 +41,7 @@ namespace Jogo25D.UI
 
 		private void OnOkPressed()
 		{
-			Visible = false;
+			Game.Managers.RouterManager.Node.Close(this);
 		}
 
 		#endregion

@@ -9,6 +9,8 @@ content_margin_right = 10.0
 content_margin_bottom = 8.0
 
 [node name="CreateCharacterMenu" type="CanvasLayer"]
+visible = false
+layer = 20
 script = ExtResource("1")
 
 [node name="Background" type="ColorRect" parent="."]

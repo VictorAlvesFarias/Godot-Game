@@ -21,6 +21,11 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public WorldCharacterMode CharacterMode { get; set; } = WorldCharacterMode.LocalCharacters;
 
+        // Mundo procedural gera terreno por seed e faz streaming de chunk; mundo nao procedural usa
+        // so o mapa desenhado a mao nas cenas de nivel, com streaming desligado.
+        [Export, GodotDictionaryField]
+        public bool IsProcedural { get; set; } = true;
+
         [Export, GodotDictionaryField]
         public string MultiplayerKey { get; set; } = "";
 
@@ -28,7 +33,13 @@ namespace Jogo25D.Features.Managers.Save.Resources
         public int AutosaveIntervalMinutes { get; set; } = SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES;
 
         [Export, GodotDictionaryField]
-        public Godot.Collections.Array<PortalSaveData> Portals { get; set; } = new();
+        public Godot.Collections.Array<PropSaveData> Props { get; set; } = new();
+
+        // Compatibilidade: mundos salvos antes da generalizacao de portal para prop gravaram a
+        // chave "Portals". A leitura converte pra Props (PropId = "portal") e esta lista fica
+        // vazia dali em diante - ver SaveManager.MigrateLegacyPortals.
+        [Export, GodotDictionaryField]
+        public Godot.Collections.Array<PropSaveData> Portals { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public long CreatedUtc { get; set; }

@@ -1,6 +1,13 @@
-using Godot;
+﻿using Godot;
+using Jogo25D.Blocks;
 using Jogo25D.Constants;
+using Jogo25D.Core;
+using Jogo25D.Features.World.Chunks.Resources;
+using Jogo25D.Instances;
+using Jogo25D.Items;
+using Jogo25D.Systems;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Jogo25D.Biomes
@@ -906,6 +913,469 @@ namespace Jogo25D.Biomes
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region Edicao de bloco
+
+        // A dimensao a que esta layer pertence, deduzida do proprio pai (o node raiz de
+        // Overworld.tscn / Upsidedown.tscn). E o que dispensa passar dimensionId em toda chamada.
+        private string _dimensionId;
+
+        public string DimensionId
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(_dimensionId))
+                {
+                    return _dimensionId;
+                }
+
+                var parentName = GetParent()?.Name.ToString() ?? "";
+
+                _dimensionId = parentName.Equals(ChunkStreamingConstants.OVERWORLD_ID, System.StringComparison.OrdinalIgnoreCase)
+                    ? ChunkStreamingConstants.OVERWORLD_ID
+                    : ChunkStreamingConstants.UPSIDEDOWN_ID;
+
+                return _dimensionId;
+            }
+        }
+
+        // A layer Base e irma da Compose dentro da mesma dimensao. Quando 'this' ja e a Base,
+        // resolve pra ela mesma - que e o comportamento que o WorldManager tinha.
+        private TerrainLayer _baseLayer;
+
+        private TerrainLayer BaseLayer
+        {
+            get
+            {
+                if (_baseLayer != null && IsInstanceValid(_baseLayer))
+                {
+                    return _baseLayer;
+                }
+
+                _baseLayer = GetParent()?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
+
+                return _baseLayer;
+            }
+        }
+
+        // Ponto de entrada do jogador: pede pro servidor quebrar, ou quebra direto se for
+        // autoritativo. O alvo do RPC e a propria layer - mesmo caminho de node nos dois peers.
+        public void BreakBlockClientRequest(Vector2I cell)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                ProcessBreakBlock(cell);
+
+                return;
+            }
+
+            RpcId(1, nameof(BreakBlockServerReceive), cell);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void BreakBlockServerReceive(Vector2I cell)
+        {
+            if (!Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            ProcessBreakBlock(cell);
+        }
+
+        private void ProcessBreakBlock(Vector2I cell)
+        {
+            var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+
+            if (GetCellSourceId(cell) == -1)
+            {
+                var baseLayer = BaseLayer;
+
+                if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
+                {
+                    return;
+                }
+
+                baseLayer.EraseBlockAndReconnect(cell);
+
+                chunkStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+
+                Rpc(nameof(BreakBlockBroadcast), cell);
+
+                return;
+            }
+
+            EraseBlockAndReconnect(cell);
+
+            chunkStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+
+            var dropPosition = ToGlobal(MapToLocal(cell));
+
+            if (BlockDB.TryGet("grass", out var grassBlock))
+            {
+                Game.Managers.DimensionManager.Node?.SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, DimensionId);
+            }
+
+            Rpc(nameof(BreakBlockBroadcast), cell);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void BreakBlockBroadcast(Vector2I cell)
+        {
+            if (GetCellSourceId(cell) == -1)
+            {
+                var baseLayer = BaseLayer;
+
+                if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
+                {
+                    return;
+                }
+
+                baseLayer.EraseBlockAndReconnect(cell);
+
+                return;
+            }
+
+            EraseBlockAndReconnect(cell);
+        }
+
+        public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
+        {
+            var baseLayer = BaseLayer;
+
+            if (!BlockDB.TryGet(blockId, out var block))
+            {
+                return false;
+            }
+
+            if (GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
+            {
+                return false;
+            }
+
+            if (!PlaceBlock(cell, block))
+            {
+                return false;
+            }
+
+            Game.Managers.ChunkStreamingManager.Node?.RecordMutation(DimensionId, cell, "place", blockId);
+
+            Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
+
+            return true;
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void PlaceBlockBroadcast(Vector2I cell, string blockId)
+        {
+            if (!BlockDB.TryGet(blockId, out var block))
+            {
+                return;
+            }
+
+            PlaceBlock(cell, block);
+        }
+
+        public void ApplyChunkMutation(ChunkMutationData mutation)
+        {
+            var cell = new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y);
+
+            if (mutation.Type == "break")
+            {
+                if (GetCellSourceId(cell) == -1)
+                {
+                    BaseLayer?.BreakDecorationOnly(cell);
+
+                    return;
+                }
+
+                EraseBlockAndReconnect(cell);
+
+                return;
+            }
+
+            if (mutation.Type == "place" && BlockDB.TryGet(mutation.ExtraData, out var block))
+            {
+                PlaceBlock(cell, block);
+            }
+        }
+
+        public void BreakDecorationOnly(Vector2I cell)
+        {
+            if (GetCellSourceId(cell) == -1)
+            {
+                return;
+            }
+
+            EraseCellWithTerrainConnect(cell);
+            ReconnectDecorationsNear(cell);
+            RedrawDebugOverlay();
+        }
+
+        public bool PlaceBlock(Vector2I cell, BlockDefinition block)
+        {
+            PaintBlockAndReconnect(cell, block);
+
+            return true;
+        }
+
+        public void EraseBlockAndReconnect(Vector2I cell)
+        {
+            if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
+            {
+                SetCell(cell, -1);
+
+                return;
+            }
+
+            var erasedTerrainSet = GetCellTileData(cell)?.TerrainSet ?? 0;
+
+            SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, erasedTerrainSet, -1, false);
+
+            var neighbors = GetSolidNeighborCells(cell);
+
+            var biomeGroups = new Dictionary<int, List<Vector2I>>();
+
+            foreach (var neighbor in neighbors)
+            {
+                var tileData = GetCellTileData(neighbor);
+
+                if (tileData == null)
+                {
+                    continue;
+                }
+
+                if (!biomeGroups.TryGetValue(tileData.TerrainSet, out var group))
+                {
+                    group = new List<Vector2I>();
+                    biomeGroups[tileData.TerrainSet] = group;
+                }
+
+                group.Add(neighbor);
+            }
+
+            var touchedCells = new HashSet<Vector2I>(neighbors);
+
+            foreach (var group in biomeGroups)
+            {
+                Connect(group.Value, group.Key);
+                ReconnectForeignBorder(group.Value, group.Key);
+
+                foreach (var foreignCell in GetForeignNeighborCells(group.Value, group.Key))
+                {
+                    touchedCells.Add(foreignCell);
+                }
+            }
+
+            var expandedNeighbors = GetExpandedNeighborCells(new Godot.Collections.Array<Vector2I>(touchedCells));
+
+            if (expandedNeighbors.Count > 0)
+            {
+                ReconnectExistingCells(expandedNeighbors);
+            }
+
+            var baseLayer = BaseLayer;
+
+            baseLayer?.EraseCellWithTerrainConnect(cell);
+            baseLayer?.RedrawDebugOverlay();
+
+            RepaintDependentLayerForCells(baseLayer, expandedNeighbors, def => def.BorderCapTerrainSet);
+
+            ReconnectDecorationsNear(cell);
+            baseLayer?.ReconnectDecorationsNear(cell);
+        }
+
+        private void PaintBlockAndReconnect(Vector2I cell, BlockDefinition block)
+        {
+            if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
+            {
+                SetCell(cell, block.SourceId, block.AtlasCoord);
+
+                return;
+            }
+
+            var neighbors = GetSolidNeighborCells(cell);
+            var biomeDef = ResolveBiomeForCell(cell);
+            var sameBiomeCells = new List<Vector2I> { cell };
+
+            foreach (var neighbor in neighbors)
+            {
+                var tileData = GetCellTileData(neighbor);
+
+                if (tileData != null && tileData.TerrainSet == biomeDef.TerrainSet)
+                {
+                    sameBiomeCells.Add(neighbor);
+                }
+            }
+
+            Connect(sameBiomeCells, biomeDef.TerrainSet);
+            ReconnectForeignBorder(sameBiomeCells, biomeDef.TerrainSet);
+
+            var foreignCells = GetForeignNeighborCells(sameBiomeCells, biomeDef.TerrainSet);
+            var expandedForeignCells = GetExpandedNeighborCells(foreignCells);
+
+            if (expandedForeignCells.Count > 0)
+            {
+                ReconnectExistingCells(expandedForeignCells);
+            }
+
+            var baseLayer = BaseLayer;
+
+            if (baseLayer != null)
+            {
+                baseLayer.ConnectDependent(this, sameBiomeCells, biomeDef.BorderCapTerrainSet);
+
+                RepaintDependentLayerForCells(baseLayer, expandedForeignCells, def => def.BorderCapTerrainSet);
+            }
+
+            ReconnectDecorationsNear(cell);
+            baseLayer?.ReconnectDecorationsNear(cell);
+        }
+
+        public void ReconnectDecorationsNear(Vector2I originCell, int radius = 4)
+        {
+            var nearbyCells = new List<Vector2I>();
+
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    var cell = originCell + new Vector2I(dx, dy);
+
+                    if (GetCellSourceId(cell) != -1)
+                    {
+                        nearbyCells.Add(cell);
+                    }
+                }
+            }
+
+            if (nearbyCells.Count > 0)
+            {
+                ReconnectExistingCells(nearbyCells);
+            }
+        }
+
+        public void EraseCellWithTerrainConnect(Vector2I cell)
+        {
+            if (GetCellSourceId(cell) == -1)
+            {
+                return;
+            }
+
+            var terrainSet = GetCellTileData(cell).TerrainSet;
+
+            SetCellsTerrainConnect(new Godot.Collections.Array<Vector2I> { cell }, terrainSet, -1, false);
+        }
+
+        private void RepaintDependentLayerForCells(TerrainLayer dependentLayer, IEnumerable<Vector2I> cells, System.Func<BiomeDefinition, int> terrainSetSelector)
+        {
+            if (dependentLayer == null)
+            {
+                return;
+            }
+
+            var groups = new Dictionary<int, List<Vector2I>>();
+
+            foreach (var cell in cells)
+            {
+                if (GetCellSourceId(cell) == -1)
+                {
+                    dependentLayer.EraseCellWithTerrainConnect(cell);
+
+                    continue;
+                }
+
+                var tileData = GetCellTileData(cell);
+
+                if (tileData == null)
+                {
+                    continue;
+                }
+
+                if (!groups.TryGetValue(tileData.TerrainSet, out var group))
+                {
+                    group = new List<Vector2I>();
+                    groups[tileData.TerrainSet] = group;
+                }
+
+                group.Add(cell);
+            }
+
+            foreach (var group in groups)
+            {
+                var biomeDef = BiomeDB.GetByTerrainSet(group.Key);
+
+                if (biomeDef == null)
+                {
+                    continue;
+                }
+
+                dependentLayer.ConnectDependent(this, group.Value, terrainSetSelector(biomeDef));
+            }
+
+            dependentLayer.RedrawDebugOverlay();
+        }
+
+        private Godot.Collections.Array<Vector2I> GetExpandedNeighborCells(IEnumerable<Vector2I> seedCells)
+        {
+            var seen = new HashSet<Vector2I>();
+            var result = new Godot.Collections.Array<Vector2I>();
+
+            foreach (var cell in seedCells)
+            {
+                if (seen.Add(cell))
+                {
+                    result.Add(cell);
+                }
+            }
+
+            foreach (var cell in result.ToArray())
+            {
+                foreach (var neighbor in GetSolidNeighborCells(cell))
+                {
+                    if (seen.Add(neighbor))
+                    {
+                        result.Add(neighbor);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private Godot.Collections.Array<Vector2I> GetSolidNeighborCells(Vector2I cell, int radius = 1)
+        {
+            var result = new Godot.Collections.Array<Vector2I>();
+
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    if (dx == 0 && dy == 0)
+                    {
+                        continue;
+                    }
+
+                    var neighbor = cell + new Vector2I(dx, dy);
+
+                    if (GetCellSourceId(neighbor) != -1)
+                    {
+                        result.Add(neighbor);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private BiomeDefinition ResolveBiomeForCell(Vector2I cell)
+        {
+            var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+
+            return chunkStreamingManager?.ResolveBiome(DimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
         }
 
         #endregion

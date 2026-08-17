@@ -1,19 +1,14 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-	public partial class StartUI : CanvasLayer
+	public partial class StartUI : ScreenUI
 	{
 		#region Godot implementation
 
 		public override void _Ready()
 		{
-			Layer = 20;
-
-			// Fica escondida ate o Bootstrap validar todos os nodes estaticos - e ele quem abre.
-			Visible = false;
-
 			Game.WhenReady(Initialize);
 		}
 
@@ -33,9 +28,7 @@ namespace Jogo25D.UI
 
 		public void OnPlayPressed()
 		{
-			Visible = false;
-
-			Game.Ui.WorldSelectUI.Node.Open();
+			Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
 		}
 
 		public void OnExitPressed()

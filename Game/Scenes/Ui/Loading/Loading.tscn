@@ -6,6 +6,8 @@
 bg_color = Color(0.18, 0.18, 0.18, 1)
 
 [node name="LoadingUI" type="CanvasLayer"]
+visible = false
+layer = 30
 script = ExtResource("1")
 
 [node name="Background" type="Panel" parent="."]

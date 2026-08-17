@@ -24,6 +24,7 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [node name="GameConsole" type="CanvasLayer" unique_id=1342680249]
+visible = false
 layer = 15
 script = ExtResource("1_console")
 

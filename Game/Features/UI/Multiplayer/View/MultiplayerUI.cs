@@ -1,11 +1,11 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class MultiplayerUI : CanvasLayer
+	public partial class MultiplayerUI : ScreenUI
 	{
 		#region Node references
 
@@ -22,9 +22,6 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			Layer = 20;
-			Visible = false;
-
 
 			ConnectTimeoutTimer = new Timer();
 			ConnectTimeoutTimer.OneShot = true;
@@ -45,7 +42,7 @@ namespace Jogo25D.UI
 			Game.Ui.MultiplayerUI.WorldsButton.Node.Pressed += OnWorldsPressed;
 			Game.Ui.MultiplayerUI.BackButton.Node.Pressed += OnBackPressed;
 
-			Game.Managers.WorldManager.Node.ServerCharacterListAvailable += OnServerCharacterListAvailable;
+			Game.Managers.SaveManager.Node.ServerCharacterListAvailable += OnServerCharacterListAvailable;
 
 			PopulateMockList();
 		}
@@ -83,18 +80,16 @@ namespace Jogo25D.UI
 
 		#region Public API
 
-		public void Open()
+		public override void OnOpened()
 		{
-			Visible = true;
 
 			StopWaitingForConnection();
 
 			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "";
 		}
 
-		public void Close()
+		public override void OnClosed()
 		{
-			Visible = false;
 		}
 
 		#endregion
@@ -108,13 +103,13 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var address = Game.Managers.WorldManager.Node.SpawnWorldAndJoin(Game.Ui.MultiplayerUI.AddressInput.Node.Text.Trim());
+			var address = Game.Managers.SessionManager.Node.SpawnWorldAndJoin(Game.Ui.MultiplayerUI.AddressInput.Node.Text.Trim());
 
 			if (string.IsNullOrEmpty(address))
 			{
-				var reason = string.IsNullOrEmpty(Game.Managers.WorldManager.Node.LastJoinError)
+				var reason = string.IsNullOrEmpty(Game.Managers.NetworkManager.Node.LastJoinError)
 					? "Não foi possível conectar."
-					: Game.Managers.WorldManager.Node.LastJoinError;
+					: Game.Managers.NetworkManager.Node.LastJoinError;
 
 				Game.Ui.ErrorModalUI.Node?.ShowError(reason);
 
@@ -124,8 +119,8 @@ namespace Jogo25D.UI
 			Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = true;
 			Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "Conectando...";
 
-			Game.Managers.WorldManager.Node.ConnectionSucceeded += OnConnectionSucceeded;
-			Game.Managers.WorldManager.Node.ConnectionAttemptFailed += OnConnectionAttemptFailed;
+			Game.Managers.NetworkManager.Node.ConnectionSucceeded += OnConnectionSucceeded;
+			Game.Managers.NetworkManager.Node.ConnectionAttemptFailed += OnConnectionAttemptFailed;
 
 			ConnectTimeoutTimer.Start();
 		}
@@ -134,7 +129,7 @@ namespace Jogo25D.UI
 		{
 			StopWaitingForConnection();
 
-			Close();
+			Game.Managers.RouterManager.Node.Close(this);
 		}
 
 		private void OnConnectionAttemptFailed()
@@ -148,7 +143,7 @@ namespace Jogo25D.UI
 
 		private void OnConnectTimeout()
 		{
-			Game.Managers.WorldManager.Node?.Disconnect();
+			Game.Managers.NetworkManager.Node?.Disconnect();
 
 			StopWaitingForConnection();
 
@@ -163,8 +158,8 @@ namespace Jogo25D.UI
 
 			if (Game.Managers.WorldManager.Node != null)
 			{
-				Game.Managers.WorldManager.Node.ConnectionSucceeded -= OnConnectionSucceeded;
-				Game.Managers.WorldManager.Node.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
+				Game.Managers.NetworkManager.Node.ConnectionSucceeded -= OnConnectionSucceeded;
+				Game.Managers.NetworkManager.Node.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
 			}
 
 			Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = false;
@@ -172,27 +167,27 @@ namespace Jogo25D.UI
 
 		public void OnWorldsPressed()
 		{
-			Close();
-
-			Game.Ui.WorldSelectUI.Node?.Open();
+			Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
 		}
 
 		private void OnServerCharacterListAvailable(string multiplayerKey, Godot.Collections.Array summaries)
 		{
-			Close();
+			Game.Ui.CharacterSelectUI.Node.CurrentContext = CharacterSelectContext.PeerJoinServer;
+			Game.Ui.CharacterSelectUI.Node.LastMultiplayerKey = multiplayerKey;
+			Game.Ui.CharacterSelectUI.Node.LastServerSummaries = summaries;
 
-			Game.Ui.CharacterSelectUI.Node?.OpenServer(multiplayerKey, summaries);
+			Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
 		}
 
 		public void OnBackPressed()
 		{
-			Close();
+			Game.Managers.RouterManager.Node.Close(this);
 
 			var startUi = Game.Ui.StartUI.Node;
 
 			if (startUi != null)
 			{
-				startUi.Visible = true;
+				Game.Managers.RouterManager.Node.Open(startUi);
 			}
 		}
 

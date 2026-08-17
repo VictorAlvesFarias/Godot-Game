@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace Jogo25D.UI
 {
-	public partial class InventoryUI : CanvasLayer
+	public partial class InventoryUI : ScreenUI
 	{
 		#region Properties
 
@@ -63,9 +63,10 @@ namespace Jogo25D.UI
 			}
 		}
 
+		public override bool IsOverlay => true;
+
 		public override void _Ready()
 		{
-			Visible = false;
 
 			Game.WhenReady(Initialize);
 		}
@@ -628,7 +629,14 @@ namespace Jogo25D.UI
 				}
 			}
 
-			Visible = !Visible;
+			if (Visible)
+			{
+				Game.Managers.RouterManager.Node.Close(this);
+			}
+			else
+			{
+				Game.Managers.RouterManager.Node.Open(this);
+			}
 
 			if (Visible)
 			{

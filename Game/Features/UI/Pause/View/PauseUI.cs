@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -6,13 +6,14 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class PauseUI : CanvasLayer
+	public partial class PauseUI : ScreenUI
 	{
 		#region Godot implementation
 
+		public override bool IsOverlay => true;
+
 		public override void _Ready()
 		{
-			Visible = false;
 
 			Game.WhenReady(Initialize);
 		}
@@ -60,7 +61,14 @@ namespace Jogo25D.UI
 
 		public void TogglePause()
 		{
-			Visible = !Visible;
+			if (Visible)
+			{
+				Game.Managers.RouterManager.Node.Close(this);
+			}
+			else
+			{
+				Game.Managers.RouterManager.Node.Open(this);
+			}
 
 			if (!IsMultiplayerActive())
 			{
@@ -91,7 +99,7 @@ namespace Jogo25D.UI
 
 		public void OnResumePressed()
 		{
-			Visible = false;
+			Game.Managers.RouterManager.Node.Close(this);
 			GetTree().Paused = false;
 
 			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
@@ -99,18 +107,13 @@ namespace Jogo25D.UI
 
 		public void OnMenuPressed()
 		{
-			Visible = false;
+			Game.Managers.RouterManager.Node.Close(this);
 			GetTree().Paused = false;
 
 			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
 			Game.Managers.WorldManager.Node?.LeaveWorld();
 
-			var startUi = Game.Ui.StartUI.Node;
-
-			if (startUi != null)
-			{
-				startUi.Visible = true;
-			}
+			Game.Managers.RouterManager.Node.Replace(Game.Ui.StartUI.Node);
 		}
 
 		#endregion
@@ -124,15 +127,15 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (Game.Managers.WorldManager.Node.IsConnected())
+			if (Game.Managers.NetworkManager.Node.IsConnected())
 			{
-				Game.Managers.WorldManager.Node.Disconnect();
+				Game.Managers.NetworkManager.Node.Disconnect();
 			}
 			else
 			{
 				var portText = Game.Ui.PauseUI.PortInput.Node.Text.Trim();
 
-				Game.Managers.WorldManager.Node.CreateServer(portText);
+				Game.Managers.NetworkManager.Node.CreateServer(portText);
 			}
 
 			UpdateNetworkStatus();
@@ -145,7 +148,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			bool connected = Game.Managers.WorldManager.Node.IsConnected();
+			bool connected = Game.Managers.NetworkManager.Node.IsConnected();
 			bool isServer = Multiplayer.IsServer();
 
 			Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;

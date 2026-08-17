@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Features.Managers.Save.Resources;
@@ -7,9 +7,9 @@ using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-	public partial class CharacterSelectUI : CanvasLayer
+	public partial class CharacterSelectUI : ScreenUI
 	{
-		public System.Action<CharacterSaveData> OnLocalSelected { get; set; }
+		// Contexto e definido por quem vai abrir a tela, antes de pedir a abertura ao router.
 		public CharacterSelectContext CurrentContext { get; set; } = CharacterSelectContext.OwnWorld;
 
 		public string LastMultiplayerKey { get; set; } = "";
@@ -24,9 +24,6 @@ namespace Jogo25D.UI
 
 		public override void _Ready()
 		{
-			Layer = 20;
-			Visible = false;
-
 
 			Game.WhenReady(Initialize);
 		}
@@ -45,49 +42,25 @@ namespace Jogo25D.UI
 
 		#region Public API
 
-		public void OpenForOwnWorld()
+		// A lista e montada na abertura, conforme o contexto - a tela nao decide quando aparece.
+		public override void OnOpened()
 		{
-			CurrentContext = CharacterSelectContext.OwnWorld;
-			OnLocalSelected = character =>
+			if (CurrentContext == CharacterSelectContext.PeerJoinServer)
 			{
-				Game.Managers.WorldManager.Node.PendingCharacter = character;
+				ShowServer();
 
-				Game.Managers.WorldManager.Node.EnterPendingWorld();
-			};
-
-			ShowLocal();
-		}
-
-		public void OpenForPeerJoin()
-		{
-			CurrentContext = CharacterSelectContext.PeerJoinLocal;
-			OnLocalSelected = character => Game.Managers.WorldManager.Node.SubmitLocalCharacterForJoin(character);
+				return;
+			}
 
 			ShowLocal();
 		}
 
-		public void OpenServer(string multiplayerKey, Godot.Collections.Array summaries)
+		// A tela de personagem so existe depois que um mundo foi escolhido - e o que impede
+		// entrar nela por atalho, sem passar pelo WorldSelect.
+		public override bool CanOpen()
 		{
-			CurrentContext = CharacterSelectContext.PeerJoinServer;
-			LastMultiplayerKey = multiplayerKey;
-			LastServerSummaries = summaries;
-
-			ShowServer();
-		}
-
-		public void Close()
-		{
-			Visible = false;
-		}
-
-		public void ReopenLocal()
-		{
-			ShowLocal();
-		}
-
-		public void ReopenServer()
-		{
-			ShowServer();
+			return CurrentContext != CharacterSelectContext.OwnWorld
+				|| Game.Managers.SessionManager.Node.PendingWorld != null;
 		}
 
 		public void CompleteLocalCreation(CharacterSaveData character)
@@ -97,9 +70,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			OnLocalSelected?.Invoke(character);
-
-			Close();
+			SelectLocal(character);
 		}
 
 		#endregion
@@ -108,8 +79,6 @@ namespace Jogo25D.UI
 
 		private void ShowLocal()
 		{
-			Visible = true;
-
 			ClearList();
 
 			var characters = Game.Managers.SaveManager.Node?.ListLocalCharacters() ?? new List<CharacterSaveData>();
@@ -118,19 +87,14 @@ namespace Jogo25D.UI
 			{
 				var row = CreateCharacterRow(
 					character.Name,
-					() =>
-					{
-						OnLocalSelected?.Invoke(character);
-
-						Close();
-					},
+					() => SelectLocal(character),
 					() =>
 					{
 						Game.Managers.SaveManager.Node?.DeleteLocalCharacter(character.CharacterId);
 
-						if (Game.Managers.WorldManager.Node.PendingCharacter?.CharacterId == character.CharacterId)
+						if (Game.Managers.SessionManager.Node.PendingCharacter?.CharacterId == character.CharacterId)
 						{
-							Game.Managers.WorldManager.Node.PendingCharacter = null;
+							Game.Managers.SessionManager.Node.PendingCharacter = null;
 						}
 
 						ShowLocal();
@@ -145,8 +109,6 @@ namespace Jogo25D.UI
 
 		private void ShowServer()
 		{
-			Visible = true;
-
 			ClearList();
 
 			foreach (var entry in LastServerSummaries)
@@ -159,17 +121,25 @@ namespace Jogo25D.UI
 					name,
 					() =>
 					{
-						Game.Managers.WorldManager.Node.SelectServerCharacterRequest(characterId);
+						Game.Managers.SaveManager.Node.SelectCharacter(characterId);
 
-						Close();
+						Game.Managers.RouterManager.Node.Close(this);
 					},
-					() => Game.Managers.WorldManager.Node.DeleteServerCharacterRequest(characterId));
+					() => Game.Managers.SaveManager.Node.DeleteCharacter(characterId));
 
 				if (row != null)
 				{
 					Game.Ui.CharacterSelectUI.ListContainer.Node.AddChild(row);
 				}
 			}
+		}
+
+		// A tela so entrega a escolha: quem decide o que fazer com ela e o SaveManager.
+		private void SelectLocal(CharacterSaveData character)
+		{
+			Game.Managers.SaveManager.Node.SelectCharacter(character);
+
+			Game.Managers.RouterManager.Node.Close(this);
 		}
 
 		private void ClearList()
@@ -217,38 +187,25 @@ namespace Jogo25D.UI
 
 		private void OnCreateCharacterPressed()
 		{
-			Close();
-
-			var createUi = Game.Ui.CreateCharacterUI.Node;
-
-			if (CurrentContext == CharacterSelectContext.PeerJoinServer)
-			{
-				createUi?.OpenServer();
-			}
-			else
-			{
-				createUi?.OpenLocal();
-			}
+			Game.Managers.RouterManager.Node.Open(Game.Ui.CreateCharacterUI.Node);
 		}
 
 		private void OnBackPressed()
 		{
-			Close();
-
 			switch (CurrentContext)
 			{
 				case CharacterSelectContext.OwnWorld:
-					Game.Managers.WorldManager.Node.PendingWorld = null;
+					Game.Managers.SessionManager.Node.PendingWorld = null;
 
-					Game.Ui.WorldSelectUI.Node?.Open();
+					Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
 
 					break;
 
 				case CharacterSelectContext.PeerJoinLocal:
 				case CharacterSelectContext.PeerJoinServer:
-					Game.Managers.WorldManager.Node.Disconnect();
+					Game.Managers.NetworkManager.Node.Disconnect();
 
-					Game.Ui.MultiplayerUI.Node?.Open();
+					Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
 
 					break;
 			}

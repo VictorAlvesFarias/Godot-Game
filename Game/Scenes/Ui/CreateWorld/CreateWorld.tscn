@@ -9,6 +9,8 @@ content_margin_right = 10.0
 content_margin_bottom = 8.0
 
 [node name="CreateWorldMenu" type="CanvasLayer"]
+visible = false
+layer = 20
 script = ExtResource("1")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -67,6 +69,13 @@ layout_mode = 2
 min_value = 1.0
 max_value = 120.0
 value = 5.0
+
+[node name="ProceduralCheck" type="CheckBox" parent="MarginContainer/Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+button_pressed = true
+text = "Mundo procedural"
 
 [node name="ModeLabel" type="Label" parent="MarginContainer/Root"]
 layout_mode = 2
