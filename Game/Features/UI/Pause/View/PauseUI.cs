@@ -111,7 +111,7 @@ namespace Jogo25D.UI
 			GetTree().Paused = false;
 
 			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
-			Game.Managers.WorldManager.Node?.LeaveWorld();
+			Game.Managers.SessionManager.Node.LeaveWorld();
 
 			Game.Managers.RouterManager.Node.Replace(Game.Ui.StartUI.Node);
 		}

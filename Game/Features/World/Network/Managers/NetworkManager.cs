@@ -25,6 +25,13 @@ namespace Jogo25D.Network
 		// O SaveManager assina pra persistir o personagem de quem caiu - o NetworkManager
 		// so avisa, nao sabe o que e personagem.
 		public event Action<long, Player> PeerLeft;
+
+		// Emitido antes de fechar a conexao. Quem tem o que persistir assina - o canal nao sabe
+		// o que e save nem o que e personagem.
+		public event Action Disconnecting;
+
+		// Servidor caiu: quem decide pra onde a UI vai e a sessao.
+		public event Action ServerDisconnected;
 		public event Action ConnectionSucceeded;
 		public event Action ConnectionAttemptFailed;
 
@@ -197,7 +204,7 @@ namespace Jogo25D.Network
 		{
 			GD.Print("[NetworkManager.Disconnect] Disconnect()");
 
-			Game.Managers.SaveManager.Node.PersistBeforeLeaving();
+			Disconnecting?.Invoke();
 
 			if (Peer != null)
 			{
@@ -326,8 +333,6 @@ namespace Jogo25D.Network
 		{
 			GD.Print("[NetworkManager.OnConnectedToServer] OnConnectedToServer()");
 
-			Game.Managers.SaveManager.Node.RequestJoinInfo();
-
 			ConnectionSucceeded?.Invoke();
 		}
 
@@ -347,7 +352,7 @@ namespace Jogo25D.Network
 		{
 			GD.Print("[NetworkManager.OnServerDisconnected] OnServerDisconnected()");
 
-			Game.Managers.SessionManager.Node.ReturnToMainMenu();
+			ServerDisconnected?.Invoke();
 		}
 
 		#endregion

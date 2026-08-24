@@ -32,7 +32,6 @@ namespace Jogo25D.Systems
 
 		#region Dinamic properties
 
-		public WorldSaveData CurrentWorldSave { get; private set; }
 
 
 		#endregion
@@ -53,9 +52,6 @@ namespace Jogo25D.Systems
 		public override void _Ready()
 		{
 			GD.Print("[WorldManager._Ready] _Ready()");
-
-			// O registro so fecha no Bootstrap, entao a assinatura espera o jogo ficar pronto.
-			Game.WhenReady(() => GetTree().Root.CloseRequested += Game.Managers.SaveManager.Node.PersistBeforeLeaving);
 		}
 
 		#endregion
@@ -90,30 +86,19 @@ namespace Jogo25D.Systems
 		// Mundo nao procedural: o terreno e o que esta desenhado a mao nas cenas de nivel, entao
 		// nao ha seed, nem import de mutacao, nem streaming - e as layers NAO sao limpas.
 		// De resto e um mundo como outro qualquer: tem save, props e autosave.
-		public void SpawnLocalWorldAndPlayer(WorldSaveData save)
+		public void SpawnLocalWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
 		{
-			CurrentWorldSave = save;
-
 			SpawnWorld();
 			SetChunkStreamingEnabled(false);
 
 			Dimensions.RestoreProps(save);
-			RespawnLocalSoloPlayer();
-
-			Game.Managers.SaveManager.Node.StartAutosave(save);
+			RespawnLocalSoloPlayer(character);
 
 			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
 		}
 
-		public async void CreateProceduralWorldAndPlayer(WorldSaveData save)
+		public async void CreateProceduralWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
 		{
-			if(save == null)
-			{
-				save = Game.Managers.SaveManager.Node.CreateWorld("Mundo sem nome", (long)GD.Randi(), WorldCharacterMode.LocalCharacters, "", SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES);
-			}	
-
-			CurrentWorldSave = save;
-
 			SpawnWorld();
 			Dimensions.ClearLayers();
 
@@ -130,8 +115,7 @@ namespace Jogo25D.Systems
 			await Game.Managers.ChunkStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), Vector2.Zero);
 		
 			Dimensions.RestoreProps(save);
-			RespawnLocalSoloPlayer();
-			Game.Managers.SaveManager.Node.StartAutosave(save);
+			RespawnLocalSoloPlayer(character);
 
 			loadingUi?.Close();
 
@@ -148,18 +132,11 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		public void LeaveWorld()
+		// Desmonta a cena do mundo. Quem persiste e limpa a sessao e o SessionManager, antes
+		// de chamar aqui.
+		public void DespawnWorld()
 		{
-			GD.Print("[WorldManager.LeaveWorld] LeaveWorld()");
-
-			Game.Managers.SaveManager.Node.PersistBeforeLeaving();
-
-			Game.Managers.SaveManager.Node.StopAutosave();
-
-			CurrentWorldSave = null;
-			Game.Managers.SessionManager.Node.PendingCharacter = null;
-
-			Game.Managers.NetworkManager.Node.CloseSession();
+			GD.Print("[WorldManager.DespawnWorld] DespawnWorld()");
 
 			var main = Game.Main.Node;
 			var world = main?.GetNodeOrNull("World");
@@ -178,7 +155,7 @@ namespace Jogo25D.Systems
 			Game.Managers.RouterManager.Node.Close(Game.Ui.HudUI.Node);
 		}
 
-		public void RespawnLocalSoloPlayer()
+		public void RespawnLocalSoloPlayer(CharacterSaveData character)
 		{
 			var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
@@ -186,9 +163,9 @@ namespace Jogo25D.Systems
 			localPlayer.PeerId = 1;
 			localPlayer.Position = Dimensions.FindGroundSpawnPosition(ChunkStreamingConstants.UPSIDEDOWN_ID, 0f);
 
-			if (Game.Managers.SessionManager.Node.PendingCharacter != null)
+			if (character != null)
 			{
-				localPlayer.Data = (PlayerData)Game.Managers.SessionManager.Node.PendingCharacter.Data.Duplicate(true);
+				localPlayer.Data = (PlayerData)character.Data.Duplicate(true);
 				localPlayer.Loaded = true;
 			}
 			else
@@ -237,9 +214,5 @@ namespace Jogo25D.Systems
 		}
 
 		#endregion
-
-
-
-
 	}
 }

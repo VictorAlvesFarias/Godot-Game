@@ -121,11 +121,11 @@ namespace Jogo25D.UI
 					name,
 					() =>
 					{
-						Game.Managers.SaveManager.Node.SelectCharacter(characterId);
+						Game.Managers.SessionManager.Node.SelectCharacter(characterId);
 
 						Game.Managers.RouterManager.Node.Close(this);
 					},
-					() => Game.Managers.SaveManager.Node.DeleteCharacter(characterId));
+					() => Game.Managers.SessionManager.Node.DeleteCharacter(characterId));
 
 				if (row != null)
 				{
@@ -137,7 +137,7 @@ namespace Jogo25D.UI
 		// A tela so entrega a escolha: quem decide o que fazer com ela e o SaveManager.
 		private void SelectLocal(CharacterSaveData character)
 		{
-			Game.Managers.SaveManager.Node.SelectCharacter(character);
+			Game.Managers.SessionManager.Node.SelectCharacter(character);
 
 			Game.Managers.RouterManager.Node.Close(this);
 		}

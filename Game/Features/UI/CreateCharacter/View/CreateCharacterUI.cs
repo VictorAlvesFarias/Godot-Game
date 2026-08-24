@@ -43,7 +43,7 @@ namespace Jogo25D.UI
 		{
 			var name = string.IsNullOrWhiteSpace(Game.Ui.CreateCharacterUI.NameInput.Node.Text) ? "Sem nome" : Game.Ui.CreateCharacterUI.NameInput.Node.Text.Trim();
 
-			Game.Managers.SaveManager.Node.CreateCharacter(name);
+			Game.Managers.SessionManager.Node.CreateCharacter(name);
 		}
 
 		private void OnBackPressed()

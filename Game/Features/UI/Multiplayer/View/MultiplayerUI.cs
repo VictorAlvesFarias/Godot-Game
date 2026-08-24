@@ -42,7 +42,7 @@ namespace Jogo25D.UI
 			Game.Ui.MultiplayerUI.WorldsButton.Node.Pressed += OnWorldsPressed;
 			Game.Ui.MultiplayerUI.BackButton.Node.Pressed += OnBackPressed;
 
-			Game.Managers.SaveManager.Node.ServerCharacterListAvailable += OnServerCharacterListAvailable;
+			Game.Managers.SessionManager.Node.ServerCharacterListAvailable += OnServerCharacterListAvailable;
 
 			PopulateMockList();
 		}
