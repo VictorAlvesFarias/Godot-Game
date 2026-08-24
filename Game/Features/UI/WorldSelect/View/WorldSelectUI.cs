@@ -117,7 +117,7 @@ namespace Jogo25D.UI
 
         #endregion
 
-		#region Core - Actions - Mundos
+		#region UI - Actions - Mundos
 
 		public void OnWorldRowPressed(WorldSaveData world)
 		{

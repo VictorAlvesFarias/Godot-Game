@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 
@@ -20,6 +21,24 @@ namespace Jogo25D.Items
         #endregion
 
         #region Core - Placement
+
+        // Lado autoritativo: converte a posicao de volta pra celula, pinta e consome.
+        public override void UseAt(Player player, ItemData data, Vector2 position)
+        {
+            if (player.GetActiveTileLayer() is not TerrainLayer layer)
+            {
+                return;
+            }
+
+            var cell = layer.LocalToMap(layer.ToLocal(position));
+
+            if (!layer.PlaceBlockAuthoritative(cell, BlockId))
+            {
+                return;
+            }
+
+            player.RemoveItemRequest(data.InstanceId, 1);
+        }
 
         public override void Use(Player player, ItemData instance)
         {
@@ -44,7 +63,7 @@ namespace Jogo25D.Items
 
             TriggerCooldownTimer(instance);
 
-            player.PlaceBlockRequest(targetCell, instance.InstanceId);
+            player.UseItemAtRequest(instance.InstanceId, layer.ToGlobal(layer.MapToLocal(targetCell)));
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)

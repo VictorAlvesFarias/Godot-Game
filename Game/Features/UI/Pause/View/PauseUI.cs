@@ -112,8 +112,6 @@ namespace Jogo25D.UI
 
 			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
 			Game.Managers.SessionManager.Node.LeaveWorld();
-
-			Game.Managers.RouterManager.Node.Replace(Game.Ui.StartUI.Node);
 		}
 
 		#endregion

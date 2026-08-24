@@ -121,9 +121,6 @@ namespace Jogo25D.Characters
 
 		public override void _Ready()
 		{
-			GD.Print("[Player._Ready] Starting method");
-			GD.Print("[Player._Ready] Adding players to group");
-
 			AddToGroup("players");
 
 			GD.Print("[Player._Ready] Initializating ItemFactory");
@@ -141,78 +138,7 @@ namespace Jogo25D.Characters
 			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
 
-			GD.Print("[Player._Ready] Setting default states");
-
 			Sprite.Play("idle");
-
-			GD.Print("[Player._Ready] Adding animation events");
-
-			GD.Print("[Player._Ready] Seting starter slot");
-
-			if (IsAuthoritative() && !Loaded)
-			{
-				Data ??= new PlayerData();
-				Data.Inventory ??= new InventoryData();
-
-                GiveItem(ItemFactory.CreateInstance("fire_slash_sword"));
-                GiveItem(ItemFactory.CreateInstance("blue_fire_sword"));
-                GiveItem(ItemFactory.CreateInstance("blue_fire_sword_alt"));
-                GiveItem(ItemFactory.CreateInstance("dark_slash_sword"));
-                GiveItem(ItemFactory.CreateInstance("whip"));
-                GiveItem(ItemFactory.CreateInstance("green_blow_sword"));
-                GiveItem(ItemFactory.CreateInstance("real_sword"));
-				GiveItem(ItemFactory.CreateInstance("bow_starting2"));
-
-				var startingMeleeWeapon = ItemFactory.CreateInstance("sword_starting");
-
-				GiveItem(startingMeleeWeapon);
-
-				GiveItem(ItemFactory.CreateInstance("pickaxe_starting"));
-
-				var startingGrassBlocks = ItemFactory.CreateInstance("block_grass");
-
-				startingGrassBlocks.Quantity = 20;
-
-				GiveItem(startingGrassBlocks);
-
-				var startingPoisonFlask = ItemFactory.CreateInstance("poison_flask");
-
-				startingPoisonFlask.Quantity = 20;
-
-				GiveItem(startingPoisonFlask);
-
-				var startingFireDamagePotion = ItemFactory.CreateInstance("fire_damage_potion");
-
-				startingFireDamagePotion.Quantity = 20;
-
-				GiveItem(startingFireDamagePotion);
-
-				var startingHealthRegenPotion = ItemFactory.CreateInstance("health_regen_potion");
-
-				startingHealthRegenPotion.Quantity = 20;
-
-				GiveItem(startingHealthRegenPotion);
-
-				var startingSpeedPotion = ItemFactory.CreateInstance("speed_potion");
-
-				startingSpeedPotion.Quantity = 20;
-
-				GiveItem(startingSpeedPotion);
-
-				var startingInstantHealPotion = ItemFactory.CreateInstance("instant_heal_potion");
-
-				startingInstantHealPotion.Quantity = 20;
-
-				GiveItem(startingInstantHealPotion);
-
-				foreach (var actionId in ActionFactory.GetAllIds())
-				{
-					GiveAbility(actionId);
-				}
-			}
-
-			ApplySkillTree();
-
 			Inventory.EnsureSize(Data.Inventory);
 
 			foreach (var item in Data.Inventory.Items)
@@ -1106,10 +1032,12 @@ namespace Jogo25D.Characters
 
 		#endregion
 
-        #region Core - Rpc - PlaceBlock
+        #region Core - Rpc - Uso de item no mundo
 
+        // Um RPC pra qualquer item que age numa posicao. O Player so confere que o item existe
+        // no inventario; o que fazer com ele e da definicao.
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void PlaceBlockReceive(Vector2I cell, long instanceId)
+        public void UseItemAtReceive(long instanceId, Vector2 position)
         {
             if (!IsAuthoritative())
             {
@@ -1123,73 +1051,19 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (ItemDefinitions.GetValueOrDefault(item.InstanceId) is not BlockItemDefinition blockItemDef)
-            {
-                return;
-            }
-
-            if (GetActiveTileLayer() is not TerrainLayer activeLayer || !activeLayer.PlaceBlockAuthoritative(cell, blockItemDef.BlockId))
-            {
-                return;
-            }
-
-            RemoveItemRequest(instanceId, 1);
+            ItemDefinitions.GetValueOrDefault(item.InstanceId)?.UseAt(this, item, position);
         }
 
-        public void PlaceBlockRequest(Vector2I cell, long instanceId)
+        public void UseItemAtRequest(long instanceId, Vector2 position)
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
             {
-                PlaceBlockReceive(cell, instanceId);
+                UseItemAtReceive(instanceId, position);
 
                 return;
             }
 
-            RpcId(1, nameof(PlaceBlockReceive), cell, instanceId);
-        }
-
-        #endregion
-
-        #region Core - Rpc - PlacePortal
-
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void PlacePortalReceive(Vector2 position, long instanceId)
-        {
-            if (!IsAuthoritative())
-            {
-                return;
-            }
-
-            var item = Inventory.FindItem(Data.Inventory, instanceId);
-
-            if (item == null || item.Quantity <= 0)
-            {
-                return;
-            }
-
-            if (ItemDefinitions.GetValueOrDefault(item.InstanceId) is not PortalItemDefinition)
-            {
-                return;
-            }
-
-            if (Game.Managers.DimensionManager.Node == null || !Game.Managers.DimensionManager.Node.SpawnPropAuthoritative("portal", position, GetActiveDimensionId()))
-            {
-                return;
-            }
-
-            RemoveItemRequest(instanceId, 1);
-        }
-
-        public void PlacePortalRequest(Vector2 position, long instanceId)
-        {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-            {
-                PlacePortalReceive(position, instanceId);
-
-                return;
-            }
-
-            RpcId(1, nameof(PlacePortalReceive), position, instanceId);
+            RpcId(1, nameof(UseItemAtReceive), instanceId, position);
         }
 
         #endregion

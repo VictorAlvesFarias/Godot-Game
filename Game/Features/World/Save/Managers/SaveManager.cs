@@ -31,6 +31,109 @@ namespace Jogo25D.Systems
         #endregion
 
 
+        #region Core - Registro e politica
+
+        // O que esta em jogo e precisa ser gravado. Guarda o Resource: quem registra sabe o que
+        // e seu, e o SaveManager nao pergunta nada a ninguem.
+        private readonly List<Resource> _registry = new();
+
+        private Timer _autosaveTimer;
+
+        // Emitido antes de serializar, pra quem tem estado fora do Resource se atualizar.
+        public event System.Action Saving;
+
+        public void Register(Resource data)
+        {
+            if (data == null || _registry.Contains(data))
+            {
+                return;
+            }
+
+            _registry.Add(data);
+        }
+
+        public void Unregister(Resource data)
+        {
+            if (data != null)
+            {
+                _registry.Remove(data);
+            }
+        }
+
+        public void ClearRegistry()
+        {
+            _registry.Clear();
+        }
+
+        public void StartAutosave(int intervalMinutes)
+        {
+            StopAutosave();
+
+            if (!IsHostOrSolo())
+            {
+                return;
+            }
+
+            _autosaveTimer = new Timer
+            {
+                WaitTime = Mathf.Max(1, intervalMinutes) * 60.0,
+                Autostart = true,
+            };
+
+            _autosaveTimer.Timeout += SaveAll;
+
+            AddChild(_autosaveTimer);
+        }
+
+        public void StopAutosave()
+        {
+            if (_autosaveTimer == null)
+            {
+                return;
+            }
+
+            _autosaveTimer.QueueFree();
+
+            _autosaveTimer = null;
+        }
+
+        // Grava tudo que esta registrado, decidindo pelo tipo. O mundo so e gravado pelo host;
+        // personagem local vale pra todo mundo.
+        public void SaveAll()
+        {
+            Saving?.Invoke();
+
+            var world = _registry.OfType<WorldSaveData>().FirstOrDefault();
+            var host = IsHostOrSolo();
+
+            if (world != null && host)
+            {
+                SaveWorld(world);
+            }
+
+            foreach (var character in _registry.OfType<CharacterSaveData>())
+            {
+                if (character.OwnerProfileId == SaveStorage.GetOrCreateLocalProfile()?.ProfileId)
+                {
+                    SaveLocalCharacter(character);
+
+                    continue;
+                }
+
+                if (host && world != null)
+                {
+                    SavePeerCharacter(character, world.CharacterMode, world.MultiplayerKey);
+                }
+            }
+        }
+
+        private bool IsHostOrSolo()
+        {
+            return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
+        }
+
+        #endregion
+
         #region Core - Consulta (fachada do SaveStorage)
 
         // A UI nao fala com o SaveStorage direto: passa por aqui, porque e aqui que se decide se o

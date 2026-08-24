@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Core;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 
@@ -14,6 +15,19 @@ namespace Jogo25D.Items
         #endregion
 
         #region Core - Placement
+
+        // Lado autoritativo: pede pro DimensionManager posicionar o prop e consome o item.
+        public override void UseAt(Player player, ItemData data, Vector2 position)
+        {
+            var dimensions = Game.Managers.DimensionManager.Node;
+
+            if (dimensions == null || !dimensions.SpawnPropAuthoritative("portal", position, player.GetActiveDimensionId()))
+            {
+                return;
+            }
+
+            player.RemoveItemRequest(data.InstanceId, 1);
+        }
 
         public override void Use(Player player, ItemData instance)
         {
@@ -45,7 +59,7 @@ namespace Jogo25D.Items
 
             TriggerCooldownTimer(instance);
 
-            player.PlacePortalRequest(targetPosition, instance.InstanceId);
+            player.UseItemAtRequest(instance.InstanceId, targetPosition);
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)

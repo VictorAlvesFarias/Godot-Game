@@ -9,22 +9,14 @@ namespace Jogo25D.UI
 {
 	public partial class CharacterSelectUI : ScreenUI
 	{
-		// Contexto e definido por quem vai abrir a tela, antes de pedir a abertura ao router.
 		public CharacterSelectContext CurrentContext { get; set; } = CharacterSelectContext.OwnWorld;
-
 		public string LastMultiplayerKey { get; set; } = "";
 		public Godot.Collections.Array LastServerSummaries { get; set; } = new();
-
-		#region Node references
-
-
-		#endregion
 
 		#region Godot implementation
 
 		public override void _Ready()
 		{
-
 			Game.WhenReady(Initialize);
 		}
 
@@ -41,8 +33,6 @@ namespace Jogo25D.UI
 		#endregion
 
 		#region Public API
-
-		// A lista e montada na abertura, conforme o contexto - a tela nao decide quando aparece.
 		public override void OnOpened()
 		{
 			if (CurrentContext == CharacterSelectContext.PeerJoinServer)
@@ -55,22 +45,9 @@ namespace Jogo25D.UI
 			ShowLocal();
 		}
 
-		// A tela de personagem so existe depois que um mundo foi escolhido - e o que impede
-		// entrar nela por atalho, sem passar pelo WorldSelect.
 		public override bool CanOpen()
 		{
-			return CurrentContext != CharacterSelectContext.OwnWorld
-				|| Game.Managers.SessionManager.Node.PendingWorld != null;
-		}
-
-		public void CompleteLocalCreation(CharacterSaveData character)
-		{
-			if (character == null)
-			{
-				return;
-			}
-
-			SelectLocal(character);
+			return CurrentContext != CharacterSelectContext.OwnWorld || Game.Managers.SessionManager.Node.PendingWorld != null;
 		}
 
 		#endregion
@@ -87,7 +64,9 @@ namespace Jogo25D.UI
 			{
 				var row = CreateCharacterRow(
 					character.Name,
-					() => SelectLocal(character),
+					() => {
+						SelectLocal(character);
+					},
 					() =>
 					{
 						Game.Managers.SaveManager.Node?.DeleteLocalCharacter(character.CharacterId);
@@ -98,7 +77,8 @@ namespace Jogo25D.UI
 						}
 
 						ShowLocal();
-					});
+					}
+				);
 
 				if (row != null)
 				{
@@ -116,16 +96,18 @@ namespace Jogo25D.UI
 				var dict = entry.AsGodotDictionary();
 				var characterId = dict["CharacterId"].AsString();
 				var name = dict["Name"].AsString();
-
 				var row = CreateCharacterRow(
 					name,
 					() =>
 					{
-						Game.Managers.SessionManager.Node.SelectCharacter(characterId);
-
+						Game.Managers.SessionManager.Node.SelectServerCharacterRequest(characterId);
 						Game.Managers.RouterManager.Node.Close(this);
 					},
-					() => Game.Managers.SessionManager.Node.DeleteCharacter(characterId));
+					() => 
+					{
+						Game.Managers.SessionManager.Node.DeleteCharacter(characterId);
+					}
+				);
 
 				if (row != null)
 				{
@@ -134,11 +116,14 @@ namespace Jogo25D.UI
 			}
 		}
 
-		// A tela so entrega a escolha: quem decide o que fazer com ela e o SaveManager.
 		private void SelectLocal(CharacterSaveData character)
 		{
-			Game.Managers.SessionManager.Node.SelectCharacter(character);
+            if (character == null)
+            {
+                return;
+            }
 
+            Game.Managers.SessionManager.Node.SelectCharacter(character);
 			Game.Managers.RouterManager.Node.Close(this);
 		}
 
@@ -169,13 +154,16 @@ namespace Jogo25D.UI
 			template.Visible = false;
 
 			var row = (HBoxContainer)template.Duplicate();
+
 			row.Visible = true;
 
 			var selectButton = row.GetNode<Button>("SelectButton");
+
 			selectButton.Text = title;
 			selectButton.Pressed += onSelect;
 
 			var deleteButton = row.GetNode<Button>("DeleteButton");
+
 			deleteButton.Pressed += onDelete;
 
 			return row;
@@ -192,24 +180,17 @@ namespace Jogo25D.UI
 
 		private void OnBackPressed()
 		{
-			switch (CurrentContext)
+			if (CurrentContext == CharacterSelectContext.OwnWorld)
 			{
-				case CharacterSelectContext.OwnWorld:
-					Game.Managers.SessionManager.Node.PendingWorld = null;
+                Game.Managers.SessionManager.Node.PendingWorld = null;
 
-					Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+                Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+            }
 
-					break;
 
-				case CharacterSelectContext.PeerJoinLocal:
-				case CharacterSelectContext.PeerJoinServer:
-					Game.Managers.NetworkManager.Node.Disconnect();
-
-					Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
-
-					break;
-			}
-		}
+            Game.Managers.NetworkManager.Node.Disconnect();
+            Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
+        }
 
 		#endregion
 	}

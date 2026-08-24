@@ -2,6 +2,8 @@
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
+using Jogo25D.UI;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Items;
@@ -44,14 +46,18 @@ namespace Jogo25D.Session
         // chega pela rede no JoinInfoReceive - quem acabou de conectar nao tem o save do mundo.
         public WorldCharacterMode CharacterMode { get; set; } = WorldCharacterMode.LocalCharacters;
 
-        public event System.Action<string, Godot.Collections.Array> ServerCharacterListAvailable;
+        // A sessao avisa que chegou a hora de escolher personagem, com o que a tela precisa
+        // pra se montar. Quem decide qual tela abrir e a UI.
+        public event System.Action<CharacterSelectContext, string, Godot.Collections.Array> CharacterSelectionRequired;
+
+        // Sessao encerrada (saiu do mundo, ou o servidor caiu). A UI decide pra onde ir.
+        public event System.Action SessionEnded;
+
 
         private readonly Dictionary<long, CharacterSaveData> _peerCharacters = new();
         private readonly Dictionary<long, string> _pendingProfileByPeer = new();
 
         public IReadOnlyDictionary<long, CharacterSaveData> PeerCharacters => _peerCharacters;
-
-        private Timer _autosaveTimer;
 
 
         #endregion
@@ -74,7 +80,11 @@ namespace Jogo25D.Session
                 Game.Managers.WorldManager.Node.CreateProceduralWorldAndPlayer(save, PendingCharacter);
             }
 
-            StartAutosave(save);
+            var save_manager = Game.Managers.SaveManager.Node;
+
+            save_manager.Register(save);
+            save_manager.Register(PendingCharacter);
+            save_manager.StartAutosave(save.AutosaveIntervalMinutes);
 
             PendingWorld = null;
         }
@@ -90,12 +100,11 @@ namespace Jogo25D.Session
 
         #region Core - Saida
 
-        // Sair do mundo: primeiro persiste e limpa o que e sessao, depois manda desmontar a cena.
         public void LeaveWorld()
         {
-            PersistBeforeLeaving();
-
-            StopAutosave();
+            Game.Managers.SaveManager.Node.SaveAll();
+            Game.Managers.SaveManager.Node.StopAutosave();
+            Game.Managers.SaveManager.Node.ClearRegistry();
 
             CurrentWorldSave = null;
             PendingCharacter = null;
@@ -103,135 +112,97 @@ namespace Jogo25D.Session
             Game.Managers.NetworkManager.Node.CloseSession();
 
             Game.Managers.WorldManager.Node.DespawnWorld();
-        }
 
-        public void ReturnToMainMenu()
-        {
-            GetTree().Paused = false;
-
-            Game.Managers.RouterManager.Node.Close(Game.Ui.PauseUI.Node);
-
-            LeaveWorld();
-
-            Game.Managers.RouterManager.Node.Replace(Game.Ui.StartUI.Node);
+            SessionEnded?.Invoke();
         }
 
         #endregion
 
-        #region Core - Personagem, join e politica de save
-
-        // Quando salvar e o que entra: a sessao sabe o que esta em jogo, o SaveManager grava.
-        public void SaveEverything()
+        private void SincronizarPersonagens()
         {
-            if (CurrentWorldSave == null)
-            {
-                return;
-            }
-
-            Game.Managers.SaveManager.Node.SaveWorld(CurrentWorldSave);
-
-            SaveOwnLocalCharacter();
-            SaveRemotePeerCharacters();
-        }
-
-        private bool IsHostOrSolo()
-        {
-            return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
-        }
-
-        public void StartAutosave(WorldSaveData save)
-        {
-            StopAutosave();
-
-            if (save == null || !IsHostOrSolo())
-            {
-                return;
-            }
-
-            _autosaveTimer = new Timer
-            {
-                WaitTime = Mathf.Max(1, save.AutosaveIntervalMinutes) * 60.0,
-                Autostart = true,
-            };
-
-            _autosaveTimer.Timeout += SaveEverything;
-
-            AddChild(_autosaveTimer);
-        }
-
-        public void StopAutosave()
-        {
-            if (_autosaveTimer == null)
-            {
-                return;
-            }
-
-            _autosaveTimer.QueueFree();
-
-            _autosaveTimer = null;
-        }
-
-        private void SaveOwnLocalCharacter()
-        {
-            if (PendingCharacter == null)
-            {
-                return;
-            }
-
             var localPlayer = Game.Managers.WorldManager.Node.GetLocalPlayer();
 
-            if (localPlayer == null)
+            if (PendingCharacter != null && localPlayer != null)
             {
-                return;
+                PendingCharacter.Data = localPlayer.Data;
             }
 
-            PendingCharacter.Data = localPlayer.Data;
-            PendingCharacter.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
+            foreach (var (peerId, character) in _peerCharacters)
+            {
+                var player = Game.Managers.WorldManager.Node.FindPlayerByPeerId(peerId);
 
-            Game.Managers.SaveManager.Node.SaveLocalCharacter(PendingCharacter);
+                if (player != null)
+                {
+                    character.Data = player.Data;
+                }
+            }
         }
 
-        private void SaveRemotePeerCharacters()
+        public async void FinishPeerJoin(long id, CharacterSaveData character)
         {
-            if (!IsHostOrSolo())
+            if (!Multiplayer.IsServer() || character == null)
             {
                 return;
             }
 
-            foreach (var player in GetTree().GetNodesInGroup("players").OfType<Player>())
+            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+
+            player.Name = $"Player{id}";
+            player.Position = Godot.Vector2.Zero;
+            player.PeerId = id;
+            player.Data = (PlayerData)character.Data.Duplicate(true);
+            player.Loaded = true;
+
+            await Game.Managers.ChunkStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), player.Position);
+
+            player.Position = Game.Managers.DimensionManager.Node.FindGroundSpawnPosition(ChunkStreamingConstants.UPSIDEDOWN_ID, player.Position.X);
+
+            Game.Managers.DimensionManager.Node.RpcId(id, nameof(DimensionManager.ClearLayersReceive));
+            Game.Managers.ChunkStreamingManager.Node.CatchUpPeer(id);
+            Game.Managers.DimensionManager.Node.SpawnPlayer(player);
+            Game.Managers.DimensionManager.Node.SpawnPlayerRequest(player);
+
+            var players = GetTree().GetNodesInGroup("players");
+
+            foreach (Node node in players)
             {
-                if (player.PeerId <= 1 || !_peerCharacters.TryGetValue(player.PeerId, out var character))
+                if (node is NPC)
                 {
                     continue;
                 }
 
-                character.Data = player.Data;
-                character.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
+                if (node is Player existingPlayer && existingPlayer.PeerId != id)
+                {
+                    GD.Print($"[NetworkManager.FinishPeerJoin] informing {id} about {existingPlayer.Name}");
 
-                if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)
-                {
-                    Game.Managers.SaveManager.Node.SaveServerCharacter(CurrentWorldSave.MultiplayerKey, character);
-                }
-                else
-                {
-                    Game.Managers.SaveManager.Node.SaveBackup(character.OwnerProfileId, character);
+                    Game.Managers.DimensionManager.Node.SpawnPlayerRequest(existingPlayer, id);
                 }
             }
-        }
 
-        public void PersistBeforeLeaving()
-        {
-            SaveOwnLocalCharacter();
+            var npc = Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("NPC_Dummy");
 
-            if (CurrentWorldSave != null && IsHostOrSolo())
+            if (npc != null)
             {
-                SaveEverything();
+                GD.Print($"[NetworkManager.FinishPeerJoin] informing {id} about NPC_Dummy");
+
+                Game.Managers.DimensionManager.Node.SpawnNpcRequest(npc.Position, id);
+            }
+
+            var worldItems = Game.Managers.DimensionManager.Node.Parents.SelectMany(parent => parent.GetChildren().OfType<WorldItem>());
+
+            foreach (var worldItem in worldItems)
+            {
+                GD.Print($"[NetworkManager.FinishPeerJoin] informing {id} about {worldItem.Name}");
+
+                Game.Managers.DimensionManager.Node.SpawnWorldItemRequest(worldItem, id);
             }
         }
+
+        #region Core - Personagem, join e politica de save
 
         public override void _Ready()
         {
-            Game.WhenReady(() => GetTree().Root.CloseRequested += PersistBeforeLeaving);
+            Game.WhenReady(() => GetTree().Root.CloseRequested += Game.Managers.SaveManager.Node.SaveAll);
 
             // A rede so avisa; quem reage e quem tem o estado. E o que mantem a seta numa
             // direcao so: Session -> Network, nunca de volta.
@@ -240,9 +211,12 @@ namespace Jogo25D.Session
                 var network = Game.Managers.NetworkManager.Node;
 
                 network.PeerLeft += OnPeerLeft;
-                network.Disconnecting += PersistBeforeLeaving;
+
+                // O que vive no no (estado do player) entra no Data antes de gravar.
+                Game.Managers.SaveManager.Node.Saving += SincronizarPersonagens;
+                network.Disconnecting += Game.Managers.SaveManager.Node.SaveAll;
                 network.ConnectionSucceeded += RequestJoinInfo;
-                network.ServerDisconnected += ReturnToMainMenu;
+                network.ServerDisconnected += LeaveWorld;
             });
         }
 
@@ -265,8 +239,6 @@ namespace Jogo25D.Session
             _pendingProfileByPeer.Clear();
         }
 
-        // API unica pra quem escolhe personagem: a tela pede, o SaveManager resolve. Quem decide
-        // se e local ou de servidor e o CharacterMode da sessao, nunca o chamador.
         public void CreateCharacter(string name)
         {
             if (CharacterMode == WorldCharacterMode.ServerCharacters)
@@ -291,7 +263,6 @@ namespace Jogo25D.Session
             Game.Managers.SaveManager.Node.DeleteLocalCharacter(characterId);
         }
 
-        // Personagem escolhido: no mundo proprio entra no jogo, no join manda pro servidor.
         public void SelectCharacter(CharacterSaveData character)
         {
             if (character == null)
@@ -311,12 +282,6 @@ namespace Jogo25D.Session
             EnterPendingWorld();
         }
 
-        public void SelectCharacter(string serverCharacterId)
-        {
-            SelectServerCharacterRequest(serverCharacterId);
-        }
-
-        // Chamado por quem acabou de conectar: pergunta ao servidor em que modo o mundo esta.
         public void RequestJoinInfo()
         {
             RpcId(1, nameof(RequestJoinInfoServerReceive));
@@ -344,9 +309,7 @@ namespace Jogo25D.Session
 
             if (mode == WorldCharacterMode.LocalCharacters)
             {
-                Game.Ui.CharacterSelectUI.Node.CurrentContext = Jogo25D.UI.CharacterSelectContext.PeerJoinLocal;
-
-                Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
+                CharacterSelectionRequired?.Invoke(CharacterSelectContext.PeerJoinLocal, "", null);
 
                 return;
             }
@@ -398,7 +361,7 @@ namespace Jogo25D.Session
 
             _peerCharacters[senderId] = character;
 
-            Game.Managers.NetworkManager.Node.FinishPeerJoin(senderId, character);
+            FinishPeerJoin(senderId, character);
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -465,17 +428,12 @@ namespace Jogo25D.Session
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void ServerCharacterListReceive(Godot.Collections.Array summaries)
         {
-            ServerCharacterListAvailable?.Invoke(CurrentWorldSave?.MultiplayerKey ?? "", summaries);
+            CharacterSelectionRequired?.Invoke(CharacterSelectContext.PeerJoinServer, CurrentWorldSave?.MultiplayerKey ?? "", summaries);
         }
 
         public void SelectServerCharacterRequest(string characterId)
         {
             RpcId(1, nameof(SelectServerCharacterServerReceive), characterId);
-        }
-
-        public void CreateServerCharacterRequest(string name)
-        {
-            RpcId(1, nameof(CreateServerCharacterServerReceive), name);
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -496,7 +454,12 @@ namespace Jogo25D.Session
 
             _peerCharacters[senderId] = character;
 
-            Game.Managers.NetworkManager.Node.FinishPeerJoin(senderId, character);
+            FinishPeerJoin(senderId, character);
+        }
+
+        public void CreateServerCharacterRequest(string name)
+        {
+            RpcId(1, nameof(CreateServerCharacterServerReceive), name);
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -519,7 +482,7 @@ namespace Jogo25D.Session
 
             _peerCharacters[senderId] = character;
 
-            Game.Managers.NetworkManager.Node.FinishPeerJoin(senderId, character);
+            FinishPeerJoin(senderId, character);
         }
 
         private void SavePeerCharacterOnDisconnect(long id, Player playerNode)
