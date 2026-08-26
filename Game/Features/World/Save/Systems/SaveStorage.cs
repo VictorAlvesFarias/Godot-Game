@@ -6,13 +6,14 @@ using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
+using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Jogo25D.Systems
 {
-    // Armazenamento: le e escreve .tres, monta e apaga pasta, migra formato antigo. Nao conhece
+    // Armazenamento: le e escreve JSON, monta e apaga pasta. Nao conhece
     // no, rede nem sessao - por isso e system, nao manager.
     //
     // Nao deve ser chamado pela UI. Quem decide se o dado vem do disco ou de um RPC e o
@@ -32,16 +33,16 @@ namespace Jogo25D.Systems
                 return CachedProfile;
             }
 
-            if (ResourceLoader.Exists(SavesConstants.PROFILE_PATH))
+            if (FileAccess.FileExists(SavesConstants.PROFILE_PATH))
             {
-                CachedProfile = ResourceLoader.Load<ProfileData>(SavesConstants.PROFILE_PATH, cacheMode: ResourceLoader.CacheMode.Ignore);
+                CachedProfile = ReadJson<ProfileData>(SavesConstants.PROFILE_PATH);
             }
 
             if (CachedProfile == null)
             {
                 CachedProfile = new ProfileData { ProfileId = Guid.NewGuid().ToString() };
 
-                ResourceSaver.Save(CachedProfile, SavesConstants.PROFILE_PATH);
+                WriteJson(CachedProfile, SavesConstants.PROFILE_PATH);
             }
 
             return CachedProfile;
@@ -75,12 +76,12 @@ namespace Jogo25D.Systems
         {
             EnsureDir(SavesConstants.CHARACTERS_DIR);
 
-            ResourceSaver.Save(character, $"{SavesConstants.CHARACTERS_DIR}/{character.CharacterId}.tres");
+            WriteJson(character, $"{SavesConstants.CHARACTERS_DIR}/{character.CharacterId}.json");
         }
 
         public static void DeleteLocalCharacter(string characterId)
         {
-            DeleteIfExists($"{SavesConstants.CHARACTERS_DIR}/{characterId}.tres");
+            DeleteIfExists($"{SavesConstants.CHARACTERS_DIR}/{characterId}.json");
         }
 
         public static List<CharacterSaveData> ListServerCharacters(string multiplayerKey)
@@ -108,7 +109,7 @@ namespace Jogo25D.Systems
 
         public static CharacterSaveData LoadServerCharacter(string multiplayerKey, string characterId)
         {
-            return LoadCharacterAt($"{ServerCharactersDirFor(multiplayerKey)}/{characterId}.tres");
+            return LoadCharacterAt($"{ServerCharactersDirFor(multiplayerKey)}/{characterId}.json");
         }
 
         public static void SaveServerCharacter(string multiplayerKey, CharacterSaveData character)
@@ -117,12 +118,12 @@ namespace Jogo25D.Systems
 
             EnsureDir(dir);
 
-            ResourceSaver.Save(character, $"{dir}/{character.CharacterId}.tres");
+            WriteJson(character, $"{dir}/{character.CharacterId}.json");
         }
 
         public static void DeleteServerCharacter(string multiplayerKey, string characterId)
         {
-            DeleteIfExists($"{ServerCharactersDirFor(multiplayerKey)}/{characterId}.tres");
+            DeleteIfExists($"{ServerCharactersDirFor(multiplayerKey)}/{characterId}.json");
         }
 
         public static void SaveBackup(string ownerProfileId, CharacterSaveData character)
@@ -136,7 +137,7 @@ namespace Jogo25D.Systems
 
             EnsureDir(dir);
 
-            ResourceSaver.Save(character, $"{dir}/{character.CharacterId}.tres");
+            WriteJson(character, $"{dir}/{character.CharacterId}.json");
         }
 
         public static List<WorldSaveData> ListWorlds()
@@ -159,11 +160,11 @@ namespace Jogo25D.Systems
                     continue;
                 }
 
-                var metaPath = $"{SavesConstants.WORLDS_DIR}/{folderName}/world.tres";
+                var metaPath = $"{SavesConstants.WORLDS_DIR}/{folderName}/world.json";
 
-                if (ResourceLoader.Exists(metaPath))
+                if (FileAccess.FileExists(metaPath))
                 {
-                    var meta = ResourceLoader.Load<WorldSaveData>(metaPath, cacheMode: ResourceLoader.CacheMode.Ignore);
+                    var meta = ReadJson<WorldSaveData>(metaPath);
 
                     if (meta != null)
                     {
@@ -229,15 +230,15 @@ namespace Jogo25D.Systems
 
             EnsureDir(dir);
 
-            ResourceSaver.Save(world, $"{dir}/world.tres");
+            WriteJson(world, $"{dir}/world.json");
         }
 
         public static DimensionSaveData LoadDimensionState(string worldId, string dimensionId)
         {
-            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/{dimensionId}.tres";
+            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/{dimensionId}.json";
 
-            return ResourceLoader.Exists(path)
-                ? ResourceLoader.Load<DimensionSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
+            return FileAccess.FileExists(path)
+                ? ReadJson<DimensionSaveData>(path)
                 : new DimensionSaveData();
         }
 
@@ -247,7 +248,7 @@ namespace Jogo25D.Systems
 
             EnsureDir(dir);
 
-            ResourceSaver.Save(state, $"{dir}/{dimensionId}.tres");
+            WriteJson(state, $"{dir}/{dimensionId}.json");
         }
 
         public static void DeleteWorld(string worldId)
@@ -297,7 +298,7 @@ namespace Jogo25D.Systems
 
             for (var fileName = dir.GetNext(); fileName != ""; fileName = dir.GetNext())
             {
-                if (dir.CurrentIsDir() || !fileName.EndsWith(".tres"))
+                if (dir.CurrentIsDir() || !fileName.EndsWith(".json"))
                 {
                     continue;
                 }
@@ -315,10 +316,64 @@ namespace Jogo25D.Systems
 
         private static CharacterSaveData LoadCharacterAt(string path)
         {
-            return ResourceLoader.Exists(path)
-                ? ResourceLoader.Load<CharacterSaveData>(path, cacheMode: ResourceLoader.CacheMode.Ignore)
+            return FileAccess.FileExists(path)
+                ? ReadJson<CharacterSaveData>(path)
                 : null;
         }
+
+        #region Core - Json
+
+        // O save e JSON puro: mesmo formato que ja trafega por RPC, via GodotDictionaryParser.
+        // O tipo concreto vem no campo "$type" do proprio arquivo, entao nao existe factory.
+        private static void WriteJson(Resource resource, string path)
+        {
+            var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+
+            if (file == null)
+            {
+                GD.PushError($"[SaveStorage] nao consegui escrever {path}: {FileAccess.GetOpenError()}");
+
+                return;
+            }
+
+            file.StoreString(Json.Stringify(GodotDictionaryParser.ToDictionary(resource), "\t"));
+
+            file.Close();
+        }
+
+        private static T ReadJson<T>(string path) where T : Resource
+        {
+            if (!FileAccess.FileExists(path))
+            {
+                return null;
+            }
+
+            var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+
+            if (file == null)
+            {
+                GD.PushError($"[SaveStorage] nao consegui ler {path}: {FileAccess.GetOpenError()}");
+
+                return null;
+            }
+
+            var texto = file.GetAsText();
+
+            file.Close();
+
+            var parsed = Json.ParseString(texto);
+
+            if (parsed.VariantType != Variant.Type.Dictionary)
+            {
+                GD.PushError($"[SaveStorage] {path} nao e um objeto JSON valido");
+
+                return null;
+            }
+
+            return GodotDictionaryParser.ToResource<T>(parsed.AsGodotDictionary());
+        }
+
+        #endregion
 
         private static void EnsureDir(string dirPath)
         {

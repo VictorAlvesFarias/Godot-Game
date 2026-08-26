@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Godot.Collections;
 using System;
 using System.Collections;
@@ -20,7 +20,7 @@ namespace Jogo25D.Utils.GodotDictionaryParser
                 return dict;
             }
 
-            dict["$type"] = resource.GetType().AssemblyQualifiedName;
+            dict["$type"] = ResolveTypeId(resource.GetType());
 
             foreach (var property in GetFields(resource.GetType()))
             {
@@ -66,6 +66,65 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         #endregion
 
+        #region Core - Identidade de tipo
+
+        // Id estavel <-> tipo. Montado uma vez por reflexao: cada classe declara o proprio id
+        // com [SaveType], entao nao existe lista central pra manter em dia.
+        private static System.Collections.Generic.Dictionary<string, Type> _typeById;
+        private static System.Collections.Generic.Dictionary<Type, string> _idByType;
+
+        private static System.Collections.Generic.Dictionary<string, Type> TypeById
+        {
+            get
+            {
+                EnsureTypeMap();
+
+                return _typeById;
+            }
+        }
+
+        private static void EnsureTypeMap()
+        {
+            if (_typeById != null)
+            {
+                return;
+            }
+
+            _typeById = new System.Collections.Generic.Dictionary<string, Type>();
+            _idByType = new System.Collections.Generic.Dictionary<Type, string>();
+
+            foreach (var type in typeof(GodotDictionaryParser).Assembly.GetTypes())
+            {
+                var attribute = type.GetCustomAttribute<SaveTypeAttribute>();
+
+                if (attribute == null || string.IsNullOrEmpty(attribute.Id))
+                {
+                    continue;
+                }
+
+                if (_typeById.TryGetValue(attribute.Id, out var conflito))
+                {
+                    GD.PushError($"[GodotDictionaryParser] id de save duplicado {attribute.Id}: {conflito} e {type}");
+
+                    continue;
+                }
+
+                _typeById[attribute.Id] = type;
+                _idByType[type] = attribute.Id;
+            }
+        }
+
+        // Sem [SaveType], usa o FullName: sobrevive a bump de versao do assembly, mas ainda
+        // amarra o arquivo ao namespace. Anotar e o caminho pra desamarrar de vez.
+        private static string ResolveTypeId(Type type)
+        {
+            EnsureTypeMap();
+
+            return _idByType.TryGetValue(type, out var id) ? id : type.FullName;
+        }
+
+        #endregion
+
         #region Core - Parsing
 
         private static PropertyInfo[] GetFields(Type type)
@@ -102,7 +161,13 @@ namespace Jogo25D.Utils.GodotDictionaryParser
             if (declaredType == typeof(long)) return (long)value;
             if (declaredType == typeof(float)) return (float)value;
             if (declaredType == typeof(bool)) return (bool)value;
-            if (declaredType == typeof(Vector2)) return (Vector2)value;
+            if (declaredType == typeof(Vector2))
+            {
+                var vector = (Vector2)value;
+
+                return new Dictionary { { "x", vector.X }, { "y", vector.Y } };
+            }
+
             if (declaredType.IsEnum) return (int)value;
 
             throw new NotSupportedException($"[GodotDictionaryParser] Tipo nao suportado: {declaredType}");
@@ -138,7 +203,15 @@ namespace Jogo25D.Utils.GodotDictionaryParser
             if (declaredType == typeof(long)) return variant.AsInt64();
             if (declaredType == typeof(float)) return variant.AsSingle();
             if (declaredType == typeof(bool)) return variant.AsBool();
-            if (declaredType == typeof(Vector2)) return variant.AsVector2();
+            if (declaredType == typeof(Vector2))
+            {
+                var vector = variant.AsGodotDictionary();
+
+                return new Vector2(
+                    vector.TryGetValue("x", out var x) ? x.AsSingle() : 0f,
+                    vector.TryGetValue("y", out var y) ? y.AsSingle() : 0f);
+            }
+
             if (declaredType.IsEnum) return Enum.ToObject(declaredType, variant.AsInt32());
 
             throw new NotSupportedException($"[GodotDictionaryParser] Tipo nao suportado: {declaredType}");
@@ -170,6 +243,11 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
                 if (!string.IsNullOrEmpty(typeName))
                 {
+                    if (TypeById.TryGetValue(typeName, out var mapped))
+                    {
+                        return mapped;
+                    }
+
                     var resolved = Type.GetType(typeName);
 
                     if (resolved != null)

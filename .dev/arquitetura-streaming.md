@@ -33,7 +33,7 @@ Isso responde a pergunta que originou o desenho: **quem carrega a entidade é o 
 | | tile | entidade |
 |---|---|---|
 | base determinística | semente do mundo | — (não existe entidade procedural hoje) |
-| delta persistido | `ChunkMutationData[]` por chunk | `EntityRecord[]` por chunk |
+| delta persistido | `ChunkMutationData[]` por chunk | `EntitySaveData[]` por chunk |
 | ao carregar | pinta + reaplica mutação | instancia a partir do registro |
 | ao descarregar | apaga o tile | serializa de volta e libera o node |
 | ao entrar peer novo | manda semente + chunks carregados | manda os registros dos chunks carregados |
@@ -46,10 +46,10 @@ Igual ao que o tile já faz hoje.
 
 | nível | o que é | quando |
 |---|---|---|
-| **registro** | o delta persistido (`ChunkMutationData`, `EntityRecord`) | **eager** — a dimensão inteira entra no `ImportState`, ao entrar no mundo |
+| **registro** | o delta persistido (`ChunkMutationData`, `EntitySaveData`) | **eager** — a dimensão inteira entra no `ImportState`, ao entrar no mundo |
 | **materialização** | a célula pintada, o node na árvore | **lazy** — só quando o chunk entra no raio |
 
-`ImportState` carrega o dicionário inteiro da dimensão; `ApplyMutations` só roda dentro do `LoadChunkAsync`. Entidade segue o mesmo: os `EntityRecord` de toda a dimensão entram em memória de uma vez, e o node só é instanciado quando o chunk dele carrega.
+`ImportState` carrega o dicionário inteiro da dimensão; `ApplyMutations` só roda dentro do `LoadChunkAsync`. Entidade segue o mesmo: os `EntitySaveData` de toda a dimensão entram em memória de uma vez, e o node só é instanciado quando o chunk dele carrega.
 
 No cliente nem o registro vem inteiro: ele recebe os deltas **do chunk** que está chegando, dentro do `LoadChunkReceive`. Quem guarda o dicionário completo é o servidor.
 
@@ -123,106 +123,165 @@ public event Action<string, Vector2I> ChunkUnloaded;
 
 `EntityStreamingManager` e `MinimapSystem` assinam. O `TileStreamingManager` não conhece nenhum dos dois — mantém a regra de pub/sub do projeto (a peça de baixo notifica, não chama).
 
-### 3.2 `EntityStreamingManager` (novo, ~200 linhas)
+### 3.2 `EntityStreamingManager` (novo, ~180 linhas)
 
-Assina `ChunkLoaded`/`ChunkUnloaded` e faz pela entidade o que o tile já faz.
+Assina `ChunkLoaded`/`ChunkUnloaded` e faz pela entidade o que o tile já faz. É também o `EntityRegistry` onde a `WorldEntity` se registra sozinha.
 
 ```
 EntityStreamingManager : Node
-├─ _records : Dictionary<(string dim, Vector2I chunk), List<EntityRecord>>
-│     o que o save conhece, carregado ou não
-├─ _live : Dictionary<long instanceId, Node>
-│     o que está instanciado agora
+├─ _records : Dictionary<(string dim, Vector2I chunk), List<EntitySaveData>>
+│     o que o save conhece, materializado ou não
+├─ _live : Dictionary<long instanceId, WorldEntity>
+│     o que está na árvore agora
+│
+├─ Register(entity)     ← chamado pelo _EnterTree da própria entidade
+├─ Unregister(entity)   ← chamado pelo _ExitTree da própria entidade
 │
 ├─ OnChunkLoaded(dimensionId, chunkCoord)
-│     └─ para cada record do chunk: DimensionManager.Spawn(record)
+│     └─ para cada record do chunk: data.Scene.Instantiate() + Restore(data)
 │
 ├─ OnChunkUnloaded(dimensionId, chunkCoord)
-│     └─ para cada entidade viva no chunk: serializa em EntityRecord, QueueFree
+│     └─ para cada entidade viva no chunk: entity.Unload()
 │
-├─ Track(node, record)      // entidade criada em runtime entra na contabilidade
-├─ Forget(instanceId)       // item recolhido, prop quebrado: some do save também
+├─ BeginTeardown()      ← DespawnWorld avisa; a partir daí ignora _ExitTree
 │
 ├─ ExportState(dimensionId) : DimensionEntitySaveData
 └─ ImportState(dimensionId, save)
 ```
 
-**`Player` fica de fora.** Player não é conteúdo de mundo: quem o cria e destrói é o join/leave da sessão, e ele é o *centro* do raio, não conteúdo dele. `Prop`/`Portal`, `WorldItem` e `NPC` entram.
+### 3.3 `WorldEntity` — a base que se registra sozinha
 
-**Diferença entre descarregar e esquecer:**
+Em vez de um manager que sabe criar cada tipo, **cada entidade se registra ao entrar na árvore**. O `Prop` já faz metade disso hoje: tem os próprios RPCs de quebra e um `virtual ToSave()`. `WorldEntity` generaliza.
 
-| | descarregar | esquecer |
+```
+WorldEntity : Node2D
+├─ _EnterTree()  → EntityRegistry.Register(this)      automático
+├─ _ExitTree()   → EntityRegistry.Unregister(this)    automático, e SÓ isso
+│
+├─ virtual EntitySaveData Capture()      estado -> resource
+├─ virtual void Restore(EntitySaveData)  resource -> estado
+│
+├─ Unload()   captura, mantém o registro no save, sai da árvore
+├─ Forget()   remove do save, QueueFree
+│
+└─ RPCs próprios de comportamento (quebrar, interagir) — como o Prop já tem
+```
+
+`Prop`/`Portal`, `WorldItem` e `NPC` passam a herdar daqui. **`Player` não**: ele é sessão, não conteúdo de mundo — quem o cria e destrói é o join/leave, e ele é o *centro* do raio, não conteúdo dele.
+
+#### A regra dura: `_ExitTree` só faz membership
+
+Medido em projeto Godot isolado (4.6), com sonda em `_exit_tree`:
+
+| como o node sai | `IsQueuedForDeletion()` nele | pai queued | `PREDELETE` |
+|---|---|---|---|
+| `RemoveChild` | `false` | `false` | depois |
+| `Reparent` | `false` | `false` | — (segue vivo) |
+| **`QueueFree` no próprio node** | **`true`** | `false` | **antes do `_ExitTree`** |
+| `QueueFree` no pai direto | `false` | `true` | depois |
+| `QueueFree` no **avô** (é o caso do `DespawnWorld`) | `false` | `false` | depois |
+| `Free` no avô | `false` | `false` | depois |
+
+Duas consequências:
+
+1. **`IsQueuedForDeletion()` só isola "eu fui liberado diretamente".** Descarregar, trocar de dimensão e desmontar o mundo caem todos em `false`/`false` — indistinguíveis. Olhar o pai não resolve: só acusa quando o pai **direto** foi o liberado, e no `DespawnWorld` o `QueueFree` é no `World`, dois ou mais níveis acima.
+2. **No auto-`QueueFree` o `PREDELETE` roda antes do `_ExitTree`.** Serializar ali é serializar um objeto já em teardown.
+
+Por isso: **`_ExitTree` tira do registro e nada mais.** Nunca captura estado, nunca decide se salva. A intenção é declarada nos métodos explícitos, antes de sair da árvore.
+
+| | `Unload()` | `Forget()` |
 |---|---|---|
-| gatilho | player se afastou | item recolhido, prop quebrado |
-| node | `QueueFree` | `QueueFree` |
+| gatilho | chunk saiu do raio | item recolhido, prop quebrado |
+| captura | `Capture()` antes de sair | não precisa |
 | registro no save | **mantido** | **removido** |
+| node | sai da árvore | `QueueFree` |
 | volta quando o chunk volta? | sim | não |
 
-Essa distinção é o coração do desenho — é ela que faz um portal continuar existindo depois de você ir embora e voltar, e um item recolhido não ressuscitar.
+E o teardown do mundo, que é indistinguível de fora, é resolvido por fora: o `WorldManager.DespawnWorld` avisa o registry que vai desmontar, e o registry ignora os `_ExitTree` que chegarem depois disso.
 
-### 3.3 `EntityRecord` — o formato único
+### 3.4 `EntitySaveData` e o formato do save: JSON
 
-```csharp
-public partial class EntityRecord : Resource
+**Implementado em 2026-08-26.** O save deixou de ser `.tres` do Godot e passou a ser JSON puro, escrito pelo `GodotDictionaryParser` — o mesmo serializador que já trafega por RPC. Um formato só para disco e rede.
+
+```json
 {
-    public string TypeId { get; set; }        // "portal", "world_item", "npc_dummy"
-    public long InstanceId { get; set; }
-    public float PositionX { get; set; }
-    public float PositionY { get; set; }
-    public string DimensionId { get; set; }
-    public Godot.Collections.Dictionary Data { get; set; }   // payload específico do tipo
+	"$type": "dimension",
+	"Chunks": [
+		{
+			"$type": "chunk_entry",
+			"ChunkCoordX": -2,
+			"State": {
+				"$type": "chunk_state",
+				"Mutations": [
+					{ "$type": "chunk_mutation", "Type": "break", "Position": { "x": -7.0, "y": 42.0 } }
+				]
+			}
+		}
+	]
 }
 ```
 
-O mesmo `EntityRecord` serve para **três coisas**, e é isso que elimina os 18 métodos:
-
-- **save**: é o que vai pro `.tres`
-- **rede**: é o que o RPC de spawn carrega
-- **spawn**: é o que o `DimensionManager` recebe para instanciar
-
-`PropSaveData` passa a ser um `EntityRecord` com `TypeId = "portal"`. `PropSaveData` continua existindo só como classe obsoleta, pelo mesmo motivo de sempre — os `.tres` salvos guardam o caminho do script.
-
-### 3.4 `EntityDefinition` — a definição por tipo
-
-Uma `Resource` por tipo de entidade, no mesmo espírito de `ItemDefinition`:
+**O tipo vem no arquivo, não há factory.** `$type` é um id curto e estável declarado pela própria classe:
 
 ```csharp
-public abstract partial class EntityDefinition : Resource
+[SaveType("prop")]
+public partial class PropSaveData : Resource { ... }
+```
+
+O parser monta o mapa `id -> Type` uma vez, por reflexão, e instancia com `Activator.CreateInstance`. Sem lista central, sem switch. Classe sem `[SaveType]` cai no `FullName`.
+
+Por que id próprio e não o nome do tipo: o `$type` antigo gravava `AssemblyQualifiedName`, **com versão do assembly**. Para RPC tanto faz — os dois lados são o mesmo build. Para save é mina: bumpar versão derruba mundo antigo. Com id estável, renomear classe, mover arquivo ou trocar namespace não quebra nada — que era exatamente a dor deixada pelo `PortalSaveData`.
+
+#### Restrições do formato, medidas
+
+Testado em Godot 4.6 headless:
+
+| ponto | resultado |
+|---|---|
+| `Json.Stringify` com `Vector2` cru | vira a string `"(12.5, -3.0)"`, e `AsVector2()` na volta dá `Vector2.Zero` — **perda silenciosa** |
+| número na volta | sempre `float`; o `FromVariant` converte pelo tipo declarado, então `int`/`long` sobrevivem |
+| `long` acima de 2^53 | perde precisão (`…806` volta `…800`) |
+| `JSON.from_native` | preserva tudo, mas o arquivo ganha tags de tipo e deixa de ser JSON legível |
+
+Decisões que saíram disso:
+
+1. **`Vector2` é serializado como `{"x":…, "y":…}` pelo parser.** O C# continua com `Vector2` nas propriedades; só a fronteira converte. Nada de partir campo em `X`/`Y` no código de gameplay.
+2. **Nada de inteiro acima de 2^53 em campo de save.** Hoje está seguro: `WorldSeed` é `uint32` (`(uint)GD.Randi()`) e timestamps são ~1.7e9.
+3. **Tipo não suportado estoura**, em vez de gravar lixo em silêncio.
+
+#### Entidade
+
+O `EntitySaveData` do streaming segue o mesmo formato — mais o caminho da cena, já que `PackedScene` não sobrevive a JSON:
+
+```csharp
+[SaveType("entity")]
+public partial class EntitySaveData : Resource
 {
-    public abstract string TypeId { get; }
-    public abstract PackedScene Scene { get; }
-
-    // Aplica o payload no node recém-instanciado.
-    public abstract void Apply(Node2D node, EntityRecord record);
-
-    // Extrai o payload de um node vivo.
-    public abstract EntityRecord Capture(Node2D node);
+    [Export, GodotDictionaryField] public string ScenePath { get; set; }
+    [Export, GodotDictionaryField] public Vector2 Position { get; set; }
+    [Export, GodotDictionaryField] public string DimensionId { get; set; }
+    [Export, GodotDictionaryField] public long InstanceId { get; set; }
 }
 ```
 
-`PropEntityDefinition`, `WorldItemEntityDefinition`, `NpcEntityDefinition`. Entidade nova = uma definição, **zero linha** no `DimensionManager` e zero RPC novo.
+E o carregamento continua sendo uma linha genérica: `GD.Load<PackedScene>(data.ScenePath).Instantiate()`.
 
-### 3.5 `DimensionManager` — 18 métodos viram 4
+### 3.5 `DimensionManager` — de 18 métodos de spawn a 1 RPC
 
-```csharp
-// Instancia pela definição e coloca no parent da dimensão. Autoritativo.
-public Node2D Spawn(EntityRecord record)
+Com auto-registro e tipo no resource, sobra do manager só o que é mesmo dele: **saber onde é o lugar**.
 
-// Spawn + replica pra todo mundo (ou pra um peer só, no catch-up).
-public void SpawnRequest(EntityRecord record, long targetPeerId = 0)
-
-[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, ...)]
-public void SpawnReceive(Godot.Collections.Dictionary recordDict)
-
-// Tira da árvore em todas as pontas.
-public void DespawnRequest(long instanceId)
+```
+DimensionManager
+├─ ResolveParent / ResolveLayer / ResolveBaseLayer / ShowOnly
+├─ FindGroundSpawnPosition
+└─ SpawnReceive(EntitySaveData)     ← o único RPC que sobra
 ```
 
-Mais `ResolveParent`/`ResolveLayer`/`ShowOnly`/`FindGroundSpawnPosition`, que continuam como estão.
+`RestoreProps`, `CollectProps`, `SpawnTestNPC` e os 18 métodos de spawn somem. Quem restaura é o `EntityStreamingManager` ao carregar o chunk; quem coleta é o `ExportState` dele.
 
-`RestoreProps` e `CollectProps` **somem**: quem restaura é o `EntityStreamingManager` ao carregar o chunk, e quem coleta é o `ExportState` dele.
+**Por que ainda sobra um RPC:** o RPC do Godot exige que o node já exista nos dois lados, no mesmo caminho. Um node que ainda não existe não pode receber RPC — então **criação não pode ser self-service**, mesmo com auto-registro. Registro, save, quebra e interação podem; criação, não.
 
-`SpawnTestNPC` some: vira um `EntityRecord` de `TypeId = "npc_dummy"` gravado no save do mundo novo, como qualquer outra entidade.
+**Questão em aberto:** o `MultiplayerSpawner` nativo resolve exatamente isso — aponta pra um parent, lista as cenas spawnáveis, e um `AddChild` no servidor replica sozinho. O projeto não usa nenhum (`MultiplayerSpawner`/`MultiplayerSynchronizer`: 0 ocorrências). Se adotado, o último RPC também some e o auto-registro cobre o ciclo inteiro. **Precisa de investigação antes de decidir.**
 
 ### 3.6 `MinimapSystem` (novo, ~50 linhas)
 
@@ -234,11 +293,11 @@ Assina `ChunkLoaded`, varre as células do chunk e pinta a imagem de descoberta.
 
 ```
 user://saves/worlds/<id>/
-├─ world.tres              meta, semente, personagens
-├─ dimension_overworld.tres
+├─ world.json              meta, semente, personagens
+├─ overworld.json
 │    ├─ Chunks[] → ChunkEntryData { coord, ChunkStateData { Mutations[] } }
-│    └─ Entities[] → EntityRecord[]        ← NOVO, chaveado por chunk
-└─ dimension_upsidedown.tres
+│    └─ Entities[] → EntitySaveData[]        ← NOVO, chaveado por chunk
+└─ upsidedown.json
 ```
 
 `DimensionSaveData` ganha a lista de entidade ao lado da de mutação. As duas são deltas por chunk; o carregamento das duas é disparado pelo mesmo evento.
@@ -252,6 +311,7 @@ user://saves/worlds/<id>/
 | autosave por timer, só no host | **implementado** |
 | registro de `WorldSaveData` e `CharacterSaveData` | **implementado** — `SessionManager` registra ao entrar no mundo |
 | mutação de tile por chunk | **implementado** |
+| save em JSON com `$type` estável | **implementado 2026-08-26** |
 | props no save | **implementado, mas fora do streaming** — `RestoreProps` carrega tudo de uma vez |
 | `WorldItem` no save | **não existe** |
 | `NPC` no save | **não existe** |
@@ -274,7 +334,18 @@ O `EntityStreamingManager` não grava arquivo: ele atualiza o `Resource` que já
 
 ### Registro automático por sinal da árvore
 
-Ideia já discutida e agora colocada no lugar certo: a entidade não precisa saber do `SaveManager`. Quem registra é o `EntityStreamingManager`, via `Track`/`Forget`, chamados pelo `DimensionManager.Spawn`/`DespawnRequest`. Como todo spawn passa por lá, o registro é automático sem interface nova e sem `_EnterTree` em cada classe.
+A entidade não conhece o `SaveManager`. Ela só se anuncia:
+
+```
+WorldEntity._EnterTree()  → EntityStreamingManager.Register(this)
+WorldEntity._ExitTree()   → EntityStreamingManager.Unregister(this)
+```
+
+Não há interface nova (`ISavable` e afins) nem passagem obrigatória por um método de spawn: quem entra na árvore está registrado, venha de onde vier — do streaming, de um RPC, ou de código de gameplay.
+
+O `EntityStreamingManager` é quem fala com o `SaveManager`, registrando o `DimensionEntitySaveData` de cada dimensão. Cadeia preservada: **entidade → manager → system**.
+
+**O que o `_ExitTree` não pode fazer** (ver a medição em 3.3): capturar estado ou decidir se salva. Ele só remove da lista de vivos. Captura acontece em `Unload()`/`Forget()`, antes de sair da árvore; e o teardown do mundo é anunciado por `BeginTeardown()`, porque de dentro do callback ele é indistinguível de um descarregamento normal.
 
 ---
 
@@ -343,9 +414,9 @@ Levantados na leitura do código; não corrigir junto seria carregar o defeito p
 | arquivo | antes | depois | delta |
 |---|---:|---:|---|
 | `ChunkStreamingManager` → `TileStreamingManager` | 623 | ~250 | −373 |
-| `DimensionManager` | 535 | ~330 | −205 (18 métodos de spawn viram 4) |
-| `EntityStreamingManager` | — | ~200 | +200 |
-| `EntityRecord` + `EntityDefinition` + 3 definições | — | ~150 | +150 |
+| `DimensionManager` | 535 | ~310 | −225 (18 métodos de spawn viram 1 RPC) |
+| `EntityStreamingManager` | — | ~180 | +180 |
+| `WorldEntity` + `EntitySaveData` | — | ~120 | +120 |
 | `MinimapSystem` | — | ~50 | +50 |
 | `CoordinateUtilities` | — | ~30 | +30 |
 | `WorldManager` | 218 | ~230 | +12 |
@@ -360,18 +431,21 @@ Menos código, e o que sobra tem uma responsabilidade cada.
 
 Cada passo compila e roda sozinho.
 
+> **Feito em 2026-08-26:** migração do save para JSON (`SaveStorage`, `GodotDictionaryParser`, `[SaveType]`), e remoção da última chamada de UI dentro do `SessionManager` (`CompleteLocalCreation`), que estava quebrando o build.
+
 1. **`CoordinateUtilities`** — extrai `WorldToCell`/`CellToChunk`, sem mudar comportamento.
 2. **`WorldManager`** — adiciona `GetAllPlayers`/`GetPlayersInDimension`; remove `FindLocalPlayer` das 4 telas.
 3. **`MinimapSystem`** — extrai `RecordDiscovered`/`GetDiscoveredTexture`; `TileStreamingManager` passa a emitir `ChunkLoaded`.
 4. **Rename `ChunkStreamingManager` → `TileStreamingManager`** — e tira `RecordMutation`, `ApplyMutations`, `ResolveBiome`, `PreloadSpawnAreaAsync` para os donos certos.
-5. **`EntityRecord` + `EntityDefinition` + as 3 definições** — só os tipos, ninguém usa ainda.
-6. **`DimensionManager.Spawn/SpawnRequest/SpawnReceive/DespawnRequest`** — genéricos, convivendo com os antigos.
+5. **`WorldEntity` + `EntitySaveData`** — a base com `_EnterTree`/`_ExitTree`, `Capture`/`Restore`, `Unload`/`Forget`. `Prop` passa a herdar; nada mais muda ainda.
+6. **`DimensionManager.SpawnReceive(EntitySaveData)`** — o RPC genérico, convivendo com os antigos.
 7. **Migrar os chamadores** para o genérico; apagar os 18 métodos antigos.
-8. **`EntityStreamingManager`** — assina `ChunkLoaded`/`ChunkUnloaded`, `Track`/`Forget`, export/import; `RestoreProps`/`CollectProps` somem.
-9. **Corrigir os 3 bugs da seção 6.**
-10. **Testar** — smoke headless, solo (andar e voltar: prop continua, item recolhido não volta), 2 peers (catch-up, carregar chunk que o outro já tinha), mundo salvo antigo.
+8. **`EntityStreamingManager`** — assina `ChunkLoaded`/`ChunkUnloaded`, recebe o auto-registro, export/import; `RestoreProps`/`CollectProps` somem.
+9. **Investigar `MultiplayerSpawner`** — se cobrir o caso, o RPC do passo 6 some.
+10. **Corrigir os bugs da seção 6.**
+11. **Testar** — smoke headless, solo (andar e voltar: prop continua, item recolhido não volta), 2 peers (catch-up, carregar chunk que o outro já tinha), mundo salvo antigo.
 
-Os passos 1–4 são mecânicos e sem risco. O 5–8 é o desenho novo. O 9 é o que faltava desde antes.
+Os passos 1–4 são mecânicos e sem risco. O 5–8 é o desenho novo. O 10 é o que faltava desde antes.
 
 ---
 

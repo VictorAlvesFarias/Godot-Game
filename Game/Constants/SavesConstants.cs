@@ -2,7 +2,7 @@
 {
     public static class SavesConstants
     {
-        public const string PROFILE_PATH = "user://profile.tres";
+        public const string PROFILE_PATH = "user://profile.json";
         public const string CHARACTERS_DIR = "user://saves/characters";
         public const string SERVER_CHARACTERS_DIR = "user://saves/server_characters";
         public const string PEER_BACKUPS_DIR = "user://saves/peer_backups";

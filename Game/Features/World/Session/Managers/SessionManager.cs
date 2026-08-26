@@ -248,7 +248,9 @@ namespace Jogo25D.Session
                 return;
             }
 
-            Game.Ui.CharacterSelectUI.Node.CompleteLocalCreation(Game.Managers.SaveManager.Node.CreateLocalCharacter(name));
+            // Criou: ja entra com ele. A sessao nao navega nem toca em tela - quem reage a
+            // entrada no mundo e a UI, pelo caminho normal do SelectCharacter.
+            SelectCharacter(Game.Managers.SaveManager.Node.CreateLocalCharacter(name));
         }
 
         public void DeleteCharacter(string characterId)

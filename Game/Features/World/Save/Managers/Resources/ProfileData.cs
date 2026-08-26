@@ -1,8 +1,9 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
 {
+    [SaveType("profile")]
     public partial class ProfileData : Resource
     {
         #region Dinamic properties

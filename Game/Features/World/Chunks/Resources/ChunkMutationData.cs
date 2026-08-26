@@ -1,8 +1,9 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.World.Chunks.Resources
 {
+    [SaveType("chunk_mutation")]
     public partial class ChunkMutationData : Resource
     {
         #region Dinamic properties

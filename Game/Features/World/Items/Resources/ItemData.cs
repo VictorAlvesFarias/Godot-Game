@@ -3,6 +3,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.World.Items.Resources
 {
+    [SaveType("item")]
     public partial class ItemData : ItemDefinitionData
     {
         #region Constructors

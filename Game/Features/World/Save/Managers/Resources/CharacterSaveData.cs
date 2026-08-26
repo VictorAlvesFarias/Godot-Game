@@ -1,9 +1,10 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
 {
+    [SaveType("character")]
     public partial class CharacterSaveData : Resource
     {
         #region Dinamic properties

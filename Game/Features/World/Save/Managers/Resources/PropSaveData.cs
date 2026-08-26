@@ -3,6 +3,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
 {
+    [SaveType("prop")]
     public partial class PropSaveData : Resource
     {
         #region Dinamic properties

@@ -5,6 +5,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
 {
+    [SaveType("world")]
     public partial class WorldSaveData : Resource
     {
         #region Dinamic properties

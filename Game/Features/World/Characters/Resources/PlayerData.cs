@@ -10,6 +10,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.World.Characters.Resources
 {
+    [SaveType("player")]
     public partial class PlayerData : Resource
     {
         #region Properties

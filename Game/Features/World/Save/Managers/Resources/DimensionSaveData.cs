@@ -1,8 +1,9 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
 {
+    [SaveType("dimension")]
     public partial class DimensionSaveData : Resource
     {
         #region Dinamic properties
