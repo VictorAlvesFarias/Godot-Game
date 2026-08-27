@@ -5,7 +5,6 @@ using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.UI;
 using Jogo25D.Features.Managers.Save.Types;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Items;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System.Collections.Generic;
@@ -124,7 +123,7 @@ namespace Jogo25D.Session
 
             if (PendingCharacter != null && localPlayer != null)
             {
-                PendingCharacter.Data = localPlayer.Data;
+                PendingCharacter.State = GodotDictionaryParser.ToDictionary(localPlayer);
             }
 
             foreach (var (peerId, character) in _peerCharacters)
@@ -133,7 +132,7 @@ namespace Jogo25D.Session
 
                 if (player != null)
                 {
-                    character.Data = player.Data;
+                    character.State = GodotDictionaryParser.ToDictionary(player);
                 }
             }
         }
@@ -150,7 +149,7 @@ namespace Jogo25D.Session
             player.Name = $"Player{id}";
             player.Position = Godot.Vector2.Zero;
             player.PeerId = id;
-            player.Data = (PlayerData)character.Data.Duplicate(true);
+            GodotDictionaryParser.ApplyTo(player, character.State);
             player.Loaded = true;
 
             await Game.Managers.TileStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), player.Position);
@@ -488,7 +487,7 @@ namespace Jogo25D.Session
                 return;
             }
 
-            character.Data = playerNode.Data;
+            character.State = GodotDictionaryParser.ToDictionary(playerNode);
             character.LastPlayedUtc = Game.Managers.SaveManager.Node.NowUtc();
 
             if (CurrentWorldSave.CharacterMode == WorldCharacterMode.ServerCharacters)

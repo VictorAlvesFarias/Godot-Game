@@ -239,7 +239,7 @@ namespace Jogo25D.UI
 				LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 			}
 
-			var progress = LocalPlayer?.Data?.SkillTree;
+			var progress = LocalPlayer?.SkillTree;
 
 			Game.Ui.SkillTreeUI.PointsLabel.Node.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
 

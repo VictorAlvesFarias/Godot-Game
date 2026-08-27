@@ -38,7 +38,7 @@ namespace Jogo25D.Actions
 				return;
 			}
 
-			var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
+			var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.ActiveProperties.OfType<AttackPropertyData>().ToList(), player.ActiveProperties.OfType<AttackPropertyData>().ToList());
 			var horizontalRange = weapon.AttackRange;
 			var maxVerticalDrop = weapon.AttackRange;
 			var ground = CalculateGroundPosition(player, horizontalRange, maxVerticalDrop);
@@ -55,8 +55,8 @@ namespace Jogo25D.Actions
 				return;
 			}
 
-			var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList(), player.Data.Properties.OfType<CritPropertyData>().ToList(), player.Properties.OfType<CritPropertyData>().ToList());
-			var resolvedDamages = Resolver.Resolve(damageProps, player.Data.Properties.OfType<DamagePropertyData>().ToList(), player.Properties.OfType<DamagePropertyData>().ToList());
+			var crit = Resolver.Resolve(Properties.OfType<CritPropertyData>().ToList(), player.ActiveProperties.OfType<CritPropertyData>().ToList(), player.ActiveProperties.OfType<CritPropertyData>().ToList());
+			var resolvedDamages = Resolver.Resolve(damageProps, player.ActiveProperties.OfType<DamagePropertyData>().ToList(), player.ActiveProperties.OfType<DamagePropertyData>().ToList());
 			var damages = resolvedDamages.ConvertAll(d => new DamageInfo
 			{
 				Amount = (int)(d.DamageAmount * d.DamageMultiplier),
@@ -90,7 +90,7 @@ namespace Jogo25D.Actions
 				return;
 			}
 
-			var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.Data.Properties.OfType<AttackPropertyData>().ToList(), player.Properties.OfType<AttackPropertyData>().ToList());
+			var weapon = Resolver.Resolve(Properties.OfType<AttackPropertyData>().ToList(), player.ActiveProperties.OfType<AttackPropertyData>().ToList(), player.ActiveProperties.OfType<AttackPropertyData>().ToList());
 			var preview = HitboxScene.Instantiate<GroundHitbox>();
 			var scale = weapon.AttackArea / 25f;
 
@@ -133,8 +133,8 @@ namespace Jogo25D.Actions
 
             var weapon = Resolver.Resolve(
                 Properties.OfType<AttackPropertyData>().ToList(),
-                player.Data.Properties.OfType<AttackPropertyData>().ToList(),
-                player.Properties.OfType<AttackPropertyData>().ToList());
+                player.ActiveProperties.OfType<AttackPropertyData>().ToList(),
+                player.ActiveProperties.OfType<AttackPropertyData>().ToList());
 
             var scale = weapon.AttackArea / 25f;
             var halfWidth = (HalfWidthPx ?? 0f) * scale;

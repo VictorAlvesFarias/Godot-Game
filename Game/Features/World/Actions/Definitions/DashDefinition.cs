@@ -12,7 +12,7 @@ namespace Jogo25D.Actions
 		{
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
 			var dir = Vector2.Zero;
-			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.Data.Properties.OfType<DashPropertyData>().ToList(), player.Properties.OfType<DashPropertyData>().ToList());
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.ActiveProperties.OfType<DashPropertyData>().ToList(), player.ActiveProperties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f)
 			{
@@ -46,14 +46,14 @@ namespace Jogo25D.Actions
 			}
 
 			player.Velocity = dir * dash.DashSpeed;
-			player.Data.CanUpdateMovement = false;
+			player.CanUpdateMovement = false;
 		}
 
 		public override void OnUpdateWhileActive(Player player, ActionDefinitionData instance, float delta)
 		{
 			var dir = instance.DashDirection.LengthSquared() > 0.01f ? instance.DashDirection : Vector2.Up;
 			var input = new Vector2(player.Input.MoveX, player.Input.MoveY);
-			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.Data.Properties.OfType<DashPropertyData>().ToList(), player.Properties.OfType<DashPropertyData>().ToList());
+			var dash = Resolver.Resolve(Properties.OfType<DashPropertyData>().ToList(), player.ActiveProperties.OfType<DashPropertyData>().ToList(), player.ActiveProperties.OfType<DashPropertyData>().ToList());
 
 			if (input.LengthSquared() > 0.01f && dash.MovementInfluence > 0f)
 			{
@@ -82,7 +82,7 @@ namespace Jogo25D.Actions
 
 		public override void OnFinishedAction(Player player, ActionDefinitionData instance, float delta)
 		{
-			player.Data.CanUpdateMovement = true;
+			player.CanUpdateMovement = true;
 			instance.DashDirection = Vector2.Zero;
 		}
 

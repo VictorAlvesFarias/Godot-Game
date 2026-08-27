@@ -33,14 +33,14 @@ namespace Jogo25D.Items
             var resolvedDamages = Resolver.Resolve(
                 Properties.OfType<DamagePropertyData>().ToList(),
                 instance.Properties.OfType<DamagePropertyData>().ToList(),
-                player.Data.Properties.OfType<DamagePropertyData>().ToList(),
-                player.Properties.OfType<DamagePropertyData>().ToList()
+                player.ActiveProperties.OfType<DamagePropertyData>().ToList(),
+                player.ActiveProperties.OfType<DamagePropertyData>().ToList()
             );
             var weapon = Resolver.Resolve(
                 Properties.OfType<AttackPropertyData>().ToList(),
                 instance.Properties.OfType<AttackPropertyData>().ToList(),
-                player.Data.Properties.OfType<AttackPropertyData>().ToList(),
-                player.Properties.OfType<AttackPropertyData>().ToList()
+                player.ActiveProperties.OfType<AttackPropertyData>().ToList(),
+                player.ActiveProperties.OfType<AttackPropertyData>().ToList()
             );
             var charges = Resolver.Resolve(
                 Properties.OfType<ChargesPropertyData>().ToList(),
@@ -49,8 +49,8 @@ namespace Jogo25D.Items
             var crit = Resolver.Resolve(
                 Properties.OfType<CritPropertyData>().ToList(),
                 instance.Properties.OfType<CritPropertyData>().ToList(),
-                player.Data.Properties.OfType<CritPropertyData>().ToList(),
-                player.Properties.OfType<CritPropertyData>().ToList()
+                player.ActiveProperties.OfType<CritPropertyData>().ToList(),
+                player.ActiveProperties.OfType<CritPropertyData>().ToList()
             );
             var damages = resolvedDamages.ConvertAll(d => new DamageInfo
             {

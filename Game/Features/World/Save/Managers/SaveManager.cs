@@ -4,7 +4,6 @@ using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
 using System;

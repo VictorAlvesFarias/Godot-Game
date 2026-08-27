@@ -168,7 +168,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			localPlayer.SetPvpEnabledRequest(!localPlayer.Data.PvpEnabled);
+			localPlayer.SetPvpEnabledRequest(!localPlayer.PvpEnabled);
 
 			UpdatePvpStatus();
 		}
@@ -177,7 +177,7 @@ namespace Jogo25D.UI
 		{
 			var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
-			Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.Data.PvpEnabled ? "PvP" : "PvE";
+			Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.PvpEnabled ? "PvP" : "PvE";
 		}
 
 		#endregion

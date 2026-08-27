@@ -32,7 +32,7 @@ namespace Jogo25D.UI
                 return;
             }
 
-            var isDead = LocalPlayer.Data.CurrentHealth <= 0
+            var isDead = LocalPlayer.CurrentHealth <= 0
                 && LocalPlayer.Sprite != null
                 && LocalPlayer.Sprite.Animation == "dead"
                 && !LocalPlayer.Sprite.IsPlaying();

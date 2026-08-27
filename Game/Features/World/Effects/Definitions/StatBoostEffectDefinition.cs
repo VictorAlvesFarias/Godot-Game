@@ -15,7 +15,7 @@ namespace Jogo25D.Effects
 
             foreach (var modifier in Modifiers)
             {
-                player.Properties.Add(modifier);
+                player.ActiveProperties.Add(modifier);
             }
         }
 
@@ -23,7 +23,7 @@ namespace Jogo25D.Effects
         {
             foreach (var modifier in Modifiers)
             {
-                player.Properties.Remove(modifier);
+                player.ActiveProperties.Remove(modifier);
             }
         }
     }

@@ -9,7 +9,6 @@ using Jogo25D.Dimensions;
 using Jogo25D.Entities;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Instances;
@@ -212,7 +211,7 @@ namespace Jogo25D.Systems
 
 			if (character != null)
 			{
-				localPlayer.Data = (PlayerData)character.Data.Duplicate(true);
+				GodotDictionaryParser.ApplyTo(localPlayer, character.State);
 				localPlayer.Loaded = true;
 			}
 			else

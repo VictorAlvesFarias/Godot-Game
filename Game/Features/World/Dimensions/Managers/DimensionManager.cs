@@ -5,7 +5,6 @@ using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Entities;
 using Jogo25D.Features.Managers.Save.Resources;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Instances;
 using Jogo25D.Items;
@@ -263,19 +262,19 @@ namespace Jogo25D.Dimensions
             player.Name = $"Player{peerId}";
             player.Position = position;
             player.PeerId = peerId;
-            player.Data = GodotDictionaryParser.ToResource<PlayerData>(data);
+            GodotDictionaryParser.ApplyTo(player, data);
 
             SpawnPlayer(player);
         }
 
         public void SpawnPlayerRequest(Player player)
         {
-            Rpc(nameof(SpawnPlayerReceive), player.PeerId, player.Position, GodotDictionaryParser.ToDictionary(player.Data));
+            Rpc(nameof(SpawnPlayerReceive), player.PeerId, player.Position, GodotDictionaryParser.ToDictionary(player));
         }
 
         public void SpawnPlayerRequest(Player player, long targetPeerId)
         {
-            RpcId(targetPeerId, nameof(SpawnPlayerReceive), player.PeerId, player.Position, GodotDictionaryParser.ToDictionary(player.Data));
+            RpcId(targetPeerId, nameof(SpawnPlayerReceive), player.PeerId, player.Position, GodotDictionaryParser.ToDictionary(player));
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

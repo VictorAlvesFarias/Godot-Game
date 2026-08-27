@@ -6,7 +6,6 @@ using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Effects;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
@@ -52,8 +51,7 @@ namespace Jogo25D.Characters
         public float KnockbackDuration { get; set; } = 0.2f;
         public float DamagePopupDuration { get; set; } = 0.8f;
 		public float DamagePopupRiseDistance { get; set; } = 26f;
-        public PlayerData Data { get; set; } = new PlayerData();
-        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = CreateBaseProperties();
+        public Godot.Collections.Array<BasePropertyData> ActiveProperties { get; set; } = CreateBaseProperties();
 
         private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
         {
@@ -63,16 +61,53 @@ namespace Jogo25D.Characters
                 new HealthPropertyData(),
             };
         }
-        public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
-        public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
+        public Godot.Collections.Array<EffectDefinitionData> ActiveEffects { get; set; } = new();
+        public Godot.Collections.Array<ActionDefinitionData> ActiveAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
 		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
 		public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
 
         #endregion
 
-        #region Systems
+        #region Estado persistido
 
-        public Inventory Inventory { get; set; } = new Inventory();
+        // O estado do personagem mora no proprio no. Marcado = vai pro save e trafega por RPC.
+        // Nao ha classe espelho: o Player E o dado.
+        //
+        // O WorldStreaming pula este no (grupo "players"): player e conteudo de SESSAO - quem
+        // o cria e destroi e o join, nao o mundo.
+        //
+        // Nao confundir com os Active*: aqueles sao DERIVADOS, recalculados pelo ApplySkillTree
+        // a partir daqui. Estes sao o que o personagem tem; aqueles sao o efeito disso agora.
+
+        [GodotDictionaryField]
+        public int CurrentHealth { get; set; } = 50;
+
+        [GodotDictionaryField]
+        public bool CanUpdateMovement { get; set; } = true;
+
+        [GodotDictionaryField]
+        public bool ReloadPending { get; set; } = true;
+
+        [GodotDictionaryField]
+        public long EquippedItemId { get; set; } = 0;
+
+        [GodotDictionaryField]
+        public bool PvpEnabled { get; set; } = false;
+
+        [GodotDictionaryField]
+        public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
+
+        [GodotDictionaryField]
+        public Godot.Collections.Array<EffectDefinitionData> CurrentEffects { get; set; } = new();
+
+        [GodotDictionaryField]
+        public Godot.Collections.Array<ActionDefinitionData> UnlockedAbilities { get; set; } = new();
+
+        [GodotDictionaryField]
+        public Godot.Collections.Array<SkillTreeNodeData> SkillTree { get; set; } = new();
+
+        [GodotDictionaryField]
+        public InventoryData Inventory { get; set; } = new InventoryData();
 
         #endregion
 
@@ -139,9 +174,9 @@ namespace Jogo25D.Characters
 			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
 
 			Sprite.Play("idle");
-			Inventory.EnsureSize(Data.Inventory);
+			InventorySystem.EnsureSize(Inventory);
 
-			foreach (var item in Data.Inventory.Items)
+			foreach (var item in Inventory.Items)
 			{
 				if (item != null)
 				{
@@ -149,7 +184,7 @@ namespace Jogo25D.Characters
 				}
 			}
 
-			foreach (var action in Data.UnlockedAbilities)
+			foreach (var action in UnlockedAbilities)
 			{
 				if (action != null)
 				{
@@ -157,11 +192,11 @@ namespace Jogo25D.Characters
 				}
 			}
 
-			if (Data.EquippedItemId > 0 && Inventory.FindItem(Data.Inventory, Data.EquippedItemId) != null)
+			if (EquippedItemId > 0 && InventorySystem.FindItem(Inventory, EquippedItemId) != null)
 			{
 				GD.Print("[Player._Ready] Running equip item");
 
-				EquipItemRequest(Data.EquippedItemId);
+				EquipItemRequest(EquippedItemId);
 			}
 		}
 
@@ -207,7 +242,7 @@ namespace Jogo25D.Characters
                     continue;
                 }
 
-                if (Data.PvpEnabled && other.Data.PvpEnabled)
+                if (PvpEnabled && other.PvpEnabled)
                 {
                     RemoveCollisionExceptionWith(other);
                 }
@@ -239,12 +274,12 @@ namespace Jogo25D.Characters
             NameLabel.Text = DisplayName;
 
             HealthLabel.Visible = true;
-            HealthLabel.Text = $"{Data.CurrentHealth}/{GetMaxHealth()}";
+            HealthLabel.Text = $"{CurrentHealth}/{GetMaxHealth()}";
         }
 
         protected void UpdateItems(float dt)
 		{
-            foreach (var item in Data.Inventory.Items)
+            foreach (var item in Inventory.Items)
             {
                 if (item == null)
                 {
@@ -257,7 +292,7 @@ namespace Jogo25D.Characters
 
         protected void UpdateAbilities(float dt)
         {
-			var abilities = Resolver.Resolve(Data.UnlockedAbilities, UnlockedAbilities);
+			var abilities = Resolver.Resolve(UnlockedAbilities, ActiveAbilities);
 
             foreach (var action in abilities)
             {
@@ -275,25 +310,6 @@ namespace Jogo25D.Characters
 
 		protected void UpdateEffects(float dt)
 		{
-            for (int i = Data.CurrentEffects.Count - 1; i >= 0; i--)
-            {
-                var effect = Data.CurrentEffects[i];
-
-                if (effect == null)
-                {
-                    Data.CurrentEffects.RemoveAt(i);
-
-                    continue;
-                }
-
-                EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
-
-                if (effect.Expired)
-                {
-                    Data.CurrentEffects.RemoveAt(i);
-                }
-            }
-
             for (int i = CurrentEffects.Count - 1; i >= 0; i--)
             {
                 var effect = CurrentEffects[i];
@@ -312,6 +328,25 @@ namespace Jogo25D.Characters
                     CurrentEffects.RemoveAt(i);
                 }
             }
+
+            for (int i = ActiveEffects.Count - 1; i >= 0; i--)
+            {
+                var effect = ActiveEffects[i];
+
+                if (effect == null)
+                {
+                    ActiveEffects.RemoveAt(i);
+
+                    continue;
+                }
+
+                EffectDB.Get(effect.Id)?.Tick(this, effect, dt);
+
+                if (effect.Expired)
+                {
+                    ActiveEffects.RemoveAt(i);
+                }
+            }
         }
 
         protected void UpdateKnockback(float dt)
@@ -325,7 +360,7 @@ namespace Jogo25D.Characters
 
             if (KnockbackTimer <= 0f)
             {
-                Data.CanUpdateMovement = true;
+                CanUpdateMovement = true;
                 Velocity = Vector2.Zero;
             }
         }
@@ -446,8 +481,8 @@ namespace Jogo25D.Characters
 				var equippedInstance = EquippedInstance();
 				var equippedResistances = equippedInstance?.Properties.OfType<DamageResistencePropertyData>().ToList() ?? new List<DamageResistencePropertyData>();
 				var equippedResistanceMultipliers = equippedInstance?.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList() ?? new List<DamageResistenceMultiplierPropertyData>();
-				var resolvedResistances = Resolver.Resolve(Data.Properties.OfType<DamageResistencePropertyData>().ToList(), Properties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
-				var resolvedResistanceMultipliers = Resolver.Resolve(Data.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
+				var resolvedResistances = Resolver.Resolve(Properties.OfType<DamageResistencePropertyData>().ToList(), ActiveProperties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
+				var resolvedResistanceMultipliers = Resolver.Resolve(Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), ActiveProperties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
 
 				resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
 
@@ -455,9 +490,9 @@ namespace Jogo25D.Characters
 				var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
 				var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor) * resistanceMultiplier);
 
-				if (Data.CurrentHealth > 0 || finalDamage >= 0)
+				if (CurrentHealth > 0 || finalDamage >= 0)
 				{
-					SetHealthRequest(Mathf.Max(0, Data.CurrentHealth - finalDamage));
+					SetHealthRequest(Mathf.Max(0, CurrentHealth - finalDamage));
 				}
 			}
 		}
@@ -466,7 +501,7 @@ namespace Jogo25D.Characters
 		{
 			var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
 
-			return Resolver.Resolve(Data.Properties.OfType<HealthPropertyData>().ToList(), Properties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
+			return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
 		}
 
         #endregion
@@ -529,7 +564,7 @@ namespace Jogo25D.Characters
 
 		public void HandleUseItem(float delta)
 		{
-			var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
+			var data = InventorySystem.FindItem(Inventory, EquippedItemId);
 			var def = data == null ? null : ItemDefinitions.GetValueOrDefault(data.InstanceId);
 
 			if (data == null || def == null)
@@ -557,7 +592,7 @@ namespace Jogo25D.Characters
 
 		public void HandleReload(float delta)
 		{
-			var data = Inventory.FindItem(Data.Inventory, Data.EquippedItemId);
+			var data = InventorySystem.FindItem(Inventory, EquippedItemId);
 
 			if (data == null)
 			{
@@ -572,9 +607,9 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			if (!def.IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges && Data.ReloadPending)
+			if (!def.IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges && ReloadPending)
 			{
-				Data.ReloadPending = false;
+				ReloadPending = false;
 
 				if (IsOwner())
 				{
@@ -588,7 +623,7 @@ namespace Jogo25D.Characters
 			{
 				def.TriggerReloadTimer(data);
 
-				Data.ReloadPending = true;
+				ReloadPending = true;
 			}
 		}
 
@@ -607,7 +642,7 @@ namespace Jogo25D.Characters
 			}
 
 			var hotbarSize = 8;
-			var currentSlot = Inventory.FindSlotIndex(Data.Inventory, Data.EquippedItemId);
+			var currentSlot = InventorySystem.FindSlotIndex(Inventory, EquippedItemId);
 
 			if (currentSlot < 0 || currentSlot >= hotbarSize)
 			{
@@ -617,7 +652,7 @@ namespace Jogo25D.Characters
 			for (int i = 1; i <= hotbarSize; i++)
 			{
 				var next = ((currentSlot + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
-				var slot = Inventory.GetSlot(Data.Inventory, next);
+				var slot = InventorySystem.GetSlot(Inventory, next);
 
 				if (slot != null)
 				{
@@ -630,12 +665,12 @@ namespace Jogo25D.Characters
 
 		public void HandleDropItem()
 		{
-			if (!Input.DropItem || Data.EquippedItemId <= 0)
+			if (!Input.DropItem || EquippedItemId <= 0)
 			{
 				return;
 			}
 
-			DropItemRequest(Data.EquippedItemId, 1);
+			DropItemRequest(EquippedItemId, 1);
 		}
 
 		#endregion
@@ -674,11 +709,11 @@ namespace Jogo25D.Characters
 
 			int removed = 0;
 
-			for (int i = 0; i < Data.Inventory.Size && removed < quantity; i++)
+			for (int i = 0; i < Inventory.Size && removed < quantity; i++)
 			{
-				var slot = Data.Inventory.Items[i];
+				var slot = Inventory.Items[i];
 
-				if (slot == null || slot.InstanceId == Data.EquippedItemId)
+				if (slot == null || slot.InstanceId == EquippedItemId)
 				{
 					continue;
 				}
@@ -699,7 +734,7 @@ namespace Jogo25D.Characters
 
 				if (slot.Quantity <= 0)
 				{
-					Data.Inventory.Items[i] = null;
+					Inventory.Items[i] = null;
 				}
 			}
 
@@ -713,7 +748,7 @@ namespace Jogo25D.Characters
 
 		public void EquipItem(long instanceId)
 		{
-			var item = Inventory.FindItem(Data.Inventory, instanceId);
+			var item = InventorySystem.FindItem(Inventory, instanceId);
 
 			if (item == null)
 			{
@@ -730,7 +765,7 @@ namespace Jogo25D.Characters
 				previousDef?.HideIndicator(this);
 			}
 
-			Data.EquippedItemId = instanceId;
+			EquippedItemId = instanceId;
 
 			ItemDefinitions.GetValueOrDefault(item.InstanceId)?.OnEquip(this, item);
 
@@ -739,12 +774,12 @@ namespace Jogo25D.Characters
 
 		public void GiveItem(ItemData item)
         {
-            if (Data?.Inventory == null)
+            if (Inventory == null)
             {
                 return;
             }
 
-            if (Inventory.AddItem(Data.Inventory, item))
+            if (InventorySystem.AddItem(Inventory, item))
             {
                 EnsureItemDefinition(item);
 
@@ -754,12 +789,12 @@ namespace Jogo25D.Characters
 
 		public ItemData GetSlot(int index)
 		{
-			return Inventory.GetSlot(Data?.Inventory, index);
+			return InventorySystem.GetSlot(Inventory, index);
 		}
 
 		public ItemData EquippedInstance()
 		{
-			return Inventory.FindItem(Data?.Inventory, Data?.EquippedItemId ?? 0);
+			return InventorySystem.FindItem(Inventory, EquippedItemId);
 		}
 
 		private void EnsureItemDefinition(ItemData item)
@@ -769,7 +804,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			if (Inventory.FindItem(Data.Inventory, item.InstanceId) == null)
+			if (InventorySystem.FindItem(Inventory, item.InstanceId) == null)
 			{
 				return;
 			}
@@ -779,7 +814,7 @@ namespace Jogo25D.Characters
 
         private void RemoveItemDefinitionIfGone(long instanceId)
 		{
-			if (Inventory.FindItem(Data.Inventory, instanceId) != null)
+			if (InventorySystem.FindItem(Inventory, instanceId) != null)
 			{
 				return;
 			}
@@ -797,12 +832,12 @@ namespace Jogo25D.Characters
 
         public void GiveEffect(string effectId)
 		{
-			if (string.IsNullOrEmpty(effectId) || Data?.CurrentEffects == null)
+			if (string.IsNullOrEmpty(effectId) || CurrentEffects == null)
 			{
 				return;
 			}
 
-			Data.CurrentEffects.Add(EffectDB.CreateInstance(effectId));
+			CurrentEffects.Add(EffectDB.CreateInstance(effectId));
 
 			EmitSignal(SignalName.EffectsChanged);
 		}
@@ -813,14 +848,14 @@ namespace Jogo25D.Characters
 
 		public void GiveAbility(string actionId)
 		{
-			if (string.IsNullOrEmpty(actionId) || Data?.UnlockedAbilities == null)
+			if (string.IsNullOrEmpty(actionId) || UnlockedAbilities == null)
 			{
 				return;
 			}
 
 			var data = ActionFactory.CreateInstance(actionId);
 
-			Data.UnlockedAbilities.Add(data);
+			UnlockedAbilities.Add(data);
 
 			EnsureActionDefinition(actionId, data);
 
@@ -860,8 +895,8 @@ namespace Jogo25D.Characters
 
         public bool IsAbilityStillGranted(string actionId)
 		{
-			return (Data?.UnlockedAbilities?.Any(e => e != null && e.Id == actionId) ?? false)
-				|| UnlockedAbilities.Any(e => e != null && e.Id == actionId);
+			return (UnlockedAbilities?.Any(e => e != null && e.Id == actionId) ?? false)
+				|| ActiveAbilities.Any(e => e != null && e.Id == actionId);
 		}
 
 		#endregion
@@ -871,17 +906,17 @@ namespace Jogo25D.Characters
 		public void ApplySkillTree()
 		{
 
-			Properties.Clear();
+			ActiveProperties.Clear();
 
 			foreach (var baseProperty in CreateBaseProperties())
 			{
-				Properties.Add(baseProperty);
+				ActiveProperties.Add(baseProperty);
 			}
 
 			var grantedAbilityIds = new HashSet<string>();
 			var grantedEffectIds = new HashSet<string>();
 
-			foreach (var progress in Data.SkillTree)
+			foreach (var progress in SkillTree)
 			{
 				if (progress == null || progress.CurrentLevel <= 0)
 				{
@@ -899,7 +934,7 @@ namespace Jogo25D.Characters
 				{
 					foreach (var property in node.Properties)
 					{
-						Properties.Add(property);
+						ActiveProperties.Add(property);
 					}
 				}
 
@@ -907,11 +942,11 @@ namespace Jogo25D.Characters
 				{
 					grantedAbilityIds.Add(abilityId);
 
-					if (!UnlockedAbilities.Any(e => e.Id == abilityId))
+					if (!ActiveAbilities.Any(e => e.Id == abilityId))
 					{
 						var abilityData = ActionFactory.CreateInstance(abilityId);
 
-						UnlockedAbilities.Add(abilityData);
+						ActiveAbilities.Add(abilityData);
 
 						EnsureActionDefinition(abilityId, abilityData);
 					}
@@ -921,20 +956,20 @@ namespace Jogo25D.Characters
 				{
 					grantedEffectIds.Add(effectId);
 
-					if (!CurrentEffects.Any(e=> e.Id == effectId))
+					if (!ActiveEffects.Any(e=> e.Id == effectId))
 					{
-						CurrentEffects.Add(EffectDB.CreateInstance(effectId));
+						ActiveEffects.Add(EffectDB.CreateInstance(effectId));
 					}
 				}
 			}
 
-			for (int i = UnlockedAbilities.Count - 1; i >= 0; i--)
+			for (int i = ActiveAbilities.Count - 1; i >= 0; i--)
 			{
-				if (UnlockedAbilities[i] == null || !grantedAbilityIds.Contains(UnlockedAbilities[i].Id))
+				if (ActiveAbilities[i] == null || !grantedAbilityIds.Contains(ActiveAbilities[i].Id))
 				{
-					var removedId = UnlockedAbilities[i]?.Id;
+					var removedId = ActiveAbilities[i]?.Id;
 
-					UnlockedAbilities.RemoveAt(i);
+					ActiveAbilities.RemoveAt(i);
 
 					if (!string.IsNullOrEmpty(removedId) && !IsAbilityStillGranted(removedId))
 					{
@@ -943,29 +978,29 @@ namespace Jogo25D.Characters
 				}
 			}
 
-			for (int i = CurrentEffects.Count - 1; i >= 0; i--)
+			for (int i = ActiveEffects.Count - 1; i >= 0; i--)
 			{
-				if (CurrentEffects[i] == null || !grantedEffectIds.Contains(CurrentEffects[i].Id))
+				if (ActiveEffects[i] == null || !grantedEffectIds.Contains(ActiveEffects[i].Id))
 				{
-					CurrentEffects.RemoveAt(i);
+					ActiveEffects.RemoveAt(i);
 				}
 			}
 		}
 
 		public bool LevelUpSkillNode(string nodeId)
 		{
-			if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(Data.SkillTree, nodeId))
+			if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(SkillTree, nodeId))
 			{
 				return false;
 			}
 
-			var progress = Data.SkillTree.FirstOrDefault(e => e.NodeId == nodeId);
+			var progress = SkillTree.FirstOrDefault(e => e.NodeId == nodeId);
 
             if (progress == null)
 			{
 				progress = new SkillTreeNodeData { NodeId = nodeId };
 
-				Data.SkillTree.Add(progress);
+				SkillTree.Add(progress);
 			}
 
 			progress.CurrentLevel++;
@@ -977,7 +1012,7 @@ namespace Jogo25D.Characters
 
 		public void ResetSkillTree()
 		{
-			Data.SkillTree.Clear();
+			SkillTree.Clear();
 
 			ApplySkillTree();
 		}
@@ -990,12 +1025,12 @@ namespace Jogo25D.Characters
 		{
 			var equippedProperties = EquippedInstance()?.Properties.OfType<MovementPropertyData>().ToList() ?? new List<MovementPropertyData>();
 			var movementProperties = Resolver.Resolve(
-				Data.Properties.OfType<MovementPropertyData>().ToList(),
 				Properties.OfType<MovementPropertyData>().ToList(),
+				ActiveProperties.OfType<MovementPropertyData>().ToList(),
 				equippedProperties
 			);
 
-			if (!Data.CanUpdateMovement)
+			if (!CanUpdateMovement)
 			{
 				MoveAndSlide();
 
@@ -1044,7 +1079,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            var item = Inventory.FindItem(Data.Inventory, instanceId);
+            var item = InventorySystem.FindItem(Inventory, instanceId);
 
             if (item == null || item.Quantity <= 0)
             {
@@ -1075,7 +1110,7 @@ namespace Jogo25D.Characters
         {
             Velocity = velocity;
             KnockbackTimer = KnockbackDuration;
-            Data.CanUpdateMovement = false;
+            CanUpdateMovement = false;
         }
 
         public void ApplyKnockbackRequest(Vector2 velocity)
@@ -1159,7 +1194,7 @@ namespace Jogo25D.Characters
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void SyncSkillTreeReceive(Godot.Collections.Array skillTree)
         {
-            Data.SkillTree = new Godot.Collections.Array<SkillTreeNodeData>();
+            SkillTree = new Godot.Collections.Array<SkillTreeNodeData>();
 
             foreach (var entry in skillTree)
             {
@@ -1167,7 +1202,7 @@ namespace Jogo25D.Characters
 
                 if (node != null)
                 {
-                    Data.SkillTree.Add(node);
+                    SkillTree.Add(node);
                 }
             }
 
@@ -1183,7 +1218,7 @@ namespace Jogo25D.Characters
 
             var skillTree = new Godot.Collections.Array();
 
-            foreach (var entry in Data.SkillTree)
+            foreach (var entry in SkillTree)
             {
                 skillTree.Add(GodotDictionaryParser.ToDictionary(entry));
             }
@@ -1216,7 +1251,7 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void SetPvpEnabledReceive(bool enabled)
 		{
-			Data.PvpEnabled = enabled;
+			PvpEnabled = enabled;
 		}
 
 		public void SetPvpEnabledRequest(bool enabled)
@@ -1241,9 +1276,9 @@ namespace Jogo25D.Characters
 		{
 			GD.Print($"[Player.SetHealthReceive] - Tentando definir o valor da saude para o peer {PeerId} no {(Multiplayer.IsServer() ? "server" : "cliente")}");
 
-			var previousHealth = Data.CurrentHealth;
+			var previousHealth = CurrentHealth;
 
-			Data.CurrentHealth = health;
+			CurrentHealth = health;
 
 			if (health < previousHealth)
 			{
@@ -1289,7 +1324,7 @@ namespace Jogo25D.Characters
 		{
 			var item = GodotDictionaryParser.ToResource<ItemData>(data);
 
-			if (Inventory.AddItem(Data.Inventory, item))
+			if (InventorySystem.AddItem(Inventory, item))
 			{
 				EnsureItemDefinition(item);
 
@@ -1314,7 +1349,7 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void MoveItemReceive(long instanceId, int toIndex)
 		{
-			if (Inventory.MoveItem(Data.Inventory, instanceId, toIndex))
+			if (InventorySystem.MoveItem(Inventory, instanceId, toIndex))
 			{
 				EmitSignal(SignalName.InventoryChanged);
 			}
@@ -1335,7 +1370,7 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
 		public void RemoveItemReceive(long instanceId, int quantity)
 		{
-			if (Inventory.RemoveItem(Data.Inventory, instanceId, quantity))
+			if (InventorySystem.RemoveItem(Inventory, instanceId, quantity))
 			{
 				RemoveItemDefinitionIfGone(instanceId);
 
@@ -1367,7 +1402,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var item = Inventory.FindItem(Data.Inventory, instanceId);
+			var item = InventorySystem.FindItem(Inventory, instanceId);
 
 			if (item == null || quantity <= 0)
 			{
@@ -1414,7 +1449,7 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			if (Inventory.AddItem(Data.Inventory, worldItem.Item))
+			if (InventorySystem.AddItem(Inventory, worldItem.Item))
 			{
 				EnsureItemDefinition(worldItem.Item);
 
@@ -1443,7 +1478,7 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void ConsumeChargeReceive(long instanceId)
 		{
-			var data = Inventory.FindItem(Data.Inventory, instanceId);
+			var data = InventorySystem.FindItem(Inventory, instanceId);
 
 			if (data == null)
 			{
@@ -1468,7 +1503,7 @@ namespace Jogo25D.Characters
 		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 		public void FinishReloadReceive(long instanceId, string chargeType, int needed)
 		{
-			var data = Inventory.FindItem(Data.Inventory, instanceId);
+			var data = InventorySystem.FindItem(Inventory, instanceId);
 
 			if (data == null)
 			{
@@ -1577,15 +1612,15 @@ namespace Jogo25D.Characters
 			{
 				Reparent(upsidedownParent, true);
 
-				if (Data.EquippedItemId > 0)
+				if (EquippedItemId > 0)
 				{
-					EquipItemRequest(Data.EquippedItemId);
+					EquipItemRequest(EquippedItemId);
 				}
 			}
 
 			GlobalPosition = position;
 			Velocity = Vector2.Zero;
-			Data.CurrentHealth = GetMaxHealth();
+			CurrentHealth = GetMaxHealth();
 			Sprite?.Play("idle");
 			Input?.RemoveBlocker("dead");
 
@@ -1644,9 +1679,9 @@ namespace Jogo25D.Characters
 
 			LastDimensionTradeMsec = Time.GetTicksMsec();
 
-			if (Data.EquippedItemId > 0)
+			if (EquippedItemId > 0)
 			{
-				EquipItemRequest(Data.EquippedItemId);
+				EquipItemRequest(EquippedItemId);
 			}
 
 			if (IsOwner())

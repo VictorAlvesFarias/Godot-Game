@@ -1,14 +1,16 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
 
 namespace Jogo25D.Systems
 {
-    public class Inventory
+    // Sistema sem estado: todo metodo recebe o InventoryData em que vai mexer. Era instanciado
+    // como campo no Player, o que nao fazia sentido e ainda ocupava o nome "Inventory".
+    public static class InventorySystem
     {
         #region Core - Actions
 
-        public bool AddItem(InventoryData inv, ItemData item)
+        public static bool AddItem(InventoryData inv, ItemData item)
         {
             GD.Print("[Inventory.AddItem] Starting method");
 
@@ -94,7 +96,7 @@ namespace Jogo25D.Systems
             return false;
         }
 
-        public bool RemoveItem(InventoryData inv, long instanceId, int quantity = 1)
+        public static bool RemoveItem(InventoryData inv, long instanceId, int quantity = 1)
         {
             GD.Print($"[Inventory.RemoveItem] Starting method, instanceId={instanceId} quantity={quantity}");
 
@@ -117,7 +119,7 @@ namespace Jogo25D.Systems
             return true;
         }
 
-        public bool MoveItem(InventoryData inv, long instanceId, int toIndex)
+        public static bool MoveItem(InventoryData inv, long instanceId, int toIndex)
         {
             GD.Print($"[Inventory.MoveItem] Starting method, instanceId={instanceId} toIndex={toIndex}");
 
@@ -142,7 +144,7 @@ namespace Jogo25D.Systems
 
         #region Core - Information
 
-        public ItemData GetSlot(InventoryData inv, int index)
+        public static ItemData GetSlot(InventoryData inv, int index)
         {
             if (inv == null || index < 0 || index >= inv.Size || index >= inv.Items.Count)
             {
@@ -152,7 +154,7 @@ namespace Jogo25D.Systems
             return inv.Items[index];
         }
 
-        public int FindSlotIndex(InventoryData inv, long instanceId)
+        public static int FindSlotIndex(InventoryData inv, long instanceId)
         {
             if (inv == null || instanceId <= 0)
             {
@@ -170,14 +172,14 @@ namespace Jogo25D.Systems
             return -1;
         }
 
-        public ItemData FindItem(InventoryData inv, long instanceId)
+        public static ItemData FindItem(InventoryData inv, long instanceId)
         {
             var index = FindSlotIndex(inv, instanceId);
 
             return index < 0 ? null : inv.Items[index];
         }
 
-        public void EnsureSize(InventoryData inv)
+        public static void EnsureSize(InventoryData inv)
         {
             if (inv == null)
             {

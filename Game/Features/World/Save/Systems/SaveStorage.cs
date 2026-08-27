@@ -3,7 +3,6 @@ using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -62,7 +61,7 @@ namespace Jogo25D.Systems
                 OwnerProfileId = profile.ProfileId,
                 MultiplayerKey = "",
                 Name = name,
-                Data = BuildStarterPlayerData(),
+                State = BuildStarterState(),
                 CreatedUtc = NowUtc(),
                 LastPlayedUtc = NowUtc(),
             };
@@ -97,7 +96,7 @@ namespace Jogo25D.Systems
                 OwnerProfileId = ownerProfileId,
                 MultiplayerKey = multiplayerKey,
                 Name = name,
-                Data = BuildStarterPlayerData(),
+                State = BuildStarterState(),
                 CreatedUtc = NowUtc(),
                 LastPlayedUtc = NowUtc(),
             };
@@ -234,21 +233,25 @@ namespace Jogo25D.Systems
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
 
-        private static PlayerData BuildStarterPlayerData()
+        // Estado inicial de um personagem novo. Instancia um Player so pra tirar o retrato dos
+        // valores padrao e libera em seguida - assim o schema vive num lugar so (a classe), em
+        // vez de ser repetido a mao aqui.
+        //
+        // Node nao e RefCounted: o Free() e obrigatorio, por isso o try/finally.
+        private static Godot.Collections.Dictionary BuildStarterState()
         {
-            var data = new PlayerData();
+            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
-            data.Inventory ??= new InventoryData();
+            try
+            {
+                player.GiveItem(ItemFactory.CreateInstance("portal"));
 
-            var portal = ItemFactory.CreateInstance("portal");
-            var bow = ItemFactory.CreateInstance("bow_starting2");
-
-            new Inventory().AddItem(data.Inventory, portal);
-            new Inventory().AddItem(data.Inventory, bow);
-
-            data.EquippedItemId = bow.InstanceId;
-
-            return data;
+                return GodotDictionaryParser.ToDictionary(player);
+            }
+            finally
+            {
+                player.Free();
+            }
         }
 
         private static string ServerCharactersDirFor(string multiplayerKey)

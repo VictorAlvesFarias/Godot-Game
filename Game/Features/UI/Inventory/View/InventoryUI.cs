@@ -18,7 +18,6 @@ namespace Jogo25D.UI
 		#region Properties
 
 		public Player LocalPlayer { get; set; }
-		public Inventory Inventory => LocalPlayer?.Inventory;
 		public PlayerInput PlayerInput => LocalPlayer?.Input;
 		public Panel[] SlotPanels { get; set; } = new Panel[128];
 		public TextureRect[] IconRects { get; set; } = new TextureRect[128];
@@ -300,12 +299,12 @@ namespace Jogo25D.UI
 
 		public void OnSlotInput(int slotIndex, InputEvent @event)
 		{
-			if (Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
 
-			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
+			var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, slotIndex);
 
 			if (@event is InputEventMouseButton mouseEvent)
 			{
@@ -324,12 +323,12 @@ namespace Jogo25D.UI
 
 		public void StartDrag(int slotIndex, Vector2 mousePos)
 		{
-			if (Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
 
-			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
+			var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, slotIndex);
 
 			if (slot == null)
 			{
@@ -380,7 +379,7 @@ namespace Jogo25D.UI
 				IconRects[DraggedSlotIndex].Modulate = Colors.White;
 			}
 
-			if (targetSlotIndex != DraggedSlotIndex && Inventory != null)
+			if (targetSlotIndex != DraggedSlotIndex && LocalPlayer?.Inventory != null)
 			{
 				SwapItems(DraggedInstanceId, targetSlotIndex);
 			}
@@ -421,7 +420,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var slot = Inventory?.FindItem(LocalPlayer.Data.Inventory, DraggedInstanceId);
+			var slot = InventorySystem.FindItem(LocalPlayer.Inventory, DraggedInstanceId);
 			var quantity = slot?.Quantity ?? 0;
 
 			if (DragPreview != null)
@@ -464,7 +463,7 @@ namespace Jogo25D.UI
 
 		public void UpdateSlot(int index)
 		{
-			if (Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
@@ -480,7 +479,7 @@ namespace Jogo25D.UI
 				|| index >= QuantityLabels.Length)
 				return;
 
-			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, index);
+			var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, index);
 
 			var definition = slot == null ? null : ItemFactory.Create(slot.Id);
 
@@ -521,12 +520,12 @@ namespace Jogo25D.UI
 
 		public void ShowContextMenuForSlot(int slotIndex, Vector2 position)
 		{
-			if (Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
 
-			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, slotIndex);
+			var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, slotIndex);
 
 			if (slot == null)
 			{
@@ -580,12 +579,12 @@ namespace Jogo25D.UI
 
 		public void OnContextMenuOption(string option)
 		{
-			if (SelectedSlotIndex < 0 || Inventory == null)
+			if (SelectedSlotIndex < 0 || LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
 
-			var slot = Inventory.GetSlot(LocalPlayer.Data.Inventory, SelectedSlotIndex);
+			var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, SelectedSlotIndex);
 
 			if (slot == null)
 			{
@@ -619,11 +618,11 @@ namespace Jogo25D.UI
 
 		public void ToggleInventory()
 		{
-			if (Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				FindLocalPlayerInventorySystem();
 
-				if (Inventory == null)
+				if (LocalPlayer?.Inventory == null)
 				{
 					return;
 				}
@@ -657,13 +656,13 @@ namespace Jogo25D.UI
 
 		public void UpdateCharacterInfo()
 		{
-			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || LocalPlayer.Data == null)
+			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
 				return;
 			}
 
 			Game.Ui.InventoryUI.CharacterNameLabel.Node.Text = $"Jogador #{LocalPlayer.PeerId}";
-			Game.Ui.InventoryUI.CharacterHealthLabel.Node.Text = $"Vida: {LocalPlayer.Data.CurrentHealth}/{LocalPlayer.GetMaxHealth()}";
+			Game.Ui.InventoryUI.CharacterHealthLabel.Node.Text = $"Vida: {LocalPlayer.CurrentHealth}/{LocalPlayer.GetMaxHealth()}";
 		}
 
 		public void UpdateCharacterSprite()
@@ -709,12 +708,12 @@ namespace Jogo25D.UI
 			{
 				properties = new Godot.Collections.Array<BasePropertyData>();
 
-				foreach (var property in LocalPlayer.Data.Properties)
+				foreach (var property in LocalPlayer.ActiveProperties)
 				{
 					properties.Add(property);
 				}
 
-				foreach (var property in LocalPlayer.Properties)
+				foreach (var property in LocalPlayer.ActiveProperties)
 				{
 					properties.Add(property);
 				}

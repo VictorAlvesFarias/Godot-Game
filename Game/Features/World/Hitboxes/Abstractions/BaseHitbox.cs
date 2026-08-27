@@ -120,7 +120,7 @@ namespace Jogo25D.Hitboxes
                 return false;
             }
 
-            return !Owner.Data.PvpEnabled || !target.Data.PvpEnabled;
+            return !Owner.PvpEnabled || !target.PvpEnabled;
         }
 
         protected bool CanApplyImpact()

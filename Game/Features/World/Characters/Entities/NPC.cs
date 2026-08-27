@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Items;
 
 namespace Jogo25D.Characters
@@ -36,7 +36,7 @@ namespace Jogo25D.Characters
 
             UpdateKnockback(dt);
 
-            if (!Data.CanUpdateMovement)
+            if (!CanUpdateMovement)
             {
                 MoveAndSlide();
 
@@ -71,7 +71,7 @@ namespace Jogo25D.Characters
             }
 
             var finalDamage = Mathf.Max(0, damage.Amount);
-            var newHealth = Mathf.Max(0, Data.CurrentHealth - finalDamage);
+            var newHealth = Mathf.Max(0, CurrentHealth - finalDamage);
 
             SetHealthRequest(newHealth);
         }

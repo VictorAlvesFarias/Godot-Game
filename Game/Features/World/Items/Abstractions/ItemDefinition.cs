@@ -48,12 +48,12 @@ namespace Jogo25D.Items
         {
             foreach (var modifier in Modifiers)
             {
-                player.Properties.Add(modifier);
+                player.ActiveProperties.Add(modifier);
             }
 
             foreach (var modifier in data.Modifiers)
             {
-                player.Properties.Add(modifier);
+                player.ActiveProperties.Add(modifier);
             }
         }
 
@@ -61,12 +61,12 @@ namespace Jogo25D.Items
         {
             foreach (var modifier in Modifiers)
             {
-                player.Properties.Remove(modifier);
+                player.ActiveProperties.Remove(modifier);
             }
 
             foreach (var modifier in data.Modifiers)
             {
-                player.Properties.Remove(modifier);
+                player.ActiveProperties.Remove(modifier);
             }
         }
 

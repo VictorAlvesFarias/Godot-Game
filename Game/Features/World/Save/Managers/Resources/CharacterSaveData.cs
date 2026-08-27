@@ -1,5 +1,4 @@
 ﻿using Godot;
-using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Features.Managers.Save.Resources
@@ -21,8 +20,10 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public string Name { get; set; } = "";
 
+        // O Player serializado: os campos marcados dele. Nao ha classe espelho - o estado
+        // do personagem E o no, e isto e o retrato dele.
         [Export, GodotDictionaryField]
-        public PlayerData Data { get; set; } = new PlayerData();
+        public Godot.Collections.Dictionary State { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public long CreatedUtc { get; set; }

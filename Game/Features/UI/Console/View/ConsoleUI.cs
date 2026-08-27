@@ -612,7 +612,7 @@ namespace Jogo25D.UI
 					{
 						var def = ItemFactory.Create(id);
 
-						if (def == null || LocalPlayer.Data.Inventory.Items.Any(i => i != null && i.Id == id))
+						if (def == null || LocalPlayer.Inventory.Items.Any(i => i != null && i.Id == id))
 						{
 							continue;
 						}

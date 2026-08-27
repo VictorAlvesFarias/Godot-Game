@@ -172,6 +172,13 @@ namespace Jogo25D.Utils.GodotDictionaryParser
         {
             // Lista de records de entidade: o record ja E dicionario, entao serializar e
             // identidade. Nao existe classe de dado por entidade (ver .dev/plano-implementacao.md).
+            // Dicionario cru: e o retrato de um no, ja serializado. Serializar de novo e
+            // identidade.
+            if (declaredType == typeof(Dictionary))
+            {
+                return (Dictionary)value ?? new Dictionary();
+            }
+
             if (IsDictionaryArrayType(declaredType))
             {
                 var records = new Godot.Collections.Array();
@@ -226,6 +233,11 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         private static object FromVariant(Variant variant, Type declaredType)
         {
+            if (declaredType == typeof(Dictionary))
+            {
+                return variant.AsGodotDictionary();
+            }
+
             if (IsDictionaryArrayType(declaredType))
             {
                 var records = new Godot.Collections.Array<Dictionary>();

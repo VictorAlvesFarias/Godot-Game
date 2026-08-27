@@ -347,7 +347,15 @@ namespace Jogo25D.Entities
         // ter campo marcado E a declaracao de "sou conteudo persistente".
         private IEnumerable<Node2D> Streamed()
         {
-            return Descendants(this).Where(GodotDictionaryParser.HasSerializableFields);
+            return Descendants(this).Where(IsStreamed);
+        }
+
+        // Participa quem declara campo de save. Player fica de fora mesmo declarando: ele e
+        // conteudo de SESSAO - quem o cria e destroi e o join, nao o mundo. Se o World o
+        // salvasse e restaurasse, duas coisas mandariam no mesmo no.
+        private static bool IsStreamed(Node2D node)
+        {
+            return GodotDictionaryParser.HasSerializableFields(node) && !node.IsInGroup("players");
         }
 
         private static IEnumerable<Node2D> Descendants(Node raiz)

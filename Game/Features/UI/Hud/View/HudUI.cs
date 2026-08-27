@@ -223,7 +223,7 @@ namespace Jogo25D.UI
 			}
 
 			var maxHealth = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.GetMaxHealth() : (int)50f;
-			var currentHealth = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.Data.CurrentHealth : maxHealth;
+			var currentHealth = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.CurrentHealth : maxHealth;
 
 			LayoutHealthBar(maxHealth, currentHealth);
 			UpdateLegacyHealthBar(maxHealth, currentHealth);
@@ -299,7 +299,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = Resolver.Resolve(LocalPlayer.Data.UnlockedAbilities, LocalPlayer.UnlockedAbilities);
+			var list = Resolver.Resolve(LocalPlayer.ActiveAbilities, LocalPlayer.ActiveAbilities);
 
 			if (list == null || list.Count == 0)
 			{
@@ -401,7 +401,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var list = Resolver.Resolve(LocalPlayer.Data.UnlockedAbilities, LocalPlayer.UnlockedAbilities);
+			var list = Resolver.Resolve(LocalPlayer.ActiveAbilities, LocalPlayer.ActiveAbilities);
 
 			if (list == null || AbilityFillBars.Count != list.Count)
 			{
@@ -532,7 +532,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			var effects = Resolver.Resolve(LocalPlayer.Data.CurrentEffects, LocalPlayer.CurrentEffects);
+			var effects = Resolver.Resolve(LocalPlayer.ActiveEffects, LocalPlayer.ActiveEffects);
 
 			while (EffectSlots.Count < effects.Count)
 			{
@@ -707,7 +707,7 @@ namespace Jogo25D.UI
 				return;
 			}
 
-			if (LocalPlayer.Data?.Inventory == null)
+			if (LocalPlayer?.Inventory == null)
 			{
 				return;
 			}
@@ -721,7 +721,7 @@ namespace Jogo25D.UI
 				}
 
 				var slot = LocalPlayer.GetSlot(i);
-				var isSelected = slot != null && slot.InstanceId == LocalPlayer.Data.EquippedItemId;
+				var isSelected = slot != null && slot.InstanceId == LocalPlayer.EquippedItemId;
 				var hotbarStyle = HotbarNormalStyle;
 
 				if (isSelected)
