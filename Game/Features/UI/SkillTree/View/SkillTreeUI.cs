@@ -46,7 +46,7 @@ namespace Jogo25D.UI
 		{
 			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
-				FindLocalPlayer();
+				LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 			}
 
 			if (PlayerInput != null && PlayerInput.IsBlockedByOther("skill_tree"))
@@ -87,17 +87,12 @@ namespace Jogo25D.UI
 
 			BuildGrid();
 
-			FindLocalPlayer();
+			LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 		}
 
 		#endregion
 
 		#region Core - Setup
-
-		public void FindLocalPlayer()
-		{
-			LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
-		}
 
 		private void BuildGrid()
 		{
@@ -241,7 +236,7 @@ namespace Jogo25D.UI
 		{
 			if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
 			{
-				FindLocalPlayer();
+				LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 			}
 
 			var progress = LocalPlayer?.Data?.SkillTree;

@@ -47,9 +47,9 @@ namespace Jogo25D.Chunks
         {
             var center = GlobalPosition;
 
-            if (Game.Managers.ChunkStreamingManager.Node != null)
+            if (Game.Managers.TileStreamingManager.Node != null)
             {
-                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * Game.Managers.ChunkStreamingManager.Node.TileSize;
+                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * Game.Managers.TileStreamingManager.Node.TileSize;
             }
 
             var ChunkPixels = _chunkPixels;

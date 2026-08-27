@@ -121,11 +121,11 @@ namespace Jogo25D.Core
                 public static global::Jogo25D.Dimensions.DimensionManager Node { get; internal set; }
             }
 
-            public static class ChunkStreamingManager
+            public static class TileStreamingManager
             {
-                public const string Path = "/root/Main/Managers/ChunkStreamingManager";
+                public const string Path = "/root/Main/Managers/TileStreamingManager";
 
-                public static global::Jogo25D.Chunks.ChunkStreamingManager Node { get; internal set; }
+                public static global::Jogo25D.Chunks.TileStreamingManager Node { get; internal set; }
             }
 
             public static class SaveManager

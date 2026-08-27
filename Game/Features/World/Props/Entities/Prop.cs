@@ -1,5 +1,7 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Core;
+using Jogo25D.Entities;
+using Jogo25D.Utils.GodotDictionaryParser;
 using Jogo25D.Features.Managers.Save.Resources;
 
 namespace Jogo25D.Props
@@ -7,12 +9,14 @@ namespace Jogo25D.Props
     // Base de tudo que e colocado no mundo como objeto: portal hoje, o resto depois.
     // O ciclo de vida - colocar, quebrar, replicar e persistir - vive aqui e serve qualquer prop.
     // Subclasse so implementa o que e especifico dela (o portal, por exemplo, so a interacao).
+    [Unload(UnloadMode.Global)]
     public partial class Prop : Area2D
     {
         #region Dinamic properties
 
-        // Id da PropDefinition que gerou este no. E o que permite restaurar do save sem
-        // saber a subclasse.
+        // Id da PropDefinition que gerou este no. Marcado = vai pro save e trafega por RPC,
+        // e e o que faz este no ser encontrado pela varredura do WorldStreaming.
+        [GodotDictionaryField]
         public string PropId { get; set; } = "";
 
         #endregion
@@ -67,19 +71,5 @@ namespace Jogo25D.Props
 
         #endregion
 
-        #region Core - Persistencia
-
-        public virtual PropSaveData ToSave(string dimensionId)
-        {
-            return new PropSaveData
-            {
-                PropId = PropId,
-                PositionX = Position.X,
-                PositionY = Position.Y,
-                DimensionId = dimensionId,
-            };
-        }
-
-        #endregion
-    }
+   }
 }

@@ -1,9 +1,11 @@
 [gd_scene format=3 uid="uid://7fnjlehfsmoj"]
 
+[ext_resource type="Script" path="res://Features/World/Entities/Managers/WorldStreaming.cs" id="0_stream"]
 [ext_resource type="PackedScene" uid="uid://eaamifcetyfn" path="res://Scenes/World/Levels/Upsidedown.tscn" id="1_xf6vi"]
 [ext_resource type="PackedScene" uid="uid://bfdarejodvd8o" path="res://Scenes/World/Levels/Overworld.tscn" id="2_ouhkt"]
 
 [node name="World" type="Node2D" unique_id=336690079]
+script = ExtResource("0_stream")
 
 [node name="Levels" type="CanvasLayer" parent="." unique_id=1147246150]
 follow_viewport_enabled = true

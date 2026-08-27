@@ -787,11 +787,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        public void ReconnectForeignBorderDependent(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet, HashSet<int> excludedForeignTerrainSets = null)
-        {
-            ReconnectForeignBorderDependentAsync(dependency, cells, terrainSet, cellsPerFrame: int.MaxValue, excludedForeignTerrainSets: excludedForeignTerrainSets).GetAwaiter().GetResult();
-        }
-
         public async Task ReconnectForeignBorderDependentAsync(TileMapLayer dependency, IReadOnlyCollection<Vector2I> cells, int terrainSet, int cellsPerFrame = 200, HashSet<int> excludedForeignTerrainSets = null)
         {
             foreach (var group in GroupForeignNeighborsByTerrainSet(cells, terrainSet, excludedForeignTerrainSets))
@@ -988,7 +983,7 @@ namespace Jogo25D.Biomes
 
         private void ProcessBreakBlock(Vector2I cell)
         {
-            var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+            var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
             if (GetCellSourceId(cell) == -1)
             {
@@ -1001,7 +996,7 @@ namespace Jogo25D.Biomes
 
                 baseLayer.EraseBlockAndReconnect(cell);
 
-                chunkStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+                tileStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
 
                 Rpc(nameof(BreakBlockBroadcast), cell);
 
@@ -1010,7 +1005,7 @@ namespace Jogo25D.Biomes
 
             EraseBlockAndReconnect(cell);
 
-            chunkStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+            tileStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
 
             var dropPosition = ToGlobal(MapToLocal(cell));
 
@@ -1061,7 +1056,7 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
-            Game.Managers.ChunkStreamingManager.Node?.RecordMutation(DimensionId, cell, "place", blockId);
+            Game.Managers.TileStreamingManager.Node?.RecordMutation(DimensionId, cell, "place", blockId);
 
             Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
 
@@ -1373,9 +1368,9 @@ namespace Jogo25D.Biomes
 
         private BiomeDefinition ResolveBiomeForCell(Vector2I cell)
         {
-            var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+            var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
-            return chunkStreamingManager?.ResolveBiome(DimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
+            return tileStreamingManager?.ResolveBiome(DimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
         }
 
         #endregion

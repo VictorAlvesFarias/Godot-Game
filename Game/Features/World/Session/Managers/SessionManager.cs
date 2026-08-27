@@ -153,12 +153,12 @@ namespace Jogo25D.Session
             player.Data = (PlayerData)character.Data.Duplicate(true);
             player.Loaded = true;
 
-            await Game.Managers.ChunkStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), player.Position);
+            await Game.Managers.TileStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), player.Position);
 
             player.Position = Game.Managers.DimensionManager.Node.FindGroundSpawnPosition(ChunkStreamingConstants.UPSIDEDOWN_ID, player.Position.X);
 
             Game.Managers.DimensionManager.Node.RpcId(id, nameof(DimensionManager.ClearLayersReceive));
-            Game.Managers.ChunkStreamingManager.Node.CatchUpPeer(id);
+            Game.Managers.TileStreamingManager.Node.CatchUpPeer(id, player.Position);
             Game.Managers.DimensionManager.Node.SpawnPlayer(player);
             Game.Managers.DimensionManager.Node.SpawnPlayerRequest(player);
 
@@ -188,14 +188,7 @@ namespace Jogo25D.Session
                 Game.Managers.DimensionManager.Node.SpawnNpcRequest(npc.Position, id);
             }
 
-            var worldItems = Game.Managers.DimensionManager.Node.Parents.SelectMany(parent => parent.GetChildren().OfType<WorldItem>());
-
-            foreach (var worldItem in worldItems)
-            {
-                GD.Print($"[NetworkManager.FinishPeerJoin] informing {id} about {worldItem.Name}");
-
-                Game.Managers.DimensionManager.Node.SpawnWorldItemRequest(worldItem, id);
-            }
+            Game.Managers.WorldManager.Node.Streaming?.CatchUpPeer(id, player.Position);
         }
 
         #region Core - Personagem, join e politica de save
@@ -231,12 +224,6 @@ namespace Jogo25D.Session
         {
             _peerCharacters.Remove(peerId);
             _pendingProfileByPeer.Remove(peerId);
-        }
-
-        public void ForgetAllPeers()
-        {
-            _peerCharacters.Clear();
-            _pendingProfileByPeer.Clear();
         }
 
         public void CreateCharacter(string name)

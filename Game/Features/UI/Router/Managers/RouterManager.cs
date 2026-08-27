@@ -112,23 +112,6 @@ namespace Jogo25D.UI
             return true;
         }
 
-        public void CloseAll()
-        {
-            foreach (var screen in _history)
-            {
-                Hide(screen);
-            }
-
-            _history.Clear();
-
-            if (Current != null)
-            {
-                Hide(Current);
-
-                Current = null;
-            }
-        }
-
         #endregion
 
         #region Core - Visibilidade

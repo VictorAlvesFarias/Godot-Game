@@ -6,6 +6,7 @@ using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
+using Jogo25D.Entities;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Characters.Resources;
@@ -56,6 +57,10 @@ namespace Jogo25D.Systems
 
 		#endregion
 
+		// O streaming de entidade vive na raiz do World, nao em Managers: ele nasce e morre
+		// com o mundo, entao nao precisa de reset nem de aviso de teardown.
+		public WorldStreaming Streaming => Game.Main.Node?.GetNodeOrNull<WorldStreaming>("World");
+
 		#region Core - World spawning
 
 		public void SpawnWorld()
@@ -91,7 +96,12 @@ namespace Jogo25D.Systems
 			SpawnWorld();
 			SetChunkStreamingEnabled(false);
 
-			Dimensions.RestoreProps(save);
+			// Sem streaming, as entidades vem todas de uma vez - mesmo registro, outra hora.
+			ImportDimension(save, ChunkStreamingConstants.OVERWORLD_ID);
+			ImportDimension(save, ChunkStreamingConstants.UPSIDEDOWN_ID);
+
+			Streaming?.MaterializeAll(ChunkStreamingConstants.OVERWORLD_ID);
+			Streaming?.MaterializeAll(ChunkStreamingConstants.UPSIDEDOWN_ID);
 			RespawnLocalSoloPlayer(character);
 
 			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
@@ -102,9 +112,10 @@ namespace Jogo25D.Systems
 			SpawnWorld();
 			Dimensions.ClearLayers();
 
-            Game.Managers.ChunkStreamingManager.Node.SetWorldSeed(save.Seed);
-            Game.Managers.ChunkStreamingManager.Node.ImportState(ChunkStreamingConstants.OVERWORLD_ID, Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, ChunkStreamingConstants.OVERWORLD_ID));
-            Game.Managers.ChunkStreamingManager.Node.ImportState(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID));
+            Game.Managers.TileStreamingManager.Node.SetWorldSeed(save.Seed);
+
+            ImportDimension(save, ChunkStreamingConstants.OVERWORLD_ID);
+            ImportDimension(save, ChunkStreamingConstants.UPSIDEDOWN_ID);
 
 			SetChunkStreamingEnabled(true);
 
@@ -112,9 +123,8 @@ namespace Jogo25D.Systems
 
 			loadingUi?.Open();
 
-			await Game.Managers.ChunkStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), Vector2.Zero);
+			await Game.Managers.TileStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), Vector2.Zero);
 		
-			Dimensions.RestoreProps(save);
 			RespawnLocalSoloPlayer(character);
 
 			loadingUi?.Close();
@@ -122,13 +132,50 @@ namespace Jogo25D.Systems
 			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
 		}
 
+		// Tile e entidade leem o MESMO arquivo de dimensao: um pega as mutacoes, o outro os
+		// records de entidade. Os dois so indexam aqui - nada e materializado ainda.
+		private void ImportDimension(WorldSaveData save, string dimensionId)
+		{
+			var state = Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, dimensionId);
+
+			Game.Managers.TileStreamingManager.Node.ImportState(dimensionId, state);
+			Streaming?.ImportState(dimensionId, state);
+		}
+
+		// Monta e grava o arquivo de uma dimensao. O DimensionSaveData existe SO aqui dentro:
+		// ele e formato de arquivo, nao estado vivo. A verdade das mutacoes esta no
+		// TileStreamingManager e a das entidades esta nos proprios nos.
+		public void SaveDimensions(string worldId)
+		{
+			foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
+			{
+				var state = new DimensionSaveData
+				{
+					WorldId = worldId,
+					DimensionId = dimensionId,
+				};
+
+				Game.Managers.TileStreamingManager.Node?.ExportInto(dimensionId, state);
+				Streaming?.ExportInto(dimensionId, state);
+
+				SaveStorage.SaveDimensionState(worldId, dimensionId, state);
+			}
+		}
+
 		private void SetChunkStreamingEnabled(bool enabled)
 		{
-			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
-			if (chunkStreamingManager != null)
+			if (tileStreamingManager != null)
 			{
-				chunkStreamingManager.Enabled = enabled;
+				tileStreamingManager.Enabled = enabled;
+			}
+
+			var streaming = Streaming;
+
+			if (streaming != null)
+			{
+				streaming.Enabled = enabled;
 			}
 		}
 
@@ -150,7 +197,7 @@ namespace Jogo25D.Systems
 
 			Dimensions.Reset();
 
-			Game.Managers.ChunkStreamingManager.Node?.ResetState();
+			Game.Managers.TileStreamingManager.Node?.ResetState();
 
 			Game.Managers.RouterManager.Node.Close(Game.Ui.HudUI.Node);
 		}
@@ -184,10 +231,10 @@ namespace Jogo25D.Systems
 
 		#region Core - Player lookup
 
+		// Sem log: telas chamam isto de dentro do _Process enquanto ainda nao ha player
+		// (DeathScreenUI faz exatamente isso), entao imprimir aqui e centenas de linhas por segundo.
 		public Player GetLocalPlayer()
 		{
-			GD.Print("[WorldManager.GetLocalPlayer] GetLocalPlayer()");
-
 			var localPeerId = 1;
 
 			if (
@@ -197,7 +244,6 @@ namespace Jogo25D.Systems
 			)
 			{
 				localPeerId = Multiplayer.GetUniqueId();
-				GD.Print($"[WorldManager.GetLocalPlayer] localPeerId={localPeerId}");
 			}
 
 			return FindPlayerByPeerId(localPeerId);
@@ -205,12 +251,27 @@ namespace Jogo25D.Systems
 
 		public Player FindPlayerByPeerId(long peerId)
 		{
-			var players = GetTree().GetNodesInGroup("players").OfType<Player>();
-			var found = players.FirstOrDefault(p => p.PeerId == peerId);
+			return GetAllPlayers().FirstOrDefault(p => p.PeerId == peerId);
+		}
 
-			GD.Print($"[WorldManager.FindPlayerByPeerId] peerId={peerId} found={(found != null)}");
+		// Todo Player da arvore, NPC incluso - quem precisa filtrar filtra.
+		public List<Player> GetAllPlayers()
+		{
+			return GetTree().GetNodesInGroup("players").OfType<Player>().ToList();
+		}
 
-			return found;
+		// Players que estao no parent daquela dimensao. E o que o streaming usa pra decidir
+		// o que carregar: raio ao redor de quem esta ali, nao de quem esta em outra dimensao.
+		public List<Player> GetPlayersInDimension(string dimensionId)
+		{
+			var parent = Dimensions.ResolveParent(dimensionId);
+
+			if (parent == null)
+			{
+				return new List<Player>();
+			}
+
+			return GetAllPlayers().Where(p => p.GetParent() == parent).ToList();
 		}
 
 		#endregion

@@ -15,22 +15,6 @@ namespace Jogo25D.Systems
 {
     public partial class SaveManager : Node
     {
-        #region Core - Politica de autosave
-
-
-        #endregion
-
-        #region Personagem da sessao
-
-
-        #endregion
-
-        #region Core - Personagem da sessao (local x servidor)
-
-
-        #endregion
-
-
         #region Core - Registro e politica
 
         // O que esta em jogo e precisa ser gravado. Guarda o Resource: quem registra sabe o que
@@ -125,6 +109,19 @@ namespace Jogo25D.Systems
                     SavePeerCharacter(character, world.CharacterMode, world.MultiplayerKey);
                 }
             }
+
+            if (!host)
+            {
+                return;
+            }
+
+            // Estado de dimensao nao fica no registry: ele e formato de arquivo, montado na
+            // hora a partir do que esta vivo. Quem monta e o WorldManager, que conhece as
+            // dimensoes e os dois streamings.
+            if (world != null)
+            {
+                Game.Managers.WorldManager.Node?.SaveDimensions(world.WorldId);
+            }
         }
 
         private bool IsHostOrSolo()
@@ -186,15 +183,6 @@ namespace Jogo25D.Systems
                 return;
             }
 
-            var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
-
-            if (chunkStreamingManager != null)
-            {
-                SaveStorage.SaveDimensionState(save.WorldId, ChunkStreamingConstants.OVERWORLD_ID, chunkStreamingManager.ExportState(ChunkStreamingConstants.OVERWORLD_ID));
-                SaveStorage.SaveDimensionState(save.WorldId, ChunkStreamingConstants.UPSIDEDOWN_ID, chunkStreamingManager.ExportState(ChunkStreamingConstants.UPSIDEDOWN_ID));
-            }
-
-            save.Props = Game.Managers.DimensionManager.Node.CollectProps();
             save.LastPlayedUtc = SaveStorage.NowUtc();
 
             SaveStorage.SaveWorldMeta(save);

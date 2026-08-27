@@ -259,7 +259,7 @@ namespace Jogo25D.Network
 			}
 
 
-			Game.Managers.ChunkStreamingManager.Node?.RemovePeer(id);
+			Game.Managers.TileStreamingManager.Node?.RemovePeer(id);
 		}
 
 		public void OnConnectedToServer()

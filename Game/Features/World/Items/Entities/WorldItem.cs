@@ -1,15 +1,21 @@
 ﻿using Godot;
 using Jogo25D.Characters;
+using Jogo25D.Core;
+using Jogo25D.Dimensions;
+using Jogo25D.Entities;
+using Jogo25D.Utils.GodotDictionaryParser;
 using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Items
 {
+    [Unload(UnloadMode.Global)]
     public partial class WorldItem : CharacterBody2D
     {
         #region Properties
 
-        public long WorldItemId { get; set; }
-        public ItemData Data { get; set; }
+
+        [GodotDictionaryField]
+        public ItemData Item { get; set; }
         public float Gravity { get; set; }
         public float BobTime { get; set; }
         public float SpriteRestY { get; set; }
@@ -83,12 +89,12 @@ namespace Jogo25D.Items
 
         public void UpdateVisual()
         {
-            if (Sprite == null || Data == null)
+            if (Sprite == null || Item == null)
             {
                 return;
             }
 
-            var texture = ItemFactory.Create(Data.Id)?.Icon;
+            var texture = ItemFactory.Create(Item?.Id)?.Icon;
 
             Sprite.Texture = texture;
             Sprite.Scale = new Vector2(0.7f, 0.7f);
@@ -118,7 +124,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            player.PickupItemRequest(WorldItemId);
+            player.PickupItemRequest(DimensionManager.InstanceIdOf(this));
         }
 
         #endregion

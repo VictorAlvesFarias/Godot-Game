@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://Features/UI/Window/Managers/WindowManager.cs" id="1_7ktwl"]
 [ext_resource type="Script" path="res://Features/UI/Router/Managers/RouterManager.cs" id="9_router"]
 [ext_resource type="Script" path="res://Features/World/Core/Managers/WorldManager.cs" id="3_b871k"]
-[ext_resource type="Script" path="res://Features/World/Chunks/Managers/ChunkStreamingManager.cs" id="4_chunkstream"]
+[ext_resource type="Script" path="res://Features/World/Chunks/Managers/TileStreamingManager.cs" id="4_chunkstream"]
 [ext_resource type="Script" path="res://Features/World/Dimensions/Managers/DimensionManager.cs" id="6_dimension"]
 [ext_resource type="Script" path="res://Features/World/Network/Managers/NetworkManager.cs" id="7_network"]
 [ext_resource type="Script" path="res://Features/World/Session/Managers/SessionManager.cs" id="8_session"]
@@ -29,7 +29,7 @@ script = ExtResource("8_session")
 [node name="DimensionManager" type="Node" parent="." unique_id=1007702764]
 script = ExtResource("6_dimension")
 
-[node name="ChunkStreamingManager" type="Node" parent="." unique_id=1007702762]
+[node name="TileStreamingManager" type="Node" parent="." unique_id=1007702762]
 script = ExtResource("4_chunkstream")
 
 [node name="SaveManager" type="Node" parent="." unique_id=1007702763]

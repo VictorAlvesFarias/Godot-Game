@@ -3,6 +3,7 @@ using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Entities;
 using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Features.World.Characters.Resources;
 using Jogo25D.Features.World.Items.Resources;
@@ -30,7 +31,6 @@ namespace Jogo25D.Dimensions
             ?? ResolveLayer(ChunkStreamingConstants.UPSIDEDOWN_ID)?.TileSet?.TileSize.X
             ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
 
-        public long NextPropId { get; set; }
 
         public IEnumerable<string> Ids => _dimensions.Keys;
 
@@ -99,13 +99,6 @@ namespace Jogo25D.Dimensions
             var dimension = Resolve(dimensionId);
 
             return dimension?.Parent != null && IsInstanceValid(dimension.Parent) ? dimension.Parent : null;
-        }
-
-        public SubViewportContainer ResolveContainer(string dimensionId)
-        {
-            var dimension = Resolve(dimensionId);
-
-            return dimension?.Container != null && IsInstanceValid(dimension.Container) ? dimension.Container : null;
         }
 
         public TerrainLayer ResolveLayer(string dimensionId)
@@ -203,7 +196,6 @@ namespace Jogo25D.Dimensions
                 dimension.BaseLayer = null;
             }
 
-            NextPropId = 0;
         }
 
         #endregion
@@ -334,31 +326,191 @@ namespace Jogo25D.Dimensions
 
         #endregion
 
-        #region Core - Spawn de item no chao
+        #region Core - Spawn generico
 
-        public void SpawnWorldItem(WorldItem item, string dimensionId)
+        // Um caminho para qualquer entidade de mundo. O EntityData descreve tudo: a cena a
+        // instanciar, onde, e o estado - que continua vivo depois do node morrer.
+        //
+        // Entidade nova nao precisa de metodo nem de RPC aqui: precisa de uma cena e de um
+        // EntityData. Player e NPC ficam de fora, sao conteudo de sessao.
+        // Chaves do record. Sao o que o node nao consegue declarar sozinho: a cena de onde ele
+        // veio, a identidade, a dimensao e a posicao (que e do Node2D, nao dele).
+        public const string RECORD_SCENE = "ScenePath";
+        public const string RECORD_DIMENSION = "DimensionId";
+        public const string RECORD_INSTANCE = "InstanceId";
+        public const string RECORD_POSITION = "Position";
+
+        // O NOME do no e a identidade. Deterministico de proposito: RPC do Godot resolve por
+        // caminho, entao o mesmo no precisa ter o mesmo nome em todos os peers.
+        public static string EntityNameOf(long instanceId)
         {
-            ResolveParent(dimensionId)?.AddChild(item);
+            return $"E{instanceId}";
         }
 
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void SpawnWorldItemReceive(long worldItemId, Godot.Collections.Dictionary data, Vector2 position, string dimensionId)
+        public static long InstanceIdOf(Node node)
         {
-            if (ResolveParent(dimensionId) == null || FindWorldItem(worldItemId) != null)
+            var name = node?.Name.ToString();
+
+            return name != null && name.Length > 1 && name[0] == 'E' && long.TryParse(name[1..], out var id)
+                ? id
+                : 0;
+        }
+
+        public static Godot.Collections.Dictionary WriteVector(Vector2 value)
+        {
+            return new Godot.Collections.Dictionary { { "x", value.X }, { "y", value.Y } };
+        }
+
+        public static Vector2 ReadVector(Godot.Collections.Dictionary record, string key)
+        {
+            if (record == null || !record.TryGetValue(key, out var raw))
+            {
+                return Vector2.Zero;
+            }
+
+            var dict = raw.AsGodotDictionary();
+
+            return new Vector2(
+                dict.TryGetValue("x", out var x) ? x.AsSingle() : 0f,
+                dict.TryGetValue("y", out var y) ? y.AsSingle() : 0f);
+        }
+
+        // Instancia e coloca no lugar. Se o node ja existir com essa identidade, nao duplica.
+        public Node2D Spawn(Godot.Collections.Dictionary record)
+        {
+            var node = Build(record);
+
+            if (node == null)
+            {
+                return null;
+            }
+
+            var parent = ResolveParent(record[RECORD_DIMENSION].AsString());
+
+            if (parent == null)
+            {
+                node.QueueFree();
+
+                return null;
+            }
+
+            parent.AddChild(node);
+
+            return node;
+        }
+
+        // Instancia SEM anexar na arvore. E o que o streaming usa pra carregar o mundo do disco:
+        // o node existe e guarda o proprio estado, mas nao processa ate ser pendurado.
+        public Node2D Build(Godot.Collections.Dictionary record)
+        {
+            if (record == null || !record.ContainsKey(RECORD_SCENE))
+            {
+                return null;
+            }
+
+            var instanceId = record.TryGetValue(RECORD_INSTANCE, out var id) ? id.AsInt64() : 0;
+
+            if (instanceId != 0 && FindByInstanceId(instanceId) != null)
+            {
+                return null;
+            }
+
+            var scene = GD.Load<PackedScene>(record[RECORD_SCENE].AsString());
+
+            if (scene == null)
+            {
+                return null;
+            }
+
+            var node = scene.Instantiate<Node2D>();
+
+            GodotDictionaryParser.ApplyTo(node, record);
+
+            node.Position = ReadVector(record, RECORD_POSITION);
+            node.Name = EntityNameOf(instanceId);
+
+            return node;
+        }
+
+        // Cria no lado autoritativo e replica. targetPeerId != 0 manda so pra um (catch-up).
+        public void SpawnRequest(Godot.Collections.Dictionary record, long targetPeerId = 0)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
             {
                 return;
             }
 
-            var item = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
-
-            item.Name = $"WorldItem{worldItemId}";
-            item.WorldItemId = worldItemId;
-            item.Data = GodotDictionaryParser.ToResource<ItemData>(data);
-            item.Position = position;
-
-            SpawnWorldItem(item, dimensionId);
+            if (targetPeerId == 0)
+            {
+                Rpc(nameof(SpawnReceive), record);
+            }
+            else
+            {
+                RpcId(targetPeerId, nameof(SpawnReceive), record);
+            }
         }
 
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SpawnReceive(Godot.Collections.Dictionary record)
+        {
+            Spawn(record);
+        }
+
+        public void DespawnRequest(long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                DespawnReceive(instanceId);
+
+                return;
+            }
+
+            Rpc(nameof(DespawnReceive), instanceId);
+        }
+
+        // Tira o no de UM peer so. O servidor continua com o dele e continua simulando.
+        public void DespawnForPeer(long targetPeerId, long instanceId)
+        {
+            if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
+            {
+                RpcId(targetPeerId, nameof(DespawnReceive), instanceId);
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void DespawnReceive(long instanceId)
+        {
+            FindByInstanceId(instanceId)?.QueueFree();
+        }
+
+        public Node2D FindByInstanceId(long instanceId)
+        {
+            if (instanceId == 0)
+            {
+                return null;
+            }
+
+            var name = EntityNameOf(instanceId);
+
+            foreach (var parent in Parents)
+            {
+                var node = parent?.GetNodeOrNull<Node2D>(name);
+
+                if (node != null)
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        #endregion
+
+        #region Core - Item no chao
+
+        // Dropar item: instancia, poe no mundo e deixa o streaming cuidar do resto. O
+        // registro acontece sozinho no _EnterTree.
         public long SpawnWorldItemRequest(ItemData itemData, Vector2 position, string dimensionId)
         {
             if (itemData == null)
@@ -366,59 +518,27 @@ namespace Jogo25D.Dimensions
                 return 0;
             }
 
-            var item = GD.Load<PackedScene>("res://Scenes/World/Items/WorldItem.tscn").Instantiate<WorldItem>();
-            var worldItemId = InstanceIdGenerator.NextInstanceId();
+            var instanceId = InstanceIdGenerator.NextInstanceId();
 
-            item.Name = $"WorldItem{worldItemId}";
-            item.WorldItemId = worldItemId;
-            item.Data = itemData;
-            item.Position = position;
-
-            SpawnWorldItem(item, dimensionId);
-
-            Rpc(nameof(SpawnWorldItemReceive), worldItemId, GodotDictionaryParser.ToDictionary(itemData), position, dimensionId);
-
-            return worldItemId;
-        }
-
-        public void SpawnWorldItemRequest(WorldItem item, long targetPeerId)
-        {
-            var dimensionId = ResolveDimensionIdOf(item);
-
-            RpcId(targetPeerId, nameof(SpawnWorldItemReceive), item.WorldItemId, GodotDictionaryParser.ToDictionary(item.Data), item.Position, dimensionId);
-        }
-
-        public WorldItem FindWorldItem(long worldItemId)
-        {
-            foreach (var parent in Parents)
+            var record = new Godot.Collections.Dictionary
             {
-                var item = parent.GetNodeOrNull<WorldItem>($"WorldItem{worldItemId}");
+                { RECORD_SCENE, "res://Scenes/World/Items/WorldItem.tscn" },
+                { RECORD_DIMENSION, dimensionId },
+                { RECORD_INSTANCE, instanceId },
+                { RECORD_POSITION, WriteVector(position) },
+                { "Item", GodotDictionaryParser.ToDictionary(itemData) },
+            };
 
-                if (item != null)
-                {
-                    return item;
-                }
-            }
+            Spawn(record);
+            SpawnRequest(record);
 
-            return null;
+            return instanceId;
         }
 
-        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void RemoveWorldItemReceive(long worldItemId)
-        {
-            FindWorldItem(worldItemId)?.QueueFree();
-        }
-
+        // Recolher e ESQUECER: QueueFree, nao RemoveChild. O node sai do save e nao volta.
         public void RemoveWorldItemRequest(long worldItemId)
         {
-            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-            {
-                RemoveWorldItemReceive(worldItemId);
-
-                return;
-            }
-
-            Rpc(nameof(RemoveWorldItemReceive), worldItemId);
+            DespawnRequest(worldItemId);
         }
 
         #endregion
@@ -442,92 +562,26 @@ namespace Jogo25D.Dimensions
                 return false;
             }
 
-            SpawnProp(propId, parent, position, ++NextPropId);
-
-            Rpc(nameof(SpawnPropBroadcast), propId, position, dimensionId, NextPropId);
-
-            return true;
-        }
-
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void SpawnPropBroadcast(string propId, Vector2 position, string dimensionId, long propInstanceId)
-        {
-            var parent = ResolveParent(dimensionId);
-
-            if (parent == null)
-            {
-                return;
-            }
-
-            SpawnProp(propId, parent, position, propInstanceId);
-        }
-
-        public Prop SpawnProp(string propId, Node2D parent, Vector2 position, long propInstanceId)
-        {
             var definition = PropDB.Get(propId);
 
-            if (definition == null || parent == null)
+            if (definition == null)
             {
-                return null;
+                return false;
             }
 
-            if (definition.Spawn(parent, position) is not Prop prop)
+            var record = new Godot.Collections.Dictionary
             {
-                return null;
-            }
+                { RECORD_SCENE, definition.ScenePath },
+                { RECORD_DIMENSION, dimensionId },
+                { RECORD_INSTANCE, InstanceIdGenerator.NextInstanceId() },
+                { RECORD_POSITION, WriteVector(position) },
+                { "PropId", propId },
+            };
 
-            prop.PropId = propId;
-            prop.Name = $"{propId}{propInstanceId}";
+            Spawn(record);
+            SpawnRequest(record);
 
-            return prop;
-        }
-
-        public void RestoreProps(WorldSaveData save)
-        {
-            if (save?.Props == null)
-            {
-                return;
-            }
-
-            foreach (var propSave in save.Props)
-            {
-                var parent = ResolveParent(propSave.DimensionId);
-
-                if (parent == null)
-                {
-                    continue;
-                }
-
-                SpawnProp(propSave.PropId, parent, new Vector2(propSave.PositionX, propSave.PositionY), ++NextPropId);
-            }
-        }
-
-        public Godot.Collections.Array<PropSaveData> CollectProps()
-        {
-            var result = new Godot.Collections.Array<PropSaveData>();
-
-            foreach (var dimensionId in _dimensions.Keys)
-            {
-                var parent = ResolveParent(dimensionId);
-
-                if (parent == null)
-                {
-                    continue;
-                }
-
-                foreach (var prop in parent.GetChildren().OfType<Prop>())
-                {
-                    result.Add(new PropSaveData
-                    {
-                        PropId = prop.PropId,
-                        PositionX = prop.Position.X,
-                        PositionY = prop.Position.Y,
-                        DimensionId = dimensionId,
-                    });
-                }
-            }
-
-            return result;
+            return true;
         }
 
         #endregion

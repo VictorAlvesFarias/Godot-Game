@@ -168,7 +168,6 @@ namespace Jogo25D.Systems
 
                     if (meta != null)
                     {
-                        MigrateLegacyPortals(meta);
 
                         result.Add(meta);
                     }
@@ -176,32 +175,6 @@ namespace Jogo25D.Systems
             }
 
             return result.OrderByDescending(w => w.LastPlayedUtc).ToList();
-        }
-
-        // Mundos salvos antes de portal virar prop gravaram a lista em "Portals". Converte pra
-        // "Props" com PropId = "portal" na leitura; o proximo save ja grava no formato novo.
-        private static void MigrateLegacyPortals(WorldSaveData world)
-        {
-            if (world?.Portals == null || world.Portals.Count == 0)
-            {
-                return;
-            }
-
-            world.Props ??= new Godot.Collections.Array<PropSaveData>();
-
-            foreach (var legacy in world.Portals)
-            {
-                if (legacy == null)
-                {
-                    continue;
-                }
-
-                legacy.PropId = string.IsNullOrEmpty(legacy.PropId) ? "portal" : legacy.PropId;
-
-                world.Props.Add(legacy);
-            }
-
-            world.Portals.Clear();
         }
 
         public static WorldSaveData CreateWorld(string name, long seed, WorldCharacterMode mode, string multiplayerKey, int autosaveIntervalMinutes, bool isProcedural = true)

@@ -33,14 +33,6 @@ namespace Jogo25D.Features.Managers.Save.Resources
         [Export, GodotDictionaryField]
         public int AutosaveIntervalMinutes { get; set; } = SavesConstants.DEFAULT_AUTOSAVE_INTERVAL_MINUTES;
 
-        [Export, GodotDictionaryField]
-        public Godot.Collections.Array<PropSaveData> Props { get; set; } = new();
-
-        // Compatibilidade: mundos salvos antes da generalizacao de portal para prop gravaram a
-        // chave "Portals". A leitura converte pra Props (PropId = "portal") e esta lista fica
-        // vazia dali em diante - ver SaveManager.MigrateLegacyPortals.
-        [Export, GodotDictionaryField]
-        public Godot.Collections.Array<PropSaveData> Portals { get; set; } = new();
 
         [Export, GodotDictionaryField]
         public long CreatedUtc { get; set; }

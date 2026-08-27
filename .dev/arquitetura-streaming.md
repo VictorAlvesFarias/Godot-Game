@@ -3,6 +3,8 @@
 Plano de arquitetura fechado em 2026-08-25. Substitui o rascunho anterior (`arquitetura-entity-lifecycle.md`).
 **Nenhum código foi alterado ainda — isto é o desenho acordado.**
 
+O passo a passo do que será escrito está em [plano-implementacao.md](plano-implementacao.md), e o que já foi feito em [status-implementacao.md](status-implementacao.md).
+
 ---
 
 ## 1. O conceito central: chunk é a unidade das duas correntes
@@ -33,7 +35,7 @@ Isso responde a pergunta que originou o desenho: **quem carrega a entidade é o 
 | | tile | entidade |
 |---|---|---|
 | base determinística | semente do mundo | — (não existe entidade procedural hoje) |
-| delta persistido | `ChunkMutationData[]` por chunk | `EntitySaveData[]` por chunk |
+| delta persistido | `ChunkMutationData[]` por chunk | um dicionário por entidade, por chunk |
 | ao carregar | pinta + reaplica mutação | instancia a partir do registro |
 | ao descarregar | apaga o tile | serializa de volta e libera o node |
 | ao entrar peer novo | manda semente + chunks carregados | manda os registros dos chunks carregados |
@@ -46,10 +48,10 @@ Igual ao que o tile já faz hoje.
 
 | nível | o que é | quando |
 |---|---|---|
-| **registro** | o delta persistido (`ChunkMutationData`, `EntitySaveData`) | **eager** — a dimensão inteira entra no `ImportState`, ao entrar no mundo |
+| **registro** | o delta persistido (mutação de tile, dicionário de entidade) | **eager** — a dimensão inteira entra no `ImportState`, ao entrar no mundo |
 | **materialização** | a célula pintada, o node na árvore | **lazy** — só quando o chunk entra no raio |
 
-`ImportState` carrega o dicionário inteiro da dimensão; `ApplyMutations` só roda dentro do `LoadChunkAsync`. Entidade segue o mesmo: os `EntitySaveData` de toda a dimensão entram em memória de uma vez, e o node só é instanciado quando o chunk dele carrega.
+`ImportState` carrega o dicionário inteiro da dimensão; `ApplyMutations` só roda dentro do `LoadChunkAsync`. Entidade segue o mesmo: os dicionários de toda a dimensão entram em memória de uma vez, e o node só é instanciado quando o chunk dele carrega.
 
 No cliente nem o registro vem inteiro: ele recebe os deltas **do chunk** que está chegando, dentro do `LoadChunkReceive`. Quem guarda o dicionário completo é o servidor.
 
@@ -125,49 +127,108 @@ public event Action<string, Vector2I> ChunkUnloaded;
 
 ### 3.2 `EntityStreamingManager` (novo, ~180 linhas)
 
-Assina `ChunkLoaded`/`ChunkUnloaded` e faz pela entidade o que o tile já faz. É também o `EntityRegistry` onde a `WorldEntity` se registra sozinha.
+Assina `ChunkLoaded`/`ChunkUnloaded` e faz pela entidade o que o tile já faz. É também o registro onde as entidades se anunciam sozinhas.
 
 ```
 EntityStreamingManager : Node
-├─ _records : Dictionary<(string dim, Vector2I chunk), List<EntitySaveData>>
-│     o que o save conhece, materializado ou não
-├─ _live : Dictionary<long instanceId, WorldEntity>
+├─ _records : Dictionary<(string dim, Vector2I chunk), List<Dictionary>>
+│     o que o save conhece, materializado ou não - mesmo formato do disco
+├─ _live : Dictionary<long instanceId, Node2D>
 │     o que está na árvore agora
 │
 ├─ Register(entity)     ← chamado pelo _EnterTree da própria entidade
 ├─ Unregister(entity)   ← chamado pelo _ExitTree da própria entidade
 │
 ├─ OnChunkLoaded(dimensionId, chunkCoord)
-│     └─ para cada record do chunk: data.Scene.Instantiate() + Restore(data)
+│     └─ para cada record do chunk: Instantiate(ScenePath) + ApplyTo(node, record)
 │
 ├─ OnChunkUnloaded(dimensionId, chunkCoord)
 │     └─ para cada entidade viva no chunk: entity.Unload()
 │
 ├─ BeginTeardown()      ← DespawnWorld avisa; a partir daí ignora _ExitTree
 │
-├─ ExportState(dimensionId) : DimensionEntitySaveData
+├─ ExportState(dimensionId) → lista de dicionários
 └─ ImportState(dimensionId, save)
 ```
 
-### 3.3 `WorldEntity` — a base que se registra sozinha
+### 3.3 O estado mora no node, não num `Data` paralelo
 
-Em vez de um manager que sabe criar cada tipo, **cada entidade se registra ao entrar na árvore**. O `Prop` já faz metade disso hoje: tem os próprios RPCs de quebra e um `virtual ToSave()`. `WorldEntity` generaliza.
+**Decidido em 2026-08-26.** A entidade não tem um `Resource` espelho. Ela marca as próprias propriedades:
+
+```csharp
+[SaveType("portal")]
+public partial class Portal : Prop
+{
+    [GodotDictionaryField] public string TargetDimension { get; set; } = "";
+    [GodotDictionaryField] public float Cooldown { get; set; }
+}
+
+public partial class Prop : Area2D
+{
+    [GodotDictionaryField] public string PropId { get; set; } = "";
+    [GodotDictionaryField] public Vector2 Position { get; set; }   // herdada de Node2D
+}
+```
+
+#### Por que não um `Data` separado
+
+Porque `Data` cria **duas hierarquias paralelas**:
 
 ```
-WorldEntity : Node2D
-├─ _EnterTree()  → EntityRegistry.Register(this)      automático
-├─ _ExitTree()   → EntityRegistry.Unregister(this)    automático, e SÓ isso
-│
-├─ virtual EntitySaveData Capture()      estado -> resource
-├─ virtual void Restore(EntitySaveData)  resource -> estado
-│
-├─ Unload()   captura, mantém o registro no save, sai da árvore
-├─ Forget()   remove do save, QueueFree
-│
-└─ RPCs próprios de comportamento (quebrar, interagir) — como o Prop já tem
+Portal : Prop : Area2D          PortalData : PropSaveData : Resource
 ```
 
-`Prop`/`Portal`, `WorldItem` e `NPC` passam a herdar daqui. **`Player` não**: ele é sessão, não conteúdo de mundo — quem o cria e destrói é o join/leave, e ele é o *centro* do raio, não conteúdo dele.
+Toda mudança na de node teria que ser espelhada na de dado. É a mesma doença dos 18 métodos de spawn, em outro eixo. Com as propriedades no node, a reflexão já traz as marcadas da classe base junto — herança de graça, uma hierarquia só.
+
+E a sincronização deixa de ser manual. Capturar o estado do node antes de liberá-lo é necessário nos **dois** desenhos — a posição mora no node, não no `Resource`, então com `Data` você também teria que copiar. A diferença é a forma:
+
+| | com `Data` | sem `Data` |
+|---|---|---|
+| antes de liberar | `data.Position = node.Position;`<br>`data.Cooldown = node.Cooldown;`<br>…campo a campo | `Merge(record, ToDictionary(node));` |
+| campo novo na classe | precisa lembrar de sincronizar | entra sozinho, pelo atributo |
+
+Esquecer uma linha de sincronização é um bug silencioso de save. Sem `Data`, não há linha para esquecer.
+
+#### Consequência: o registro em memória é o próprio dicionário
+
+Descarregar existe pra liberar o node — mas se o estado mora nele, liberar destrói o estado. Então no unload a entidade é serializada e o que fica é o dicionário:
+
+```csharp
+private readonly Dictionary<(string dim, Vector2I chunk), List<Godot.Collections.Dictionary>> _records = new();
+private readonly Dictionary<long, Node2D> _live = new();
+```
+
+O registro em memória e o formato em disco passam a ser **a mesma coisa**. O custo é que entidade descarregada fica stringly-typed (`dict["PropId"]`); como praticamente nada consulta entidade descarregada, é barato.
+
+#### Consequência: `$type` não é necessário pra entidade
+
+`Activator.CreateInstance` não reconstrói node — node é cena com filhos. A reconstrução é `GD.Load<PackedScene>(caminho).Instantiate()`, e **a cena já carrega o script**. Para node, o `ScenePath` *é* o tipo.
+
+O caminho não precisa ser escrito à mão: `node.SceneFilePath` vem preenchido pelo Godot em qualquer node instanciado de um `PackedScene` (medido: `'user://alvo.tscn'` na instância, `''` num `new()`).
+
+`$type` continua indispensável para `Resource` puro — meta do mundo, personagem, mutação de tile.
+
+#### A exceção: `Player`
+
+`Player.Data` continua existindo. Ele é copiado pra `CharacterSaveData`, guardado em `_peerCharacters`, mandado por RPC no join e salvo separado do node — o dado precisa sobreviver ao node de propósito.
+
+Não é inconsistência, é a linha que já estava traçada: **conteúdo de mundo põe o estado no node; conteúdo de sessão mantém `Resource` próprio.**
+
+#### O que muda no parser
+
+O `GetFields` já usa reflexão sobre `Type` qualquer, então é pouco:
+
+```csharp
+public static Dictionary ToDictionary(GodotObject source)         // era Resource
+public static void ApplyTo(GodotObject target, Dictionary dict)   // novo: popula em vez de criar
+public static Resource ToResource(Dictionary dict, Type fallback) // continua, pra Resource puro
+```
+
+#### Quem participa do streaming
+
+Sem `Data`, o discriminador é o atributo: entidade que declara `[GodotDictionaryField]` e está sob um parent de dimensão entra; o resto (efeito, label, hitbox) não.
+
+Isso resolve o `NPC : Player` de graça. Hoje NPC **é** um Player por herança, então "Player fica de fora" não é expressável por tipo — e o código contorna em dois lugares (`p.PeerId > 0` no `EvaluateCore`, `if (node is NPC) continue` no `FinishPeerJoin`). Participa quem **declara**, não quem herda.
 
 #### A regra dura: `_ExitTree` só faz membership
 
@@ -187,19 +248,19 @@ Duas consequências:
 1. **`IsQueuedForDeletion()` só isola "eu fui liberado diretamente".** Descarregar, trocar de dimensão e desmontar o mundo caem todos em `false`/`false` — indistinguíveis. Olhar o pai não resolve: só acusa quando o pai **direto** foi o liberado, e no `DespawnWorld` o `QueueFree` é no `World`, dois ou mais níveis acima.
 2. **No auto-`QueueFree` o `PREDELETE` roda antes do `_ExitTree`.** Serializar ali é serializar um objeto já em teardown.
 
-Por isso: **`_ExitTree` tira do registro e nada mais.** Nunca captura estado, nunca decide se salva. A intenção é declarada nos métodos explícitos, antes de sair da árvore.
+Por isso: **`_ExitTree` tira do registro e nada mais.** Nunca captura estado, nunca decide se salva. A intenção é declarada por quem age — `OnChunkUnloaded` ou `Forget` —, antes de sair da árvore.
 
 | | `Unload()` | `Forget()` |
 |---|---|---|
 | gatilho | chunk saiu do raio | item recolhido, prop quebrado |
-| captura | `Capture()` antes de sair | não precisa |
+| captura | serializa o node pro dicionário antes de sair | não precisa |
 | registro no save | **mantido** | **removido** |
 | node | sai da árvore | `QueueFree` |
 | volta quando o chunk volta? | sim | não |
 
-E o teardown do mundo, que é indistinguível de fora, é resolvido por fora: o `WorldManager.DespawnWorld` avisa o registry que vai desmontar, e o registry ignora os `_ExitTree` que chegarem depois disso.
+E o teardown do mundo, que é indistinguível de fora, é resolvido por fora: o `WorldManager.DespawnWorld` chama `BeginTeardown()` antes de liberar o `World`, e o registry ignora os `_ExitTree` que chegarem depois disso.
 
-### 3.4 `EntitySaveData` e o formato do save: JSON
+### 3.4 O formato do save: JSON
 
 **Implementado em 2026-08-26.** O save deixou de ser `.tres` do Godot e passou a ser JSON puro, escrito pelo `GodotDictionaryParser` — o mesmo serializador que já trafega por RPC. Um formato só para disco e rede.
 
@@ -224,13 +285,172 @@ E o teardown do mundo, que é indistinguível de fora, é resolvido por fora: o 
 **O tipo vem no arquivo, não há factory.** `$type` é um id curto e estável declarado pela própria classe:
 
 ```csharp
+// Game/Features/World/Save/Managers/Resources/PropSaveData.cs
 [SaveType("prop")]
-public partial class PropSaveData : Resource { ... }
+public partial class PropSaveData : Resource
+{
+    [Export, GodotDictionaryField] public string PropId { get; set; } = "portal";
+    [Export, GodotDictionaryField] public float PositionX { get; set; }
+    ...
+}
 ```
 
-O parser monta o mapa `id -> Type` uma vez, por reflexão, e instancia com `Activator.CreateInstance`. Sem lista central, sem switch. Classe sem `[SaveType]` cai no `FullName`.
+#### O código que instancia o Resource
 
-Por que id próprio e não o nome do tipo: o `$type` antigo gravava `AssemblyQualifiedName`, **com versão do assembly**. Para RPC tanto faz — os dois lados são o mesmo build. Para save é mina: bumpar versão derruba mundo antigo. Com id estável, renomear classe, mover arquivo ou trocar namespace não quebra nada — que era exatamente a dor deixada pelo `PortalSaveData`.
+Está em `GodotDictionaryParser`, e é este — implementado e rodando:
+
+```csharp
+// Le o "$type" do proprio dicionario e devolve o Resource ja no tipo certo.
+// Nao existe switch nem lista de tipos em lugar nenhum.
+public static Resource ToResource(Dictionary dict, Type fallbackType = null)
+{
+    if (dict == null || dict.Count == 0)
+    {
+        return null;
+    }
+
+    var type = ResolveType(dict, fallbackType);
+
+    if (type == null)
+    {
+        return null;
+    }
+
+    var resource = (Resource)Activator.CreateInstance(type);
+
+    foreach (var property in GetFields(type))
+    {
+        if (!dict.ContainsKey(property.Name))
+        {
+            continue;
+        }
+
+        property.SetValue(resource, FromVariant(dict[property.Name], property.PropertyType));
+    }
+
+    return resource;
+}
+
+private static Type ResolveType(Dictionary dict, Type fallbackType)
+{
+    if (dict.TryGetValue("$type", out var typeNameVariant))
+    {
+        var typeName = typeNameVariant.AsString();
+
+        if (!string.IsNullOrEmpty(typeName))
+        {
+            // 1. id estavel do [SaveType]
+            if (TypeById.TryGetValue(typeName, out var mapped))
+            {
+                return mapped;
+            }
+
+            // 2. fallback: FullName de quem nao anotou
+            var resolved = Type.GetType(typeName);
+
+            if (resolved != null)
+            {
+                return resolved;
+            }
+        }
+    }
+
+    // 3. ultimo recurso: o tipo que o chamador esperava
+    return fallbackType;
+}
+```
+
+E o mapa `id -> Type`, montado uma vez por reflexão — é isto que substitui a factory:
+
+```csharp
+private static void EnsureTypeMap()
+{
+    if (_typeById != null)
+    {
+        return;
+    }
+
+    _typeById = new Dictionary<string, Type>();
+    _idByType = new Dictionary<Type, string>();
+
+    foreach (var type in typeof(GodotDictionaryParser).Assembly.GetTypes())
+    {
+        var attribute = type.GetCustomAttribute<SaveTypeAttribute>();
+
+        if (attribute == null || string.IsNullOrEmpty(attribute.Id))
+        {
+            continue;
+        }
+
+        if (_typeById.TryGetValue(attribute.Id, out var conflito))
+        {
+            GD.PushError($"[GodotDictionaryParser] id de save duplicado {attribute.Id}: {conflito} e {type}");
+
+            continue;
+        }
+
+        _typeById[attribute.Id] = type;
+        _idByType[type] = attribute.Id;
+    }
+}
+```
+
+Classe nova com `[SaveType("x")]` entra no mapa sozinha, no próximo boot. Ninguém precisa registrar nada em lugar nenhum.
+
+#### E o código que instancia a classe (o node)
+
+Node **não** passa por aí. `Activator.CreateInstance` cria um objeto C# nu; node é cena com filhos — sprite, colisão, tudo. Quem reconstrói node é o Godot, pela cena:
+
+```csharp
+// EntityStreamingManager, quando o chunk entra no raio.
+var node = GD.Load<PackedScene>(record["ScenePath"].AsString()).Instantiate<Node2D>();
+
+// O node ja existe; aqui so populamos as propriedades marcadas.
+GodotDictionaryParser.ApplyTo(node, record);
+
+parent.AddChild(node);   // dispara _EnterTree -> Register
+```
+
+`ApplyTo` é o irmão do `ToResource`: mesma varredura de `[GodotDictionaryField]`, mesma conversão de `Variant`, só que **popula um objeto existente em vez de criar**:
+
+```csharp
+public static void ApplyTo(GodotObject target, Dictionary dict)
+{
+    if (target == null || dict == null)
+    {
+        return;
+    }
+
+    foreach (var property in GetFields(target.GetType()))
+    {
+        if (!dict.ContainsKey(property.Name))
+        {
+            continue;
+        }
+
+        property.SetValue(target, FromVariant(dict[property.Name], property.PropertyType));
+    }
+}
+```
+
+Os dois caminhos convivem por motivo, não por acidente:
+
+| | reconstruído por | tipo vem de |
+|---|---|---|
+| `Resource` (mundo, personagem, mutação) | `Activator.CreateInstance` | `$type` |
+| node (portal, item, npc) | `PackedScene.Instantiate` | `ScenePath` |
+
+O passo a passo completo, com o JSON de exemplo, está em 3.5.
+
+#### Por que id próprio e não o nome do tipo
+
+O `$type` antigo gravava `AssemblyQualifiedName`, **com versão do assembly**:
+
+```
+Jogo25D.…PropSaveData, Game, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+```
+
+Para RPC tanto faz — os dois lados são o mesmo build. Para save é mina: bumpar versão derruba mundo antigo. Com id estável, renomear classe, mover arquivo ou trocar namespace não quebra nada — que era exatamente a dor deixada pelo `PortalSaveData`.
 
 #### Restrições do formato, medidas
 
@@ -251,22 +471,226 @@ Decisões que saíram disso:
 
 #### Entidade
 
-O `EntitySaveData` do streaming segue o mesmo formato — mais o caminho da cena, já que `PackedScene` não sobrevive a JSON:
+Entidade não usa `Resource` de save (ver 3.3): as propriedades marcadas moram no próprio node, e o registro é o dicionário. Os únicos campos que o streaming acrescenta por fora são os que existem sem o node:
+
+| campo | de onde vem |
+|---|---|
+| `ScenePath` | `node.SceneFilePath`, preenchido pelo Godot |
+| `InstanceId` | gerado no primeiro registro |
+| `DimensionId` | o parent em que o node está |
+
+O resto do objeto JSON é o que a classe declarou com `[GodotDictionaryField]`.
+
+### 3.5 Do JSON ao node registrado — exemplo completo
+
+Um portal em `(864, -128)` na dimensão `upsidedown`, que cai no chunk `(0, -1)`.
+
+#### 1. A classe declara o que é dela
 
 ```csharp
-[SaveType("entity")]
-public partial class EntitySaveData : Resource
+public partial class Prop : Area2D
 {
-    [Export, GodotDictionaryField] public string ScenePath { get; set; }
-    [Export, GodotDictionaryField] public Vector2 Position { get; set; }
-    [Export, GodotDictionaryField] public string DimensionId { get; set; }
-    [Export, GodotDictionaryField] public long InstanceId { get; set; }
+    [GodotDictionaryField] public string PropId { get; set; } = "";
+    [GodotDictionaryField] public Vector2 Position { get; set; }   // vem de Node2D
+}
+
+public partial class Portal : Prop
+{
+    [GodotDictionaryField] public string TargetDimension { get; set; } = "";
 }
 ```
 
-E o carregamento continua sendo uma linha genérica: `GD.Load<PackedScene>(data.ScenePath).Instantiate()`.
+Nenhuma classe de dado. Nenhum `Capture()`/`Restore()`.
 
-### 3.5 `DimensionManager` — de 18 métodos de spawn a 1 RPC
+#### 2. O que está no disco
+
+`user://saves/worlds/<id>/upsidedown.json`
+
+```json
+{
+	"$type": "dimension",
+	"Chunks": [ ... mutações de tile ... ],
+	"Entities": [
+		{
+			"InstanceId": 41,
+			"ScenePath": "res://Scenes/World/Props/Portal.tscn",
+			"DimensionId": "upsidedown",
+			"Position": { "x": 864.0, "y": -128.0 },
+			"PropId": "portal",
+			"TargetDimension": "overworld"
+		}
+	]
+}
+```
+
+`PropId` e `Position` vêm do `Prop`; `TargetDimension` vem do `Portal`. A reflexão junta os dois porque `Portal : Prop`.
+
+Não há `$type` aqui: **o `ScenePath` é o tipo.** A cena carrega o script, e é o Godot que resolve.
+
+#### 3. Entrar no mundo: registro sim, node não
+
+```csharp
+// WorldManager, ao carregar o mundo.
+var save = SaveStorage.LoadDimensionState(worldId, "upsidedown");
+
+Game.Managers.TileStreamingManager.Node.ImportState("upsidedown", save);
+Game.Managers.EntityStreamingManager.Node.ImportState("upsidedown", save);
+```
+
+```csharp
+public void ImportState(string dimensionId, DimensionSaveData save)
+{
+    foreach (var record in save.Entities)
+    {
+        var position = record["Position"].AsGodotDictionary();
+        var chunk = CoordinateUtilities.WorldToChunk(
+            new Vector2(position["x"].AsSingle(), position["y"].AsSingle()),
+            Dimensions.TileSize);
+
+        Records(dimensionId, chunk).Add(record);
+    }
+}
+```
+
+Só indexa por chunk. **Nenhum node é criado.**
+
+#### 4. O chunk entra no raio
+
+```csharp
+private void OnChunkLoaded(string dimensionId, Vector2I chunkCoord)
+{
+    var parent = Game.Managers.DimensionManager.Node.ResolveParent(dimensionId);
+
+    foreach (var record in Records(dimensionId, chunkCoord))
+    {
+        var instanceId = record["InstanceId"].AsInt64();
+
+        if (_live.ContainsKey(instanceId))
+        {
+            continue;
+        }
+
+        var node = GD.Load<PackedScene>(record["ScenePath"].AsString()).Instantiate<Node2D>();
+
+        // Popula as propriedades marcadas direto no node. Nao cria nada:
+        // o node ja existe, veio da cena.
+        GodotDictionaryParser.ApplyTo(node, record);
+
+        _restoring = instanceId;   // avisa o Register que este veio do save
+
+        parent.AddChild(node);     // dispara _EnterTree -> Register
+
+        _restoring = 0;
+    }
+}
+```
+
+#### 5. A entidade se registra sozinha
+
+```csharp
+// Prop.cs — duas linhas, herdadas por Portal e qualquer prop futuro.
+public override void _EnterTree() => EntityStreaming.Register(this);
+public override void _ExitTree()  => EntityStreaming.Unregister(this);
+```
+
+E o `Register` distingue **restaurado** de **nascido agora** — senão o portal recém-carregado entraria de novo na lista e duplicaria:
+
+```csharp
+public void Register(Node2D node)
+{
+    if (!GodotDictionaryParser.HasSerializableFields(node))
+    {
+        return;   // efeito, label, hitbox: streaming nao tem nada com isso
+    }
+
+    if (_restoring != 0)
+    {
+        // Veio do save: o record ja existe, so liga o node vivo a ele.
+        _live[_restoring] = node;
+
+        return;
+    }
+
+    // Nasceu agora: alguem colocou um portal. Cria o record.
+    var instanceId = InstanceIdGenerator.NextInstanceId();
+    var record = GodotDictionaryParser.ToDictionary(node);
+
+    record["InstanceId"] = instanceId;
+    record["ScenePath"] = node.SceneFilePath;
+    record["DimensionId"] = Dimensions.ResolveDimensionIdOf(node);
+
+    Records(record["DimensionId"].AsString(), ChunkOf(node)).Add(record);
+
+    _live[instanceId] = node;
+}
+```
+
+#### 6. O chunk sai do raio
+
+```csharp
+private void OnChunkUnloaded(string dimensionId, Vector2I chunkCoord)
+{
+    foreach (var record in Records(dimensionId, chunkCoord))
+    {
+        var instanceId = record["InstanceId"].AsInt64();
+
+        if (!_live.TryGetValue(instanceId, out var node))
+        {
+            continue;
+        }
+
+        // O estado mora no node: serializa ANTES de liberar, ou ele se perde.
+        Merge(record, GodotDictionaryParser.ToDictionary(node));
+
+        _live.Remove(instanceId);
+
+        node.QueueFree();
+    }
+}
+```
+
+O record continua na lista; o node morre. Quando o chunk voltar, o passo 4 refaz tudo a partir do mesmo dicionário.
+
+**Esquecer é o outro caminho**, e só ele mexe na lista:
+
+```csharp
+public void Forget(long instanceId)   // item recolhido, prop quebrado
+{
+    // tira de _records e de _live; o node se vira com o proprio QueueFree
+}
+```
+
+#### 7. Salvar
+
+O `SaveManager` já emite `Saving` antes de serializar — é onde o estado vivo entra no record:
+
+```csharp
+private void OnSaving()
+{
+    foreach (var (instanceId, node) in _live)
+    {
+        Merge(_recordById[instanceId], GodotDictionaryParser.ToDictionary(node));
+    }
+}
+```
+
+Entidade descarregada não precisa de nada: o record dela já está atualizado desde o unload.
+
+#### O ciclo fechado
+
+```
+JSON --ScenePath--> Portal.tscn --Instantiate--> node --ApplyTo--> propriedades
+  ^                                               |
+  |                                          AddChild
+  |                                               |
+  |                                          _EnterTree --> Register --> _live
+  |                                                                        |
+  +---- ToDictionary(node) <---- unload / Forget / Saving <----------------+
+```
+
+Em nenhum ponto alguém pergunta "que tipo de entidade é essa". O `ScenePath` resolve a cena, o atributo resolve o que serializa, e o `_EnterTree` resolve o registro.
+
+### 3.6 `DimensionManager` — de 18 métodos de spawn a 1 RPC
 
 Com auto-registro e tipo no resource, sobra do manager só o que é mesmo dele: **saber onde é o lugar**.
 
@@ -274,7 +698,7 @@ Com auto-registro e tipo no resource, sobra do manager só o que é mesmo dele: 
 DimensionManager
 ├─ ResolveParent / ResolveLayer / ResolveBaseLayer / ShowOnly
 ├─ FindGroundSpawnPosition
-└─ SpawnReceive(EntitySaveData)     ← o único RPC que sobra
+└─ SpawnReceive(Dictionary record)  ← o único RPC que sobra
 ```
 
 `RestoreProps`, `CollectProps`, `SpawnTestNPC` e os 18 métodos de spawn somem. Quem restaura é o `EntityStreamingManager` ao carregar o chunk; quem coleta é o `ExportState` dele.
@@ -283,7 +707,7 @@ DimensionManager
 
 **Questão em aberto:** o `MultiplayerSpawner` nativo resolve exatamente isso — aponta pra um parent, lista as cenas spawnáveis, e um `AddChild` no servidor replica sozinho. O projeto não usa nenhum (`MultiplayerSpawner`/`MultiplayerSynchronizer`: 0 ocorrências). Se adotado, o último RPC também some e o auto-registro cobre o ciclo inteiro. **Precisa de investigação antes de decidir.**
 
-### 3.6 `MinimapSystem` (novo, ~50 linhas)
+### 3.7 `MinimapSystem` (novo, ~50 linhas)
 
 Assina `ChunkLoaded`, varre as células do chunk e pinta a imagem de descoberta. Guarda `_discoveredOverworld`/`_discoveredUpsidedown` e expõe `GetDiscoveredTexture`. É o que sai do `TileStreamingManager`.
 
@@ -296,7 +720,7 @@ user://saves/worlds/<id>/
 ├─ world.json              meta, semente, personagens
 ├─ overworld.json
 │    ├─ Chunks[] → ChunkEntryData { coord, ChunkStateData { Mutations[] } }
-│    └─ Entities[] → EntitySaveData[]        ← NOVO, chaveado por chunk
+│    └─ Entities[] → um dicionário por entidade  ← NOVO, chaveado por chunk
 └─ upsidedown.json
 ```
 
@@ -320,7 +744,7 @@ user://saves/worlds/<id>/
 
 ### O que o registro do `SaveManager` passa a receber
 
-Hoje o registry guarda `WorldSaveData` e `CharacterSaveData`. Passa a guardar também o `DimensionEntitySaveData` de cada dimensão, exportado pelo `EntityStreamingManager` no evento `Saving`:
+Hoje o registry guarda `WorldSaveData` e `CharacterSaveData`. Passa a guardar também as entidades de cada dimensão, que o `EntityStreamingManager` atualiza no evento `Saving`:
 
 ```
 SaveManager.SaveAll()
@@ -337,13 +761,13 @@ O `EntityStreamingManager` não grava arquivo: ele atualiza o `Resource` que já
 A entidade não conhece o `SaveManager`. Ela só se anuncia:
 
 ```
-WorldEntity._EnterTree()  → EntityStreamingManager.Register(this)
-WorldEntity._ExitTree()   → EntityStreamingManager.Unregister(this)
+Portal._EnterTree()  → EntityStreamingManager.Register(this)
+Portal._ExitTree()   → EntityStreamingManager.Unregister(this)
 ```
 
-Não há interface nova (`ISavable` e afins) nem passagem obrigatória por um método de spawn: quem entra na árvore está registrado, venha de onde vier — do streaming, de um RPC, ou de código de gameplay.
+Não há passagem obrigatória por um método de spawn: quem entra na árvore está registrado, venha de onde vier — do streaming, de um RPC, ou de código de gameplay.
 
-O `EntityStreamingManager` é quem fala com o `SaveManager`, registrando o `DimensionEntitySaveData` de cada dimensão. Cadeia preservada: **entidade → manager → system**.
+O `EntityStreamingManager` é quem fala com o `SaveManager`, registrando o `DimensionSaveData` de cada dimensão. Cadeia preservada: **entidade → manager → system**.
 
 **O que o `_ExitTree` não pode fazer** (ver a medição em 3.3): capturar estado ou decidir se salva. Ele só remove da lista de vivos. Captura acontece em `Unload()`/`Forget()`, antes de sair da árvore; e o teardown do mundo é anunciado por `BeginTeardown()`, porque de dentro do callback ele é indistinguível de um descarregamento normal.
 
@@ -416,12 +840,12 @@ Levantados na leitura do código; não corrigir junto seria carregar o defeito p
 | `ChunkStreamingManager` → `TileStreamingManager` | 623 | ~250 | −373 |
 | `DimensionManager` | 535 | ~310 | −225 (18 métodos de spawn viram 1 RPC) |
 | `EntityStreamingManager` | — | ~180 | +180 |
-| `WorldEntity` + `EntitySaveData` | — | ~120 | +120 |
+| `GodotDictionaryParser.ApplyTo` + `[GodotDictionaryField]` nas entidades | — | ~40 | +40 |
 | `MinimapSystem` | — | ~50 | +50 |
 | `CoordinateUtilities` | — | ~30 | +30 |
 | `WorldManager` | 218 | ~230 | +12 |
 | 4 telas (`FindLocalPlayer`) | — | — | −40 |
-| **total** | | | **≈ −176 linhas** |
+| **total** | | | **≈ −236 linhas** |
 
 Menos código, e o que sobra tem uma responsabilidade cada.
 
@@ -437,8 +861,8 @@ Cada passo compila e roda sozinho.
 2. **`WorldManager`** — adiciona `GetAllPlayers`/`GetPlayersInDimension`; remove `FindLocalPlayer` das 4 telas.
 3. **`MinimapSystem`** — extrai `RecordDiscovered`/`GetDiscoveredTexture`; `TileStreamingManager` passa a emitir `ChunkLoaded`.
 4. **Rename `ChunkStreamingManager` → `TileStreamingManager`** — e tira `RecordMutation`, `ApplyMutations`, `ResolveBiome`, `PreloadSpawnAreaAsync` para os donos certos.
-5. **`WorldEntity` + `EntitySaveData`** — a base com `_EnterTree`/`_ExitTree`, `Capture`/`Restore`, `Unload`/`Forget`. `Prop` passa a herdar; nada mais muda ainda.
-6. **`DimensionManager.SpawnReceive(EntitySaveData)`** — o RPC genérico, convivendo com os antigos.
+5. **`ApplyTo` no parser + `[GodotDictionaryField]` no `Prop`** — o `Prop` ganha as duas linhas de `_EnterTree`/`_ExitTree`; nada mais muda ainda.
+6. **`DimensionManager.SpawnReceive(Dictionary)`** — o RPC genérico, convivendo com os antigos.
 7. **Migrar os chamadores** para o genérico; apagar os 18 métodos antigos.
 8. **`EntityStreamingManager`** — assina `ChunkLoaded`/`ChunkUnloaded`, recebe o auto-registro, export/import; `RestoreProps`/`CollectProps` somem.
 9. **Investigar `MultiplayerSpawner`** — se cobrir o caso, o RPC do passo 6 some.

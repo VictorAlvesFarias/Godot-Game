@@ -11,23 +11,57 @@ namespace Jogo25D.Utils.GodotDictionaryParser
     {
         #region Core - Conversion
 
-        public static Dictionary ToDictionary(Resource resource)
+        // Aceita Resource e Node: a varredura e por reflexao sobre o tipo em runtime, entao
+        // funciona igual pros dois. Node serializado nao leva "$type" - quem reconstroi node
+        // e a cena (PackedScene), nao o Activator.
+        public static Dictionary ToDictionary(GodotObject source)
         {
             var dict = new Dictionary();
 
-            if (resource == null)
+            if (source == null)
             {
                 return dict;
             }
 
-            dict["$type"] = ResolveTypeId(resource.GetType());
+            var type = source.GetType();
 
-            foreach (var property in GetFields(resource.GetType()))
+            if (source is Resource)
             {
-                dict[property.Name] = ToVariant(property.GetValue(resource), property.PropertyType);
+                dict["$type"] = ResolveTypeId(type);
+            }
+
+            foreach (var property in GetFields(type))
+            {
+                dict[property.Name] = ToVariant(property.GetValue(source), property.PropertyType);
             }
 
             return dict;
+        }
+
+        // Irmao do ToResource: mesma varredura, mesma conversao, so que popula um objeto que
+        // ja existe em vez de criar. E o que permite restaurar node - node vem da cena.
+        public static void ApplyTo(GodotObject target, Dictionary dict)
+        {
+            if (target == null || dict == null)
+            {
+                return;
+            }
+
+            foreach (var property in GetFields(target.GetType()))
+            {
+                if (!dict.ContainsKey(property.Name))
+                {
+                    continue;
+                }
+
+                property.SetValue(target, FromVariant(dict[property.Name], property.PropertyType));
+            }
+        }
+
+        // Discriminador do streaming: participa quem declara campo salvavel.
+        public static bool HasSerializableFields(GodotObject source)
+        {
+            return source != null && GetFields(source.GetType()).Length > 0;
         }
 
         public static T ToResource<T>(Dictionary dict) where T : Resource
@@ -136,6 +170,23 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         private static Variant ToVariant(object value, Type declaredType)
         {
+            // Lista de records de entidade: o record ja E dicionario, entao serializar e
+            // identidade. Nao existe classe de dado por entidade (ver .dev/plano-implementacao.md).
+            if (IsDictionaryArrayType(declaredType))
+            {
+                var records = new Godot.Collections.Array();
+
+                if (value is IEnumerable dictionaries)
+                {
+                    foreach (var item in dictionaries)
+                    {
+                        records.Add((Dictionary)item);
+                    }
+                }
+
+                return records;
+            }
+
             if (IsResourceArrayType(declaredType, out _))
             {
                 var array = new Godot.Collections.Array();
@@ -175,6 +226,18 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         private static object FromVariant(Variant variant, Type declaredType)
         {
+            if (IsDictionaryArrayType(declaredType))
+            {
+                var records = new Godot.Collections.Array<Dictionary>();
+
+                foreach (var element in variant.AsGodotArray())
+                {
+                    records.Add(element.AsGodotDictionary());
+                }
+
+                return records;
+            }
+
             if (IsResourceArrayType(declaredType, out var elementType))
             {
                 var list = Activator.CreateInstance(declaredType);
@@ -220,6 +283,11 @@ namespace Jogo25D.Utils.GodotDictionaryParser
         #endregion
 
         #region Utils
+
+        private static bool IsDictionaryArrayType(Type declaredType)
+        {
+            return declaredType == typeof(Godot.Collections.Array<Dictionary>);
+        }
 
         private static bool IsResourceArrayType(Type type, out Type elementType)
         {

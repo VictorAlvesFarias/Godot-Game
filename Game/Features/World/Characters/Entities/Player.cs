@@ -1407,16 +1407,16 @@ namespace Jogo25D.Characters
 				return;
 			}
 
-			var worldItem = Game.Managers.DimensionManager.Node.FindWorldItem(worldItemId);
+			var worldItem = Game.Managers.DimensionManager.Node.FindByInstanceId(worldItemId) as WorldItem;
 
 			if (worldItem == null)
 			{
 				return;
 			}
 
-			if (Inventory.AddItem(Data.Inventory, worldItem.Data))
+			if (Inventory.AddItem(Data.Inventory, worldItem.Item))
 			{
-				EnsureItemDefinition(worldItem.Data);
+				EnsureItemDefinition(worldItem.Item);
 
 				EmitSignal(SignalName.InventoryChanged);
 			}
@@ -1612,11 +1612,11 @@ namespace Jogo25D.Characters
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
-			if (chunkStreamingManager != null)
+			if (tileStreamingManager != null)
 			{
-				await chunkStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), position);
+				await tileStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), position);
 			}
 
 			RpcId(1, nameof(TeleportServerReceive), position);
@@ -1678,11 +1678,11 @@ namespace Jogo25D.Characters
 
 			loadingUi?.Open();
 
-			var chunkStreamingManager = Game.Managers.ChunkStreamingManager.Node;
+			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
-			if (chunkStreamingManager != null)
+			if (tileStreamingManager != null)
 			{
-				await chunkStreamingManager.PreloadSpawnAreaAsync(targetDimensionId, dimensions.ResolveParent(targetDimensionId), Position);
+				await tileStreamingManager.PreloadSpawnAreaAsync(targetDimensionId, dimensions.ResolveParent(targetDimensionId), Position);
 			}
 
 			RpcId(1, nameof(TradeDimensionServerReceive));
@@ -1693,11 +1693,6 @@ namespace Jogo25D.Characters
 		#endregion
 
 		#region Core - Busca
-
-		public static Player FindByPeerId(SceneTree tree, long peerId)
-		{
-			return tree?.GetNodesInGroup("players").OfType<Player>().FirstOrDefault(player => player.PeerId == peerId);
-		}
 
 		#endregion
 	}

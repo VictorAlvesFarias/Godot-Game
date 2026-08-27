@@ -140,9 +140,9 @@ namespace Jogo25D.UI
             Texture2D texture = null;
             var origin = Vector2I.Zero;
 
-            if (Game.Managers.ChunkStreamingManager.Node != null)
+            if (Game.Managers.TileStreamingManager.Node != null)
             {
-                texture = Game.Managers.ChunkStreamingManager.Node.GetDiscoveredTexture(layer, out origin);
+                texture = Game.Managers.TileStreamingManager.Node.GetDiscoveredTexture(layer, out origin);
             }
 
             if (texture != null)

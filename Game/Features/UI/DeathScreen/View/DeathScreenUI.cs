@@ -27,7 +27,7 @@ namespace Jogo25D.UI
         {
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
             {
-                FindLocalPlayer();
+                LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
                 return;
             }
@@ -55,12 +55,7 @@ namespace Jogo25D.UI
         {
             Game.Ui.DeathScreenUI.ReviveButton.Node.Pressed += OnRevivePressed;
 
-            FindLocalPlayer();
-        }
-
-        public void FindLocalPlayer()
-        {
-            LocalPlayer = Game.Managers.WorldManager.Node.GetLocalPlayer();
+            LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
         }
 
         #endregion
