@@ -56,7 +56,11 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
-        public override bool IsOverlay => true;
+        // Nao e overlay: e a tela principal do jogo. Precisa virar o Current do router e
+        // esconder o menu anterior (CreateCharacter/WorldSelect/...) - senao ele fica visivel
+        // por baixo pra sempre. Pause/Inventory/Console etc continuam overlay de verdade,
+        // empilhando POR CIMA do Hud sem tirar ele do Current.
+        public override bool IsOverlay => false;
 
 		public override void _Ready()
 		{
