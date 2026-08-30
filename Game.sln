@@ -1,10 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.7.11925.98 stable
+VisualStudioVersion = 18.7.11925.98
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "Game\Game.csproj", "{8C44F2DC-1234-5678-9ABC-DEF012345678}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.csproj", "{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,12 +17,6 @@ Global
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
 		{8C44F2DC-1234-5678-9ABC-DEF012345678}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
-		{7F3A9C12-4B8D-4E1A-9C5F-2D6E8A0B1C34}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,10 +1,10 @@
-[gd_resource type="TileSet" format=3 uid="uid://f3qsgt6u2xruo"]
+[gd_resource type="TileSet" format=3 uid="uid://ruof64q9ramvo"]
 
-[ext_resource type="Texture2D" uid="uid://faobbsiz5welo" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="1_olive_base"]
+[ext_resource type="Texture2D" uid="uid://93m0gx1dm2a02" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="1_olive_base"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_olive_base"]
 texture = ExtResource("1_olive_base")
-texture_region_size = Vector2i(16, 16)
+texture_region_size = Vector2i(24, 24)
 0:0/0 = 0
 0:0/0/terrain_set = 5
 0:0/0/terrain = 0
@@ -336,7 +336,7 @@ texture_region_size = Vector2i(16, 16)
 8:4/0/terrains_peering_bit/top_side = 0
 
 [resource]
-tile_size = Vector2i(16, 16)
+tile_size = Vector2i(24, 24)
 terrain_set_5/mode = 0
 terrain_set_5/terrain_0/name = "olive_base"
 terrain_set_5/terrain_0/color = Color(0.775000, 0.225000, 0.564167, 1)

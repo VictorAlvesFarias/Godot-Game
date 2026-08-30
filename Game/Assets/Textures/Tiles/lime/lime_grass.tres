@@ -1,10 +1,10 @@
-[gd_resource type="TileSet" format=3 uid="uid://qwqfng4351p9s"]
+[gd_resource type="TileSet" format=3 uid="uid://kffbndtjr7chd"]
 
-[ext_resource type="Texture2D" uid="uid://mcqzm8q2gq31z" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
+[ext_resource type="Texture2D" uid="uid://afwcqkvsm7i39" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_grass"]
 texture = ExtResource("1_lime_grass")
-texture_region_size = Vector2i(16, 16)
+texture_region_size = Vector2i(24, 24)
 0:0/0 = 0
 0:0/0/terrain_set = 0
 0:0/0/terrain = 0
@@ -336,7 +336,7 @@ texture_region_size = Vector2i(16, 16)
 8:4/0/terrains_peering_bit/top_side = 0
 
 [resource]
-tile_size = Vector2i(16, 16)
+tile_size = Vector2i(24, 24)
 terrain_set_0/mode = 0
 terrain_set_0/terrain_0/name = "lime_grass"
 terrain_set_0/terrain_0/color = Color(0.775000, 0.738333, 0.225000, 1)

@@ -652,9 +652,11 @@ At 1378 lines it is the largest file after `Player`, and the least exercised par
 
 ### 5. The gap between textures that do not connect
 
-Where two terrains meet and cannot be connected, a hole is left in the tiling. The intended answer is already wired: `BiomeDefinition.BorderCapTerrainSet` is filled in for both biomes and painted onto the `Base` layer through `ConnectDependent` — a second terrain set, underneath the main one, covering what the first cannot resolve.
+ Where two terrains meet and cannot be connected, a hole is left in the tiling. The answer is already wired: `BiomeDefinition.BorderCapTerrainSet` is filled in for both biomes and painted onto the `Base` layer through `ConnectDependent` — a second terrain set, underneath the main one, covering what the first cannot resolve.
 
-The approach depends on textures larger than a single tile. Those do not exist yet, which is why the gap is still visible.
+The approach depends on drawing more than one cell's worth of art per cell. The tileset now does exactly that: the `TileSet` declares no `tile_size`, so the grid stays at Godot's default of 16px, while every atlas source carries a `texture_region_size` of 24px. Each tile paints 24px of art onto a 16px cell, and the 8px of overhang is what closes the gap — the border textures do connect now.
+
+Those textures are provisional, drawn to prove the approach rather than to ship. Both the art and the strategy behind it still need to be validated with attention: whether the overhang holds at every corner the autotiler can produce, how it behaves where three terrains meet, and whether 24px is the right ratio or just the first one that worked.
 
 ---
 
