@@ -6,180 +6,179 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class PauseUI : ScreenUI
-	{
-		#region Godot implementation
+    public partial class PauseUI : ScreenUI
+    {
+        #region Godot implementation
 
-		public override bool IsOverlay => true;
+        public override bool IsOverlay => true;
 
-		public override void _Ready()
-		{
+        public override void _Ready()
+        {
+            Game.WhenReady(Initialize);
+        }
 
-			Game.WhenReady(Initialize);
-		}
+        #endregion
 
-		#endregion
+        #region Core - Setup
 
-		#region Core - Setup
+        private void Initialize()
+        {
+            Game.Ui.PauseUI.ResumeButton.Node.Pressed += OnResumePressed;
+            Game.Ui.PauseUI.ExitButton.Node.Pressed += OnExitPressed;
+            Game.Ui.PauseUI.HostButton.Node.Pressed += OnHostPressed;
+            Game.Ui.PauseUI.PvpButton.Node.Pressed += OnPvpPressed;
+            Game.Ui.PauseUI.MenuButton.Node.Pressed += OnMenuPressed;
+        }
 
-		private void Initialize()
-		{
-			Game.Ui.PauseUI.ResumeButton.Node.Pressed += OnResumePressed;
-			Game.Ui.PauseUI.ExitButton.Node.Pressed += OnExitPressed;
-			Game.Ui.PauseUI.HostButton.Node.Pressed += OnHostPressed;
-			Game.Ui.PauseUI.PvpButton.Node.Pressed += OnPvpPressed;
-			Game.Ui.PauseUI.MenuButton.Node.Pressed += OnMenuPressed;
-		}
+        public override void _Input(InputEvent @event)
+        {
+            if (@event.IsActionPressed("pause") && !@event.IsEcho())
+            {
+                var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
 
-		public override void _Input(InputEvent @event)
-		{
-			if (@event.IsActionPressed("pause") && !@event.IsEcho())
-			{
-				var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
+                if (!Visible && (input?.IsBlockedByOther("pause") ?? false))
+                {
+                    return;
+                }
 
-				if (!Visible && (input?.IsBlockedByOther("pause") ?? false))
-				{
-					return;
-				}
+                TogglePause();
+            }
+        }
 
-				TogglePause();
-			}
-		}
+        public override void _Process(double delta)
+        {
+            if (Visible)
+            {
+                UpdateNetworkStatus();
+                UpdatePvpStatus();
+            }
+        }
 
-		public override void _Process(double delta)
-		{
-			if (Visible)
-			{
-				UpdateNetworkStatus();
-				UpdatePvpStatus();
-			}
-		}
+        #endregion
 
-		#endregion
+        #region Core - Pause
 
-		#region Core - Pause
+        public void TogglePause()
+        {
+            if (Visible)
+            {
+                Game.Managers.RouterManager.Node.Close(this);
+            }
+            else
+            {
+                Game.Managers.RouterManager.Node.Open(this);
+            }
 
-		public void TogglePause()
-		{
-			if (Visible)
-			{
-				Game.Managers.RouterManager.Node.Close(this);
-			}
-			else
-			{
-				Game.Managers.RouterManager.Node.Open(this);
-			}
+            if (!IsMultiplayerActive())
+            {
+                GetTree().Paused = Visible;
+            }
 
-			if (!IsMultiplayerActive())
-			{
-				GetTree().Paused = Visible;
-			}
+            var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
 
-			var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
+            if (Visible)
+            {
+                input?.AddBlocker("pause");
+            }
+            else
+            {
+                input?.RemoveBlocker("pause");
+            }
+        }
 
-			if (Visible)
-			{
-				input?.AddBlocker("pause");
-			}
-			else
-			{
-				input?.RemoveBlocker("pause");
-			}
-		}
+        public bool IsMultiplayerActive()
+        {
+            return Multiplayer != null && Multiplayer.HasMultiplayerPeer();
+        }
 
-		public bool IsMultiplayerActive()
-		{
-			return Multiplayer != null && Multiplayer.HasMultiplayerPeer();
-		}
+        public void OnExitPressed()
+        {
+            GetTree().Quit();
+        }
 
-		public void OnExitPressed()
-		{
-			GetTree().Quit();
-		}
+        public void OnResumePressed()
+        {
+            Game.Managers.RouterManager.Node.Close(this);
+            GetTree().Paused = false;
 
-		public void OnResumePressed()
-		{
-			Game.Managers.RouterManager.Node.Close(this);
-			GetTree().Paused = false;
+            Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+        }
 
-			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
-		}
+        public void OnMenuPressed()
+        {
+            Game.Managers.RouterManager.Node.Close(this);
+            GetTree().Paused = false;
 
-		public void OnMenuPressed()
-		{
-			Game.Managers.RouterManager.Node.Close(this);
-			GetTree().Paused = false;
+            Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+            Game.Managers.SessionManager.Node.LeaveWorld();
+        }
 
-			Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
-			Game.Managers.SessionManager.Node.LeaveWorld();
-		}
+        #endregion
 
-		#endregion
+        #region Core - Network
 
-		#region Core - Network
+        public void OnHostPressed()
+        {
+            if (Game.Managers.WorldManager.Node == null)
+            {
+                return;
+            }
 
-		public void OnHostPressed()
-		{
-			if (Game.Managers.WorldManager.Node == null)
-			{
-				return;
-			}
+            if (Game.Managers.NetworkManager.Node.IsConnected())
+            {
+                Game.Managers.NetworkManager.Node.Disconnect();
+            }
+            else
+            {
+                var portText = Game.Ui.PauseUI.PortInput.Node.Text.Trim();
 
-			if (Game.Managers.NetworkManager.Node.IsConnected())
-			{
-				Game.Managers.NetworkManager.Node.Disconnect();
-			}
-			else
-			{
-				var portText = Game.Ui.PauseUI.PortInput.Node.Text.Trim();
+                Game.Managers.NetworkManager.Node.CreateServer(portText);
+            }
 
-				Game.Managers.NetworkManager.Node.CreateServer(portText);
-			}
+            UpdateNetworkStatus();
+        }
 
-			UpdateNetworkStatus();
-		}
+        public void UpdateNetworkStatus()
+        {
+            if (Game.Managers.WorldManager.Node == null)
+            {
+                return;
+            }
 
-		public void UpdateNetworkStatus()
-		{
-			if (Game.Managers.WorldManager.Node == null)
-			{
-				return;
-			}
+            bool connected = Game.Managers.NetworkManager.Node.IsConnected();
+            bool isServer = Multiplayer.IsServer();
 
-			bool connected = Game.Managers.NetworkManager.Node.IsConnected();
-			bool isServer = Multiplayer.IsServer();
+            Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;
+            Game.Ui.PauseUI.PortInput.Node.Visible = Game.Ui.PauseUI.HostButton.Node.Visible;
 
-			Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;
-			Game.Ui.PauseUI.PortInput.Node.Visible = Game.Ui.PauseUI.HostButton.Node.Visible;
+            Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer ? "Stop server" : "Host";
+        }
 
-			Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer ? "Stop server" : "Host";
-		}
+        #endregion
 
-		#endregion
+        #region Core - Pvp
 
-		#region Core - Pvp
+        public void OnPvpPressed()
+        {
+            var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
-		public void OnPvpPressed()
-		{
-			var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            if (localPlayer == null)
+            {
+                return;
+            }
 
-			if (localPlayer == null)
-			{
-				return;
-			}
+            localPlayer.SetPvpEnabledRequest(!localPlayer.PvpEnabled);
 
-			localPlayer.SetPvpEnabledRequest(!localPlayer.PvpEnabled);
+            UpdatePvpStatus();
+        }
 
-			UpdatePvpStatus();
-		}
+        public void UpdatePvpStatus()
+        {
+            var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
 
-		public void UpdatePvpStatus()
-		{
-			var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.PvpEnabled ? "PvP" : "PvE";
+        }
 
-			Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.PvpEnabled ? "PvP" : "PvE";
-		}
-
-		#endregion
-	}
+        #endregion
+    }
 }

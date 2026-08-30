@@ -114,13 +114,6 @@ namespace Jogo25D.Systems
                 return;
             }
 
-            // Estado de dimensao nao fica no registry: ele e formato de arquivo, montado na
-            // hora a partir do que esta vivo. Quem monta e o WorldManager, que conhece as
-            // dimensoes e os dois streamings.
-            if (world != null)
-            {
-                Game.Managers.WorldManager.Node?.SaveDimensions(world.WorldId);
-            }
         }
 
         private bool IsHostOrSolo()
@@ -147,11 +140,6 @@ namespace Jogo25D.Systems
         public void DeleteWorld(string worldId)
         {
             SaveStorage.DeleteWorld(worldId);
-        }
-
-        public DimensionSaveData LoadDimensionState(string worldId, string dimensionId)
-        {
-            return SaveStorage.LoadDimensionState(worldId, dimensionId);
         }
 
         public List<CharacterSaveData> ListLocalCharacters()
@@ -184,7 +172,9 @@ namespace Jogo25D.Systems
 
             save.LastPlayedUtc = SaveStorage.NowUtc();
 
-            SaveStorage.SaveWorldMeta(save);
+            // Um arquivo por mundo: a meta vai no state da raiz do documento, junto com as
+            // dimensoes e as entidades.
+            Game.Managers.WorldManager.Node?.SalvarDocumento(save);
         }
 
         public void SaveLocalCharacter(CharacterSaveData character)

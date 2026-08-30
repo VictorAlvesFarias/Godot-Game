@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
@@ -27,17 +27,11 @@ namespace Jogo25D.UI
 
         #endregion
 
-        #region Node references
-
-
-        #endregion
-
         #region Godot implementation
 
         public override void _Ready()
         {
             CustomMinimumSize = new Vector2(160, 160);
-
 
             if (Multiplayer != null &&
                 Multiplayer.MultiplayerPeer != null &&
@@ -115,7 +109,6 @@ namespace Jogo25D.UI
         {
             if (node is TileMapLayer layer && IsInstanceValid(layer))
             {
-
                 var container = layer.GetParent()?.GetParent()?.GetParentOrNull<SubViewportContainer>();
 
                 if (container != null && container.Visible)
@@ -151,7 +144,6 @@ namespace Jogo25D.UI
 
                 return;
             }
-
         }
 
         private void DrawDiscoveredTexture(TileMapLayer layer, Texture2D texture, Vector2I origin, Vector2 playerPos, Vector2 center, float scale)

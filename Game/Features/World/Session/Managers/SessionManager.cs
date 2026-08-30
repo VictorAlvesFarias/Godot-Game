@@ -45,9 +45,30 @@ namespace Jogo25D.Session
         // chega pela rede no JoinInfoReceive - quem acabou de conectar nao tem o save do mundo.
         public WorldCharacterMode CharacterMode { get; set; } = WorldCharacterMode.LocalCharacters;
 
-        // A sessao avisa que chegou a hora de escolher personagem, com o que a tela precisa
-        // pra se montar. Quem decide qual tela abrir e a UI.
-        public event System.Action<CharacterSelectContext, string, Godot.Collections.Array> CharacterSelectionRequired;
+        // Derivado, nunca guardado: quem escolhe personagem esta num destes tres caminhos, e
+        // qual deles e responde o estado que ja existe aqui.
+        public CharacterSelectContext SelectionContext
+        {
+            get
+            {
+                if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+                {
+                    return CharacterSelectContext.OwnWorld;
+                }
+
+                return CharacterMode == WorldCharacterMode.LocalCharacters
+                    ? CharacterSelectContext.PeerJoinLocal
+                    : CharacterSelectContext.PeerJoinServer;
+            }
+        }
+
+        // A lista que o servidor respondeu no modo ServerCharacters. Nao esta no disco do
+        // cliente: chega por RPC, e a tela so le pra montar as linhas.
+        public Godot.Collections.Array ServerCharacterSummaries { get; private set; } = new();
+
+        // A sessao avisa que chegou a hora de escolher personagem. Quem decide qual tela abrir
+        // e a UI, e o que mostrar sai do SelectionContext.
+        public event System.Action CharacterSelectionRequired;
 
         // Sessao encerrada (saiu do mundo, ou o servidor caiu). A UI decide pra onde ir.
         public event System.Action SessionEnded;
@@ -149,6 +170,7 @@ namespace Jogo25D.Session
             player.Name = $"Player{id}";
             player.Position = Godot.Vector2.Zero;
             player.PeerId = id;
+            player.CharacterId = character.CharacterId;
             GodotDictionaryParser.ApplyTo(player, character.State);
             player.Loaded = true;
 
@@ -178,7 +200,7 @@ namespace Jogo25D.Session
                 }
             }
 
-            var npc = Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("NPC_Dummy");
+            var npc = Game.Managers.DimensionManager.Node.ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("NPC_Dummy");
 
             if (npc != null)
             {
@@ -297,7 +319,9 @@ namespace Jogo25D.Session
 
             if (mode == WorldCharacterMode.LocalCharacters)
             {
-                CharacterSelectionRequired?.Invoke(CharacterSelectContext.PeerJoinLocal, "", null);
+                ServerCharacterSummaries = new Godot.Collections.Array();
+
+                CharacterSelectionRequired?.Invoke();
 
                 return;
             }
@@ -416,7 +440,9 @@ namespace Jogo25D.Session
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void ServerCharacterListReceive(Godot.Collections.Array summaries)
         {
-            CharacterSelectionRequired?.Invoke(CharacterSelectContext.PeerJoinServer, CurrentWorldSave?.MultiplayerKey ?? "", summaries);
+            ServerCharacterSummaries = summaries ?? new Godot.Collections.Array();
+
+            CharacterSelectionRequired?.Invoke();
         }
 
         public void SelectServerCharacterRequest(string characterId)

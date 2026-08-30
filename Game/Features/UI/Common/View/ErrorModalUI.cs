@@ -3,47 +3,46 @@ using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-	public partial class ErrorModalUI : ScreenUI
-	{
-		#region Godot implementation
+    public partial class ErrorModalUI : ScreenUI
+    {
+        #region Godot implementation
 
-		public override bool IsOverlay => true;
+        public override bool IsOverlay => true;
 
-		public override void _Ready()
-		{
+        public override void _Ready()
+        {
+            Game.WhenReady(Initialize);
+        }
 
-			Game.WhenReady(Initialize);
-		}
+        #endregion
 
-		#endregion
+        #region Public API
 
-		#region Core - Setup
+        public void ShowError(string message)
+        {
+            Game.Ui.ErrorModalUI.MessageLabel.Node.Text = message;
 
-		private void Initialize()
-		{
-			Game.Ui.ErrorModalUI.OkButton.Node.Pressed += OnOkPressed;
-		}
+            Game.Managers.RouterManager.Node.Open(this);
+        }
 
-		#endregion
+        #endregion
 
-		#region Public API
+        #region Core - Setup
 
-		public void ShowError(string message)
-		{
-			Game.Ui.ErrorModalUI.MessageLabel.Node.Text = message;
+        private void Initialize()
+        {
+            Game.Ui.ErrorModalUI.OkButton.Node.Pressed += OnOkPressed;
+        }
 
-			Game.Managers.RouterManager.Node.Open(this);
-		}
+        #endregion
 
-		#endregion
+        #region UI - Events
 
-		#region Core - Actions
+        private void OnOkPressed()
+        {
+            Game.Managers.RouterManager.Node.Close(this);
+        }
 
-		private void OnOkPressed()
-		{
-			Game.Managers.RouterManager.Node.Close(this);
-		}
-
-		#endregion
-	}
+        #endregion
+    }
 }

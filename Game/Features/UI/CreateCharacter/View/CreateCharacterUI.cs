@@ -5,16 +5,14 @@ using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
-	public partial class CreateCharacterUI : ScreenUI
-	{
+    public partial class CreateCharacterUI : ScreenUI
+    {
+        #region Godot implementation
 
-		#region Godot implementation
-
-		public override void _Ready()
-		{
-
-			Game.WhenReady(Initialize);
-		}
+        public override void _Ready()
+        {
+            Game.WhenReady(Initialize);
+        }
 
         #endregion
 
@@ -30,27 +28,27 @@ namespace Jogo25D.UI
         #region Core - Setup
 
         private void Initialize()
-		{
-			Game.Ui.CreateCharacterUI.BackButton.Node.Pressed += OnBackPressed;
-			Game.Ui.CreateCharacterUI.CreateButton.Node.Pressed += OnCreatePressed;
-		}
+        {
+            Game.Ui.CreateCharacterUI.BackButton.Node.Pressed += OnBackPressed;
+            Game.Ui.CreateCharacterUI.CreateButton.Node.Pressed += OnCreatePressed;
+        }
 
         #endregion
 
-		#region Core - Actions
+        #region UI - Events
 
-		private void OnCreatePressed()
-		{
-			var name = string.IsNullOrWhiteSpace(Game.Ui.CreateCharacterUI.NameInput.Node.Text) ? "Sem nome" : Game.Ui.CreateCharacterUI.NameInput.Node.Text.Trim();
+        private void OnCreatePressed()
+        {
+            var name = string.IsNullOrWhiteSpace(Game.Ui.CreateCharacterUI.NameInput.Node.Text) ? "Sem nome" : Game.Ui.CreateCharacterUI.NameInput.Node.Text.Trim();
 
-			Game.Managers.SessionManager.Node.CreateCharacter(name);
-		}
+            Game.Managers.SessionManager.Node.CreateCharacter(name);
+        }
 
-		private void OnBackPressed()
-		{
-			Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
-		}
+        private void OnBackPressed()
+        {
+            Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }

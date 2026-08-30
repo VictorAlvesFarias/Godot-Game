@@ -587,47 +587,56 @@ namespace Jogo25D.Chunks
             WorldSeed = seed;
         }
 
-        // Escreve as mutacoes no objeto que o WorldManager esta montando pra gravar.
-        public void ExportInto(string dimensionId, DimensionSaveData save)
+        public Godot.Collections.Array ExportMutations(string dimensionId)
         {
-            var state = ResolveState(dimensionId);
+            var lista = new Godot.Collections.Array();
 
-            save.Chunks.Clear();
-
-            foreach (var (chunkCoord, chunkState) in state)
+            foreach (var (_, chunkState) in ResolveState(dimensionId))
             {
-                // Chunk visitado mas nao alterado nao precisa ir pro arquivo: o terreno dele
-                // e regerado pela semente. Sem isso o save cresce com area explorada em vez de
-                // crescer com o que o jogador fez (medido: 78 chunks pra 15 mutacoes).
-                if (chunkState == null || chunkState.Mutations.Count == 0)
+                foreach (var mutacao in chunkState.Mutations)
                 {
-                    continue;
+                    lista.Add(new Godot.Collections.Dictionary
+                    {
+                        { "type", mutacao.Type },
+                        { "x", (int)mutacao.Position.X },
+                        { "y", (int)mutacao.Position.Y },
+                        { "blockId", mutacao.ExtraData },
+                    });
                 }
-
-                save.Chunks.Add(new ChunkEntryData
-                {
-                    ChunkCoordX = chunkCoord.X,
-                    ChunkCoordY = chunkCoord.Y,
-                    State = chunkState,
-                });
             }
+
+            return lista;
         }
 
-        public void ImportState(string dimensionId, DimensionSaveData save)
+        public void ImportMutations(string dimensionId, Godot.Collections.Array lista)
         {
             var state = ResolveState(dimensionId);
 
             state.Clear();
 
-            if (save == null)
+            if (lista == null)
             {
                 return;
             }
 
-
-            foreach (var entry in save.Chunks)
+            foreach (var bruta in lista)
             {
-                state[new Vector2I(entry.ChunkCoordX, entry.ChunkCoordY)] = entry.State ?? new ChunkStateData();
+                var mutacao = bruta.AsGodotDictionary();
+                var cell = new Vector2I(mutacao["x"].AsInt32(), mutacao["y"].AsInt32());
+                var chunk = CoordinateUtilities.CellToChunk(cell);
+
+                if (!state.TryGetValue(chunk, out var chunkState))
+                {
+                    chunkState = new ChunkStateData();
+                    state[chunk] = chunkState;
+                }
+
+                chunkState.Mutations.Add(new ChunkMutationData
+                {
+                    Type = mutacao["type"].AsString(),
+                    Position = new Vector2(cell.X, cell.Y),
+                    ExtraData = mutacao.TryGetValue("blockId", out var b) ? b.AsString() : "",
+                });
             }
         }
 

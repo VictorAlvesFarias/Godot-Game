@@ -16,10 +16,8 @@ namespace Jogo25D.UI
 
         public override bool IsOverlay => true;
 
-		public override void _Ready()
+        public override void _Ready()
         {
-
-
         }
 
         public override void _Process(double delta)

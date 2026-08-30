@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(\"C:\\\\Tools\\\\Godot\\\\godot.exe\" --headless -s validate_shared_layer.gd)"
-    ]
-  }
-}

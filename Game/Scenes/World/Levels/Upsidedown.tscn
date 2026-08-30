@@ -1,5 +1,6 @@
 [gd_scene format=4 uid="uid://eaamifcetyfn"]
 
+[ext_resource type="Script" path="res://Features/World/Dimensions/Entities/Upsidedown.cs" id="0_dimupsidedown"]
 [ext_resource type="Script" uid="uid://b7fp0le412qg5" path="res://Features/World/Background/Entities/BackgroundController.cs" id="1_2t3hh"]
 [ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="2_a7an3"]
 [ext_resource type="Texture2D" uid="uid://ckrj4lovpeiwe" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png" id="3_yegaj"]
@@ -26,6 +27,7 @@ Directions = Array[int]([0, 8])
 metadata/_custom_type_script = "uid://dt4b1jkrrfrh1"
 
 [node name="Upsidedown" type="Node2D" unique_id=726539886]
+script = ExtResource("0_dimupsidedown")
 
 [node name="Background" type="Node2D" parent="." unique_id=655906721]
 script = ExtResource("1_2t3hh")
@@ -122,6 +124,8 @@ script = ExtResource("11_terrainlayer")
 UseConnections = true
 Relations = Array[Resource]([SubResource("Resource_blm8h"), SubResource("Resource_ufdy7")])
 
+
+[node name="Entities" type="Node2D" parent="."]
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]
 zoom = Vector2(2, 2)
 script = ExtResource("4_jbnhx")

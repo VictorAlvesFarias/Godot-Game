@@ -1,9 +1,9 @@
-namespace Jogo25D.UI
+﻿namespace Jogo25D.UI
 {
-	public enum CharacterSelectContext
-	{
-		OwnWorld,
-		PeerJoinLocal,
-		PeerJoinServer,
-	}
+    public enum CharacterSelectContext
+    {
+        OwnWorld,
+        PeerJoinLocal,
+        PeerJoinServer,
+    }
 }

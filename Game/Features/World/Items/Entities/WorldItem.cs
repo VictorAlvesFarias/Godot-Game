@@ -3,18 +3,20 @@ using Jogo25D.Characters;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Entities;
+using Jogo25D.Save;
 using Jogo25D.Utils.GodotDictionaryParser;
 using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Items
 {
     [Unload(UnloadMode.Global)]
+    [SaveScene("worldItem", "res://Scenes/World/Items/WorldItem.tscn")]
     public partial class WorldItem : CharacterBody2D
     {
         #region Properties
 
 
-        [GodotDictionaryField]
+        [Save, GodotDictionaryField]
         public ItemData Item { get; set; }
         public float Gravity { get; set; }
         public float BobTime { get; set; }

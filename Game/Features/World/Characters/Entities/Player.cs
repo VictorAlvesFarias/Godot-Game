@@ -22,6 +22,7 @@ using System.Linq;
 
 namespace Jogo25D.Characters
 {
+	[Jogo25D.Save.SaveScene("player", "res://Scenes/World/Characters/Player.tscn", Ref = "characters/{0}.json")]
 	public partial class Player : CharacterBody2D
 	{
         #region Events
@@ -43,6 +44,8 @@ namespace Jogo25D.Characters
 		#region Dinamic properties
 
 		public long PeerId { get; set; } = 1;
+
+		public string CharacterId { get; set; } = "";
 		public float Gravity { get; set; }
 		public ulong LastDimensionTradeMsec { get; set; }
         public bool Loaded { get; set;  }
@@ -684,16 +687,12 @@ namespace Jogo25D.Characters
 
 		public TileMapLayer GetActiveTileLayer()
 		{
-			var parent = GetParent();
-
-			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
+			return Game.Managers.DimensionManager.Node?.ResolveLayer(GetActiveDimensionId());
 		}
 
 		public TileMapLayer GetActiveBaseLayer()
 		{
-			var parent = GetParent();
-
-			return parent?.GetNodeOrNull<TileMapLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
+			return Game.Managers.DimensionManager.Node?.ResolveBaseLayer(GetActiveDimensionId());
 		}
 
 		#endregion

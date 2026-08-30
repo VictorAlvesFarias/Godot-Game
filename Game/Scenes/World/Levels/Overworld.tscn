@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://colalmw2tb2xy"]
 
+[ext_resource type="Script" path="res://Features/World/Dimensions/Entities/Overworld.cs" id="0_dimoverworld"]
 [ext_resource type="Texture2D" uid="uid://l2tmrwahq7k4" path="res://Assets/Textures/Backgrounds/white_blue_sky/sky.png" id="1_y8qed"]
 [ext_resource type="Texture2D" uid="uid://dbw7ifakxit8u" path="res://Assets/Textures/Backgrounds/white_blue_sky/layer_2.png" id="2_danr7"]
 [ext_resource type="Script" uid="uid://bkbt4dowylfu8" path="res://Features/World/Camera/Entities/CameraController.cs" id="2_vlsnn"]
@@ -17,6 +18,7 @@ script = ExtResource("9_cg0d3")
 TerrainSetB = 1
 
 [node name="Overworld" type="Node2D" unique_id=1584147225]
+script = ExtResource("0_dimoverworld")
 
 [node name="Background" type="Node2D" parent="." unique_id=920441478]
 script = ExtResource("8_bgscr")
@@ -111,6 +113,8 @@ rendering_quadrant_size = 32
 script = ExtResource("12_terrainlayer")
 Connections = Array[Resource]([SubResource("Resource_40gko")])
 
+
+[node name="Entities" type="Node2D" parent="."]
 [node name="Camera2D" type="Camera2D" parent="." unique_id=391792556]
 zoom = Vector2(2, 2)
 script = ExtResource("2_vlsnn")

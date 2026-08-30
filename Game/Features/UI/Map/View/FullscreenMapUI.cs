@@ -8,16 +8,19 @@ namespace Jogo25D.UI
 {
     public partial class FullscreenMapUI : ScreenUI
     {
+        #region Dinamic properties
+
         public Player LocalPlayer { get; set; }
         public PlayerInput PlayerInput => LocalPlayer?.Input;
 
         public bool IsPanning { get; set; }
 
-        public override bool IsOverlay => true;
+        #endregion
 
-		public override void _Ready()
+        #region Godot implementation
+
+        public override void _Ready()
         {
-
             Game.WhenReady(() => Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = 4000f);
         }
 
@@ -91,6 +94,16 @@ namespace Jogo25D.UI
             }
         }
 
+        #endregion
+
+        #region ScreenUI implementation
+
+        public override bool IsOverlay => true;
+
+        #endregion
+
+        #region Core - Player lookup
+
         public void FindLocalPlayer()
         {
             var worldManager = Game.Managers.WorldManager.Node;
@@ -102,6 +115,10 @@ namespace Jogo25D.UI
                 Game.Ui.FullscreenMapUI.MapView.Node.SetLocalPlayer(LocalPlayer);
             }
         }
+
+        #endregion
+
+        #region Core - Toggle
 
         public void ToggleMap()
         {
@@ -140,6 +157,10 @@ namespace Jogo25D.UI
             }
         }
 
+        #endregion
+
+        #region Core - Camera
+
         public void Zoom(float delta)
         {
             Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = Mathf.Clamp(Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius + delta, 400f, 12000f);
@@ -154,5 +175,7 @@ namespace Jogo25D.UI
 
             Game.Ui.FullscreenMapUI.MapView.Node.PanOffset -= screenDelta / Game.Ui.FullscreenMapUI.MapView.Node.LastScale;
         }
+
+        #endregion
     }
 }

@@ -3,49 +3,51 @@ using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
-	public partial class StartUI : ScreenUI
-	{
-		#region Godot implementation
+    public partial class StartUI : ScreenUI
+    {
+        #region Godot implementation
 
-		public override void _Ready()
-		{
-			Game.WhenReady(Initialize);
-		}
+        public override void _Ready()
+        {
+            Game.WhenReady(Initialize);
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Setup
+        #region Core - Setup
 
-		private void Initialize()
-		{
-			// Sessao acabou (saiu do mundo ou o servidor caiu): o menu inicial volta.
-			Game.Managers.SessionManager.Node.SessionEnded += OnSessionEnded;
+        private void Initialize()
+        {
+            Game.Managers.SessionManager.Node.SessionEnded += OnSessionEnded;
+            Game.Ui.StartUI.PlayButton.Node.Pressed += OnPlayPressed;
+            Game.Ui.StartUI.ExitButton.Node.Pressed += OnExitPressed;
+        }
 
-			Game.Ui.StartUI.PlayButton.Node.Pressed += OnPlayPressed;
-			Game.Ui.StartUI.ExitButton.Node.Pressed += OnExitPressed;
-		}
+        #endregion
 
-		#endregion
+        #region Managers - Events
 
-		#region UI - Actions
+        private void OnSessionEnded()
+        {
+            GetTree().Paused = false;
 
-		public void OnPlayPressed()
-		{
-			Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
-		}
+            Game.Managers.RouterManager.Node.Replace(this);
+        }
 
-		private void OnSessionEnded()
-		{
-			GetTree().Paused = false;
+        #endregion
 
-			Game.Managers.RouterManager.Node.Replace(this);
-		}
+        #region UI - Events
 
-		public void OnExitPressed()
-		{
-			GetTree().Quit();
-		}
+        public void OnPlayPressed()
+        {
+            Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+        }
 
-		#endregion
-	}
+        public void OnExitPressed()
+        {
+            GetTree().Quit();
+        }
+
+        #endregion
+    }
 }

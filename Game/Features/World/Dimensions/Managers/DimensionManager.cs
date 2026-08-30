@@ -33,8 +33,6 @@ namespace Jogo25D.Dimensions
 
         public IEnumerable<string> Ids => _dimensions.Keys;
 
-        public IEnumerable<Node2D> Parents => _dimensions.Keys.Select(ResolveParent).Where(parent => parent != null);
-
         public bool IsResolved => _dimensions.Values.All(dimension => dimension.Parent != null && IsInstanceValid(dimension.Parent));
 
         #endregion
@@ -47,8 +45,6 @@ namespace Jogo25D.Dimensions
             [ChunkStreamingConstants.UPSIDEDOWN_ID] = new DimensionData("Main/World/Levels/UpsidedownViewportContainer", "UpsidedownViewport/Upsidedown"),
         };
 
-        // Estado de uma dimensao. Privado de proposito: quem consome usa os Resolve* passando o
-        // dimensionId, nunca o par de campos solto.
         private class DimensionData
         {
             public DimensionData(string containerPath, string parentSubPath)
@@ -70,8 +66,6 @@ namespace Jogo25D.Dimensions
 
         #region Core - Resolucao
 
-        // Chamado depois que o World.tscn entra na arvore. Resolve parent e container das duas
-        // dimensoes; as layers ficam pro primeiro ResolveLayer, que ja sabe se revalidar.
         public void ResolveReferences()
         {
             foreach (var (dimensionId, dimension) in _dimensions)
@@ -100,6 +94,35 @@ namespace Jogo25D.Dimensions
             return dimension?.Parent != null && IsInstanceValid(dimension.Parent) ? dimension.Parent : null;
         }
 
+        public Node2D ResolveEntities(string dimensionId)
+        {
+            return ResolveParent(dimensionId)?.GetNodeOrNull<Node2D>("Entities");
+        }
+
+        public void ClearEntities()
+        {
+            foreach (var dimensionId in _dimensions.Keys)
+            {
+                ClearEntities(dimensionId);
+            }
+        }
+
+        public void ClearEntities(string dimensionId)
+        {
+            var parent = ResolveParent(dimensionId);
+            var entities = parent?.GetNodeOrNull<Node2D>("Entities");
+
+            if (entities == null)
+            {
+                return;
+            }
+
+            entities.Name = "EntitiesDiscarded";
+            entities.QueueFree();
+
+            parent.AddChild(new Node2D { Name = "Entities" });
+        }
+
         public TerrainLayer ResolveLayer(string dimensionId)
         {
             var dimension = Resolve(dimensionId);
@@ -121,11 +144,9 @@ namespace Jogo25D.Dimensions
         // Dimensao a que um no pertence, pelo parent em que ele esta pendurado.
         public string ResolveDimensionIdOf(Node node)
         {
-            var parent = node?.GetParent();
-
             foreach (var (dimensionId, dimension) in _dimensions)
             {
-                if (parent != null && parent == dimension.Parent)
+                if (node != null && dimension.Parent != null && dimension.Parent.IsAncestorOf(node))
                 {
                     return dimensionId;
                 }
@@ -242,7 +263,7 @@ namespace Jogo25D.Dimensions
             player.AddToGroup("players");
             player.SetMultiplayerAuthority(1);
 
-            var parent = ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID);
+            var parent = ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID);
 
             if (parent == null)
             {
@@ -280,7 +301,7 @@ namespace Jogo25D.Dimensions
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void SpawnNpcReceive(Vector2 position)
         {
-            var parent = ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID);
+            var parent = ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID);
 
             if (parent == null || parent.GetNodeOrNull("NPC_Dummy") != null)
             {
@@ -305,7 +326,7 @@ namespace Jogo25D.Dimensions
 
         public void SpawnTestNPC()
         {
-            var parent = ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID);
+            var parent = ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID);
 
             if (parent == null || parent.GetNodeOrNull("NPC_Dummy") != null)
             {
@@ -384,7 +405,7 @@ namespace Jogo25D.Dimensions
                 return null;
             }
 
-            var parent = ResolveParent(record[RECORD_DIMENSION].AsString());
+            var parent = ResolveEntities(record[RECORD_DIMENSION].AsString());
 
             if (parent == null)
             {
@@ -491,9 +512,9 @@ namespace Jogo25D.Dimensions
 
             var name = EntityNameOf(instanceId);
 
-            foreach (var parent in Parents)
+            foreach (var dimensionId in _dimensions.Keys)
             {
-                var node = parent?.GetNodeOrNull<Node2D>(name);
+                var node = ResolveEntities(dimensionId)?.GetNodeOrNull<Node2D>(name);
 
                 if (node != null)
                 {
@@ -547,7 +568,7 @@ namespace Jogo25D.Dimensions
         public bool SpawnPropAuthoritative(string propId, Vector2 position, string dimensionId)
         {
             var layer = ResolveLayer(dimensionId);
-            var parent = ResolveParent(dimensionId);
+            var parent = ResolveEntities(dimensionId);
 
             if (layer == null || parent == null)
             {

@@ -16,7 +16,7 @@ namespace Jogo25D.UI
 
         public override bool IsOverlay => true;
 
-		public override void _Ready()
+        public override void _Ready()
         {
             ProcessMode = ProcessModeEnum.Always;
 
@@ -60,7 +60,7 @@ namespace Jogo25D.UI
 
         #endregion
 
-        #region Core - Actions
+        #region UI - Events
 
         public void OnRevivePressed()
         {

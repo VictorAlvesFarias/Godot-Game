@@ -105,7 +105,7 @@ namespace Jogo25D.Network
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var player = Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("Player");
+			var player = Dimensions.ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("Player");
 
 			if (player == null)
 			{
@@ -174,7 +174,7 @@ namespace Jogo25D.Network
 
 			Multiplayer.MultiplayerPeer = Peer;
 
-			var localPlayer = Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("Player");
+			var localPlayer = Dimensions.ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("Player");
 
 			if (localPlayer != null)
 			{
@@ -187,7 +187,7 @@ namespace Jogo25D.Network
 				GD.Print("[NetworkManager.JoinServer] no local player to remove");
 			}
 
-			var localNpc = Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull("NPC_Dummy");
+			var localNpc = Dimensions.ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull("NPC_Dummy");
 
 			if (localNpc != null)
 			{

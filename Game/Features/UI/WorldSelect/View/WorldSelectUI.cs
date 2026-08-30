@@ -8,20 +8,14 @@ using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-	public partial class WorldSelectUI : ScreenUI
-	{
-		#region Node references
+    public partial class WorldSelectUI : ScreenUI
+    {
+        #region Godot implementation
 
-
-		#endregion
-
-		#region Godot implementation
-
-		public override void _Ready()
-		{
-
-			Game.WhenReady(Initialize);
-		}
+        public override void _Ready()
+        {
+            Game.WhenReady(Initialize);
+        }
 
         #endregion
 
@@ -29,7 +23,6 @@ namespace Jogo25D.UI
 
         public override void OnOpened()
         {
-
             PopulateWorldRows();
         }
 
@@ -38,115 +31,111 @@ namespace Jogo25D.UI
         #region Core - Setup
 
         private void Initialize()
-		{
-			Game.Ui.WorldSelectUI.CreateWorldButton.Node.Pressed += OnCreateWorldPressed;
-			Game.Ui.WorldSelectUI.MultiplayerButton.Node.Pressed += OnMultiplayerPressed;
-			Game.Ui.WorldSelectUI.BackButton.Node.Pressed += OnBackPressed;
-		}
+        {
+            Game.Ui.WorldSelectUI.CreateWorldButton.Node.Pressed += OnCreateWorldPressed;
+            Game.Ui.WorldSelectUI.MultiplayerButton.Node.Pressed += OnMultiplayerPressed;
+            Game.Ui.WorldSelectUI.BackButton.Node.Pressed += OnBackPressed;
+        }
 
-		#endregion
+        private Control CreateWorldRow(string title, string subtitle, System.Action onSelect, System.Action onDelete)
+        {
+            var template = Game.Ui.WorldSelectUI.WorldRowWithDeleteTemplate.Node;
 
-		#region Core - Setup
+            if (template == null)
+            {
+                GD.PushError("WorldSelectUI: WorldRowWithDeleteTemplate não encontrado em Game.Ui.WorldSelectUI.ListContainer.Node.");
 
-		private Control CreateWorldRow(string title, string subtitle, System.Action onSelect, System.Action onDelete)
-		{
-			var template = Game.Ui.WorldSelectUI.WorldRowWithDeleteTemplate.Node;
+                return null;
+            }
 
-			if (template == null)
-			{
-				GD.PushError("WorldSelectUI: WorldRowWithDeleteTemplate não encontrado em Game.Ui.WorldSelectUI.ListContainer.Node.");
+            var wrapper = (HBoxContainer)template.Duplicate();
 
-				return null;
-			}
+            wrapper.Visible = true;
 
-			template.Visible = false;
+            var selectButton = wrapper.GetNode<Button>("SelectButton");
 
-			var wrapper = (HBoxContainer)template.Duplicate();
-			
-			wrapper.Visible = true;
+            selectButton.Text = subtitle == null ? title : $"{title}\n{subtitle}";
+            selectButton.Pressed += onSelect;
 
-			var selectButton = wrapper.GetNode<Button>("SelectButton");
+            var deleteButton = wrapper.GetNode<Button>("DeleteButton");
 
-			selectButton.Text = subtitle == null ? title : $"{title}\n{subtitle}";
-			selectButton.Pressed += onSelect;
+            deleteButton.Pressed += onDelete;
 
-			var deleteButton = wrapper.GetNode<Button>("DeleteButton");
+            return wrapper;
+        }
 
-			deleteButton.Pressed += onDelete;
+        private void PopulateWorldRows()
+        {
+            foreach (var child in Game.Ui.WorldSelectUI.ListContainer.Node.GetChildren())
+            {
+                if (child.Name == "WorldRowTemplate" || child.Name == "WorldRowWithDeleteTemplate")
+                {
+                    ((Control)child).Visible = false;
 
-			return wrapper;
-		}
+                    continue;
+                }
 
-		private void PopulateWorldRows()
-		{
-			foreach (var child in Game.Ui.WorldSelectUI.ListContainer.Node.GetChildren())
-			{
-				if (child.Name == "WorldRowTemplate" || child.Name == "WorldRowWithDeleteTemplate")
-				{
-					continue;
-				}
+                child.QueueFree();
+            }
 
-				child.QueueFree();
-			}
+            var worlds = Game.Managers.SaveManager.Node?.ListWorlds() ?? new List<WorldSaveData>();
 
-			var worlds = Game.Managers.SaveManager.Node?.ListWorlds() ?? new List<WorldSaveData>();
+            foreach (var world in worlds)
+            {
+                var modeLabel = $"Servidor (chave: {world.MultiplayerKey})";
 
-			foreach (var world in worlds)
-			{
-				var modeLabel = world.CharacterMode == WorldCharacterMode.ServerCharacters
-					? $"Servidor (chave: {world.MultiplayerKey})"
-					: "Local";
+                if (world.CharacterMode != WorldCharacterMode.ServerCharacters)
+                {
+                    modeLabel = "Local";
+                }
 
-				var row = CreateWorldRow(
-					world.Name,
-					$"{modeLabel} · autosave a cada {world.AutosaveIntervalMinutes} min",
-					() => OnWorldRowPressed(world),
-					() =>
-					{
-						Game.Managers.SaveManager.Node?.DeleteWorld(world.WorldId);
+                var row = CreateWorldRow(
+                    world.Name,
+                    $"{modeLabel} · autosave a cada {world.AutosaveIntervalMinutes} min",
+                    () =>{
+                        OnWorldRowPressed(world);
+                    },
+                    () =>
+                    {
+                        Game.Managers.SaveManager.Node?.DeleteWorld(world.WorldId);
 
-						PopulateWorldRows();
-					});
+                        PopulateWorldRows();
+                    }
+                );
 
-				if (row != null)
-				{
-					Game.Ui.WorldSelectUI.ListContainer.Node.AddChild(row);
-				}
-			}
-		}
+                if (row != null)
+                {
+                    Game.Ui.WorldSelectUI.ListContainer.Node.AddChild(row);
+                }
+            }
+        }
 
         #endregion
 
-		#region UI - Actions - Mundos
+        #region UI - Events
 
-		public void OnWorldRowPressed(WorldSaveData world)
-		{
-			Game.Managers.SessionManager.Node.PendingWorld = world;
+        public void OnWorldRowPressed(WorldSaveData world)
+        {
+            Game.Managers.SessionManager.Node.PendingWorld = world;
 
-			Game.Ui.CharacterSelectUI.Node.CurrentContext = CharacterSelectContext.OwnWorld;
+            Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
+        }
 
-			Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
-		}
+        public void OnCreateWorldPressed()
+        {
+            Game.Managers.RouterManager.Node.Open(Game.Ui.CreateWorldUI.Node);
+        }
 
-		public void OnCreateWorldPressed()
-		{
-			Game.Managers.RouterManager.Node.Open(Game.Ui.CreateWorldUI.Node);
-		}
+        public void OnMultiplayerPressed()
+        {
+            Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
+        }
 
-		#endregion
+        public void OnBackPressed()
+        {
+            Game.Managers.RouterManager.Node.Back();
+        }
 
-		#region Core - Actions - Navegacao
-
-		public void OnMultiplayerPressed()
-		{
-			Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
-		}
-
-		public void OnBackPressed()
-		{
-			Game.Managers.RouterManager.Node.Back();
-		}
-
-		#endregion
-	}
+        #endregion
+    }
 }

@@ -3,10 +3,12 @@ using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Props;
+using Jogo25D.Save;
 using Jogo25D.Systems;
 
 namespace Jogo25D.Portals
 {
+    [SaveScene("portal", "res://Scenes/World/Props/Portal.tscn")]
     public partial class Portal : Prop
     {
         #region Dinamic properties

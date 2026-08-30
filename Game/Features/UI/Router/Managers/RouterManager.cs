@@ -3,8 +3,6 @@ using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
-    // Dono de qual tela esta aberta - estado que nao pertence a nenhuma tela, por isso e manager.
-    // Ninguem mais escreve Visible de tela: quem quer trocar de tela chama Open/Back/Close aqui.
     public partial class RouterManager : Node
     {
         #region Dinamic properties
@@ -36,7 +34,6 @@ namespace Jogo25D.UI
                 return true;
             }
 
-            // Abrir a tela imediatamente anterior e voltar: consome o historico em vez de crescer.
             if (_history.Count > 0 && _history[^1] == screen)
             {
                 _history.RemoveAt(_history.Count - 1);
@@ -116,7 +113,7 @@ namespace Jogo25D.UI
 
         #region Core - Visibilidade
 
-        private static void Show(ScreenUI screen)
+        private void Show(ScreenUI screen)
         {
             if (screen.Visible)
             {
@@ -128,7 +125,7 @@ namespace Jogo25D.UI
             screen.OnOpened();
         }
 
-        private static void Hide(ScreenUI screen)
+        private void Hide(ScreenUI screen)
         {
             if (!screen.Visible)
             {

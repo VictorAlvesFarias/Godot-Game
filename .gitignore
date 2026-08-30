@@ -31,3 +31,10 @@ Microsoft.NET.Sdk.DefaultItems.targets
 _TargetFrameworkDirectories
 /.utils
 /.docs
+/.old
+/.dev
+/.claude
+/.arch
+/.docs
+/.agents
+

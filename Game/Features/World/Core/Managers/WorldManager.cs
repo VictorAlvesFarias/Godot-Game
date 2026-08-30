@@ -12,6 +12,7 @@ using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Instances;
+using Jogo25D.Save;
 using Jogo25D.Items;
 using Jogo25D.Portals;
 using Jogo25D.Props;
@@ -56,8 +57,6 @@ namespace Jogo25D.Systems
 
 		#endregion
 
-		// O streaming de entidade vive na raiz do World, nao em Managers: ele nasce e morre
-		// com o mundo, entao nao precisa de reset nem de aviso de teardown.
 		public WorldStreaming Streaming => Game.Main.Node?.GetNodeOrNull<WorldStreaming>("World");
 
 		#region Core - World spawning
@@ -87,20 +86,12 @@ namespace Jogo25D.Systems
 			GD.Print("[WorldManager.SpawnWorld] world instantiated");
 		}
 
-		// Mundo nao procedural: o terreno e o que esta desenhado a mao nas cenas de nivel, entao
-		// nao ha seed, nem import de mutacao, nem streaming - e as layers NAO sao limpas.
-		// De resto e um mundo como outro qualquer: tem save, props e autosave.
 		public void SpawnLocalWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
 		{
 			SpawnWorld();
 			SetChunkStreamingEnabled(false);
 
-			// Sem streaming, as entidades vem todas de uma vez - mesmo registro, outra hora.
-			ImportDimension(save, ChunkStreamingConstants.OVERWORLD_ID);
-			ImportDimension(save, ChunkStreamingConstants.UPSIDEDOWN_ID);
-
-			Streaming?.MaterializeAll(ChunkStreamingConstants.OVERWORLD_ID);
-			Streaming?.MaterializeAll(ChunkStreamingConstants.UPSIDEDOWN_ID);
+			CarregarDocumento(save);
 			RespawnLocalSoloPlayer(character);
 
 			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
@@ -113,8 +104,7 @@ namespace Jogo25D.Systems
 
             Game.Managers.TileStreamingManager.Node.SetWorldSeed(save.Seed);
 
-            ImportDimension(save, ChunkStreamingConstants.OVERWORLD_ID);
-            ImportDimension(save, ChunkStreamingConstants.UPSIDEDOWN_ID);
+            CarregarDocumento(save);
 
 			SetChunkStreamingEnabled(true);
 
@@ -131,34 +121,80 @@ namespace Jogo25D.Systems
 			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
 		}
 
-		// Tile e entidade leem o MESMO arquivo de dimensao: um pega as mutacoes, o outro os
-		// records de entidade. Os dois so indexam aqui - nada e materializado ainda.
-		private void ImportDimension(WorldSaveData save, string dimensionId)
+		private void CarregarDocumento(WorldSaveData save)
 		{
-			var state = Game.Managers.SaveManager.Node.LoadDimensionState(save.WorldId, dimensionId);
+			var documento = SaveStorage.LoadWorldDocument(save.WorldId);
 
-			Game.Managers.TileStreamingManager.Node.ImportState(dimensionId, state);
-			Streaming?.ImportState(dimensionId, state);
+			if (documento == null)
+			{
+				return;
+			}
+
+			foreach (var bruta in WorldDocument.Dimensoes(documento))
+			{
+				var entrada = bruta.AsGodotDictionary();
+				var dimensionId = WorldDocument.Texto(entrada, WorldDocument.TYPE);
+				var parent = Dimensions.ResolveParent(dimensionId);
+
+				if (parent == null)
+				{
+					continue;
+				}
+
+				SaveSerializer.Ler(parent, WorldDocument.Estado(entrada));
+
+				foreach (var brutaNo in WorldDocument.Nos(entrada))
+				{
+					var no = brutaNo.AsGodotDictionary();
+
+					if (WorldDocument.EhReferencia(no))
+					{
+						continue;
+					}
+
+					var node = WorldDocument.Construir(no);
+
+					if (node == null)
+					{
+						continue;
+					}
+
+					if (Streaming != null && Streaming.Enabled)
+					{
+						Streaming.Adotar(node, dimensionId);
+					}
+					else
+					{
+						Dimensions.ResolveEntities(dimensionId)?.AddChild(node);
+					}
+				}
+			}
 		}
 
-		// Monta e grava o arquivo de uma dimensao. O DimensionSaveData existe SO aqui dentro:
-		// ele e formato de arquivo, nao estado vivo. A verdade das mutacoes esta no
-		// TileStreamingManager e a das entidades esta nos proprios nos.
-		public void SaveDimensions(string worldId)
+		public void SalvarDocumento(WorldSaveData save)
 		{
+			if (save == null || Streaming == null)
+			{
+				return;
+			}
+
+			var dimensoes = new List<Node2D>();
+
 			foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
 			{
-				var state = new DimensionSaveData
+				var parent = Dimensions.ResolveParent(dimensionId);
+
+				if (parent != null)
 				{
-					WorldId = worldId,
-					DimensionId = dimensionId,
-				};
-
-				Game.Managers.TileStreamingManager.Node?.ExportInto(dimensionId, state);
-				Streaming?.ExportInto(dimensionId, state);
-
-				SaveStorage.SaveDimensionState(worldId, dimensionId, state);
+					dimensoes.Add(parent);
+				}
 			}
+
+			var documento = WorldDocument.Escrever(Streaming, dimensoes, d => Streaming.Descarregados(d is Dimension dim ? dim.DimensionId : d.Name));
+
+			documento[WorldDocument.STATE] = WorldDocument.EstadoDe(save);
+
+			SaveStorage.SaveWorldDocument(save.WorldId, documento);
 		}
 
 		private void SetChunkStreamingEnabled(bool enabled)
@@ -178,23 +214,12 @@ namespace Jogo25D.Systems
 			}
 		}
 
-		// Desmonta a cena do mundo. Quem persiste e limpa a sessao e o SessionManager, antes
-		// de chamar aqui.
 		public void DespawnWorld()
 		{
-			GD.Print("[WorldManager.DespawnWorld] DespawnWorld()");
+			Streaming?.ResetState();
 
-			var main = Game.Main.Node;
-			var world = main?.GetNodeOrNull("World");
-
-			if (world != null)
-			{
-				world.QueueFree();
-
-				GD.Print("[WorldManager.LeaveWorld] world queued for free");
-			}
-
-			Dimensions.Reset();
+			Dimensions.ClearEntities();
+			Dimensions.ClearLayers();
 
 			Game.Managers.TileStreamingManager.Node?.ResetState();
 
@@ -211,6 +236,7 @@ namespace Jogo25D.Systems
 
 			if (character != null)
 			{
+				localPlayer.CharacterId = character.CharacterId;
 				GodotDictionaryParser.ApplyTo(localPlayer, character.State);
 				localPlayer.Loaded = true;
 			}
@@ -263,7 +289,7 @@ namespace Jogo25D.Systems
 		// o que carregar: raio ao redor de quem esta ali, nao de quem esta em outra dimensao.
 		public List<Player> GetPlayersInDimension(string dimensionId)
 		{
-			var parent = Dimensions.ResolveParent(dimensionId);
+			var parent = Dimensions.ResolveEntities(dimensionId);
 
 			if (parent == null)
 			{
