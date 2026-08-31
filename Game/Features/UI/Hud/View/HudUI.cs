@@ -56,6 +56,25 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
+        // F3 mostra e esconde o contador. Nasce escondido: numero de debug nao e HUD de jogo.
+        public override void _Input(InputEvent evento)
+        {
+            if (evento is not InputEventKey tecla || !tecla.Pressed || tecla.Echo || tecla.Keycode != Key.F3)
+            {
+                return;
+            }
+
+            var fps = Game.Ui.HudUI.FpsLabel.Node;
+
+            if (fps != null)
+            {
+                fps.Visible = !fps.Visible;
+            }
+
+            GetViewport().SetInputAsHandled();
+        }
+
+
         // Nao e overlay: e a tela principal do jogo. Precisa virar o Current do router e
         // esconder o menu anterior (CreateCharacter/WorldSelect/...) - senao ele fica visivel
         // por baixo pra sempre. Pause/Inventory/Console etc continuam overlay de verdade,
@@ -80,7 +99,7 @@ namespace Jogo25D.UI
             UpdateFpsDisplay(delta);
             UpdateHealthDisplay();
 
-            if (LocalPlayer != null && IsInstanceValid(LocalPlayer) && AbilitySlots.Count == 0)
+            if (LocalPlayer != null && IsInstanceValid(LocalPlayer) && AbilitySlots.Count != CountAbilities())
             {
                 BuildAbilitySlots();
             }
@@ -226,12 +245,15 @@ namespace Jogo25D.UI
 
         private void UpdateLegacyHealthBar(int maxHealth, int currentHealth)
         {
-            Game.Ui.HudUI.LegacyHealthBar.Node.MaxValue = maxHealth;
-            Game.Ui.HudUI.LegacyHealthBar.Node.Value = currentHealth;
+            var barra = Game.Ui.HudUI.LegacyHealthBar.Node;
 
-            var barWidth = maxHealth * 10f;
+            barra.MaxValue = maxHealth;
+            barra.Value = currentHealth;
 
-            Game.Ui.HudUI.LegacyHealthBar.Node.CustomMinimumSize = new Vector2(barWidth, 30f);
+            var largura = UiConstants.HEALTH_BAR_BASE_WIDTH + maxHealth * UiConstants.HEALTH_BAR_PX_PER_HEALTH;
+
+            // So a largura e calculada. A altura vem da cena, senao nao ha como ajusta-la la.
+            barra.CustomMinimumSize = new Vector2(largura, barra.CustomMinimumSize.Y);
         }
 
         private void LayoutHealthBar(int maxHealth, int currentHealth)
@@ -287,6 +309,17 @@ namespace Jogo25D.UI
 
         #region Core - Abilities
 
+        public int CountAbilities()
+        {
+            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
+            {
+                return 0;
+            }
+
+            // Mesma contagem que Resolver.Resolve produz, sem alocar uma lista por frame.
+            return (LocalPlayer.UnlockedAbilities?.Count ?? 0) + (LocalPlayer.ActiveAbilities?.Count ?? 0);
+        }
+
         public void BuildAbilitySlots()
         {
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || Game.Ui.HudUI.AbilitiesContainer.Node == null || AbilityTemplateMissing)
@@ -294,7 +327,7 @@ namespace Jogo25D.UI
                 return;
             }
 
-            var list = Resolver.Resolve(LocalPlayer.ActiveAbilities, LocalPlayer.ActiveAbilities);
+            var list = Resolver.Resolve(LocalPlayer.UnlockedAbilities, LocalPlayer.ActiveAbilities);
 
             if (list == null || list.Count == 0)
             {
@@ -396,7 +429,7 @@ namespace Jogo25D.UI
                 return;
             }
 
-            var list = Resolver.Resolve(LocalPlayer.ActiveAbilities, LocalPlayer.ActiveAbilities);
+            var list = Resolver.Resolve(LocalPlayer.UnlockedAbilities, LocalPlayer.ActiveAbilities);
 
             if (list == null || AbilityFillBars.Count != list.Count)
             {
@@ -446,7 +479,10 @@ namespace Jogo25D.UI
 
                 if (chargesLabel != null)
                 {
-                    chargesLabel.Text = def?.MaxCharges > 1 ? $"x{action.CurrentCharges}" : "";
+                    var usaCargas = def?.MaxCharges > 0;
+
+                    chargesLabel.Text = usaCargas ? Mathf.Min(action.CurrentCharges, UiConstants.MAX_CHARGES_SHOWN).ToString() : "";
+                    chargesLabel.Visible = usaCargas;
                 }
 
                 if (action.InCooldown)
@@ -578,11 +614,29 @@ namespace Jogo25D.UI
 
         #region Core - Hotkeys
 
-        public Panel DuplicateHotkeySlot(Panel template)
+        // Mesma cor do card de titulo: os icones do HUD pertencem a mesma familia visual.
+        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
+
+
+                private static readonly StringName VARIACAO_REDONDO = "SlotRound";
+        private static readonly StringName VARIACAO_REDONDO_HOVER = "SlotRoundHover";
+
+public Panel DuplicateHotkeySlot(Panel template)
         {
             var panel = (Panel)template.Duplicate();
 
             Game.Ui.HudUI.HotkeysContainer.Node.AddChild(panel);
+
+            foreach (var filho in panel.GetChildren())
+            {
+                if (filho is Control controle)
+                {
+                    controle.MouseFilter = Control.MouseFilterEnum.Ignore;
+                }
+            }
+
+            panel.MouseEntered += () => panel.ThemeTypeVariation = VARIACAO_REDONDO_HOVER;
+            panel.MouseExited += () => panel.ThemeTypeVariation = VARIACAO_REDONDO;
 
             return panel;
         }
@@ -624,42 +678,42 @@ namespace Jogo25D.UI
 
         private static Texture2D CreateInventoryIcon()
         {
-            var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
-            var color = Colors.White;
+            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
+            var color = COR_ICONE;
 
-            image.FillRect(new Rect2I(3, 3, 10, 10), color);
-            image.FillRect(new Rect2I(15, 3, 10, 10), color);
-            image.FillRect(new Rect2I(3, 15, 10, 10), color);
-            image.FillRect(new Rect2I(15, 15, 10, 10), color);
+            image.FillRect(new Rect2I(2, 2, 8, 8), color);
+            image.FillRect(new Rect2I(12, 2, 8, 8), color);
+            image.FillRect(new Rect2I(2, 12, 8, 8), color);
+            image.FillRect(new Rect2I(12, 12, 8, 8), color);
 
             return ImageTexture.CreateFromImage(image);
         }
 
         private static Texture2D CreateMapIcon()
         {
-            var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
-            var color = Colors.White;
+            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
+            var color = COR_ICONE;
 
-            image.FillRect(new Rect2I(2, 2, 24, 3), color);
-            image.FillRect(new Rect2I(2, 23, 24, 3), color);
-            image.FillRect(new Rect2I(2, 2, 3, 24), color);
-            image.FillRect(new Rect2I(23, 2, 3, 24), color);
+            image.FillRect(new Rect2I(1, 1, 20, 3), color);
+            image.FillRect(new Rect2I(1, 18, 20, 3), color);
+            image.FillRect(new Rect2I(1, 1, 3, 20), color);
+            image.FillRect(new Rect2I(18, 1, 3, 20), color);
 
-            FillCircle(image, new Vector2I(14, 14), 5, color);
+            FillCircle(image, new Vector2I(11, 11), 4, color);
 
             return ImageTexture.CreateFromImage(image);
         }
 
         private static Texture2D CreateSkillTreeIcon()
         {
-            var image = Image.CreateEmpty(28, 28, false, Image.Format.Rgba8);
-            var color = Colors.White;
+            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
+            var color = COR_ICONE;
 
-            image.FillRect(new Rect2I(4, 13, 20, 2), color);
+            image.FillRect(new Rect2I(4, 10, 14, 2), color);
 
-            FillCircle(image, new Vector2I(6, 14), 4, color);
-            FillCircle(image, new Vector2I(14, 14), 4, color);
-            FillCircle(image, new Vector2I(22, 14), 4, color);
+            FillCircle(image, new Vector2I(5, 11), 3, color);
+            FillCircle(image, new Vector2I(11, 11), 3, color);
+            FillCircle(image, new Vector2I(17, 11), 3, color);
 
             return ImageTexture.CreateFromImage(image);
         }

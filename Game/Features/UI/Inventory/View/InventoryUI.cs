@@ -21,6 +21,11 @@ namespace Jogo25D.UI
         public PlayerInput PlayerInput => LocalPlayer?.Input;
         public const int MAX_SLOTS = 128;
 
+        private static readonly StringName VARIACAO_SLOT = "Slot";
+        private static readonly StringName VARIACAO_SLOT_HOVER = "SlotHover";
+        private static readonly StringName VARIACAO_DROP = "DropSlot";
+        private static readonly StringName VARIACAO_DROP_HOVER = "DropSlotHover";
+
         public int SlotCount => Mathf.Min(LocalPlayer?.Inventory?.Size ?? 0, MAX_SLOTS);
 
         public Panel[] SlotPanels { get; set; } = new Panel[MAX_SLOTS];
@@ -153,6 +158,22 @@ namespace Jogo25D.UI
 
         private void Initialize()
         {
+            var dropar = Game.Ui.InventoryUI.DropSlot.Node;
+
+            if (dropar != null)
+            {
+                foreach (var filho in dropar.GetChildren())
+                {
+                    if (filho is Control controle)
+                    {
+                        controle.MouseFilter = Control.MouseFilterEnum.Ignore;
+                    }
+                }
+
+                dropar.MouseEntered += () => dropar.ThemeTypeVariation = VARIACAO_DROP_HOVER;
+                dropar.MouseExited += () => dropar.ThemeTypeVariation = VARIACAO_DROP;
+            }
+
             Game.Ui.InventoryUI.GridContainer.Node.Columns = 8;
 
             Game.Ui.InventoryUI.EquiparButtonTemplate.Node.Visible = false;
@@ -180,6 +201,19 @@ namespace Jogo25D.UI
 
             DragPreview = (Panel)template.Duplicate();
             DragPreview.Visible = false;
+
+            // O preview anda colado no ponteiro. Se ele capturar o mouse, o slot embaixo nunca
+            // recebe MouseEntered e o hover morre justo durante o arraste, que e quando ele
+            // mais importa - e o que mostra onde o item vai cair.
+            DragPreview.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+            foreach (var filho in DragPreview.GetChildren())
+            {
+                if (filho is Control controle)
+                {
+                    controle.MouseFilter = Control.MouseFilterEnum.Ignore;
+                }
+            }
 
             Game.Ui.InventoryUI.MainControl.Node.AddChild(DragPreview);
         }
@@ -294,6 +328,21 @@ namespace Jogo25D.UI
 
             int slotIndex = index;
             SlotPanels[index].GuiInput += (InputEvent @event) => OnSlotInput(slotIndex, @event);
+
+            // Os filhos nao podem interceptar o mouse, ou o painel nunca recebe MouseExited
+            // quando o ponteiro passa por cima do icone.
+            foreach (var filho in SlotPanels[index].GetChildren())
+            {
+                if (filho is Control controle)
+                {
+                    controle.MouseFilter = Control.MouseFilterEnum.Ignore;
+                }
+            }
+
+            var painel = SlotPanels[index];
+
+            painel.MouseEntered += () => painel.ThemeTypeVariation = VARIACAO_SLOT_HOVER;
+            painel.MouseExited += () => painel.ThemeTypeVariation = VARIACAO_SLOT;
         }
 
         public void OnSlotInput(int slotIndex, InputEvent @event)

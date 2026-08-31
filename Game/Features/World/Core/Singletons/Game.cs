@@ -234,7 +234,7 @@ namespace Jogo25D.Core
 
                 public static class LegacyHealthBar
                 {
-                    public const string Path = "/root/Main/Ui/HudUI/MarginContainer/VBoxContainer/LegacyHealthBar";
+                    public const string Path = "/root/Main/Ui/HudUI/MarginContainer/VBoxContainer/HealthBlock/HealthFrame/HealthRow/LegacyHealthBar";
 
                     public static Godot.ProgressBar Node { get; internal set; }
                 }

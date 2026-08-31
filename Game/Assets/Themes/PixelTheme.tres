@@ -1,0 +1,348 @@
+[gd_resource type="Theme" format=3 uid="uid://cssl4qiyytpn4"]
+
+[ext_resource type="FontFile" uid="uid://dlsm4tbof7u0k" path="res://Assets/Fonts/Planes_ValMore.ttf" id="1_font"]
+
+[sub_resource type="StyleBoxFlat" id="S_Caixa"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoD"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.1, 0.1, 0.13, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.2, 0.19, 0.25, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Vazio"]
+bg_color = Color(0, 0, 0, 0)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoH"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.24, 0.21, 0.33, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoN"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.17, 0.15, 0.24, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoP"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.11, 0.1, 0.16, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Arraste"]
+bg_color = Color(0.19, 0.17, 0.27, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Perigo"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.16, 0.07, 0.1, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.72, 0.26, 0.34, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Menu"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.09, 0.08, 0.13, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Janela"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+bg_color = Color(0.09, 0.08, 0.13, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.35, 0.31, 0.47, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Tela"]
+bg_color = Color(0.03, 0.03, 0.05, 0.86)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Slot"]
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotHover"]
+bg_color = Color(0.19, 0.17, 0.27, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_TitleCard"]
+content_margin_left = 30.0
+content_margin_top = 11.0
+content_margin_right = 30.0
+content_margin_bottom = 11.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.35, 0.25, 0.09, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BarraGrab"]
+bg_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BarraGrabH"]
+bg_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BarraFundo"]
+bg_color = Color(0.06, 0.05, 0.09, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_PerigoHover"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.28, 0.10, 0.14, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.40, 0.48, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotSel"]
+bg_color = Color(0.20, 0.18, 0.28, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotRound"]
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.35, 0.31, 0.47, 1)
+corner_radius_top_left = 99
+corner_radius_top_right = 99
+corner_radius_bottom_right = 99
+corner_radius_bottom_left = 99
+anti_aliasing = false
+corner_detail = 20
+
+[sub_resource type="StyleBoxFlat" id="S_SlotRoundHover"]
+bg_color = Color(0.22, 0.19, 0.30, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+corner_radius_top_left = 99
+corner_radius_top_right = 99
+corner_radius_bottom_right = 99
+corner_radius_bottom_left = 99
+anti_aliasing = false
+corner_detail = 20
+
+[sub_resource type="StyleBoxFlat" id="S_TitleCardSmall"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.35, 0.25, 0.09, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_ChargesBadge"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.25, 0.09, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+anti_aliasing = false
+
+[resource]
+default_font = ExtResource("1_font")
+default_font_size = 18
+Box/base_type = &"Panel"
+Box/styles/panel = SubResource("S_Caixa")
+Button/colors/font_color = Color(0.87, 0.85, 0.93, 1)
+Button/colors/font_disabled_color = Color(0.51, 0.49, 0.6, 1)
+Button/colors/font_hover_color = Color(0.93, 0.72, 0.31, 1)
+Button/colors/font_outline_color = Color(0, 0, 0, 1)
+Button/colors/font_pressed_color = Color(0.93, 0.72, 0.31, 1)
+Button/constants/outline_size = 4
+Button/styles/disabled = SubResource("S_BotaoD")
+Button/styles/focus = SubResource("S_Vazio")
+Button/styles/hover = SubResource("S_BotaoH")
+Button/styles/normal = SubResource("S_BotaoN")
+Button/styles/pressed = SubResource("S_BotaoP")
+DragPreview/base_type = &"Panel"
+DragPreview/styles/panel = SubResource("S_Arraste")
+DropLabel/base_type = &"Label"
+DropLabel/colors/font_color = Color(0.85, 0.35, 0.42, 1)
+DropLabel/colors/font_outline_color = Color(0, 0, 0, 1)
+DropLabel/constants/outline_size = 4
+DropLabel/font_sizes/font_size = 16
+DropSlotRound/base_type = &"Panel"
+SlotRound/styles/panel = SubResource("S_SlotRound")
+SlotRoundHover/base_type = &"Panel"
+SlotRoundHover/styles/panel = SubResource("S_SlotRoundHover")
+SlotSelected/base_type = &"Panel"
+SlotSelected/styles/panel = SubResource("S_SlotSel")
+SlotHover/base_type = &"Panel"
+DropSlotHover/styles/panel = SubResource("S_PerigoHover")
+DropSlot/base_type = &"Panel"
+DropSlot/styles/panel = SubResource("S_Perigo")
+HSeparator/colors/color = Color(0.27, 0.25, 0.36, 1)
+HSeparator/constants/separation = 6
+Hint/base_type = &"Label"
+Hint/colors/font_color = Color(0.51, 0.49, 0.6, 1)
+Hint/font_sizes/font_size = 13
+Label/colors/font_color = Color(0.87, 0.85, 0.93, 1)
+Label/colors/font_outline_color = Color(0, 0, 0, 1)
+Label/constants/outline_size = 4
+Menu/base_type = &"Panel"
+Menu/styles/panel = SubResource("S_Menu")
+Panel/styles/panel = SubResource("S_Janela")
+PanelContainer/styles/panel = SubResource("S_Janela")
+Quantity/base_type = &"Label"
+Quantity/colors/font_color = Color(0.93, 0.72, 0.31, 1)
+Quantity/font_sizes/font_size = 15
+Screen/base_type = &"Panel"
+Screen/styles/panel = SubResource("S_Tela")
+ScrollContainer/styles/panel = SubResource("S_Vazio")
+Slot/base_type = &"Panel"
+Slot/styles/panel = SubResource("S_Slot")
+SlotRound/base_type = &"Panel"
+SlotRound/styles/panel = SubResource("S_SlotRound")
+SlotRoundHover/base_type = &"Panel"
+SlotRoundHover/styles/panel = SubResource("S_SlotRoundHover")
+SlotSelected/base_type = &"Panel"
+SlotSelected/styles/panel = SubResource("S_SlotSel")
+SlotHover/base_type = &"Panel"
+SlotHover/styles/panel = SubResource("S_SlotHover")
+Title/base_type = &"Label"
+Title/colors/font_color = Color(0.93, 0.72, 0.31, 1)
+Title/font_sizes/font_size = 22
+ChargesBadge/base_type = &"Label"
+ChargesBadge/styles/normal = SubResource("S_ChargesBadge")
+ChargesBadge/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+ChargesBadge/constants/outline_size = 0
+ChargesBadge/font_sizes/font_size = 12
+CardBox/base_type = &"PanelContainer"
+CardBox/styles/panel = SubResource("S_TitleCardSmall")
+TitleCardSmall/base_type = &"Label"
+TitleCardSmall/styles/normal = SubResource("S_TitleCardSmall")
+TitleCardSmall/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+TitleCardSmall/constants/outline_size = 0
+TitleCardSmall/font_sizes/font_size = 14
+TitleCard/base_type = &"Label"
+TitleCard/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+TitleCard/colors/font_outline_color = Color(0.93, 0.72, 0.31, 1)
+TitleCard/constants/outline_size = 0
+TitleCard/font_sizes/font_size = 20
+TitleCard/styles/normal = SubResource("S_TitleCard")
+Transparent/base_type = &"PanelContainer"
+Transparent/styles/panel = SubResource("S_Vazio")
+VScrollBar/styles/grabber = SubResource("S_BarraGrab")
+VScrollBar/styles/grabber_highlight = SubResource("S_BarraGrabH")
+VScrollBar/styles/grabber_pressed = SubResource("S_BarraGrabH")
+VScrollBar/styles/scroll = SubResource("S_BarraFundo")

@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Core;
 using System.Collections.Generic;
 
 namespace Jogo25D.UI
@@ -10,6 +11,8 @@ namespace Jogo25D.UI
         public ScreenUI Current { get; private set; }
 
         private readonly List<ScreenUI> _history = new();
+
+        private readonly HashSet<ScreenUI> _overlays = new();
 
         #endregion
 
@@ -123,6 +126,13 @@ namespace Jogo25D.UI
             screen.Visible = true;
 
             screen.OnOpened();
+
+            if (screen.IsOverlay)
+            {
+                _overlays.Add(screen);
+            }
+
+            AtualizarCursor();
         }
 
         private void Hide(ScreenUI screen)
@@ -135,6 +145,18 @@ namespace Jogo25D.UI
             screen.Visible = false;
 
             screen.OnClosed();
+
+            _overlays.Remove(screen);
+
+            AtualizarCursor();
+        }
+
+        // Mira so quando o jogo esta na frente: com qualquer overlay aberto, volta a seta.
+        private void AtualizarCursor()
+        {
+            var emJogo = Current is HudUI && _overlays.Count == 0;
+
+            Game.Managers.WindowManager.Node?.AplicarCursor(emJogo);
         }
 
         #endregion
