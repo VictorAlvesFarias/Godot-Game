@@ -54,6 +54,9 @@ namespace Jogo25D.Characters
         public float KnockbackDuration { get; set; } = 0.2f;
         public float DamagePopupDuration { get; set; } = 0.8f;
 		public float DamagePopupRiseDistance { get; set; } = 26f;
+		public int StepUpBlocks { get; set; } = 2;
+		public float StepUpSpeedFactor { get; set; } = 1.5f;
+		public float StepUpRemaining { get; set; } = 0f;
         public Godot.Collections.Array<BasePropertyData> ActiveProperties { get; set; } = CreateBaseProperties();
 
         private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
@@ -1038,13 +1041,20 @@ namespace Jogo25D.Characters
 
 			var v = Velocity;
 
-			if (!IsOnFloor())
+			// Subir degrau tira o corpo do chao por alguns frames. Enquanto isso ele conta como
+			// apoiado: sem isso a gravidade comeria a subida e o pulo ficaria bloqueado no meio dela.
+			var subindoDegrau = StepUpRemaining > 0f;
+
+			if (!IsOnFloor() && !subindoDegrau)
 			{
 				v.Y += Gravity * delta;
 			}
 
-			if (Input.Jump && IsOnFloor())
+			if (Input.Jump && (IsOnFloor() || subindoDegrau))
 			{
+				// O pulo cancela a subida: quem pulou quer sair dali, nao terminar o degrau.
+				StepUpRemaining = 0f;
+
 				v.Y = movementProperties.JumpVelocity;
 
 				GD.Print("[HandleMovement] Pulando");
@@ -1059,9 +1069,77 @@ namespace Jogo25D.Characters
 				v.X = Mathf.MoveToward(v.X, 0, movementProperties.Speed);
 			}
 
+			UpdateStepUp(delta, movementProperties.Speed * StepUpSpeedFactor, ref v);
+
 			Velocity = v;
 
 			MoveAndSlide();
+
+			TryStepUp(delta);
+		}
+
+		// Gasta a subida agendada ao longo de alguns frames, numa velocidade derivada da que o
+		// player anda - entao buff de movimento acelera a subida junto. Sem isso o corpo teleporta
+		// o degrau inteiro num frame so, e o movimento fica seco.
+		private void UpdateStepUp(float delta, float speed, ref Vector2 velocity)
+		{
+			if (StepUpRemaining <= 0f)
+			{
+				return;
+			}
+
+			var rise = Mathf.Min(StepUpRemaining, speed * delta);
+
+			// Se algo entrou no caminho no meio da subida, desiste em vez de atravessar.
+			if (TestMove(GlobalTransform, Vector2.Up * rise))
+			{
+				StepUpRemaining = 0f;
+
+				return;
+			}
+
+			GlobalPosition += Vector2.Up * rise;
+
+			StepUpRemaining -= rise;
+
+			// A gravidade nao briga com a subida enquanto ela acontece.
+			velocity.Y = 0f;
+		}
+
+		// Sobe degrau de ate StepUpBlocks blocos sem precisar pular. So age quando o corpo
+		// esbarrou em algo andando no chao: procura a menor altura em que o caminho a frente
+		// esta livre e levanta o corpo ate la.
+		private void TryStepUp(float delta)
+		{
+			if (StepUpRemaining > 0f || StepUpBlocks <= 0 || Input == null || Input.MoveX == 0f || !IsOnFloor() || !IsOnWall())
+			{
+				return;
+			}
+
+			var tileSize = Game.Managers.DimensionManager.Node?.TileSize ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
+			var maxHeight = tileSize * StepUpBlocks;
+			var reach = Mathf.Max(Mathf.Abs(Velocity.X) * delta, PlayerConstants.STEP_UP_MIN_REACH);
+			var forward = new Vector2(Mathf.Sign(Input.MoveX) * reach, 0f);
+
+			for (var height = PlayerConstants.STEP_UP_PROBE; height <= maxHeight; height += PlayerConstants.STEP_UP_PROBE)
+			{
+				// Teto: se o corpo nao cabe nesta altura, nenhuma altura maior cabe.
+				if (TestMove(GlobalTransform, Vector2.Up * height))
+				{
+					return;
+				}
+
+				var raised = GlobalTransform;
+
+				raised.Origin += Vector2.Up * height;
+
+				if (!TestMove(raised, forward))
+				{
+					StepUpRemaining = height;
+
+					return;
+				}
+			}
 		}
 
 		#endregion

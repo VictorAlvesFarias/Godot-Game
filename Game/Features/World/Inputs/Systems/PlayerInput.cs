@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Characters;
 using System.Collections.Generic;
 using System.Linq;
@@ -86,7 +86,7 @@ namespace Jogo25D.Systems
             }
             var moveX = Input.GetAxis("move_left", "move_right");
             var moveY = Input.GetAxis("move_up", "move_down");
-            var jump = Input.IsActionJustPressed("move_up");
+            var jump = Input.IsActionPressed("move_up");
             var dash = Input.IsActionJustPressed("dash");
             var attack = Input.IsActionPressed("shoot");
             var reload = Input.IsActionJustPressed("reload");
