@@ -21,6 +21,26 @@ namespace Jogo25D.UI
             Game.Managers.SessionManager.Node.SessionEnded += OnSessionEnded;
             Game.Ui.StartUI.PlayButton.Node.Pressed += OnPlayPressed;
             Game.Ui.StartUI.ExitButton.Node.Pressed += OnExitPressed;
+
+            LigarMarcador(Game.Ui.StartUI.PlayButton.Node);
+            LigarMarcador(Game.Ui.StartUI.ExitButton.Node);
+        }
+
+        // O triangulo vem da cena, dentro do proprio botao. Aqui so nasce escondido e passa a
+        // seguir o mouse, igual ao menu de pause.
+        private void LigarMarcador(Button botao)
+        {
+            var marcador = botao?.GetNodeOrNull<Control>("HoverMarker");
+
+            if (marcador == null)
+            {
+                return;
+            }
+
+            marcador.Visible = false;
+
+            botao.MouseEntered += delegate { marcador.Visible = true; };
+            botao.MouseExited += delegate { marcador.Visible = false; };
         }
 
         #endregion

@@ -203,13 +203,6 @@ namespace Jogo25D.Core
 
                     public static Godot.Button Node { get; internal set; }
                 }
-
-                public static class PortInput
-                {
-                    public const string Path = "/root/Main/Ui/PauseUI/MarginContainer/Root/MenuColumn/PortInput";
-
-                    public static Godot.LineEdit Node { get; internal set; }
-                }
             }
 
             public static class HudUI
@@ -561,18 +554,11 @@ namespace Jogo25D.Core
                     public static Godot.Button Node { get; internal set; }
                 }
 
-                public static class WorldRowTemplate
-                {
-                    public const string Path = "/root/Main/Ui/WorldSelectUI/MarginContainer/Root/ListScroll/ListContainer/WorldRowTemplate";
-
-                    public static Godot.Button Node { get; internal set; }
-                }
-
                 public static class WorldRowWithDeleteTemplate
                 {
                     public const string Path = "/root/Main/Ui/WorldSelectUI/MarginContainer/Root/ListScroll/ListContainer/WorldRowWithDeleteTemplate";
 
-                    public static Godot.HBoxContainer Node { get; internal set; }
+                    public static Godot.PanelContainer Node { get; internal set; }
                 }
             }
 
@@ -596,23 +582,16 @@ namespace Jogo25D.Core
                     public static Godot.VBoxContainer Node { get; internal set; }
                 }
 
-                public static class AddressInput
+                public static class ServerRowTemplate
                 {
-                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ConnectRow/AddressInput";
+                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate";
 
-                    public static Godot.LineEdit Node { get; internal set; }
+                    public static Godot.PanelContainer Node { get; internal set; }
                 }
 
-                public static class ConnectButton
+                public static class AddConnectionButton
                 {
-                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ConnectRow/ConnectButton";
-
-                    public static Godot.Button Node { get; internal set; }
-                }
-
-                public static class WorldsButton
-                {
-                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ButtonRow/WorldsButton";
+                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ButtonRow/AddConnectionButton";
 
                     public static Godot.Button Node { get; internal set; }
                 }
@@ -630,12 +609,82 @@ namespace Jogo25D.Core
 
                     public static Godot.Label Node { get; internal set; }
                 }
+            }
 
-                public static class ServerRowTemplate
+            public static class HostModalUI
+            {
+                public const string Path = "/root/Main/Ui/HostModalUI";
+
+                public static global::Jogo25D.UI.HostModalUI Node { get; internal set; }
+
+                public static class PortInput
                 {
-                    public const string Path = "/root/Main/Ui/MultiplayerUI/MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate";
+                    public const string Path = "/root/Main/Ui/HostModalUI/Background/CenterContainer/Panel/MarginContainer/Root/PortInput";
 
-                    public static Godot.PanelContainer Node { get; internal set; }
+                    public static Godot.LineEdit Node { get; internal set; }
+                }
+
+                public static class ConfirmButton
+                {
+                    public const string Path = "/root/Main/Ui/HostModalUI/Background/CenterContainer/Panel/MarginContainer/Root/Buttons/ConfirmButton";
+
+                    public static Godot.Button Node { get; internal set; }
+                }
+
+                public static class CancelButton
+                {
+                    public const string Path = "/root/Main/Ui/HostModalUI/Background/CenterContainer/Panel/MarginContainer/Root/Buttons/CancelButton";
+
+                    public static Godot.Button Node { get; internal set; }
+                }
+            }
+
+            public static class AddConnectionUI
+            {
+                public const string Path = "/root/Main/Ui/AddConnectionUI";
+
+                public static global::Jogo25D.UI.AddConnectionUI Node { get; internal set; }
+
+                public static class DescriptionInput
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/DescriptionInput";
+
+                    public static Godot.LineEdit Node { get; internal set; }
+                }
+
+                public static class IpInput
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/IpInput";
+
+                    public static Godot.LineEdit Node { get; internal set; }
+                }
+
+                public static class PortInput
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/PortInput";
+
+                    public static Godot.LineEdit Node { get; internal set; }
+                }
+
+                public static class StatusLabel
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/StatusLabel";
+
+                    public static Godot.Label Node { get; internal set; }
+                }
+
+                public static class SaveButton
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/ButtonRow/SaveButton";
+
+                    public static Godot.Button Node { get; internal set; }
+                }
+
+                public static class BackButton
+                {
+                    public const string Path = "/root/Main/Ui/AddConnectionUI/MarginContainer/Root/ButtonRow/BackButton";
+
+                    public static Godot.Button Node { get; internal set; }
                 }
             }
 
@@ -738,7 +787,7 @@ namespace Jogo25D.Core
 
                 public static class StatusLabel
                 {
-                    public const string Path = "/root/Main/Ui/LoadingUI/Background/CenterContainer/StatusLabel";
+                    public const string Path = "/root/Main/Ui/LoadingUI/Background/CenterContainer/Column/StatusLabel";
 
                     public static Godot.Label Node { get; internal set; }
                 }
@@ -755,6 +804,27 @@ namespace Jogo25D.Core
                     public const string Path = "/root/Main/Ui/FullscreenMapUI/Background/MapPanel/MapView";
 
                     public static global::Jogo25D.UI.MinimapUI Node { get; internal set; }
+                }
+
+                public static class ZoomHint
+                {
+                    public const string Path = "/root/Main/Ui/FullscreenMapUI/Background/MapPanel/HintsColumn/ZoomHint";
+
+                    public static Godot.Panel Node { get; internal set; }
+                }
+
+                public static class PanHint
+                {
+                    public const string Path = "/root/Main/Ui/FullscreenMapUI/Background/MapPanel/HintsColumn/PanHint";
+
+                    public static Godot.Panel Node { get; internal set; }
+                }
+
+                public static class PositionLabel
+                {
+                    public const string Path = "/root/Main/Ui/FullscreenMapUI/Background/MapPanel/PositionWrap/PositionLabel";
+
+                    public static Godot.Label Node { get; internal set; }
                 }
             }
 
@@ -859,7 +929,7 @@ namespace Jogo25D.Core
                 {
                     public const string Path = "/root/Main/Ui/CharacterSelectUI/MarginContainer/Root/ListScroll/ListContainer/CharacterRowTemplate";
 
-                    public static Godot.HBoxContainer Node { get; internal set; }
+                    public static Godot.PanelContainer Node { get; internal set; }
                 }
             }
 

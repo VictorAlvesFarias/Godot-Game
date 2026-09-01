@@ -1,141 +1,120 @@
-[gd_scene format=3]
+[gd_scene load_steps=4 format=3 uid="uid://b7dgfprgskcih"]
 
-[ext_resource type="Script" path="res://Features/UI/CreateWorld/View/CreateWorldUI.cs" id="1"]
+[ext_resource type="Script" uid="uid://bs2kdfjyhwlsq" path="res://Features/UI/CreateWorld/View/CreateWorldUI.cs" id="1"]
+[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
-[sub_resource type="StyleBoxEmpty" id="Style_Empty"]
-content_margin_left = 10.0
-content_margin_top = 8.0
-content_margin_right = 10.0
-content_margin_bottom = 8.0
-
-[node name="CreateWorldMenu" type="CanvasLayer"]
-visible = false
+[node name="CreateWorldMenu" type="CanvasLayer" unique_id=1495434738]
 layer = 20
 script = ExtResource("1")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="Panel" parent="." unique_id=1612081476]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.12, 0.12, 0.12, 1)
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"ScreenTinted"
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1566487245]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("theme_pixel")
 theme_override_constants/margin_left = 80
 theme_override_constants/margin_top = 50
 theme_override_constants/margin_right = 80
 theme_override_constants/margin_bottom = 50
 
-[node name="Root" type="VBoxContainer" parent="MarginContainer"]
+[node name="Root" type="VBoxContainer" parent="MarginContainer" unique_id=684421388]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Title" type="Label" parent="MarginContainer/Root"]
+[node name="Title" type="Label" parent="MarginContainer/Root" unique_id=261157213]
 layout_mode = 2
+theme_type_variation = &"Title"
 theme_override_font_sizes/font_size = 36
 text = "Criar Mundo"
 
-[node name="NameLabel" type="Label" parent="MarginContainer/Root"]
+[node name="NameLabel" type="Label" parent="MarginContainer/Root" unique_id=615632859]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Nome do mundo"
 
-[node name="NameInput" type="LineEdit" parent="MarginContainer/Root"]
+[node name="NameInput" type="LineEdit" parent="MarginContainer/Root" unique_id=1291723526]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("Style_Empty")
-theme_override_styles/focus = SubResource("Style_Empty")
 placeholder_text = "Nome do mundo"
 
-[node name="AutosaveLabel" type="Label" parent="MarginContainer/Root"]
+[node name="AutosaveLabel" type="Label" parent="MarginContainer/Root" unique_id=317589456]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Autosave (minutos)"
 
-[node name="AutosaveInput" type="SpinBox" parent="MarginContainer/Root"]
+[node name="AutosaveInput" type="SpinBox" parent="MarginContainer/Root" unique_id=2107063259]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 min_value = 1.0
 max_value = 120.0
 value = 5.0
 
-[node name="ProceduralCheck" type="CheckBox" parent="MarginContainer/Root"]
+[node name="ProceduralCheck" type="CheckBox" parent="MarginContainer/Root" unique_id=639917832]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 button_pressed = true
 text = "Mundo procedural"
 
-[node name="ModeLabel" type="Label" parent="MarginContainer/Root"]
+[node name="ModeLabel" type="Label" parent="MarginContainer/Root" unique_id=1336386468]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Modo"
 
-[node name="ModeOption" type="OptionButton" parent="MarginContainer/Root"]
-layout_mode = 2
-
-[node name="KeyLabel" type="Label" parent="MarginContainer/Root"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
-text = "Chave de Multiplayer"
-visible = false
-
-[node name="KeyInput" type="LineEdit" parent="MarginContainer/Root"]
+[node name="ModeOption" type="OptionButton" parent="MarginContainer/Root" unique_id=1580339510]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+
+[node name="KeyLabel" type="Label" parent="MarginContainer/Root" unique_id=1122878841]
 visible = false
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
+layout_mode = 2
 theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("Style_Empty")
-theme_override_styles/focus = SubResource("Style_Empty")
+text = "Chave de Multiplayer"
+
+[node name="KeyInput" type="LineEdit" parent="MarginContainer/Root" unique_id=762919059]
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
 placeholder_text = "Chave compartilhada entre mundos"
 
-[node name="Spacer" type="Control" parent="MarginContainer/Root"]
+[node name="Spacer" type="Control" parent="MarginContainer/Root" unique_id=217892441]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root"]
+[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root" unique_id=1066281557]
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="BackButton" type="Button" parent="MarginContainer/Root/ButtonRow"]
+[node name="BackButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=1407818780]
 layout_mode = 2
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
+theme_type_variation = &"CardButton"
 theme_override_font_sizes/font_size = 18
 text = "Voltar"
-flat = true
 
-[node name="Spacer2" type="Control" parent="MarginContainer/Root/ButtonRow"]
+[node name="Spacer2" type="Control" parent="MarginContainer/Root/ButtonRow" unique_id=1229981906]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CreateButton" type="Button" parent="MarginContainer/Root/ButtonRow"]
+[node name="CreateButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=1681398427]
 layout_mode = 2
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
+theme_type_variation = &"CardButton"
 theme_override_font_sizes/font_size = 18
 text = "Criar"
-flat = true

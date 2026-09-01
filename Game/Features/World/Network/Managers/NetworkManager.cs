@@ -105,6 +105,8 @@ namespace Jogo25D.Network
 
 			Multiplayer.MultiplayerPeer = Peer;
 
+			CurrentPort = port.ToString();
+
 			var player = Dimensions.ResolveEntities(ChunkStreamingConstants.UPSIDEDOWN_ID)?.GetNodeOrNull<Player>("Player");
 
 			if (player == null)
@@ -124,6 +126,9 @@ namespace Jogo25D.Network
 
 			return port.ToString();
 		}
+
+		// Porta em que o servidor local subiu, para a interface poder mostrar em que porta esta hospedando.
+		public string CurrentPort { get; private set; } = "";
 
 		public string LastJoinError { get; private set; } = "";
 

@@ -1,9 +1,8 @@
-[gd_scene format=3 uid="uid://do3nmql37qihd"]
+[gd_scene load_steps=5 format=3 uid="uid://do3nmql37qihd"]
 
 [ext_resource type="Script" uid="uid://da54s7ax32su3" path="res://Features/UI/Loading/View/LoadingUI.cs" id="1"]
-
-[sub_resource type="StyleBoxFlat" id="Style_Overlay"]
-bg_color = Color(0.18, 0.18, 0.18, 1)
+[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://Features/UI/Common/Objects/PixelSpinner.cs" id="script_spinner"]
 
 [node name="LoadingUI" type="CanvasLayer" unique_id=1982732397]
 layer = 30
@@ -16,7 +15,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-theme_override_styles/panel = SubResource("Style_Overlay")
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"ScreenTinted"
 
 [node name="CenterContainer" type="CenterContainer" parent="Background" unique_id=1291770581]
 layout_mode = 0
@@ -25,9 +25,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="StatusLabel" type="Label" parent="Background/CenterContainer" unique_id=1165261107]
+[node name="Column" type="VBoxContainer" parent="Background/CenterContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_constants/separation = 22
+
+[node name="Spinner" type="Control" parent="Background/CenterContainer/Column"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("script_spinner")
+
+[node name="StatusLabel" type="Label" parent="Background/CenterContainer/Column" unique_id=1165261107]
+layout_mode = 2
+theme_type_variation = &"Title"
 theme_override_font_sizes/font_size = 22
 text = "Carregando"
 horizontal_alignment = 1

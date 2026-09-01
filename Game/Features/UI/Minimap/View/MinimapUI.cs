@@ -12,10 +12,10 @@ namespace Jogo25D.UI
 
         public string PlayerGroupName { get; set; } = "players";
         public float ViewRadius { get; set; } = 1200f;
-        public Color LocalPlayerColor { get; set; } = new Color(0.2f, 0.8f, 1f, 1f);
-        public Color OtherPlayerColor { get; set; } = new Color(0.6f, 0.6f, 0.6f, 1f);
-        public Color TileColor { get; set; } = new Color(0.4f, 0.4f, 0.45f, 0.9f);
-        public Color BackgroundColor { get; set; } = new Color(0.08f, 0.1f, 0.12f, 0.95f);
+        public Color LocalPlayerColor { get; set; } = new Color(0.93f, 0.72f, 0.31f, 1f);
+        public Color OtherPlayerColor { get; set; } = new Color(0.62f, 0.6f, 0.72f, 1f);
+        public Color TileColor { get; set; } = new Color(0.35f, 0.31f, 0.47f, 0.9f);
+        public Color BackgroundColor { get; set; } = new Color(0.1f, 0.09f, 0.15f, 0.95f);
         public float PlayerDotRadius { get; set; } = 4f;
 
         public Node LocalPlayer { get; set; }

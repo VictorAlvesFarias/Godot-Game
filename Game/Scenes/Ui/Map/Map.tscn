@@ -1,35 +1,25 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://druo5n6itqj7u"]
 
-[ext_resource type="Script" path="res://Features/UI/Map/View/FullscreenMapUI.cs" id="1"]
-[ext_resource type="Script" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
+[ext_resource type="Script" uid="uid://cak33moriob40" path="res://Features/UI/Map/View/FullscreenMapUI.cs" id="1"]
+[ext_resource type="Script" uid="uid://dwh48p6b8gesa" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
-[sub_resource type="StyleBoxFlat" id="Style_Overlay"]
-bg_color = Color(0.05, 0.05, 0.05, 0.92)
-
-[sub_resource type="StyleBoxFlat" id="Style_MapPanel"]
-bg_color = Color(0.08, 0.1, 0.12, 0.95)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.4, 0.4, 0.4, 1)
-
-[node name="FullscreenMapUI" type="CanvasLayer"]
-visible = false
+[node name="FullscreenMapUI" type="CanvasLayer" unique_id=1547104578]
 layer = 15
 script = ExtResource("1")
 
-[node name="Background" type="Panel" parent="."]
+[node name="Background" type="Panel" parent="." unique_id=139384879]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-theme_override_styles/panel = SubResource("Style_Overlay")
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"ScreenTinted"
 
-[node name="MapPanel" type="Panel" parent="Background"]
-anchors_preset = 8
+[node name="MapPanel" type="Panel" parent="Background" unique_id=1852841277]
+layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
@@ -40,24 +30,173 @@ offset_right = 459.5
 offset_bottom = 459.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_MapPanel")
 
-[node name="MapView" type="Control" parent="Background/MapPanel"]
-anchors_preset = 15
+[node name="MapView" type="Control" parent="Background/MapPanel" unique_id=692549512]
+clip_contents = true
+anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
-clip_contents = true
 script = ExtResource("2")
 
-[node name="HintLabel" type="Label" parent="Background"]
+[node name="TitleWrap" type="CenterContainer" parent="Background/MapPanel" unique_id=1866123024]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_top = -17.0
+offset_bottom = 17.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="Background/MapPanel/TitleWrap" unique_id=939307681]
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"TitleCardSmall"
+text = "MAPA"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HintsColumn" type="VBoxContainer" parent="Background/MapPanel" unique_id=2133210179]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -76.0
+offset_top = 16.0
+offset_right = -20.0
+offset_bottom = 140.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="ZoomHint" type="Panel" parent="Background/MapPanel/HintsColumn" unique_id=1608486125]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"SlotRound"
+
+[node name="MarginContainer" type="MarginContainer" parent="Background/MapPanel/HintsColumn/ZoomHint" unique_id=365765703]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="CenterContainer" type="CenterContainer" parent="Background/MapPanel/HintsColumn/ZoomHint/MarginContainer" unique_id=256588928]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="Background/MapPanel/HintsColumn/ZoomHint/MarginContainer/CenterContainer" unique_id=1745322674]
+texture_filter = 1
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CornerIcon" type="TextureRect" parent="Background/MapPanel/HintsColumn/ZoomHint" unique_id=2056079839]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -18.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PanHint" type="Panel" parent="Background/MapPanel/HintsColumn" unique_id=973204869]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"SlotRound"
+
+[node name="MarginContainer" type="MarginContainer" parent="Background/MapPanel/HintsColumn/PanHint" unique_id=1209800564]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="CenterContainer" type="CenterContainer" parent="Background/MapPanel/HintsColumn/PanHint/MarginContainer" unique_id=336050031]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="Background/MapPanel/HintsColumn/PanHint/MarginContainer/CenterContainer" unique_id=1290254580]
+texture_filter = 1
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CornerIcon" type="TextureRect" parent="Background/MapPanel/HintsColumn/PanHint" unique_id=1316462165]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -18.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PositionWrap" type="CenterContainer" parent="Background/MapPanel" unique_id=515353323]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -17.0
+offset_bottom = 17.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="PositionLabel" type="Label" parent="Background/MapPanel/PositionWrap" unique_id=2144842815]
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"TitleCardSmall"
+text = "X 0   Y 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HintLabel" type="Label" parent="Background" unique_id=468292777]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 300.0
+offset_right = 400.0
 offset_bottom = 40.0
-theme_override_colors/font_color = Color(1, 1, 1, 0.8)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Hint"
 text = "Pressione M para fechar - scroll pra dar zoom"

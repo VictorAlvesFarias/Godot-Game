@@ -1,0 +1,106 @@
+[gd_scene format=3 uid="uid://xtigttoj5asj"]
+
+[ext_resource type="Script" uid="uid://d3nt8u8ri3ndw" path="res://Features/UI/AddConnection/View/AddConnectionUI.cs" id="1"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="AddConnectionMenu" type="CanvasLayer" unique_id=511004727]
+layer = 20
+script = ExtResource("1")
+
+[node name="Background" type="Panel" parent="." unique_id=1331032136]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"ScreenTinted"
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1884067973]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("theme_pixel")
+theme_override_constants/margin_left = 80
+theme_override_constants/margin_top = 50
+theme_override_constants/margin_right = 80
+theme_override_constants/margin_bottom = 50
+
+[node name="Root" type="VBoxContainer" parent="MarginContainer" unique_id=63296873]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="MarginContainer/Root" unique_id=1196773606]
+layout_mode = 2
+theme_type_variation = &"Title"
+theme_override_font_sizes/font_size = 36
+text = "Adicionar Conexão"
+
+[node name="DescriptionLabel" type="Label" parent="MarginContainer/Root" unique_id=393227998]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Descrição do servidor"
+
+[node name="DescriptionInput" type="LineEdit" parent="MarginContainer/Root" unique_id=1431807536]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "Servidor do fulano"
+
+[node name="IpLabel" type="Label" parent="MarginContainer/Root" unique_id=1708885872]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "IP"
+
+[node name="IpInput" type="LineEdit" parent="MarginContainer/Root" unique_id=192660252]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "127.0.0.1"
+
+[node name="PortLabel" type="Label" parent="MarginContainer/Root" unique_id=841987975]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Porta"
+
+[node name="PortInput" type="LineEdit" parent="MarginContainer/Root" unique_id=1971231559]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+placeholder_text = "9876"
+
+[node name="StatusLabel" type="Label" parent="MarginContainer/Root" unique_id=2071203359]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.4, 0.48, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="Spacer" type="Control" parent="MarginContainer/Root" unique_id=818426751]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root" unique_id=107557939]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="BackButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=188339660]
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"CardButton"
+theme_override_font_sizes/font_size = 18
+text = "Voltar"
+
+[node name="Spacer2" type="Control" parent="MarginContainer/Root/ButtonRow" unique_id=1436948928]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SaveButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=1085479002]
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"CardButton"
+theme_override_font_sizes/font_size = 18
+text = "Salvar"

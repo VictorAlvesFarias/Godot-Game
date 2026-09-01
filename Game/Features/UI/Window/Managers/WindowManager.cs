@@ -28,8 +28,8 @@ namespace Jogo25D.UI
 
         #region Core - Cursor
 
-        // Dois ponteiros: a seta nas telas e a mira em jogo. O hotspot da seta e a ponta,
-        // no canto de cima a esquerda; o da mira e o centro.
+        // Tres ponteiros: a seta nas telas, a mira em jogo e a mao sobre o que e clicavel.
+        // O hotspot da seta e a ponta, no canto de cima a esquerda; o da mira e o centro.
         public void AplicarCursor(bool emJogo)
         {
             var caminho = emJogo ? UiConstants.CROSSHAIR_PATH : UiConstants.CURSOR_PATH;
@@ -47,7 +47,25 @@ namespace Jogo25D.UI
                 : Vector2.Zero;
 
             Input.SetCustomMouseCursor(textura, Input.CursorShape.Arrow, hotspot);
-            Input.SetCustomMouseCursor(textura, Input.CursorShape.PointingHand, hotspot);
+
+            AplicarPonteiro();
+        }
+
+
+        // A mao independe de estar em jogo ou numa tela: quem a escolhe e o proprio Control,
+        // pelo mouse_default_cursor_shape.
+        public void AplicarPonteiro()
+        {
+            var textura = GD.Load<Texture2D>(UiConstants.POINTER_PATH);
+
+            if (textura == null)
+            {
+                GD.PushError($"[WindowManager] ponteiro nao encontrado em {UiConstants.POINTER_PATH}");
+
+                return;
+            }
+
+            Input.SetCustomMouseCursor(textura, Input.CursorShape.PointingHand, new Vector2(UiConstants.POINTER_HOTSPOT_X, 0f));
         }
 
         #endregion

@@ -48,18 +48,16 @@ namespace Jogo25D.UI
                 return null;
             }
 
-            var wrapper = (HBoxContainer)template.Duplicate();
+            var wrapper = (Control)template.Duplicate();
 
             wrapper.Visible = true;
 
-            var selectButton = wrapper.GetNode<Button>("SelectButton");
+            var nameLabel = wrapper.GetNode<Label>("MarginContainer/HBoxContainer/NameLabel");
 
-            selectButton.Text = subtitle == null ? title : $"{title}\n{subtitle}";
-            selectButton.Pressed += onSelect;
+            nameLabel.Text = subtitle == null ? title : $"{title}\n{subtitle}";
 
-            var deleteButton = wrapper.GetNode<Button>("DeleteButton");
-
-            deleteButton.Pressed += onDelete;
+            wrapper.GetNode<Button>("MarginContainer/HBoxContainer/SelectButton").Pressed += onSelect;
+            wrapper.GetNode<Button>("MarginContainer/HBoxContainer/DeleteButton").Pressed += onDelete;
 
             return wrapper;
         }
@@ -68,7 +66,7 @@ namespace Jogo25D.UI
         {
             foreach (var child in Game.Ui.WorldSelectUI.ListContainer.Node.GetChildren())
             {
-                if (child.Name == "WorldRowTemplate" || child.Name == "WorldRowWithDeleteTemplate")
+                if (child.Name == "WorldRowWithDeleteTemplate")
                 {
                     ((Control)child).Visible = false;
 

@@ -1,27 +1,7 @@
-[gd_scene format=3 uid="uid://b3on12lgpr7t0"]
+[gd_scene load_steps=3 format=3 uid="uid://b3on12lgpr7t0"]
 
 [ext_resource type="Script" uid="uid://d3e4lgu1kqkvd" path="res://Features/UI/Console/View/ConsoleUI.cs" id="1_console"]
-
-[sub_resource type="StyleBoxFlat" id="Style_Background"]
-bg_color = Color(0.12, 0.12, 0.12, 0.97)
-border_color = Color(0.62, 0.36, 0.92, 0.7)
-
-[sub_resource type="StyleBoxFlat" id="Style_Suggestions"]
-bg_color = Color(0.16, 0.16, 0.16, 0.97)
-border_color = Color(0.62, 0.36, 0.92, 0.45)
-
-[sub_resource type="StyleBoxFlat" id="Style_Input"]
-bg_color = Color(0.16, 0.16, 0.16, 1)
-border_color = Color(0.62, 0.36, 0.92, 0.5)
-
-[sub_resource type="StyleBoxEmpty" id="Style_InputEmpty"]
-
-[sub_resource type="StyleBoxFlat" id="Style_SuggestionHighlight"]
-bg_color = Color(0.62, 0.36, 0.92, 0.25)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
+[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="GameConsole" type="CanvasLayer" unique_id=1342680249]
 visible = false
@@ -35,10 +15,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_Background")
+theme = ExtResource("theme_pixel")
 
 [node name="SuggestionHighlightHolder" type="Panel" parent="Background" unique_id=1858621100]
-theme_override_styles/panel = SubResource("Style_SuggestionHighlight")
+theme_type_variation = &"SlotSelected"
 
 [node name="Margin" type="MarginContainer" parent="Background" unique_id=1444312033]
 layout_mode = 1
@@ -71,14 +51,14 @@ theme_override_constants/separation = 1
 
 [node name="Normal" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=138813300]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_color = Color(0.87, 0.85, 0.93, 1)
 theme_override_font_sizes/font_size = 14
 text = "Normal message."
 autowrap_mode = 3
 
 [node name="Echo" type="Label" parent="Background/Margin/VBoxContainer/HistoryScroll/HistoryContainer" unique_id=128928779]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.53, 0.53, 0.53, 1)
+theme_override_colors/font_color = Color(0.51, 0.49, 0.6, 1)
 theme_override_font_sizes/font_size = 14
 text = "Echo message."
 autowrap_mode = 3
@@ -113,7 +93,7 @@ theme_override_constants/separation = 1
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_styles/panel = SubResource("Style_Suggestions")
+theme_type_variation = &"Box"
 
 [node name="Margin" type="MarginContainer" parent="Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel" unique_id=2035632949]
 layout_mode = 1
@@ -133,16 +113,15 @@ theme_override_constants/separation = 2
 
 [node name="SuggestionTemplate" type="Button" parent="Background/Margin/VBoxContainer/InputContainer/SuggestionsPanel/Margin/SuggestionsBar"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 13
 text = "suggestion"
 flat = true
 
 [node name="InputPanel" type="Panel" parent="Background/Margin/VBoxContainer/InputContainer" unique_id=484220949]
-custom_minimum_size = Vector2(0, 32)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_styles/panel = SubResource("Style_Input")
+theme_type_variation = &"Slot"
 
 [node name="Margin" type="MarginContainer" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel" unique_id=1345130076]
 layout_mode = 1
@@ -160,13 +139,11 @@ size_flags_vertical = 4
 theme_override_constants/separation = 6
 
 [node name="Input" type="LineEdit" parent="Background/Margin/VBoxContainer/InputContainer/InputPanel/Margin/InputRow" unique_id=260174765]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
+theme_type_variation = &"FlatField"
 theme_override_font_sizes/font_size = 14
-theme_override_styles/normal = SubResource("Style_InputEmpty")
-theme_override_styles/focus = SubResource("Style_InputEmpty")
 placeholder_text = "Digite um comando... (Tab=autocomplete, Seta=historico)"
 caret_blink = true

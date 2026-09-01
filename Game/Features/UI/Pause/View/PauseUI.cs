@@ -28,6 +28,35 @@ namespace Jogo25D.UI
             Game.Ui.PauseUI.HostButton.Node.Pressed += OnHostPressed;
             Game.Ui.PauseUI.PvpButton.Node.Pressed += OnPvpPressed;
             Game.Ui.PauseUI.MenuButton.Node.Pressed += OnMenuPressed;
+
+            foreach (var botao in new[]
+            {
+                Game.Ui.PauseUI.ResumeButton.Node,
+                Game.Ui.PauseUI.HostButton.Node,
+                Game.Ui.PauseUI.PvpButton.Node,
+                Game.Ui.PauseUI.MenuButton.Node,
+                Game.Ui.PauseUI.ExitButton.Node
+            })
+            {
+                LigarMarcador(botao);
+            }
+        }
+
+        // O triangulo vem da cena, dentro do proprio botao. Aqui so nasce escondido e passa a
+        // seguir o mouse, como o marcador do slot selecionado na hotbar.
+        private void LigarMarcador(Button botao)
+        {
+            var marcador = botao?.GetNodeOrNull<Control>("HoverMarker");
+
+            if (marcador == null)
+            {
+                return;
+            }
+
+            marcador.Visible = false;
+
+            botao.MouseEntered += delegate { marcador.Visible = true; };
+            botao.MouseExited += delegate { marcador.Visible = false; };
         }
 
         public override void _Input(InputEvent @event)
@@ -130,9 +159,9 @@ namespace Jogo25D.UI
             }
             else
             {
-                var portText = Game.Ui.PauseUI.PortInput.Node.Text.Trim();
+                Game.Ui.HostModalUI.Node.Abrir();
 
-                Game.Managers.NetworkManager.Node.CreateServer(portText);
+                return;
             }
 
             UpdateNetworkStatus();
@@ -149,9 +178,10 @@ namespace Jogo25D.UI
             bool isServer = Multiplayer.IsServer();
 
             Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;
-            Game.Ui.PauseUI.PortInput.Node.Visible = Game.Ui.PauseUI.HostButton.Node.Visible;
 
-            Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer ? "Stop server" : "Host";
+            Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer
+                ? $"Hosting {Game.Managers.NetworkManager.Node.CurrentPort}"
+                : "Host";
         }
 
         #endregion

@@ -42,6 +42,7 @@ namespace Jogo25D.UI
         public TextureRect[] HotbarIconRects { get; } = new TextureRect[8];
         public Label[] HotbarNameLabels { get; } = new Label[8];
         public Label[] HotbarQtyLabels { get; } = new Label[8];
+        public Control[] HotbarSelectedMarkers { get; } = new Control[8];
         public List<Panel> AbilitySlots { get; } = new List<Panel>();
         public List<ProgressBar> AbilityFillBars { get; } = new List<ProgressBar>();
         public List<TextureRect> AbilityIconRects { get; } = new List<TextureRect>();
@@ -158,6 +159,13 @@ namespace Jogo25D.UI
                 HotbarIconRects[i] = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
                 HotbarNameLabels[i] = panel.GetNode<Label>("MarginContainer/CenterContainer/NameLabel");
                 HotbarQtyLabels[i] = panel.GetNode<Label>("QtyLabel");
+                HotbarSelectedMarkers[i] = panel.GetNodeOrNull<Control>("SelectedMarker");
+
+                if (HotbarSelectedMarkers[i] != null)
+                {
+                    // Na cena o triangulo fica visivel para poder ser editado; em jogo quem manda e o slot selecionado.
+                    HotbarSelectedMarkers[i].Visible = false;
+                }
             }
             CallDeferred(nameof(FindLocalPlayer));
         }
@@ -779,6 +787,11 @@ public Panel DuplicateHotkeySlot(Panel template)
                 }
 
                 panel.AddThemeStyleboxOverride("panel", hotbarStyle);
+
+                if (HotbarSelectedMarkers[i] != null)
+                {
+                    HotbarSelectedMarkers[i].Visible = isSelected;
+                }
 
                 var def = ItemFactory.Create(slot?.Id);
                 var empty = def == null || slot == null;

@@ -1,7 +1,9 @@
 ﻿using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Features.Managers.Save.Resources;
 using Jogo25D.Systems;
+using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
@@ -37,6 +39,8 @@ namespace Jogo25D.UI
             StopWaitingForConnection();
 
             Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "";
+
+            PopulateConnectionRows();
         }
 
         #endregion
@@ -45,25 +49,85 @@ namespace Jogo25D.UI
 
         private void Initialize()
         {
-            Game.Ui.MultiplayerUI.ConnectButton.Node.Pressed += OnConnectPressed;
-            Game.Ui.MultiplayerUI.WorldsButton.Node.Pressed += OnWorldsPressed;
+            Game.Ui.MultiplayerUI.AddConnectionButton.Node.Pressed += OnAddConnectionPressed;
             Game.Ui.MultiplayerUI.BackButton.Node.Pressed += OnBackPressed;
 
             Game.Managers.SessionManager.Node.CharacterSelectionRequired += OnCharacterSelectionRequired;
+
+            Game.Ui.MultiplayerUI.ServerRowTemplate.Node.Visible = false;
+
+            PopulateConnectionRows();
+        }
+
+        #endregion
+
+        #region Core - Lista de conexoes
+
+        public void PopulateConnectionRows()
+        {
+            var lista = Game.Ui.MultiplayerUI.ListContainer.Node;
+            var template = Game.Ui.MultiplayerUI.ServerRowTemplate.Node;
+
+            if (lista == null || template == null)
+            {
+                return;
+            }
+
+            foreach (var filho in lista.GetChildren())
+            {
+                if (filho == template)
+                {
+                    // O template fica na cena para poder ser editado, mas nunca aparece em jogo.
+                    template.Visible = false;
+
+                    continue;
+                }
+
+                filho.QueueFree();
+            }
+
+            foreach (var conexao in SaveStorage.ListConnections())
+            {
+                lista.AddChild(CreateConnectionRow(conexao));
+            }
+        }
+
+        private Control CreateConnectionRow(ServerConnectionData conexao)
+        {
+            var linha = (Control)Game.Ui.MultiplayerUI.ServerRowTemplate.Node.Duplicate();
+
+            linha.Visible = true;
+
+            var nome = linha.GetNode<Label>("MarginContainer/HBoxContainer/WorldNameLabel");
+            var conectar = linha.GetNode<Button>("MarginContainer/HBoxContainer/ConnectButton");
+            var excluir = linha.GetNode<Button>("MarginContainer/HBoxContainer/DeleteButton");
+
+            nome.Text = $"{conexao.Description}\n{conexao.Ip}:{conexao.Port}";
+
+            conectar.Pressed += delegate { Connect($"{conexao.Ip}:{conexao.Port}"); };
+
+            excluir.Pressed += delegate
+            {
+                SaveStorage.DeleteConnection(conexao.ConnectionId);
+
+                PopulateConnectionRows();
+            };
+
+            return linha;
         }
 
         #endregion
 
         #region UI - Events
 
-        public void OnConnectPressed()
+        public void Connect(string endereco)
         {
             if (Game.Managers.WorldManager.Node == null)
             {
                 return;
             }
 
-            var address = Game.Managers.SessionManager.Node.SpawnWorldAndJoin(Game.Ui.MultiplayerUI.AddressInput.Node.Text.Trim());
+            var address = Game.Managers.SessionManager.Node.SpawnWorldAndJoin(endereco);
 
             if (string.IsNullOrEmpty(address))
             {
@@ -72,8 +136,7 @@ namespace Jogo25D.UI
                 return;
             }
 
-            Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = true;
-            Game.Ui.MultiplayerUI.StatusLabel.Node.Text = "Conectando...";
+            Game.Ui.MultiplayerUI.StatusLabel.Node.Text = $"Conectando em {endereco}...";
 
             Game.Managers.NetworkManager.Node.ConnectionSucceeded += OnConnectionSucceeded;
             Game.Managers.NetworkManager.Node.ConnectionAttemptFailed += OnConnectionAttemptFailed;
@@ -93,9 +156,10 @@ namespace Jogo25D.UI
             }
         }
 
-        public void OnWorldsPressed()
+        public void OnAddConnectionPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+            Game.Managers.RouterManager.Node.Close(this);
+            Game.Managers.RouterManager.Node.Open(Game.Ui.AddConnectionUI.Node);
         }
 
         #endregion
@@ -136,8 +200,6 @@ namespace Jogo25D.UI
                 Game.Managers.NetworkManager.Node.ConnectionSucceeded -= OnConnectionSucceeded;
                 Game.Managers.NetworkManager.Node.ConnectionAttemptFailed -= OnConnectionAttemptFailed;
             }
-
-            Game.Ui.MultiplayerUI.ConnectButton.Node.Disabled = false;
         }
 
         private void OnCharacterSelectionRequired()

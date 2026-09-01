@@ -148,18 +148,14 @@ namespace Jogo25D.UI
                 return null;
             }
 
-            var row = (HBoxContainer)template.Duplicate();
+            var row = (Control)template.Duplicate();
 
             row.Visible = true;
 
-            var selectButton = row.GetNode<Button>("SelectButton");
+            row.GetNode<Label>("MarginContainer/HBoxContainer/NameLabel").Text = title;
 
-            selectButton.Text = title;
-            selectButton.Pressed += onSelect;
-
-            var deleteButton = row.GetNode<Button>("DeleteButton");
-
-            deleteButton.Pressed += onDelete;
+            row.GetNode<Button>("MarginContainer/HBoxContainer/SelectButton").Pressed += onSelect;
+            row.GetNode<Button>("MarginContainer/HBoxContainer/DeleteButton").Pressed += onDelete;
 
             return row;
         }

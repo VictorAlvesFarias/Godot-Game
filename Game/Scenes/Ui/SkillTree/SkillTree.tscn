@@ -1,45 +1,10 @@
-[gd_scene format=3 uid="uid://bli0n422x5i74"]
+[gd_scene load_steps=4 format=3 uid="uid://bli0n422x5i74"]
 
-[ext_resource type="Script" uid="uid://cytly8gocsxrm" path="res://Features/UI/SkillTree/View/SkillTreeUI.cs" id="1"]
+[ext_resource type="Script" uid="uid://cuxvtqy6fqvbc" path="res://Features/UI/SkillTree/View/SkillTreeUI.cs" id="1"]
 [ext_resource type="Texture2D" uid="uid://dqi4c4xrpvi2s" path="res://Assets/Textures/Items/effect_poison_damage/icon.png" id="2_placeholder"]
-
-[sub_resource type="StyleBoxFlat" id="Style_ScreenBackground"]
-bg_color = Color(0.05, 0.05, 0.05, 0.92)
-
-[sub_resource type="StyleBoxEmpty" id="Style_Empty_MainPanel"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kvl7p"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-
-[sub_resource type="StyleBoxFlat" id="Style_SlotNormal"]
-bg_color = Color(0.16, 0.16, 0.16, 0.85)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.4, 0.4, 0.4, 1)
-
-[sub_resource type="StyleBoxFlat" id="Style_SlotLocked"]
-bg_color = Color(0.08, 0.08, 0.08, 0.85)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.25, 0.25, 0.25, 1)
-
-[sub_resource type="StyleBoxFlat" id="Style_SlotMaxed"]
-bg_color = Color(0.25, 0.16, 0.35, 0.85)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.62, 0.36, 0.92, 1)
+[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="SkillTreeUI" type="CanvasLayer" unique_id=253909130]
-visible = false
 layer = 20
 script = ExtResource("1")
 
@@ -49,10 +14,12 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_ScreenBackground")
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"Screen"
 
 [node name="MaxedStyleHolder" type="Panel" parent="Background" unique_id=1172448300]
-theme_override_styles/panel = SubResource("Style_SlotMaxed")
+layout_mode = 0
+theme_type_variation = &"SlotSelected"
 
 [node name="MainPanel" type="PanelContainer" parent="Background" unique_id=877619220]
 layout_mode = 0
@@ -66,7 +33,6 @@ offset_right = 459.5
 offset_bottom = 459.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = SubResource("Style_Empty_MainPanel")
 
 [node name="MarginContainer" type="MarginContainer" parent="Background/MainPanel" unique_id=1587443857]
 layout_mode = 2
@@ -79,16 +45,24 @@ theme_override_constants/margin_bottom = 20
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Background/MainPanel/MarginContainer/Root" unique_id=2054268960]
+[node name="TitleWrap" type="MarginContainer" parent="Background/MainPanel/MarginContainer/Root" unique_id=2054268961]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+size_flags_horizontal = 4
+theme_override_constants/margin_top = -53
+theme_override_constants/margin_bottom = 11
+
+[node name="Title" type="Label" parent="Background/MainPanel/MarginContainer/Root/TitleWrap" unique_id=2054268960]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"TitleCardSmall"
+z_index = 20
 text = "ÁRVORE DE HABILIDADES"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="PointsLabel" type="Label" parent="Background/MainPanel/MarginContainer/Root" unique_id=792892712]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 13
+theme_type_variation = &"Hint"
 horizontal_alignment = 1
 
 [node name="Toolbar" type="HBoxContainer" parent="Background/MainPanel/MarginContainer/Root" unique_id=820935936]
@@ -96,15 +70,10 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="SearchInput" type="LineEdit" parent="Background/MainPanel/MarginContainer/Root/Toolbar" unique_id=1646747063]
-custom_minimum_size = Vector2(160, 0)
+custom_minimum_size = Vector2(160, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxEmpty_kvl7p")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_kvl7p")
-placeholder_text = "Port"
+placeholder_text = "Buscar"
 
 [node name="ResetButton" type="Button" parent="Background/MainPanel/MarginContainer/Root/Toolbar" unique_id=1761242456]
 layout_mode = 2
@@ -129,10 +98,7 @@ custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_styles/normal = SubResource("Style_SlotNormal")
-theme_override_styles/hover = SubResource("Style_SlotNormal")
-theme_override_styles/pressed = SubResource("Style_SlotNormal")
-theme_override_styles/disabled = SubResource("Style_SlotLocked")
+theme_type_variation = &"SkillSlot"
 clip_text = true
 
 [node name="MarginContainer" type="MarginContainer" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate" unique_id=328485224]
@@ -177,7 +143,7 @@ autowrap_mode = 2
 
 [node name="LevelLabel" type="Label" parent="Background/MainPanel/MarginContainer/Root/Scroll/GridContainer/SlotTemplate/MarginContainer/Box" unique_id=1644978797]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.9, 0.3, 1)
-theme_override_font_sizes/font_size = 11
+theme_type_variation = &"Quantity"
+theme_override_font_sizes/font_size = 12
 text = "0/0"
 horizontal_alignment = 1

@@ -1,158 +1,125 @@
-[gd_scene format=3]
+[gd_scene load_steps=4 format=3 uid="uid://bbai8tstmimsa"]
 
-[ext_resource type="Script" path="res://Features/UI/Multiplayer/View/MultiplayerUI.cs" id="1"]
+[ext_resource type="Script" uid="uid://cac2ymli8x48c" path="res://Features/UI/Multiplayer/View/MultiplayerUI.cs" id="1"]
+[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
-[sub_resource type="StyleBoxEmpty" id="Style_Empty"]
-content_margin_left = 10.0
-content_margin_top = 8.0
-content_margin_right = 10.0
-content_margin_bottom = 8.0
-
-[sub_resource type="StyleBoxFlat" id="Style_ServerRow"]
-bg_color = Color(1, 1, 1, 0.06)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 1, 1, 0.15)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[node name="MultiplayerMenu" type="CanvasLayer"]
-visible = false
+[node name="MultiplayerMenu" type="CanvasLayer" unique_id=1343173139]
 layer = 20
 script = ExtResource("1")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="Panel" parent="." unique_id=542383007]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.12, 0.12, 0.12, 1)
+theme = ExtResource("theme_pixel")
+theme_type_variation = &"ScreenTinted"
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1027181047]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("theme_pixel")
 theme_override_constants/margin_left = 80
 theme_override_constants/margin_top = 50
 theme_override_constants/margin_right = 80
 theme_override_constants/margin_bottom = 50
 
-[node name="Root" type="VBoxContainer" parent="MarginContainer"]
+[node name="Root" type="VBoxContainer" parent="MarginContainer" unique_id=1798674542]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="MarginContainer/Root"]
+[node name="Title" type="Label" parent="MarginContainer/Root" unique_id=1932542139]
 layout_mode = 2
+theme_type_variation = &"Title"
 theme_override_font_sizes/font_size = 36
 text = "Multiplayer"
 
-[node name="SearchInput" type="LineEdit" parent="MarginContainer/Root"]
+[node name="SearchInput" type="LineEdit" parent="MarginContainer/Root" unique_id=368118893]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("Style_Empty")
-theme_override_styles/focus = SubResource("Style_Empty")
 placeholder_text = "Pesquisar mundos..."
 
-[node name="ListScroll" type="ScrollContainer" parent="MarginContainer/Root"]
+[node name="ListScroll" type="ScrollContainer" parent="MarginContainer/Root" unique_id=878964731]
 custom_minimum_size = Vector2(0, 320)
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="ListContainer" type="VBoxContainer" parent="MarginContainer/Root/ListScroll"]
+[node name="ListContainer" type="VBoxContainer" parent="MarginContainer/Root/ListScroll" unique_id=1678800019]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="ServerRowTemplate" type="PanelContainer" parent="MarginContainer/Root/ListScroll/ListContainer"]
+[node name="ServerRowTemplate" type="PanelContainer" parent="MarginContainer/Root/ListScroll/ListContainer" unique_id=696906439]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-theme_override_styles/panel = SubResource("Style_ServerRow")
+theme_type_variation = &"Box"
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate"]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate" unique_id=1926077233]
 layout_mode = 2
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 10
+theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_bottom = 4
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer" unique_id=1509903921]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="WorldNameLabel" type="Label" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer/HBoxContainer"]
+[node name="WorldNameLabel" type="Label" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer/HBoxContainer" unique_id=1377116814]
 layout_mode = 2
 size_flags_horizontal = 3
-vertical_alignment = 1
-text = "Mundo"
-
-[node name="ConnectRow" type="HBoxContainer" parent="MarginContainer/Root"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="AddressInput" type="LineEdit" parent="MarginContainer/Root/ConnectRow"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_placeholder_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 16
-theme_override_styles/normal = SubResource("Style_Empty")
-theme_override_styles/focus = SubResource("Style_Empty")
-placeholder_text = "IP:Porta"
+text = "Mundo"
+vertical_alignment = 1
 
-[node name="ConnectButton" type="Button" parent="MarginContainer/Root/ConnectRow"]
+[node name="ConnectButton" type="Button" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(110, 36)
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_font_sizes/font_size = 18
-text = "Conectar"
-flat = true
-
-[node name="StatusLabel" type="Label" parent="MarginContainer/Root"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.3, 0.3, 1)
+theme_type_variation = &"CardButton"
 theme_override_font_sizes/font_size = 14
-text = ""
+text = "Conectar"
 
-[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root"]
+[node name="DeleteButton" type="Button" parent="MarginContainer/Root/ListScroll/ListContainer/ServerRowTemplate/MarginContainer/HBoxContainer"]
+custom_minimum_size = Vector2(90, 36)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"Danger"
+theme_override_font_sizes/font_size = 14
+text = "Excluir"
+
+[node name="StatusLabel" type="Label" parent="MarginContainer/Root" unique_id=575505653]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.4, 0.48, 1)
+theme_override_font_sizes/font_size = 14
+
+[node name="ButtonRow" type="HBoxContainer" parent="MarginContainer/Root" unique_id=2092970616]
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="BackButton" type="Button" parent="MarginContainer/Root/ButtonRow"]
+[node name="BackButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=95003234]
 layout_mode = 2
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
+theme_type_variation = &"CardButton"
 theme_override_font_sizes/font_size = 18
 text = "Voltar"
-flat = true
 
-[node name="WorldsButton" type="Button" parent="MarginContainer/Root/ButtonRow"]
+[node name="AddConnectionButton" type="Button" parent="MarginContainer/Root/ButtonRow" unique_id=796576807]
 layout_mode = 2
 focus_mode = 0
 mouse_default_cursor_shape = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.62, 0.36, 0.92, 1)
-theme_override_colors/font_hover_color = Color(0.62, 0.36, 0.92, 1)
+theme_type_variation = &"CardButton"
 theme_override_font_sizes/font_size = 18
-text = "Mundos"
-flat = true
+text = "Adicionar Conexão"

@@ -84,6 +84,70 @@ namespace Jogo25D.Systems
             DeleteIfExists($"{SavesConstants.CHARACTERS_DIR}/{characterId}.json");
         }
 
+        #region Core - Conexoes salvas
+
+        public static List<ServerConnectionData> ListConnections()
+        {
+            var result = new List<ServerConnectionData>();
+
+            using var dir = DirAccess.Open(SavesConstants.CONNECTIONS_DIR);
+
+            if (dir == null)
+            {
+                return result;
+            }
+
+            dir.ListDirBegin();
+
+            for (var fileName = dir.GetNext(); fileName != ""; fileName = dir.GetNext())
+            {
+                if (dir.CurrentIsDir() || !fileName.EndsWith(".json"))
+                {
+                    continue;
+                }
+
+                var connection = ReadJson<ServerConnectionData>($"{SavesConstants.CONNECTIONS_DIR}/{fileName}");
+
+                if (connection != null)
+                {
+                    result.Add(connection);
+                }
+            }
+
+            dir.ListDirEnd();
+
+            return result;
+        }
+
+        public static ServerConnectionData CreateConnection(string description, string ip, int port)
+        {
+            var connection = new ServerConnectionData
+            {
+                ConnectionId = Guid.NewGuid().ToString(),
+                Description = description,
+                Ip = ip,
+                Port = port,
+            };
+
+            SaveConnection(connection);
+
+            return connection;
+        }
+
+        public static void SaveConnection(ServerConnectionData connection)
+        {
+            EnsureDir(SavesConstants.CONNECTIONS_DIR);
+
+            WriteJson(connection, $"{SavesConstants.CONNECTIONS_DIR}/{connection.ConnectionId}.json");
+        }
+
+        public static void DeleteConnection(string connectionId)
+        {
+            DeleteIfExists($"{SavesConstants.CONNECTIONS_DIR}/{connectionId}.json");
+        }
+
+        #endregion
+
         public static List<CharacterSaveData> ListServerCharacters(string multiplayerKey)
         {
             return ListCharactersAt(ServerCharactersDirFor(multiplayerKey));

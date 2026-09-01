@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/WorldSelect/WorldSelect.tscn" id="8_worldselect"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Multiplayer/Multiplayer.tscn" id="9_multiplayer"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Common/ErrorModal.tscn" id="10_errormodal"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/Common/HostModal.tscn" id="18_hostmodal"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/AddConnection/AddConnection.tscn" id="19_addconnection"]
 [ext_resource type="PackedScene" uid="uid://bli0n422x5i74" path="res://Scenes/Ui/SkillTree/SkillTree.tscn" id="11_skilltree"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/DeathScreen/DeathScreen.tscn" id="12_deathscreen"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Loading/Loading.tscn" id="13_loading"]
@@ -61,4 +63,10 @@ visible = false
 visible = false
 
 [node name="CreateCharacterUI" parent="." unique_id=1773230627 instance=ExtResource("17_createcharacter")]
+visible = false
+
+[node name="HostModalUI" parent="." instance=ExtResource("18_hostmodal")]
+visible = false
+
+[node name="AddConnectionUI" parent="." instance=ExtResource("19_addconnection")]
 visible = false

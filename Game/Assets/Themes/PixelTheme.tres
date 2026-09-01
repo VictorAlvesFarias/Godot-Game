@@ -71,13 +71,82 @@ border_width_bottom = 4
 border_color = Color(0.93, 0.72, 0.31, 1)
 anti_aliasing = false
 
-[sub_resource type="StyleBoxFlat" id="S_Arraste"]
-bg_color = Color(0.19, 0.17, 0.27, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.93, 0.72, 0.31, 1)
+[sub_resource type="StyleBoxFlat" id="S_TitleCardSmall"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.35, 0.25, 0.09, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoCardD"]
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+bg_color = Color(0.45, 0.39, 0.28, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.3, 0.25, 0.15, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoCardH"]
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 0.83, 0.45, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.52, 0.37, 0.13, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoCard"]
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.35, 0.25, 0.09, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_BotaoCardP"]
+content_margin_left = 20.0
+content_margin_top = 8.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+bg_color = Color(0.76, 0.57, 0.23, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.35, 0.25, 0.09, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_ChargesBadge"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.93, 0.72, 0.31, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.25, 0.09, 1)
 anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="S_Perigo"]
@@ -93,6 +162,93 @@ border_width_bottom = 4
 border_color = Color(0.72, 0.26, 0.34, 1)
 anti_aliasing = false
 
+[sub_resource type="StyleBoxFlat" id="S_PerigoHover"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.28, 0.1, 0.14, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.4, 0.48, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Arraste"]
+bg_color = Color(0.19, 0.17, 0.27, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_CampoFoco"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.08, 0.07, 0.12, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Campo"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.08, 0.07, 0.12, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Linha"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_LinhaHover"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.19, 0.17, 0.27, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_LinhaSel"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.2, 0.18, 0.28, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
 [sub_resource type="StyleBoxFlat" id="S_Menu"]
 content_margin_left = 6.0
 content_margin_top = 6.0
@@ -104,6 +260,16 @@ border_width_top = 4
 border_width_right = 4
 border_width_bottom = 4
 border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxEmpty" id="S_OpcaoMenu"]
+content_margin_left = 0.0
+content_margin_top = 4.0
+content_margin_right = 0.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="S_Sobreposicao"]
+bg_color = Color(0.03, 0.03, 0.05, 0.45)
 anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="S_Janela"]
@@ -123,13 +289,17 @@ anti_aliasing = false
 bg_color = Color(0.03, 0.03, 0.05, 0.86)
 anti_aliasing = false
 
-[sub_resource type="StyleBoxFlat" id="S_Slot"]
-bg_color = Color(0.13, 0.12, 0.19, 1)
+[sub_resource type="StyleBoxFlat" id="S_TelaTingida"]
+bg_color = Color(0.09, 0.08, 0.13, 0.88)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotLocked"]
+bg_color = Color(0.08, 0.07, 0.12, 1)
 border_width_left = 4
 border_width_top = 4
 border_width_right = 4
 border_width_bottom = 4
-border_color = Color(0.27, 0.25, 0.36, 1)
+border_color = Color(0.18, 0.17, 0.24, 1)
 anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="S_SlotHover"]
@@ -139,6 +309,52 @@ border_width_top = 4
 border_width_right = 4
 border_width_bottom = 4
 border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_Slot"]
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.27, 0.25, 0.36, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotSel"]
+bg_color = Color(0.2, 0.18, 0.28, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotRound"]
+bg_color = Color(0.13, 0.12, 0.19, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.35, 0.31, 0.47, 1)
+corner_radius_top_left = 99
+corner_radius_top_right = 99
+corner_radius_bottom_right = 99
+corner_radius_bottom_left = 99
+corner_detail = 20
+anti_aliasing = false
+
+[sub_resource type="StyleBoxFlat" id="S_SlotRoundHover"]
+bg_color = Color(0.22, 0.19, 0.3, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.93, 0.72, 0.31, 1)
+corner_radius_top_left = 99
+corner_radius_top_right = 99
+corner_radius_bottom_right = 99
+corner_radius_bottom_left = 99
+corner_detail = 20
 anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="S_TitleCard"]
@@ -166,98 +382,6 @@ anti_aliasing = false
 bg_color = Color(0.06, 0.05, 0.09, 1)
 anti_aliasing = false
 
-[sub_resource type="StyleBoxFlat" id="S_PerigoHover"]
-content_margin_left = 14.0
-content_margin_top = 10.0
-content_margin_right = 14.0
-content_margin_bottom = 10.0
-bg_color = Color(0.28, 0.10, 0.14, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.93, 0.40, 0.48, 1)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
-anti_aliasing = false
-
-[sub_resource type="StyleBoxFlat" id="S_SlotSel"]
-bg_color = Color(0.20, 0.18, 0.28, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.93, 0.72, 0.31, 1)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
-anti_aliasing = false
-
-[sub_resource type="StyleBoxFlat" id="S_SlotRound"]
-bg_color = Color(0.13, 0.12, 0.19, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.35, 0.31, 0.47, 1)
-corner_radius_top_left = 99
-corner_radius_top_right = 99
-corner_radius_bottom_right = 99
-corner_radius_bottom_left = 99
-anti_aliasing = false
-corner_detail = 20
-
-[sub_resource type="StyleBoxFlat" id="S_SlotRoundHover"]
-bg_color = Color(0.22, 0.19, 0.30, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.93, 0.72, 0.31, 1)
-corner_radius_top_left = 99
-corner_radius_top_right = 99
-corner_radius_bottom_right = 99
-corner_radius_bottom_left = 99
-anti_aliasing = false
-corner_detail = 20
-
-[sub_resource type="StyleBoxFlat" id="S_TitleCardSmall"]
-content_margin_left = 16.0
-content_margin_top = 6.0
-content_margin_right = 16.0
-content_margin_bottom = 6.0
-bg_color = Color(0.93, 0.72, 0.31, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.35, 0.25, 0.09, 1)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
-anti_aliasing = false
-
-[sub_resource type="StyleBoxFlat" id="S_ChargesBadge"]
-content_margin_left = 4.0
-content_margin_top = 1.0
-content_margin_right = 4.0
-content_margin_bottom = 1.0
-bg_color = Color(0.93, 0.72, 0.31, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.35, 0.25, 0.09, 1)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
-anti_aliasing = false
-
 [resource]
 default_font = ExtResource("1_font")
 default_font_size = 18
@@ -266,41 +390,93 @@ Box/styles/panel = SubResource("S_Caixa")
 Button/colors/font_color = Color(0.87, 0.85, 0.93, 1)
 Button/colors/font_disabled_color = Color(0.51, 0.49, 0.6, 1)
 Button/colors/font_hover_color = Color(0.93, 0.72, 0.31, 1)
-Button/colors/font_outline_color = Color(0, 0, 0, 1)
 Button/colors/font_pressed_color = Color(0.93, 0.72, 0.31, 1)
-Button/constants/outline_size = 4
 Button/styles/disabled = SubResource("S_BotaoD")
 Button/styles/focus = SubResource("S_Vazio")
 Button/styles/hover = SubResource("S_BotaoH")
 Button/styles/normal = SubResource("S_BotaoN")
 Button/styles/pressed = SubResource("S_BotaoP")
+CardBox/base_type = &"PanelContainer"
+CardBox/styles/panel = SubResource("S_TitleCardSmall")
+CardButton/base_type = &"Button"
+CardButton/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+CardButton/colors/font_disabled_color = Color(0.28, 0.24, 0.16, 1)
+CardButton/colors/font_hover_color = Color(0.16, 0.11, 0.04, 1)
+CardButton/colors/font_pressed_color = Color(0.16, 0.11, 0.04, 1)
+CardButton/styles/disabled = SubResource("S_BotaoCardD")
+CardButton/styles/focus = SubResource("S_Vazio")
+CardButton/styles/hover = SubResource("S_BotaoCardH")
+CardButton/styles/normal = SubResource("S_BotaoCard")
+CardButton/styles/pressed = SubResource("S_BotaoCardP")
+ChargesBadge/base_type = &"Label"
+ChargesBadge/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+ChargesBadge/font_sizes/font_size = 12
+ChargesBadge/styles/normal = SubResource("S_ChargesBadge")
+CheckBox/colors/font_color = Color(0.87, 0.85, 0.93, 1)
+CheckBox/colors/font_hover_color = Color(0.93, 0.72, 0.31, 1)
+CheckBox/colors/font_pressed_color = Color(0.93, 0.72, 0.31, 1)
+CheckBox/styles/focus = SubResource("S_Vazio")
+CheckBox/styles/hover = SubResource("S_Vazio")
+CheckBox/styles/normal = SubResource("S_Vazio")
+CheckBox/styles/pressed = SubResource("S_Vazio")
+Danger/base_type = &"Button"
+Danger/colors/font_color = Color(0.93, 0.62, 0.66, 1)
+Danger/colors/font_hover_color = Color(1, 0.85, 0.87, 1)
+Danger/colors/font_pressed_color = Color(1, 0.85, 0.87, 1)
+Danger/styles/disabled = SubResource("S_Perigo")
+Danger/styles/focus = SubResource("S_Vazio")
+Danger/styles/hover = SubResource("S_PerigoHover")
+Danger/styles/normal = SubResource("S_Perigo")
+Danger/styles/pressed = SubResource("S_PerigoHover")
+DangerBox/base_type = &"Panel"
+DangerBox/styles/panel = SubResource("S_Perigo")
 DragPreview/base_type = &"Panel"
 DragPreview/styles/panel = SubResource("S_Arraste")
 DropLabel/base_type = &"Label"
 DropLabel/colors/font_color = Color(0.85, 0.35, 0.42, 1)
-DropLabel/colors/font_outline_color = Color(0, 0, 0, 1)
-DropLabel/constants/outline_size = 4
 DropLabel/font_sizes/font_size = 16
-DropSlotRound/base_type = &"Panel"
-SlotRound/styles/panel = SubResource("S_SlotRound")
-SlotRoundHover/base_type = &"Panel"
-SlotRoundHover/styles/panel = SubResource("S_SlotRoundHover")
-SlotSelected/base_type = &"Panel"
-SlotSelected/styles/panel = SubResource("S_SlotSel")
-SlotHover/base_type = &"Panel"
-DropSlotHover/styles/panel = SubResource("S_PerigoHover")
 DropSlot/base_type = &"Panel"
 DropSlot/styles/panel = SubResource("S_Perigo")
+DropSlotHover/styles/panel = SubResource("S_PerigoHover")
+DropSlotRound/base_type = &"Panel"
+FlatField/base_type = &"LineEdit"
+FlatField/styles/focus = SubResource("S_Vazio")
+FlatField/styles/normal = SubResource("S_Vazio")
 HSeparator/colors/color = Color(0.27, 0.25, 0.36, 1)
 HSeparator/constants/separation = 6
 Hint/base_type = &"Label"
 Hint/colors/font_color = Color(0.51, 0.49, 0.6, 1)
 Hint/font_sizes/font_size = 13
 Label/colors/font_color = Color(0.87, 0.85, 0.93, 1)
-Label/colors/font_outline_color = Color(0, 0, 0, 1)
-Label/constants/outline_size = 4
+LineEdit/colors/caret_color = Color(0.93, 0.72, 0.31, 1)
+LineEdit/colors/font_color = Color(0.87, 0.85, 0.93, 1)
+LineEdit/colors/font_placeholder_color = Color(0.51, 0.49, 0.6, 1)
+LineEdit/font_sizes/font_size = 14
+LineEdit/styles/focus = SubResource("S_CampoFoco")
+LineEdit/styles/normal = SubResource("S_Campo")
+ListRow/base_type = &"Button"
+ListRow/styles/disabled = SubResource("S_Linha")
+ListRow/styles/focus = SubResource("S_Vazio")
+ListRow/styles/hover = SubResource("S_LinhaHover")
+ListRow/styles/normal = SubResource("S_Linha")
+ListRow/styles/pressed = SubResource("S_LinhaSel")
 Menu/base_type = &"Panel"
 Menu/styles/panel = SubResource("S_Menu")
+MenuOption/base_type = &"Button"
+MenuOption/styles/disabled = SubResource("S_OpcaoMenu")
+MenuOption/styles/focus = SubResource("S_OpcaoMenu")
+MenuOption/styles/hover = SubResource("S_OpcaoMenu")
+MenuOption/styles/normal = SubResource("S_OpcaoMenu")
+MenuOption/styles/pressed = SubResource("S_OpcaoMenu")
+OptionButton/colors/font_color = Color(0.87, 0.85, 0.93, 1)
+OptionButton/colors/font_hover_color = Color(0.93, 0.72, 0.31, 1)
+OptionButton/colors/font_pressed_color = Color(0.93, 0.72, 0.31, 1)
+OptionButton/styles/focus = SubResource("S_Vazio")
+OptionButton/styles/hover = SubResource("S_BotaoH")
+OptionButton/styles/normal = SubResource("S_BotaoN")
+OptionButton/styles/pressed = SubResource("S_BotaoP")
+Overlay/base_type = &"Panel"
+Overlay/styles/panel = SubResource("S_Sobreposicao")
 Panel/styles/panel = SubResource("S_Janela")
 PanelContainer/styles/panel = SubResource("S_Janela")
 Quantity/base_type = &"Label"
@@ -308,38 +484,36 @@ Quantity/colors/font_color = Color(0.93, 0.72, 0.31, 1)
 Quantity/font_sizes/font_size = 15
 Screen/base_type = &"Panel"
 Screen/styles/panel = SubResource("S_Tela")
+ScreenTinted/base_type = &"Panel"
+ScreenTinted/styles/panel = SubResource("S_TelaTingida")
 ScrollContainer/styles/panel = SubResource("S_Vazio")
+SkillSlot/base_type = &"Button"
+SkillSlot/styles/disabled = SubResource("S_SlotLocked")
+SkillSlot/styles/focus = SubResource("S_Vazio")
+SkillSlot/styles/hover = SubResource("S_SlotHover")
+SkillSlot/styles/normal = SubResource("S_Slot")
+SkillSlot/styles/pressed = SubResource("S_SlotSel")
 Slot/base_type = &"Panel"
 Slot/styles/panel = SubResource("S_Slot")
+SlotHover/base_type = &"Panel"
+SlotHover/styles/panel = SubResource("S_SlotHover")
 SlotRound/base_type = &"Panel"
 SlotRound/styles/panel = SubResource("S_SlotRound")
 SlotRoundHover/base_type = &"Panel"
 SlotRoundHover/styles/panel = SubResource("S_SlotRoundHover")
 SlotSelected/base_type = &"Panel"
 SlotSelected/styles/panel = SubResource("S_SlotSel")
-SlotHover/base_type = &"Panel"
-SlotHover/styles/panel = SubResource("S_SlotHover")
 Title/base_type = &"Label"
 Title/colors/font_color = Color(0.93, 0.72, 0.31, 1)
 Title/font_sizes/font_size = 22
-ChargesBadge/base_type = &"Label"
-ChargesBadge/styles/normal = SubResource("S_ChargesBadge")
-ChargesBadge/colors/font_color = Color(0.16, 0.11, 0.04, 1)
-ChargesBadge/constants/outline_size = 0
-ChargesBadge/font_sizes/font_size = 12
-CardBox/base_type = &"PanelContainer"
-CardBox/styles/panel = SubResource("S_TitleCardSmall")
-TitleCardSmall/base_type = &"Label"
-TitleCardSmall/styles/normal = SubResource("S_TitleCardSmall")
-TitleCardSmall/colors/font_color = Color(0.16, 0.11, 0.04, 1)
-TitleCardSmall/constants/outline_size = 0
-TitleCardSmall/font_sizes/font_size = 14
 TitleCard/base_type = &"Label"
 TitleCard/colors/font_color = Color(0.16, 0.11, 0.04, 1)
-TitleCard/colors/font_outline_color = Color(0.93, 0.72, 0.31, 1)
-TitleCard/constants/outline_size = 0
 TitleCard/font_sizes/font_size = 20
 TitleCard/styles/normal = SubResource("S_TitleCard")
+TitleCardSmall/base_type = &"Label"
+TitleCardSmall/colors/font_color = Color(0.16, 0.11, 0.04, 1)
+TitleCardSmall/font_sizes/font_size = 14
+TitleCardSmall/styles/normal = SubResource("S_TitleCardSmall")
 Transparent/base_type = &"PanelContainer"
 Transparent/styles/panel = SubResource("S_Vazio")
 VScrollBar/styles/grabber = SubResource("S_BarraGrab")
