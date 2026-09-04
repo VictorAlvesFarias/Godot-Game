@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://Features/UI/Window/Managers/WindowManager.cs" id="1_7ktwl"]
+[ext_resource type="Script" path="res://Features/World/Light/Managers/LightMapManager.cs" id="lightmap_1"]
 [ext_resource type="Script" path="res://Features/UI/Router/Managers/RouterManager.cs" id="9_router"]
 [ext_resource type="Script" path="res://Features/World/Core/Managers/WorldManager.cs" id="3_b871k"]
 [ext_resource type="Script" path="res://Features/World/Chunks/Managers/TileStreamingManager.cs" id="4_chunkstream"]
@@ -25,6 +26,9 @@ script = ExtResource("7_network")
 
 [node name="SessionManager" type="Node" parent="." unique_id=1007702766]
 script = ExtResource("8_session")
+
+[node name="LightMapManager" type="Node" parent="." unique_id=1007702768]
+script = ExtResource("lightmap_1")
 
 [node name="DimensionManager" type="Node" parent="." unique_id=1007702764]
 script = ExtResource("6_dimension")

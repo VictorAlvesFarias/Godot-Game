@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="LightMapData" format=3 uid="uid://dejmyfrw0ttci"]
+
+[ext_resource type="Script" uid="uid://cv53hboh06phq" path="res://Features/World/Light/Resources/LightMapData.cs" id="1_eycpx"]
+
+[resource]
+script = ExtResource("1_eycpx")
+SunAngleDegrees = -24.5
+SolidCost = 3
+MinBrightness = 0.3
+MaxLightLevel = 14
+SunBlockStrength = 1.0
+ShadowSoftness = 0.0
+AmbientInfluence = 0.0
+ShadowFloor = 0.0
+AirShadowStrength = 0.89

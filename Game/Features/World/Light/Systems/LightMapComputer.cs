@@ -1,0 +1,585 @@
+using Godot;
+using Jogo25D.Constants;
+using System.Collections.Generic;
+
+namespace Jogo25D.Light
+{
+    // Nucleo do mapa de luz: recebe uma grade de custos e devolve a imagem de brilho. Nao e Node,
+    // nao le singleton e nao conhece dimensao, camera nem cena - por isso o mesmo calculo roda no
+    // editor e em jogo, sem [Tool] nenhum aqui dentro. Quem o usa e o LightMap2D, o no autorado
+    // em cada cena de dimensao.
+    //
+    // Faz a luz do ceu, e a pergunta que ela responde e QUANTO DE CEU CADA CELULA ENXERGA.
+    //
+    // Isto ja foi uma inundacao em fila, e a pergunta era outra: a quantos passos do ceu a celula
+    // esta. Um campo de distancia cobra por TODO passo, inclusive os que atravessam ar vazio -
+    // entao o tronco de uma arvore de copa larga ficava preto por estar dez celulas de vao aberto
+    // longe da clareira, mesmo enxergando meio horizonte de ceu limpo dos dois lados. Nao havia
+    // termo nenhum no calculo que representasse "esta celula ve o ceu".
+    //
+    // Sao duas contas, e de proposito:
+    //
+    //   AR      lanca um leque de raios para cima e acumula o custo SO da materia que atravessa.
+    //           O ar e de graca. E o quanto de ceu aquele ponto enxerga.
+    //
+    //   MATERIA nao lanca raio nenhum. Ela e semeada pelo ar encostado nela e escurece para dentro,
+    //           celula a celula. E o quao FUNDO dentro da materia o ponto esta.
+    //
+    // A segunda ja foi um leque tambem, e ai a mesma forma sombreava diferente conforme o que
+    // existia LONGE dela: um bloco com tronco pendurado ficava com o nucleo escuro empurrado para
+    // baixo, porque os raios da face de baixo iam bater no chao doze celulas abaixo. Profundidade
+    // dentro da materia nao pode depender de nada que esta fora dela - por isso ela virou uma
+    // erosao da propria forma, que da nucleo centrado em qualquer bloco.
+    //
+    // Caverna continua preta porque o ar dela ja e preto e e ele que semeia; tronco acende porque
+    // o ar ao lado dele ve ceu; miolo de copa escurece porque esta fundo; e o terreno escurece com
+    // a profundidade pelo mesmo motivo.
+    //
+    // A SOMBRA PROJETADA nao mora mais aqui: ela e feita no shader, por fragmento. Esta classe so
+    // entrega a textura de dados que ele consome. O plano e o registro dos defeitos ja encontrados
+    // estao em Docs/LightMapShadowPlan.md.
+    //
+    // O estado (arrays e fila) e por instancia: cada no tem a sua calculadora, entao as janelas
+    // podem ter tamanhos diferentes sem uma realocar a da outra a cada quadro.
+    public sealed class LightMapComputer
+    {
+        #region Static properties
+
+        // Quantos raios formam o leque, e quantos deles decidem o brilho. Ver VisaoDoCeu.
+        private const int Amostras = 16;
+        private const int Melhores = Amostras / 4;
+
+        #endregion
+
+        #region Dinamic properties
+
+        // Desligado, o terreno fica todo em brilho cheio.
+        public bool DiffuseEnabled { get; set; } = true;
+
+        // A escala inteira em que a luz e contada. Junto com SolidCost decide ate onde ela chega.
+        public int MaxLevel { get; set; } = LightMapConstants.MAX_LEVEL;
+
+        // Custo de atravessar um bloco. Quanto maior, mais rapido escurece com a profundidade.
+        public int SolidCost { get; set; } = LightMapConstants.COST_SOLID;
+
+        // Piso de luminosidade: sem isso o fundo do mundo fica preto absoluto.
+        public float MinBrightness { get; set; } = LightMapConstants.MIN_BRIGHTNESS;
+
+        // Geometria do sol. Ficam aqui porque e esta classe que converte o angulo em inclinacao,
+        // e o resultado vai para o shader como direcao.
+        public float MaxSlope { get; set; } = LightMapConstants.MAX_SUN_SLOPE;
+        public float MinSunHeight { get; set; } = LightMapConstants.MIN_SUN_HEIGHT;
+
+        public int Largura { get; private set; }
+        public int Altura { get; private set; }
+
+        // A grade de custo, uma entrada por celula, em ordem de linha. Quem chama preenche - por
+        // PreencherGrade, que le TileMapLayer, ou na mao.
+        public float[] Custos => _custos;
+
+        #endregion
+
+        #region Static properties
+
+        private readonly Queue<int> _fila = new();
+
+        private float[] _niveis = System.Array.Empty<float>();
+        private float[] _custos = System.Array.Empty<float>();
+
+        // A silhueta do terreno, por coluna: a linha da materia mais ALTA dali. _topoEsq guarda o
+        // menor topo de todas as colunas ate x, e _topoDir o mesmo olhando para a direita. Servem
+        // para o raio desistir cedo - ver o comentario em Raio.
+        private int[] _topo = System.Array.Empty<int>();
+        private int[] _topoEsq = System.Array.Empty<int>();
+        private int[] _topoDir = System.Array.Empty<int>();
+
+        // As direcoes do leque, calculadas uma vez por tamanho de leque em vez de duas
+        // trigonometricas por celula por raio.
+        private float[] _leque = System.Array.Empty<float>();
+
+        // As melhores transmissoes do leque, reaproveitado entre celulas - ver VisaoDoCeu.
+        private readonly float[] _melhores = new float[Melhores];
+
+        private Image _imagem;
+        private byte[] _pixels = System.Array.Empty<byte>();
+
+        #endregion
+
+        #region Core - Entrada
+
+        // Idempotente: so realoca quando o tamanho da janela muda de verdade.
+        public void Redimensionar(int largura, int altura)
+        {
+            largura = Mathf.Max(1, largura);
+            altura = Mathf.Max(1, altura);
+
+            if (Largura == largura && Altura == altura)
+            {
+                return;
+            }
+
+            Largura = largura;
+            Altura = altura;
+
+            var total = largura * altura;
+
+            _niveis = new float[total];
+            _custos = new float[total];
+
+            _topo = new int[largura];
+            _topoEsq = new int[largura];
+            _topoDir = new int[largura];
+
+            _imagem = null;
+        }
+
+        // Para onde a luz do sol viaja. Rotacao 0 aponta para BAIXO, nao para cima: e onde o sol
+        // esta acima do mundo. Com o arco montado em torno de 180 a luz saia da cena.
+        public static Vector2 DirecaoDaLuz(float rotacaoEmRadianos)
+        {
+            return Vector2.Down.Rotated(rotacaoEmRadianos);
+        }
+
+        // Quanto a luz anda na horizontal a cada linha que desce. Ao meio-dia e perto de zero e a
+        // sombra cai reta - por isso a projecao some do meio do dia, e nao por defeito.
+        public float InclinacaoPorLinha(float rotacaoEmRadianos)
+        {
+            var direcao = DirecaoDaLuz(rotacaoEmRadianos);
+
+            // Sol rasante deitaria a sombra ate o outro lado do mundo, e a janela nao tem esse
+            // alcance: abaixo do limite a luz volta a cair reta.
+            if (direcao.Y < MinSunHeight)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp(direcao.X / direcao.Y, -MaxSlope, MaxSlope);
+        }
+
+        // Le as camadas de tile e monta a grade. A ordem da lista manda: a primeira que tiver
+        // alguma coisa na celula decide. E o que faz uma camada de composicao acrescentar copa de
+        // arvore sem apagar o terreno que esta embaixo.
+        public void PreencherGrade(IReadOnlyList<TileMapLayer> camadas, Vector2I origem)
+        {
+            if (camadas == null || camadas.Count == 0)
+            {
+                return;
+            }
+
+            for (int y = 0; y < Altura; y++)
+            {
+                for (int x = 0; x < Largura; x++)
+                {
+                    var i = y * Largura + x;
+                    var dados = DadosDaCelula(camadas, new Vector2I(origem.X + x, origem.Y + y));
+
+                    if (dados == null)
+                    {
+                        _custos[i] = 0f;
+
+                        continue;
+                    }
+
+                    // Quem tem colisao e parede; o resto e folhagem, e por isso copa de arvore
+                    // filtra a luz em vez de cortar.
+                    _custos[i] = dados.GetCollisionPolygonsCount(0) > 0
+                        ? SolidCost
+                        : LightMapConstants.COST_FOLIAGE;
+                }
+            }
+        }
+
+        // Uma celula e ar quando ela nao tem tile - e ar nao custa nada.
+        private bool EhAr(int celula)
+        {
+            return _custos[celula] <= 0f;
+        }
+
+        private static TileData DadosDaCelula(IReadOnlyList<TileMapLayer> camadas, Vector2I celula)
+        {
+            for (int i = 0; i < camadas.Count; i++)
+            {
+                var dados = camadas[i]?.GetCellTileData(celula);
+
+                if (dados != null)
+                {
+                    return dados;
+                }
+            }
+
+            return null;
+        }
+
+        #endregion
+
+        #region Core - Calculo
+
+        // Roda o mapa sobre a grade ja preenchida e devolve a imagem de brilho, um texel por
+        // celula. A imagem e reaproveitada entre chamadas do mesmo tamanho, entao quem consome
+        // deve usa-la no mesmo quadro (ImageTexture.Update) em vez de guardar.
+        public Image Calcular()
+        {
+            if (Largura <= 0 || Altura <= 0)
+            {
+                return null;
+            }
+
+            if (DiffuseEnabled)
+            {
+                CalcularVisaoDoCeu();
+            }
+
+            return Desenhar();
+        }
+
+        // A materia, erodida a partir do ar encostado nela.
+        //
+        // Cada celula de materia com ar vizinho nasce com o nivel DESSE ar - sem pagar custo: ela e
+        // a face que recebe a luz, e cobrar ja nela deixava a grama da superficie escura. Dali para
+        // dentro cada celula custa o proprio custo, entao o nivel cai com a profundidade e o nucleo
+        // de um bloco fica centrado, seja qual for a forma e independente do que exista em volta.
+        //
+        // Relaxacao em fila, nao largura simples: o custo varia por celula (folhagem e bloco tem
+        // custos diferentes), entao uma celula pode melhorar depois de ja ter saido da fila.
+        private void ErodirMateria()
+        {
+            _fila.Clear();
+
+            for (int i = 0; i < _niveis.Length; i++)
+            {
+                if (EhAr(i))
+                {
+                    continue;
+                }
+
+                var x = i % Largura;
+                var y = i / Largura;
+
+                var nivel = 0f;
+
+                if (x > 0 && EhAr(i - 1)) nivel = Mathf.Max(nivel, _niveis[i - 1]);
+                if (x < Largura - 1 && EhAr(i + 1)) nivel = Mathf.Max(nivel, _niveis[i + 1]);
+                if (y > 0 && EhAr(i - Largura)) nivel = Mathf.Max(nivel, _niveis[i - Largura]);
+                if (y < Altura - 1 && EhAr(i + Largura)) nivel = Mathf.Max(nivel, _niveis[i + Largura]);
+
+                if (nivel <= 0f)
+                {
+                    continue;
+                }
+
+                _niveis[i] = nivel;
+
+                _fila.Enqueue(i);
+            }
+
+            while (_fila.Count > 0)
+            {
+                var i = _fila.Dequeue();
+
+                var nivel = _niveis[i];
+
+                var x = i % Largura;
+                var y = i / Largura;
+
+                if (x > 0) Escurecer(i - 1, nivel);
+                if (x < Largura - 1) Escurecer(i + 1, nivel);
+                if (y > 0) Escurecer(i - Largura, nivel);
+                if (y < Altura - 1) Escurecer(i + Largura, nivel);
+            }
+        }
+
+        private void Escurecer(int destino, float nivelOrigem)
+        {
+            if (EhAr(destino))
+            {
+                return;
+            }
+
+            var novo = nivelOrigem - _custos[destino];
+
+            if (novo <= _niveis[destino])
+            {
+                return;
+            }
+
+            _niveis[destino] = novo;
+
+            _fila.Enqueue(destino);
+        }
+
+        // A materia mais alta de cada coluna, e o acumulado dela para os dois lados.
+        private void MontarSilhueta()
+        {
+            for (int x = 0; x < Largura; x++)
+            {
+                _topo[x] = Altura;
+
+                for (int y = 0; y < Altura; y++)
+                {
+                    if (!EhAr(y * Largura + x))
+                    {
+                        _topo[x] = y;
+
+                        break;
+                    }
+                }
+            }
+
+            var corrente = Altura;
+
+            for (int x = 0; x < Largura; x++)
+            {
+                corrente = Mathf.Min(corrente, _topo[x]);
+                _topoEsq[x] = corrente;
+            }
+
+            corrente = Altura;
+
+            for (int x = Largura - 1; x >= 0; x--)
+            {
+                corrente = Mathf.Min(corrente, _topo[x]);
+                _topoDir[x] = corrente;
+            }
+        }
+
+        // Os angulos varrem de 0 a PI: do horizonte da direita ao horizonte da esquerda passando
+        // pelo alto - so o semicirculo de CIMA, porque so o ar traca, e o que ele mede e ceu.
+        // Raio para baixo sairia pelo fundo da janela e contaria como ceu o que e subsolo.
+        private void MontarLeque()
+        {
+            if (_leque.Length == Amostras * 2)
+            {
+                return;
+            }
+
+            _leque = new float[Amostras * 2];
+
+            for (int k = 0; k < Amostras; k++)
+            {
+                var angulo = Mathf.Pi * (k + 0.5f) / Amostras;
+
+                _leque[k * 2] = Mathf.Cos(angulo);
+                _leque[k * 2 + 1] = -Mathf.Sin(angulo);
+            }
+        }
+
+        // O nivel de cada celula: o quanto de ceu ela enxerga, na escala de MaxLevel.
+        private void CalcularVisaoDoCeu()
+        {
+            MontarSilhueta();
+            MontarLeque();
+
+            for (int y = 0; y < Altura; y++)
+            {
+                for (int x = 0; x < Largura; x++)
+                {
+                    // Acima da silhueta inteira - dos dois lados - nao ha o que tapar: o raio so
+                    // sobe, entao todo raio deste ponto sai limpo. E ceu aberto, que e a maior
+                    // parte da tela, e sai por um teste em vez do leque todo.
+                    if (y < _topoEsq[x] && y < _topoDir[x])
+                    {
+                        _niveis[y * Largura + x] = MaxLevel;
+
+                        continue;
+                    }
+
+                    var celula = y * Largura + x;
+
+                    // Materia nao traca: ela e semeada depois, por ErodirMateria.
+                    if (!EhAr(celula))
+                    {
+                        _niveis[celula] = 0f;
+
+                        continue;
+                    }
+
+                    _niveis[celula] = MaxLevel * VisaoDoCeu(x, y);
+                }
+            }
+
+            ErodirMateria();
+        }
+
+        // Vale a media dos MELHORES raios do leque, nao a do leque inteiro.
+        //
+        // A media do circulo mede volume: ela nao distingue "enterrado no meio do bloco" de
+        // "pendurado embaixo dele com o aberto dos dois lados" - so muda o grau. E pior, ela poe a
+        // LARGURA do que esta em volta direto na conta: a copa tapa um cone de
+        // 2*atan(metade da copa / altura), entao dobrar a copa dobrava o cone e escurecia o tronco,
+        // que nao tem nada a ver com isso.
+        //
+        // Um ponto e iluminado pela face dele que esta mais exposta, e nao pela media de todas as
+        // direcoes. O quarto melhor do leque e essa face:
+        //
+        //   miolo de um bloco     todo raio morre na materia          -> escuro
+        //   face de um bloco      o quarto virado para fora sai limpo -> cheio, em qualquer face
+        //   tronco sob copa       o quarto lateral sai limpo          -> cheio, em qualquer copa
+        //   fresta de caverna     um raio so sai, num quarto de 6     -> fraco
+        //   boca de caverna       varios saem                         -> claro
+        private float VisaoDoCeu(int x, int y)
+        {
+            System.Array.Clear(_melhores, 0, Melhores);
+
+            for (int k = 0; k < Amostras; k++)
+            {
+                var t = Raio(x, y, _leque[k * 2], _leque[k * 2 + 1]);
+
+                if (t <= _melhores[Melhores - 1])
+                {
+                    continue;
+                }
+
+                var i = Melhores - 1;
+
+                while (i > 0 && _melhores[i - 1] < t)
+                {
+                    _melhores[i] = _melhores[i - 1];
+
+                    i--;
+                }
+
+                _melhores[i] = t;
+            }
+
+            var soma = 0f;
+
+            for (int i = 0; i < Melhores; i++)
+            {
+                soma += _melhores[i];
+            }
+
+            return soma / Melhores;
+        }
+
+        // Quanto deste raio chega ao ceu, de 0 a 1.
+        //
+        // Anda por DDA, saltando de fronteira em fronteira de celula: cada celula cruzada e
+        // visitada exatamente uma vez. Com passo fixo, um passo curto conta a mesma celula duas
+        // vezes e um passo longo pula bloco fino na diagonal.
+        //
+        // A celula de ORIGEM nao e cobrada: a conta e do que tapa a vista dela, e nao dela mesma.
+        // E o que deixa a face exposta de um bloco receber luz cheia sem precisar de remendo.
+        private float Raio(int x, int y, float dx, float dy)
+        {
+            float px = x + 0.5f;
+            float py = y + 0.5f;
+
+            var cx = x;
+            var cy = y;
+
+            var avancoX = dx > 0f ? 1 : -1;
+            var avancoY = dy > 0f ? 1 : -1;
+
+            var absX = Mathf.Abs(dx);
+            var absY = Mathf.Abs(dy);
+
+            var deltaX = absX < 1e-6f ? 1e9f : 1f / absX;
+            var deltaY = absY < 1e-6f ? 1e9f : 1f / absY;
+
+            var proximoX = absX < 1e-6f ? 1e9f : (dx > 0f ? cx + 1f - px : px - cx) / absX;
+            var proximoY = absY < 1e-6f ? 1e9f : (dy > 0f ? cy + 1f - py : py - cy) / absY;
+
+            var acumulado = 0f;
+
+            var teto = (float)MaxLevel;
+
+            var limite = Largura + Altura;
+
+            for (int passo = 0; passo < limite; passo++)
+            {
+                if (proximoX < proximoY)
+                {
+                    proximoX += deltaX;
+                    cx += avancoX;
+                }
+                else
+                {
+                    proximoY += deltaY;
+                    cy += avancoY;
+                }
+
+                // Saiu da janela: dali para fora e ceu aberto, nada mais tapa.
+                if (cx < 0 || cy < 0 || cx >= Largura || cy >= Altura)
+                {
+                    return 1f - acumulado / teto;
+                }
+
+                // Ja passou por cima de tudo que ainda podia tapa-lo. O raio so sobe, entao daqui
+                // em diante toda celula que ele visitar esta acima da materia mais alta que sobrou
+                // na direcao em que ele anda - nao ha o que encontrar. Sem isto o raio caminha a
+                // janela inteira por ar vazio so para descobrir que era ceu, e o ceu aberto, que e
+                // a maior parte da tela, custa o maximo em vez do minimo.
+                var silhueta = avancoX > 0 ? _topoDir[cx] : _topoEsq[cx];
+
+                if (cy < silhueta)
+                {
+                    return 1f - acumulado / teto;
+                }
+
+                acumulado += _custos[cy * Largura + cx];
+
+                if (acumulado >= teto)
+                {
+                    return 0f;
+                }
+            }
+
+            return 0f;
+        }
+
+        // Quanta luz do ceu chega a uma celula, de 0 a 1. Vale para ar e para materia.
+        private float NivelDifuso(int celula)
+        {
+            return DiffuseEnabled ? _niveis[celula] / MaxLevel : 1f;
+        }
+
+        // O brilho que a difusa da a uma celula de materia. E o que vai no canal G da textura.
+        //
+        // Vale o nivel da propria celula: a semeadura de ErodirMateria ja fez o papel da face,
+        // dando a cada celula de superficie o nivel do ar encostado nela.
+        private float BrilhoDaMateria(int celula)
+        {
+            return Mathf.Lerp(MinBrightness, 1f, NivelDifuso(celula));
+        }
+
+        // A textura de DADOS que o shader consome, um texel por celula:
+        //
+        //   R = 1 se ha materia ali, 0 se e ar
+        //   G = o brilho que a difusa deu aquela celula (so a materia usa)
+        //   B = quanta luz do ceu chega ali, de 0 a 1 - INCLUSIVE no ar
+        //
+        // A CPU nao desenha mais sombra nenhuma. O shader tracaa o raio por fragmento, entao a
+        // borda ganha a resolucao da tela em vez da celula, e o custo sai daqui - onde ele era
+        // proporcional a area vezes o numero de sub-celulas.
+        private Image Desenhar()
+        {
+            var total = Largura * Altura * 3;
+
+            if (_pixels.Length != total)
+            {
+                _pixels = new byte[total];
+            }
+
+            for (int i = 0; i < Largura * Altura; i++)
+            {
+                var noAr = EhAr(i);
+
+                var p = i * 3;
+
+                _pixels[p] = noAr ? (byte)0 : (byte)255;
+                _pixels[p + 1] = (byte)Mathf.Clamp(BrilhoDaMateria(i) * 255f, 0f, 255f);
+
+                // O ar tambem leva o nivel difuso, mesmo sem ser escurecido por ele. E o que
+                // deixa o shader saber se aquele ponto esta num lugar aberto ou fechado: sem
+                // isso, a sombra no ar tem a mesma forca dentro de uma caverna e a ceu aberto.
+                _pixels[p + 2] = (byte)Mathf.Clamp(NivelDifuso(i) * 255f, 0f, 255f);
+            }
+
+            _imagem = Image.CreateFromData(Largura, Altura, false, Image.Format.Rgb8, _pixels);
+
+            return _imagem;
+        }
+
+        #endregion
+    }
+}

@@ -38,3 +38,9 @@ _TargetFrameworkDirectories
 /.docs
 /.agents
 
+
+# Capturas de tela dos testes
+.images/
+
+# Codigo removido do projeto, guardado para reimplementar
+.backup/

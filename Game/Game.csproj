@@ -3,5 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- O inspetor do Godot mostra como dica de campo o texto dos comentarios /// dos exports.
+         Sem este arquivo de documentacao gerado, as dicas nao aparecem. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: nao exigir /// em tudo que e publico, so onde interessa. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>

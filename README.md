@@ -638,7 +638,24 @@ Recording a source and a category on `BasePropertyData` would reach the whole sy
 
 ### 3. Lighting
 
-Lighting is prototyped on two branches, `ilumination-feature` and `ilumination-hdr-feature`, present locally and on the remote. It is exploratory work: it still has to be developed and merged back.
+A day/night cycle drives one `DirectionalLight2D` per dimension, plus a weaker bluish one for the moon and a `CanvasModulate` for ambient tint. The nodes (`Sun`, `Moon`, `Ambient`) live in each dimension scene; `LightingManager` resolves them by name and rewrites rotation, energy, colour and position every frame. All tuning is in `LightingConstants`. Cast shadows come from the tileset: `LightingManager.PrepararOclusao` copies each tile's collision polygon into an occlusion layer at runtime, so 141 of the 376 tiles occlude light.
+
+Two properties of Godot's 2D lighting decide whether any of this is visible, and both cost a long debugging session:
+
+- **A `DirectionalLight2D` with rotation 0 points down, not up.** The sun's arc therefore lives around 0 degrees (`SUNRISE_ANGLE_DEGREES = -50`, `SUNSET_ANGLE_DEGREES = 50`), and the back-off that places the emission line uses `Vector2.Down.Rotated(angle)`. With the arc built around 180 degrees the light travelled away from the scene: nothing was lit, and with shadows on the whole map read as one flat shade — which looks exactly like "shadows do not work".
+- **The light emits from a line at the node's position**, not from infinity, and only reaches `max_distance` from there. The line has to be pushed behind the view (`SUN_BACKOFF`), or half the screen sits behind it and gets no light at all.
+
+Verified by measurement rather than by eye: holding energy and ambient fixed and swinging the sun from -40 to +40 degrees changes 22.4% of the screen with shadows on and 0.07% with them off. The old prototype branches `ilumination-feature` and `ilumination-hdr-feature` are superseded by this.
+
+**Per-tile light map.** `LightMapManager` answers a different question from the directional light: not "which direction does the sun come from" but "how much light reaches this cell". Skylight enters at the top of each column, and each cell it crosses costs it intensity — 1 for air, 2 for foliage, 3 for solid — so caves start dark, the mouth of a cave is a gradient rather than a cut, and building upwards darkens what sits below. The result is drawn as one texel per cell, stretched over the visible area with linear filtering and a multiply blend; the filter provides the gradient for free.
+
+**Projection lives inside the light map, not in the engine's shadows.** Skylight does not fall straight down: it sweeps at the sun's own angle, each row sampling the row above it offset by `direction.X / direction.Y`, interpolated between the two neighbouring cells. A tower therefore casts a slanted shadow on the ground that turns with the day, at exactly the same softness as the rest of the map, because it is the same mechanism — no occluder, no shadow atlas, no hard edge. Air costs nothing in this sweep (sunlight crosses emptiness intact) and only loses intensity to matter, which is what separates it from the diffuse propagation that runs afterwards.
+
+Cells with open sky straight above them are never darkened, whatever the light map says about them. Without that exception the projected shadow also lands on the sky itself, and shadow on the sky does not exist.
+
+It runs over a window around the camera, not over the world — the world is endless, and the window is a few thousand cells, cheap enough to redo from scratch. There is no incremental state to invalidate, only a dirty flag that `TerrainLayer` raises when a block appears or disappears. Measured cost on the procedural map: 471 fps without it, 419 with it idle, 183 when it is invalidated every single frame — the worst case, which only happens while the player digs continuously.
+
+`CastShadows` therefore defaults to **false**. Both systems darken the same terrain: every tile is an occluder, so the whole subsurface falls into shadow and the light map then multiplies on top of that — measured, the terrain goes to black at any shadow alpha from 0.20 up. The light map covers that case better, because it loses intensity per block instead of cutting at once. Turning cast shadows back on is legitimate if you want a built tower to throw a slanted shadow on the ground, but then `MIN_BRIGHTNESS` and `COST_SOLID` need loosening so the two darknesses do not stack.
 
 ---
 

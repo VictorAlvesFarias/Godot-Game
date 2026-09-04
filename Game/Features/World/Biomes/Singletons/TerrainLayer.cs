@@ -1114,11 +1114,15 @@ namespace Jogo25D.Biomes
         {
             PaintBlockAndReconnect(cell, block);
 
+            Game.Managers.LightMapManager.Node?.Invalidate(DimensionId);
+
             return true;
         }
 
         public void EraseBlockAndReconnect(Vector2I cell)
         {
+            Game.Managers.LightMapManager.Node?.Invalidate(DimensionId);
+
             if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
             {
                 SetCell(cell, -1);

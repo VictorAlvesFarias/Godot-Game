@@ -74,6 +74,8 @@ namespace Jogo25D.Systems
 			{
 				Dimensions.ResolveReferences();
 
+				Game.Managers.LightMapManager.Node?.AttachToDimensions();
+
 				return;
 			}
 
@@ -83,12 +85,20 @@ namespace Jogo25D.Systems
 
 			Dimensions.ResolveReferences();
 
+			Game.Managers.LightMapManager.Node?.AttachToDimensions();
+
 			GD.Print("[WorldManager.SpawnWorld] world instantiated");
 		}
 
 		public void SpawnLocalWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
 		{
 			SpawnWorld();
+
+			// NAO limpar as camadas aqui. Mundo nao procedural roda justamente o mapa desenhado a
+			// mao na cena da dimensao, com streaming desligado, e nenhum tile e gravado no save -
+			// o SaveSerializer so grava propriedade marcada com [Save]. Limpar deixava o mundo
+			// vazio e o player caindo sem fim. Quem precisa limpar e o caminho procedural, que
+			// gera o proprio terreno, e ele ja faz isso.
 			SetChunkStreamingEnabled(false);
 
 			CarregarDocumento(save);
@@ -222,6 +232,7 @@ namespace Jogo25D.Systems
 			Dimensions.ClearLayers();
 
 			Game.Managers.TileStreamingManager.Node?.ResetState();
+			Game.Managers.LightMapManager.Node?.Detach();
 
 			Game.Managers.RouterManager.Node.Close(Game.Ui.HudUI.Node);
 		}
