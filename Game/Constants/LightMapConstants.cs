@@ -23,42 +23,11 @@
         // Piso de luminosidade. Sem isso o fundo do mundo fica preto absoluto e nada e legivel.
         public const float MIN_BRIGHTNESS = 0.12f;
 
-        // Celulas a mais de cada lado da area visivel. Serve para a luz que vem de fora da tela
-        // ja chegar propagada na borda, em vez de a borda inteira nascer escura.
-        public const int WINDOW_MARGIN = 12;
-
         // --- Sombra projetada ---
-
-        // Quanto de luz uma celula de materia ABSORVE, como fracao do que chegou nela. O raio e
-        // multiplicado, nao descontado: com desconto fixo ele trava em zero e, a partir de umas
-        // poucas celulas, copa grossa e copa fina projetam a mesma sombra.
-        public const float SUN_BLOCK_STRENGTH = 0.92f;
-
-        // Teto da inclinacao, em celulas por linha: o comprimento maximo da sombra deitada.
-        public const float MAX_SUN_SLOPE = 1.6f;
-
-        // Altura minima do sol, como componente Y da direcao. Abaixo disso a sombra cai reta.
-        public const float MIN_SUN_HEIGHT = 0.2f;
-
-        // Quanto a sombra no terreno escurece, no maximo.
-        public const float SHADOW_FLOOR = 0.35f;
-
-        // Quantas celulas ela penetra no terreno.
-        public const int SHADOW_DEPTH = 6;
 
         // Opacidade da sombra no ar: 1 e preto absoluto, 0 e invisivel. Vira o piso do feixe no
         // shader - o valor do pixel onde a transmissao e zero.
         public const float AIR_SHADOW_OPACITY = 0.6f;
-
-        // Sub-colunas por celula na varredura do sol, e o teto delas.
-        public const int SOLAR_SUBSAMPLES = 4;
-        public const int SOLAR_SUBSAMPLES_MAX = 32;
-
-        // Abaixo desta transmissao o raio para: o que sobra nao muda mais o pixel.
-        public const float RAY_CUTOFF = 0.02f;
-
-        // De quanto a inclinacao do sol precisa mudar para o mapa ser refeito.
-        public const float SUN_SLOPE_STEP = 0.03f;
 
         // Teto da meia-abertura do cone, em graus. Acima disto a sombra deixa de parecer com o
         // objeto: com 10 graus, a sombra de uma copa de 16 celulas vira 26 de largura a trinta
@@ -67,10 +36,6 @@
 
         // Distancia da fonte de luz, de 0 a 1. Ver a propriedade Penumbra.
         public const float PENUMBRA = 0.95f;
-
-        // Quanto a luz do ambiente enfraquece a sombra. Lugar aberto tem muita luz vinda de todo
-        // lado, que preenche a sombra; lugar fechado nao tem, e a sombra fica cheia.
-        public const float AMBIENT_INFLUENCE = 0.5f;
 
         // O shader que desenha a sombra projetada, por fragmento.
         public const string SHADER_PATH = "res://Assets/Shaders/light_map.gdshader";

@@ -75,11 +75,6 @@ namespace Jogo25D.Light
         // Piso de luminosidade: sem isso o fundo do mundo fica preto absoluto.
         public float MinBrightness { get; set; } = LightMapConstants.MIN_BRIGHTNESS;
 
-        // Geometria do sol. Ficam aqui porque e esta classe que converte o angulo em inclinacao,
-        // e o resultado vai para o shader como direcao.
-        public float MaxSlope { get; set; } = LightMapConstants.MAX_SUN_SLOPE;
-        public float MinSunHeight { get; set; } = LightMapConstants.MIN_SUN_HEIGHT;
-
         public int Largura { get; private set; }
         public int Altura { get; private set; }
 
@@ -159,22 +154,6 @@ namespace Jogo25D.Light
         public static Vector2 DirecaoDaLuz(float rotacaoEmRadianos)
         {
             return Vector2.Down.Rotated(rotacaoEmRadianos);
-        }
-
-        // Quanto a luz anda na horizontal a cada linha que desce. Ao meio-dia e perto de zero e a
-        // sombra cai reta - por isso a projecao some do meio do dia, e nao por defeito.
-        public float InclinacaoPorLinha(float rotacaoEmRadianos)
-        {
-            var direcao = DirecaoDaLuz(rotacaoEmRadianos);
-
-            // Sol rasante deitaria a sombra ate o outro lado do mundo, e a janela nao tem esse
-            // alcance: abaixo do limite a luz volta a cair reta.
-            if (direcao.Y < MinSunHeight)
-            {
-                return 0f;
-            }
-
-            return Mathf.Clamp(direcao.X / direcao.Y, -MaxSlope, MaxSlope);
         }
 
         // Le as camadas de tile e monta a grade. A ordem da lista manda: a primeira que tiver

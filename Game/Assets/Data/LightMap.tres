@@ -5,6 +5,5 @@
 [resource]
 script = ExtResource("1_eycpx")
 SunAngleDegrees = -24.5
-SunBlockStrength = 1.0
-Penumbra = 0.95
+Penumbra = 0.0
 AirShadowOpacity = 0.95

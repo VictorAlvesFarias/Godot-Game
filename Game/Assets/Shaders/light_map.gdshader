@@ -27,9 +27,6 @@ uniform vec2 grade;
 // Direcao em que a luz VIAJA, normalizada. O raio anda contra ela, rumo ao sol.
 uniform vec2 direcao;
 
-// Quanto de luz uma celula de materia deixa passar (1 - dureza).
-uniform float passa;
-
 // A cor que a celula assume onde a sombra e total.
 uniform float piso_terreno;
 uniform float piso_ar;
@@ -48,19 +45,7 @@ uniform float penumbra;
 // preenche a sombra; lugar fechado nao tem, e a sombra fica cheia. 0 ignora o ambiente.
 uniform float influencia_ambiente;
 
-// Abaixo desta transmissao o raio para: o que sobra nao muda mais o pixel.
-uniform float corte;
-
-// Teto de passos do DDA. Shader precisa de laco limitado; a janela inteira cabe nisto.
-const int MAX_PASSOS = 512;
-
-// Quantos raios formam o cone. Impar de proposito: o do meio e a direcao exata do sol.
-//
-// Tres bastam. So o cone INTEIRO livre conta como luz, entao o que decide e "algum raio bate?" -
-// e para um oclusor convexo isso e resolvido pelos dois extremos. O do meio so pega oclusor fino
-// passando bem no meio do cone. Eram cinco quando a media dos raios virava rampa; sem a rampa, os
-// dois do meio nao mudavam o desenho e custavam 40% do fragmento.
-const int AMOSTRAS = 3;
+const int PASSOS_DE_BISSECCAO = 10;
 
 vec2 rodar(vec2 v, float a) {
     float s = sin(a);
@@ -110,8 +95,22 @@ float transmissao(vec2 p, vec2 rumo, bool comeca_na_materia, out float profundid
 
     profundidade_percorrida = 0.0;
 
-    for (int i = 0; i < MAX_PASSOS; i++) {
-        if (proximo.x < proximo.y) {
+    // O teto de passos e a diagonal Manhattan da janela: nenhum raio pode dar mais passos que
+    // isso sem sair dela, e sair dela ja retorna. Era um 512 fixo, folgado em 4x.
+    int limite = int(grade.x + grade.y);
+
+    for (int i = 0; i < limite; i++) {
+        // Quina: quando as duas fronteiras caem no mesmo ponto, o raio passa exatamente pelo
+        // canto entre quatro celulas. Avancando um eixo so, ele ENTRA numa das duas diagonais que
+        // nao chegou a cruzar - e se aquela for solida, e bloqueado sem ter tocado em nada. Na tela
+        // isso vira um risco fino e reto, na direcao exata que passa pela quina, saindo do canto de
+        // um tronco ou de uma copa.
+        //
+        // Cruzando a quina de fato, ele so visita as duas celulas que a diagonal realmente atinge.
+        if (abs(proximo.x - proximo.y) < 1e-5) {
+            proximo += delta;
+            c += avanco;
+        } else if (proximo.x < proximo.y) {
             proximo.x += delta.x;
             c.x += avanco.x;
         } else {
@@ -139,14 +138,92 @@ float transmissao(vec2 p, vec2 rumo, bool comeca_na_materia, out float profundid
             continue;
         }
 
-        t *= passa;
-
-        if (t <= corte) {
-            return 0.0;
-        }
+        // Materia e OPACA, sempre. Oclusao e caracteristica do TILE, e nao do mapa inteiro: um
+        // numero global so faria sentido se todo tile do mundo fosse igualmente translucido, que e
+        // o mesmo que dizer que ele nao existe. Se um dia houver folhagem que deixa passar luz,
+        // isso e dado do tileset e entra pela grade de custo, nao por uma propriedade do recurso.
+        return 0.0;
     }
 
     return t;
+}
+
+// Quanto do cone chega ao sol, de 0 a 1.
+//
+// Materia e opaca, entao cada raio responde SIM ou NAO e a fronteira entre os dois e um angulo
+// exato. Contar raios livres daria a cobertura em AMOSTRAS+1 degraus, e esses degraus aparecem na
+// borda como faixas - a escadinha e da amostragem, nao da conta.
+//
+// Entao ele mede a EXTENSAO ANGULAR livre, trecho por trecho: cinco raios uniformes dividem o cone
+// em quatro trechos, e onde as pontas de um trecho discordam a bisseccao acha a fronteira dentro
+// dele. Cada passo dobra a precisao, entao dez dao ~1024 niveis por fronteira.
+//
+// Cada trecho e resolvido por conta propria, e nao so o primeiro. E o que trata FRESTA - oclusor
+// fino no meio do cone, que poe duas fronteiras em trechos diferentes. Com uma bisseccao so, a
+// fresta caia numa fracao contada de cinco niveis e virava cunha em escada dentro da sombra.
+//
+// Custo: 5 raios sempre, mais 10 por fronteira. Pixel em plena luz ou em plena sombra nao tem
+// fronteira nenhuma e sai com 5. Borda comum tem uma. Fresta tem duas.
+float cobertura(vec2 celula, vec2 rumo) {
+    float prof;
+
+    if (penumbra <= 0.0) {
+        return transmissao(celula, rumo, false, prof);
+    }
+
+    // Quantas amostras o bracket precisa: um vao de UMA celula a distancia d ocupa ~1/d radianos,
+    // entao o passo angular tem que ser menor que isso, ou a fresta cabe inteira dentro de um
+    // trecho, as duas pontas dele concordam, nenhuma virada e detectada e o vao SOME - vira sombra
+    // onde devia ter luz, num risco fino e paralelo a sombra.
+    //
+    // A distancia maxima em que um oclusor ainda pode existir e a DIAGONAL da janela: alem dela o
+    // raio ja saiu. Entao a contagem sai da propria janela e da abertura do cone, sem numero
+    // escolhido a mao - cone estreito, o caso comum, resolve com 3 e sai barato; cone aberto paga
+    // o que precisa. Era um alcance fixo de 40 celulas, MENOR que a diagonal, entao vao de uma
+    // celula entre 40 e a borda ainda sumia.
+    int amostras = max(3, int(2.0 * penumbra * length(grade)) + 1);
+
+    float passo = 2.0 * penumbra / float(amostras - 1);
+
+    float angulo_anterior = -penumbra;
+
+    bool livre_anterior = transmissao(celula, rodar(rumo, angulo_anterior), false, prof) > 0.5;
+
+    float livre_total = 0.0;
+
+    for (int k = 1; k < amostras; k++) {
+        float angulo = -penumbra + float(k) * passo;
+
+        bool livre = transmissao(celula, rodar(rumo, angulo), false, prof) > 0.5;
+
+        if (livre == livre_anterior) {
+            if (livre) {
+                livre_total += passo;
+            }
+        } else {
+            float baixo = angulo_anterior;
+            float alto = angulo;
+
+            for (int i = 0; i < PASSOS_DE_BISSECCAO; i++) {
+                float meio = 0.5 * (baixo + alto);
+
+                if ((transmissao(celula, rodar(rumo, meio), false, prof) > 0.5) == livre_anterior) {
+                    baixo = meio;
+                } else {
+                    alto = meio;
+                }
+            }
+
+            float fronteira = 0.5 * (baixo + alto);
+
+            livre_total += livre_anterior ? fronteira - angulo_anterior : angulo - fronteira;
+        }
+
+        angulo_anterior = angulo;
+        livre_anterior = livre;
+    }
+
+    return livre_total / (2.0 * penumbra);
 }
 
 void fragment() {
@@ -169,39 +246,31 @@ void fragment() {
     float brilho = 1.0;
 
     if (ar_ligado && !materia) {
-        float profundidade_percorrida;
+        float t = cobertura(celula, -direcao);
 
-        float t;
-
-        if (penumbra <= 0.0) {
-            t = transmissao(celula, -direcao, false, profundidade_percorrida);
-        } else {
-            // O cone: varios raios abertos em torno da direcao do sol, com a media. Perto do
-            // oclusor eles concordam e a borda fica nitida; longe divergem e ela abre sozinha.
-            float soma = 0.0;
-
-            for (int k = 0; k < AMOSTRAS; k++) {
-                float fatia = float(k) / float(AMOSTRAS - 1) * 2.0 - 1.0;
-
-                float prof_amostra;
-
-                soma += transmissao(celula, rodar(-direcao, fatia * penumbra), false, prof_amostra);
-            }
-
-            t = soma / float(AMOSTRAS);
-        }
-
-        // A faixa de penumbra e SOMBRA: mesmo tom, sem degrade e sem tom proprio.
+        // O degrade da penumbra e a FRACAO DO DISCO DO SOL que ainda esta visivel dali:
         //
-        // So o cone inteiro livre conta como luz. Se um raio que seja bate no oclusor, o ponto esta
-        // na sombra - e a faixa onde isso acontece nasce com largura zero encostada no oclusor e
-        // ALARGA proporcional a distancia dele, porque os raios divergem. E so isso que a abertura
-        // do cone controla: o quanto a sombra engorda com a distancia.
+        //     I = I0 * A_visivel / A_sol
         //
-        // Era mix(piso_ar, 1.0, t), a media dos raios entrando como rampa. Aquilo grudava dois
-        // efeitos num numero so - a abertura definia a largura e a media definia o degrade - e
-        // ainda pintava a faixa de um tom diferente do da sombra.
-        brilho = t >= 1.0 ? 1.0 : piso_ar;
+        // Sol inteiro visivel da luz cheia; metade tapado da metade da luz; nada visivel da sombra
+        // cheia. Nao e uma rampa escolhida - e a area que sobra.
+        //
+        // Como o oclusor e sempre uma aresta de tile, o corte no disco e uma RETA, e a area do
+        // pedaco que sobra tem forma fechada - o segmento circular:
+        //
+        //     visivel = ( acos(x) - x * sqrt(1 - x*x) ) / PI
+        //
+        // com x indo de -1 (disco todo livre) a +1 (todo tapado). A formula geral de intersecao de
+        // dois circulos so seria necessaria se o oclusor tambem fosse redondo.
+        //
+        // t e a fracao do cone que os raios acharam livre, e a borda corta o cone linearmente,
+        // entao x = 1 - 2t. O resultado e uma curva em S: a borda escurece devagar no comeco,
+        // rapido no meio e devagar no fim, que e o que o disco faz de verdade.
+        float x = clamp(1.0 - 2.0 * t, -1.0, 1.0);
+
+        float visivel = (acos(x) - x * sqrt(max(0.0, 1.0 - x * x))) / PI;
+
+        brilho = mix(piso_ar, 1.0, visivel);
     }
 
     COLOR = vec4(vec3(brilho), 1.0);

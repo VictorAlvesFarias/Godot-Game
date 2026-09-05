@@ -37,13 +37,6 @@ namespace Jogo25D.Light
 
         #region Sombra projetada no ar
 
-        /// <summary>
-        /// Quanto de luz uma celula de materia ABSORVE, como fracao do que chegou nela. O que
-        /// sobra segue em frente, entao a sombra escurece a cada celula atravessada sem nunca
-        /// travar - e isso que faz a sombra acompanhar a densidade da copa trecho a trecho.
-        /// </summary>
-        [ExportGroup("Sombra projetada no ar")]
-        [Export(PropertyHint.Range, "0,1,0.01")] public float SunBlockStrength { get; set; } = LightMapConstants.SUN_BLOCK_STRENGTH;
 
         /// <summary>
         /// A DISTANCIA da fonte de luz, de 0 a 1. E o que abre a faixa de penumbra.

@@ -101,7 +101,6 @@ namespace Jogo25D.Light
         private Sprite2D _overlay;
 
         private Vector2I _ultimaOrigem;
-        private Vector2 _ultimaDirecao;
         private bool _temResultado;
         private bool _sujo = true;
 
@@ -167,7 +166,6 @@ namespace Jogo25D.Light
 
             _copia.SunAngleDegrees = LerFloat(bruto, nameof(LightMapData.SunAngleDegrees), padrao.SunAngleDegrees);
 
-            _copia.SunBlockStrength = LerFloat(bruto, nameof(LightMapData.SunBlockStrength), padrao.SunBlockStrength);
             _copia.AirShadowEnabled = LerBool(bruto, nameof(LightMapData.AirShadowEnabled), padrao.AirShadowEnabled);
             _copia.AirShadowOpacity = LerFloat(bruto, nameof(LightMapData.AirShadowOpacity), padrao.AirShadowOpacity);
 
@@ -334,23 +332,27 @@ namespace Jogo25D.Light
             var grid = _camadas[0];
             var celula = grid.TileSet.TileSize;
 
-            DimensionarJanela(celula, out var largura, out var altura);
-
-            var centro = grid.LocalToMap(grid.ToLocal(PosicaoDoCentro()));
-            var origem = new Vector2I(centro.X - largura / 2, centro.Y - altura / 2);
-
             var ajustes = Ajustes;
 
             var direcaoDoSol = LightMapComputer.DirecaoDaLuz(RotacaoDoSol(ajustes));
 
+            DimensionarJanela(celula, direcaoDoSol, out var largura, out var altura);
+
+            var centro = grid.LocalToMap(grid.ToLocal(PosicaoDoCentro()));
+            var origem = new Vector2I(centro.X - largura / 2, centro.Y - altura / 2);
+
+            // A direcao do sol NAO entra no gatilho abaixo. A grade que a CPU monta e materia e
+            // difusa, e nada nela olha o angulo - quem usa a direcao e so um SetShaderParameter.
+            // Enquanto esta chamada ficou dentro do bloco de recalculo, girar o sol disparava o
+            // recalculo inteiro da grade para atualizar um vec2, e existia uma constante so para
+            // evitar esse desperdicio: o remendo de um acoplamento que nao precisava existir.
+            // Separados, o sol gira liso e sem degrau.
+            AlimentarShader(overlay, ajustes, direcaoDoSol, largura, altura);
+
             // No editor refaz sempre: nada avisa quando um tile e pintado, e um preview parado
             // enquanto se desenha o mapa nao serve para calibrar. Em jogo so refaz quando a
-            // janela anda, o sol gira o bastante ou um bloco muda.
-            var precisa = Engine.IsEditorHint()
-                || _sujo
-                || !_temResultado
-                || origem != _ultimaOrigem
-                || direcaoDoSol.DistanceTo(_ultimaDirecao) >= LightMapConstants.SUN_SLOPE_STEP;
+            // janela anda ou um bloco muda.
+            var precisa = Engine.IsEditorHint() || _sujo || !_temResultado || origem != _ultimaOrigem;
 
             if (!precisa)
             {
@@ -358,7 +360,6 @@ namespace Jogo25D.Light
             }
 
             _ultimaOrigem = origem;
-            _ultimaDirecao = direcaoDoSol;
             _sujo = false;
 
 
@@ -382,8 +383,6 @@ namespace Jogo25D.Light
             {
                 overlay.Texture = ImageTexture.CreateFromImage(imagem);
             }
-
-            AlimentarShader(overlay, ajustes, direcaoDoSol, largura, altura);
 
             // MapToLocal devolve o centro da celula; o sprite comeca no canto dela. Global porque
             // o overlay e TopLevel, e portanto nao herda a transformada deste no.
@@ -416,7 +415,6 @@ namespace Jogo25D.Light
 
             material.SetShaderParameter("grade", new Vector2(largura, altura));
             material.SetShaderParameter("direcao", direcao);
-            material.SetShaderParameter("passa", 1f - Mathf.Clamp(ajustes.SunBlockStrength, 0f, 1f));
             material.SetShaderParameter("piso_ar", 1f - Mathf.Clamp(ajustes.AirShadowOpacity, 0f, 1f));
             material.SetShaderParameter("ar_ligado", ajustes.AirShadowEnabled);
             // A propriedade e a DISTANCIA da fonte, de 0 a 1; o shader quer a meia-abertura do
@@ -427,19 +425,36 @@ namespace Jogo25D.Light
             var distancia = Mathf.Clamp(ajustes.Penumbra, 0f, 1f);
 
             material.SetShaderParameter("penumbra", Mathf.Atan(aberturaMaxima * (1f - distancia)));
-            material.SetShaderParameter("corte", LightMapConstants.RAY_CUTOFF);
         }
 
-        // Em jogo a janela cobre o que a camera enxerga, com margem para a luz de fora da tela ja
-        // chegar propagada na borda. No editor nao ha camera ativa, e o tamanho vem do inspetor.
-        private void DimensionarJanela(Vector2I celula, out int largura, out int altura)
+        // Em jogo a janela cobre o que a camera enxerga, com margem para o oclusor de fora da tela
+        // ainda projetar sombra dentro dela. No editor nao ha camera ativa, e o tamanho vem do
+        // inspetor.
+        //
+        // A margem sai da INCLINACAO DO SOL, e nao de um numero fixo. O raio anda
+        // inclinacao celulas de lado por celula de altura, entao para uma sombra atravessar a area
+        // visivel inteira quem a projeta pode estar ate inclinacao * altura_visivel colunas fora da
+        // tela. Com 12 fixo, sol a -45 graus precisaria de 27 e a sombra cortava na borda.
+        //
+        // Teto na propria altura visivel: acima disso a janela vira mais margem que conteudo, e o
+        // recalculo cresce sem a sombra ficar melhor.
+        private void DimensionarJanela(Vector2I celula, Vector2 direcaoDoSol, out int largura, out int altura)
         {
             if (!Engine.IsEditorHint() && _camera is Camera2D camera)
             {
                 var vista = camera.GetViewportRect().Size / camera.Zoom;
 
-                largura = Mathf.CeilToInt(vista.X / celula.X) + LightMapConstants.WINDOW_MARGIN * 2;
-                altura = Mathf.CeilToInt(vista.Y / celula.Y) + LightMapConstants.WINDOW_MARGIN * 2;
+                var visivelX = Mathf.CeilToInt(vista.X / celula.X);
+                var visivelY = Mathf.CeilToInt(vista.Y / celula.Y);
+
+                var inclinacao = Mathf.Abs(direcaoDoSol.Y) < 1e-3f
+                    ? float.MaxValue
+                    : Mathf.Abs(direcaoDoSol.X / direcaoDoSol.Y);
+
+                var margem = Mathf.Clamp(Mathf.CeilToInt(inclinacao * visivelY), 2, visivelY);
+
+                largura = visivelX + margem * 2;
+                altura = visivelY + margem * 2;
 
                 return;
             }
