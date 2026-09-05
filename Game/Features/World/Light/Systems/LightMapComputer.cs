@@ -56,7 +56,7 @@ namespace Jogo25D.Light
         // que bate no que esta iluminado em volta e volta. Ver EspalharAmbienteNoAr.
         // Quantas celulas de ar o ambiente se espalha antes de acabar. E o alcance do rebote: luz
         // que bate no que esta iluminado em volta e volta. Ver EspalharAmbienteNoAr.
-        private const float AlcanceDoAmbiente = 20f;
+        private const float AlcanceDoAmbiente = 40f;
 
 
         #endregion
@@ -99,6 +99,7 @@ namespace Jogo25D.Light
 
 
         private float[] _custos = System.Array.Empty<float>();
+
 
         // A silhueta do terreno, por coluna: a linha da materia mais ALTA dali. _topoEsq guarda o
         // menor topo de todas as colunas ate x, e _topoDir o mesmo olhando para a direita. Servem
@@ -180,11 +181,10 @@ namespace Jogo25D.Light
                         continue;
                     }
 
-                    // Quem tem colisao e parede; o resto e folhagem, e por isso copa de arvore
-                    // filtra a luz em vez de cortar.
-                    _custos[i] = dados.GetCollisionPolygonsCount(0) > 0
-                        ? SolidCost
-                        : LightMapConstants.COST_FOLIAGE;
+                    // Todo tile e igual: se tem tile, e materia, e materia e opaca. Nao ha
+                    // marca, categoria nem excecao - nem colisao, que ja foi tentada e neste
+                    // tileset diz o contrario do esperado (copa TEM colisao, tronco e caixa NAO).
+                    _custos[i] = SolidCost;
                 }
             }
         }
@@ -724,6 +724,10 @@ namespace Jogo25D.Light
 
                 var p = i * 3;
 
+                // Ar, folhagem e parede, e nao um bit de "tem materia". A folhagem precisa
+                // aparecer separada porque ela BLOQUEIA O SOL e DEIXA PASSAR O AMBIENTE - copa de
+                // arvore corta o raio direto e ainda assim tem ceu do outro lado dela. Com um bit
+                // so, o bolsao embaixo de uma copa lia como quarto fechado e ficava preto.
                 _pixels[p] = noAr ? (byte)0 : (byte)255;
                 _pixels[p + 1] = (byte)Mathf.Clamp(BrilhoDaMateria(i) * 255f, 0f, 255f);
 

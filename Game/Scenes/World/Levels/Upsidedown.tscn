@@ -128,7 +128,7 @@ UseConnections = true
 Relations = Array[Resource]([SubResource("Resource_blm8h"), SubResource("Resource_ufdy7")])
 
 [node name="LightMap" type="Node2D" parent="." unique_id=633027984]
-position = Vector2(4, -6)
+position = Vector2(6, -5)
 script = ExtResource("13_lightmap")
 PreviewSize = Vector2i(140, 90)
 Settings = ExtResource("14_lmdata")

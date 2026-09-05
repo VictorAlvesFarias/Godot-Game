@@ -25,6 +25,9 @@
 
         // --- Sombra projetada ---
 
+        // Influencia do ambiente na sombra, de 0 a 1. Ver a propriedade AmbientInfluence.
+        public const float AMBIENT_INFLUENCE = 0.5f;
+
         // Opacidade da sombra no ar: 1 e preto absoluto, 0 e invisivel. Vira o piso do feixe no
         // shader - o valor do pixel onde a transmissao e zero.
         public const float AIR_SHADOW_OPACITY = 0.6f;

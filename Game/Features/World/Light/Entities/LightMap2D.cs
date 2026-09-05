@@ -167,6 +167,7 @@ namespace Jogo25D.Light
             _copia.SunAngleDegrees = LerFloat(bruto, nameof(LightMapData.SunAngleDegrees), padrao.SunAngleDegrees);
 
             _copia.AirShadowEnabled = LerBool(bruto, nameof(LightMapData.AirShadowEnabled), padrao.AirShadowEnabled);
+            _copia.AmbientInfluence = LerFloat(bruto, nameof(LightMapData.AmbientInfluence), padrao.AmbientInfluence);
             _copia.AirShadowOpacity = LerFloat(bruto, nameof(LightMapData.AirShadowOpacity), padrao.AirShadowOpacity);
 
             return _copia;
@@ -423,6 +424,9 @@ namespace Jogo25D.Light
             // proporcional a tangente - assim o slider anda linear no que se ve.
             var aberturaMaxima = Mathf.Tan(Mathf.DegToRad(LightMapConstants.PENUMBRA_MAX_DEGREES));
             var distancia = Mathf.Clamp(ajustes.Penumbra, 0f, 1f);
+
+            // O alcance vai de 0 a 1 e vira a abertura do leque, ate o semicirculo.
+            material.SetShaderParameter("influencia_ambiente", Mathf.Clamp(ajustes.AmbientInfluence, 0f, 1f));
 
             material.SetShaderParameter("penumbra", Mathf.Atan(aberturaMaxima * (1f - distancia)));
         }

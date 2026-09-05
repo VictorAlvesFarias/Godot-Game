@@ -63,6 +63,26 @@ namespace Jogo25D.Light
         [Export] public bool AirShadowEnabled { get; set; } = true;
 
         /// <summary>
+        /// O ALCANCE do ambiente: o quanto a luz em volta clareia a sombra.
+        ///
+        ///     0.0  nenhuma influencia - a sombra tem a escuridao cheia em qualquer lugar
+        ///     0.6  padrao
+        ///     1.0  maximo - so nao clareia quem nao tem luz nenhuma em volta
+        ///
+        /// Quanto da sombra a luz de contato preenche. Nao e a abertura do leque - essa e sempre
+        /// o hemisferio de cima inteiro, porque ela e geometria e nao gosto.
+        ///
+        /// Quanta luz encosta na sombra sai de um leque de raios: a fracao dele que ainda alcanca
+        /// o ceu. Ponto na borda da sombra tem quase tudo livre; miolo de sombra grossa tem quase
+        /// tudo tapado. Por isso o efeito e proporcional ao tamanho da sombra, sem ajuste nenhum
+        /// para isso. Esta propriedade decide o quanto dessa medida vira clareamento.
+        ///
+        /// Lugar fechado, como o interior de uma caixa, nao clareia em valor nenhum: la nao ha
+        /// direcao que escape, e influencia total nao inventa luz onde nao ha.
+        /// </summary>
+        [Export(PropertyHint.Range, "0,1,0.01")] public float AmbientInfluence { get; set; } = LightMapConstants.AMBIENT_INFLUENCE;
+
+        /// <summary>
         /// A OPACIDADE da sombra: o quanto ela escurece onde o sol nao chega.
         ///
         ///     1.0  sombra opaca, preto absoluto
