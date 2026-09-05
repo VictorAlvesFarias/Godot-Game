@@ -136,8 +136,99 @@ São duas contas, de propósito:
 
 | | Como | O que mede |
 |---|---|---|
-| **Ar** | leque de 16 raios para cima, os 4 melhores | quanto de céu aquele ponto enxerga |
+| **Ar** | leque de 16 raios para cima, cada raio **sim ou não** | quanto de céu aquele ponto enxerga |
 | **Matéria** | semeada pelo ar encostado nela, escurece para dentro | o quão **fundo** dentro da matéria o ponto está |
+
+#### O mesmo leque dá duas medidas
+
+| Medida | Como | Para que |
+|---|---|---|
+| **Melhor quarto** (4 de 16) | média dos melhores raios | semeia a matéria — a face mais exposta manda |
+| **Fração do céu** (16 de 16) | média do leque inteiro | o **ambiente**, canal B, que o shader usa para afrouxar a sombra |
+
+Usar o melhor quarto nas duas quantizava o ambiente: média de quatro raios binários só pode dar
+`0 · 0.25 · 0.5 · 0.75 · 1`, cinco níveis, e a sombra ganhava manchas de borda seca. Com a média
+inteira são 17, e com o rebote abaixo, 49 medidos numa janela real.
+
+E a fração do céu não serve de semente pelo motivo já dito: ela põe a largura da copa na conta do
+tronco.
+
+#### O ambiente vaza pelo ar: o rebote
+
+Só "que fração do céu eu vejo **daqui**" não basta. Debaixo de uma copa isso é quase zero mesmo com
+a faixa iluminada a três células de distância — e aí duas sombras vizinhas, com a mesma luz em
+volta, ficam com escuridão muito diferente conforme o que cada uma tem por cima. Na sombra real quem
+preenche é a luz que bate no que está iluminado em volta e volta, e ela vem **dos lados**, não de
+cima.
+
+Então o ambiente escorre de um ponto de ar para os vizinhos de ar, perdendo `1 / AlcanceDoAmbiente`
+por célula (20 hoje).
+
+Mexer nesse alcance **não é a mesma regulagem** que `AirShadowOpacity`: como ele não atravessa
+parede, ele clareia bolsão aberto longe da luz e **não toca em lugar vedado** — quarto lacrado
+medido em 0 com alcance 10, 20, 40 e 80.
+
+Já foi uma **difusão**, com parede refletindo, para tentar separar "bolsão aberto longe da luz" de
+"fundo de túnel" pela largura da abertura em vez da distância. Medido, não pagou:
+
+| | sob copa larga | túnel a 20 células | custo |
+|---|---|---|---|
+| Difusão, reflexão 0.8 | 37 | 13 | 41 ms |
+| Propagação, alcance 20 | 32 | **6** | **12 ms** |
+
+Mesmo ponto sob a copa, túnel mais escuro, um terço do custo. Medido, entrando por baixo de uma copa de 25 de largura, do sol para o centro:
+
+```
+sem rebote   175 159 143 127  63  31  15  15  15   0   0   0
+com rebote   175 159 143 127 102  76  51  25  15   0   0   0
+```
+
+Penhasco de três células vira rampa de nove.
+
+#### E leva uma média no fim
+
+O leque tem um número fixo de raios, e **os mesmos ângulos em toda célula**. Andar uma célula faz a
+borda de uma copa cruzar a fronteira de um raio, e o ambiente pula `1 / Amostras` de uma vez — às
+vezes para cima, às vezes para baixo. Medido subindo ao lado de um tronco:
+
+```
+63 · 63 · 63 · 47 · 63 · 47      todos múltiplos exatos de 1/16
+```
+
+Como os ângulos são os mesmos em todo lugar, esse erro fica **coerente no espaço e vira mancha**,
+não ruído. Triplicar os raios reduz o degrau mas não o elimina, e custa o triplo — medido, 48 raios
+ainda deixam resto. A média resolve porque o erro é de alta frequência e o campo de ambiente não é:
+
+```
+16 raios, sem média    63 · 63 · 63 · 47 · 63 · 47 · 19
+16 raios, 4 médias      58 · 57 · 57 · 56 · 52 · 45 · 30
+```
+
+Duas árvores idênticas em posições diferentes passam a dar perfis **idênticos byte a byte**.
+
+Passa **só por ar**: parede corta. É o que mantém o quarto lacrado em zero — do contrário isto
+desfaria o conserto do raio binário, vazando luz por dentro da parede.
+
+#### O raio é binário: matéria é opaca
+
+Já foi absorção acumulada, e aí o alcance do raio — `MaxLightLevel ÷ SolidCost` — valia como
+**espessura de parede**. Com 14 e custo 4 o raio atravessava 3,5 células, e um quarto lacrado por
+parede de **uma** célula media 182 de 255 de céu visível. Luz passando por parede.
+
+| Espessura da parede | 1 | 2 | 3 |
+|---|---|---|---|
+| Antes | **182** | 36 | 0 |
+| Agora | 0 | 0 | 0 |
+
+Aquele mesmo número é o que diz quantos blocos a luz penetra no terreno. São duas perguntas
+opostas — o degradê quer que ela vá fundo, a vedação quer que pare no primeiro bloco — e não cabem
+no mesmo valor. Por isso o raio é binário, e o degradê fica por conta da erosão, que é outra
+passada e tem o custo por célula só dela.
+
+O degradê espacial não se perde: o que varia de ponto para ponto é **quantos** raios do leque
+escapam, e isso muda suave. Medido num túnel entrando pela boca: `255 · 255 · 191 · 127 · 63 · 0`.
+
+De quebra o cálculo caiu de 17 ms para **10 ms**: o raio morre na primeira célula de matéria.
 
 A matéria já lançou leque também, e aí **a mesma forma sombreava diferente conforme o que existia
 longe dela**. Medido em dois blocos 15×14 idênticos, um com tronco pendurado até o chão e outro sem:

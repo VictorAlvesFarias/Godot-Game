@@ -46,8 +46,9 @@
         // Quantas celulas ela penetra no terreno.
         public const int SHADOW_DEPTH = 6;
 
-        // Peso da sombra no ar.
-        public const float AIR_SHADOW_STRENGTH = 0.6f;
+        // Opacidade da sombra no ar: 1 e preto absoluto, 0 e invisivel. Vira o piso do feixe no
+        // shader - o valor do pixel onde a transmissao e zero.
+        public const float AIR_SHADOW_OPACITY = 0.6f;
 
         // Sub-colunas por celula na varredura do sol, e o teto delas.
         public const int SOLAR_SUBSAMPLES = 4;
@@ -59,11 +60,13 @@
         // De quanto a inclinacao do sol precisa mudar para o mapa ser refeito.
         public const float SUN_SLOPE_STEP = 0.03f;
 
-        // Abertura do cone de raios, em graus. Com 0 e um raio so, e a borda da sombra e binaria:
-        // o pixel bate ou nao bate no oclusor, e a transicao acontece em um pixel. Abrindo o cone,
-        // os raios divergem com a distancia - perto do oclusor concordam e a borda fica nitida,
-        // longe discordam e ela abre sozinha, que e o que uma fonte de tamanho real faz.
-        public const float SHADOW_SOFTNESS_DEGREES = 3f;
+        // Teto da meia-abertura do cone, em graus. Acima disto a sombra deixa de parecer com o
+        // objeto: com 10 graus, a sombra de uma copa de 16 celulas vira 26 de largura a trinta
+        // celulas de distancia. Referencia: o sol de verdade tem raio angular de 0.27 grau.
+        public const float PENUMBRA_MAX_DEGREES = 10f;
+
+        // Distancia da fonte de luz, de 0 a 1. Ver a propriedade Penumbra.
+        public const float PENUMBRA = 0.95f;
 
         // Quanto a luz do ambiente enfraquece a sombra. Lugar aberto tem muita luz vinda de todo
         // lado, que preenche a sombra; lugar fechado nao tem, e a sombra fica cheia.

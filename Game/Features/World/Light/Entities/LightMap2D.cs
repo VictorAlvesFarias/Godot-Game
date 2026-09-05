@@ -11,15 +11,14 @@ namespace Jogo25D.Light
     // A luz nao cai reta: ela desce inclinada segundo o angulo do sol, e cada linha amostra a de
     // cima deslocada. E dai que sai a sombra projetada de uma torre ou de uma copa de arvore -
     // sem oclusor, sem atlas de sombra e sem borda dura, porque e o mesmo mecanismo do resto do
-    // mapa. Ao meio-dia (angulo perto de 0) a inclinacao e quase zero e a sombra cai reta,
+    // mapa. Ao meio-dia (angulo perto de 0) a direcao e quase reta para baixo e a sombra cai reta,
     // aterrissando no bloco logo abaixo: nesse horario nao ha projecao para ver.
     //
     // O calculo mora no LightMapComputer; este no cuida so das bordas - de onde vem a grade (as
     // camadas), onde fica a janela (a camera) e para onde vai a imagem (o overlay).
     //
-    // A imagem vai num Sprite2D filho com TopLevel ligado, e nao no _Draw deste no: com
-    // AngleSource = NodeRotation o no gira, e um desenho preso a ele giraria junto, saindo de
-    // cima do terreno.
+    // A imagem vai num Sprite2D filho com TopLevel ligado, e nao no _Draw deste no: assim ela
+    // fica presa ao mundo e nao a transformada deste no.
     [Tool]
     public partial class LightMap2D : Node2D
     {
@@ -102,7 +101,7 @@ namespace Jogo25D.Light
         private Sprite2D _overlay;
 
         private Vector2I _ultimaOrigem;
-        private float _ultimaInclinacao;
+        private Vector2 _ultimaDirecao;
         private bool _temResultado;
         private bool _sujo = true;
 
@@ -163,25 +162,14 @@ namespace Jogo25D.Light
 
             var padrao = _padroes ??= new LightMapData();
 
-            _copia.DiffuseEnabled = LerBool(bruto, nameof(LightMapData.DiffuseEnabled), padrao.DiffuseEnabled);
-            _copia.SolidCost = LerInt(bruto, nameof(LightMapData.SolidCost), padrao.SolidCost);
-            _copia.MaxLightLevel = LerInt(bruto, nameof(LightMapData.MaxLightLevel), padrao.MaxLightLevel);
-            _copia.MinBrightness = LerFloat(bruto, nameof(LightMapData.MinBrightness), padrao.MinBrightness);
             _copia.ShowRawMap = LerBool(bruto, nameof(LightMapData.ShowRawMap), padrao.ShowRawMap);
-            _copia.AmbientInfluence = LerFloat(bruto, nameof(LightMapData.AmbientInfluence), padrao.AmbientInfluence);
-            _copia.ShadowSoftness = LerFloat(bruto, nameof(LightMapData.ShadowSoftness), padrao.ShadowSoftness);
+            _copia.Penumbra = LerFloat(bruto, nameof(LightMapData.Penumbra), padrao.Penumbra);
 
-            _copia.AngleSource = (SunAngleSource)LerInt(bruto, nameof(LightMapData.AngleSource), (int)padrao.AngleSource);
             _copia.SunAngleDegrees = LerFloat(bruto, nameof(LightMapData.SunAngleDegrees), padrao.SunAngleDegrees);
-            _copia.MaxSunSlope = LerFloat(bruto, nameof(LightMapData.MaxSunSlope), padrao.MaxSunSlope);
-            _copia.MinSunHeight = LerFloat(bruto, nameof(LightMapData.MinSunHeight), padrao.MinSunHeight);
 
             _copia.SunBlockStrength = LerFloat(bruto, nameof(LightMapData.SunBlockStrength), padrao.SunBlockStrength);
-            _copia.TerrainShadowEnabled = LerBool(bruto, nameof(LightMapData.TerrainShadowEnabled), padrao.TerrainShadowEnabled);
-            _copia.ShadowFloor = LerFloat(bruto, nameof(LightMapData.ShadowFloor), padrao.ShadowFloor);
-            _copia.ShadowDepth = LerInt(bruto, nameof(LightMapData.ShadowDepth), padrao.ShadowDepth);
             _copia.AirShadowEnabled = LerBool(bruto, nameof(LightMapData.AirShadowEnabled), padrao.AirShadowEnabled);
-            _copia.AirShadowStrength = LerFloat(bruto, nameof(LightMapData.AirShadowStrength), padrao.AirShadowStrength);
+            _copia.AirShadowOpacity = LerFloat(bruto, nameof(LightMapData.AirShadowOpacity), padrao.AirShadowOpacity);
 
             return _copia;
         }
@@ -207,12 +195,10 @@ namespace Jogo25D.Light
             return valor.VariantType == Variant.Type.Nil ? padrao : valor.AsBool();
         }
 
-        // O angulo do sol, em radianos. Vem do numero do inspetor ou da rotacao do proprio no.
-        private float RotacaoDoSol(LightMapData ajustes)
+        // O angulo do sol, em radianos.
+        private static float RotacaoDoSol(LightMapData ajustes)
         {
-            return ajustes.AngleSource == SunAngleSource.FixedAngle
-                ? Mathf.DegToRad(ajustes.SunAngleDegrees)
-                : GlobalRotation;
+            return Mathf.DegToRad(ajustes.SunAngleDegrees);
         }
 
         private void ResolverReferencias()
@@ -355,10 +341,7 @@ namespace Jogo25D.Light
 
             var ajustes = Ajustes;
 
-            _calculadora.MaxSlope = ajustes.MaxSunSlope;
-            _calculadora.MinSunHeight = ajustes.MinSunHeight;
-
-            var inclinacao = _calculadora.InclinacaoPorLinha(RotacaoDoSol(ajustes));
+            var direcaoDoSol = LightMapComputer.DirecaoDaLuz(RotacaoDoSol(ajustes));
 
             // No editor refaz sempre: nada avisa quando um tile e pintado, e um preview parado
             // enquanto se desenha o mapa nao serve para calibrar. Em jogo so refaz quando a
@@ -367,7 +350,7 @@ namespace Jogo25D.Light
                 || _sujo
                 || !_temResultado
                 || origem != _ultimaOrigem
-                || Mathf.Abs(inclinacao - _ultimaInclinacao) >= LightMapConstants.SUN_SLOPE_STEP;
+                || direcaoDoSol.DistanceTo(_ultimaDirecao) >= LightMapConstants.SUN_SLOPE_STEP;
 
             if (!precisa)
             {
@@ -375,13 +358,9 @@ namespace Jogo25D.Light
             }
 
             _ultimaOrigem = origem;
-            _ultimaInclinacao = inclinacao;
+            _ultimaDirecao = direcaoDoSol;
             _sujo = false;
 
-            _calculadora.DiffuseEnabled = ajustes.DiffuseEnabled;
-            _calculadora.MaxLevel = Mathf.Max(1, ajustes.MaxLightLevel);
-            _calculadora.MinBrightness = ajustes.MinBrightness;
-            _calculadora.SolidCost = ajustes.SolidCost;
 
             _calculadora.Redimensionar(largura, altura);
             _calculadora.PreencherGrade(_camadas, origem);
@@ -404,7 +383,7 @@ namespace Jogo25D.Light
                 overlay.Texture = ImageTexture.CreateFromImage(imagem);
             }
 
-            AlimentarShader(overlay, ajustes, inclinacao, largura, altura);
+            AlimentarShader(overlay, ajustes, direcaoDoSol, largura, altura);
 
             // MapToLocal devolve o centro da celula; o sprite comeca no canto dela. Global porque
             // o overlay e TopLevel, e portanto nao herda a transformada deste no.
@@ -416,31 +395,38 @@ namespace Jogo25D.Light
 
         // Os uniformes que o shader consome. A CPU nao calcula sombra: ela entrega a grade e os
         // ajustes, e o raio e tracado por fragmento.
-        private void AlimentarShader(Sprite2D overlay, LightMapData ajustes, float inclinacao, int largura, int altura)
+        private void AlimentarShader(Sprite2D overlay, LightMapData ajustes, Vector2 direcao, int largura, int altura)
         {
             if (overlay.Material is not ShaderMaterial material)
             {
                 return;
             }
 
-            // Direcao em que a luz VIAJA. O shader anda contra ela, rumo ao sol.
-            var direcao = new Vector2(inclinacao, 1f).Normalized();
+            // Direcao em que a luz VIAJA, crua. O shader anda contra ela, rumo ao sol.
+            //
+            // Ja veio achatada num unico numero - a inclinacao X/Y - e remontada aqui com Y fixo em
+            // 1, o que obrigava a luz a sempre viajar para BAIXO. Aquele numero explode quando Y
+            // tende a zero, e era so por causa disso que existiam um teto de inclinacao
+            // (MaxSunSlope) e uma altura minima do sol (MinSunHeight). Sem ele, o sol da a volta
+            // inteira: o DDA do shader anda em qualquer direcao.
 
             material.SetShaderParameter("dados_mapa", overlay.Texture);
 
             // A mesma textura, para o shader ler o ambiente com filtro linear.
-            material.SetShaderParameter("dados_suaves", overlay.Texture);
 
             material.SetShaderParameter("grade", new Vector2(largura, altura));
             material.SetShaderParameter("direcao", direcao);
             material.SetShaderParameter("passa", 1f - Mathf.Clamp(ajustes.SunBlockStrength, 0f, 1f));
-            material.SetShaderParameter("piso_terreno", ajustes.ShadowFloor);
-            material.SetShaderParameter("piso_ar", 1f - Mathf.Clamp(ajustes.AirShadowStrength, 0f, 1f));
-            material.SetShaderParameter("profundidade", (float)ajustes.ShadowDepth);
-            material.SetShaderParameter("terreno_ligado", ajustes.TerrainShadowEnabled);
+            material.SetShaderParameter("piso_ar", 1f - Mathf.Clamp(ajustes.AirShadowOpacity, 0f, 1f));
             material.SetShaderParameter("ar_ligado", ajustes.AirShadowEnabled);
-            material.SetShaderParameter("suavidade", Mathf.DegToRad(ajustes.ShadowSoftness));
-            material.SetShaderParameter("influencia_ambiente", ajustes.AmbientInfluence);
+            // A propriedade e a DISTANCIA da fonte, de 0 a 1; o shader quer a meia-abertura do
+            // cone em radianos. Fonte encostada ve o angulo maximo, fonte no infinito ve zero.
+            // A conversao e linear na TANGENTE, e nao no angulo, porque a largura da faixa e
+            // proporcional a tangente - assim o slider anda linear no que se ve.
+            var aberturaMaxima = Mathf.Tan(Mathf.DegToRad(LightMapConstants.PENUMBRA_MAX_DEGREES));
+            var distancia = Mathf.Clamp(ajustes.Penumbra, 0f, 1f);
+
+            material.SetShaderParameter("penumbra", Mathf.Atan(aberturaMaxima * (1f - distancia)));
             material.SetShaderParameter("corte", LightMapConstants.RAY_CUTOFF);
         }
 

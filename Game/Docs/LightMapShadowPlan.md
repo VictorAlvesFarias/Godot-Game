@@ -101,7 +101,7 @@ fragmento — não da área vezes sub-células.
 4. Se o pixel está dentro de matéria, o raio **sobe até a superfície sem absorver**, contando a
    profundidade: a sombra é avaliada na entrada e desvanece com `ShadowDepth`. É o arrasto, agora
    por pixel.
-5. Aplica o piso — `ShadowFloor` no terreno, `1 − AirShadowStrength` no ar —, afrouxa esse piso
+5. Aplica o piso — `ShadowFloor` no terreno, `1 − AirShadowOpacity` no ar —, afrouxa esse piso
    conforme a **luz do ambiente** naquele ponto, e multiplica.
 
 **A borda é um cone, não um raio.** Com um raio só a borda fica binária: o pixel bate ou não bate
@@ -174,6 +174,11 @@ Cada uma custou uma rodada de depuração na tentativa anterior:
 | Listras verticais de luz descendo da copa | Ambiente lido célula a célula; ele entra por coluna e não tem direção |
 | Superfície em pleno sol com a cor de quem está na sombra | A luz direta só criava sombra; ela nunca acendia nada, e o brilho vinha só da difusa |
 | Copa larga escurecendo o tronco | A difusa era um campo de distância e cobrava por todo passo, inclusive por ar vazio; nenhum termo do cálculo perguntava se a célula via o céu |
+| Manchas de escuridão sem regra, em múltiplos de 1/16 | Aliasing do leque: ângulos fixos e iguais em toda célula, então o erro fica coerente no espaço |
+| Sombras vizinhas com escuridão muito diferente, com a mesma luz em volta | O ambiente só media o céu visível dali; faltava o rebote, que vem dos lados |
+| Ambiente em cinco níveis, com manchas de borda seca | Ele usava a média do melhor quarto, e média de quatro raios binários só dá cinco valores |
+| Bordinha acesa em volta de todo sólido ao subir o AmbientInfluence | O ambiente era lido com filtro linear e borrava meia célula na fronteira ar/matéria |
+| Quarto lacrado por parede fina enxergando 71% do céu | O raio acumulava absorção, então `MaxLightLevel ÷ SolidCost` valia como espessura de parede — 3,5 células |
 | A mesma forma sombreando diferente conforme o que existe longe dela | A matéria lançava raio, então a face de baixo de um bloco ia bater no chão doze células abaixo |
 | Núcleo escuro de um bloco encostado na borda de baixo, não centrado | O leque cobria só o semicírculo de cima; a face de baixo de uma laje não via nada e a de cima via tudo |
 | Largura da copa escurecendo o tronco | A média do leque mede volume: o cone que a copa tapa cresce com a largura dela e entrava direto na conta de quem está embaixo |

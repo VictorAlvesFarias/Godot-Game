@@ -21,14 +21,6 @@ render_mode blend_mul, unshaded;
 // valor cru da celula, que e o que o texelFetch precisa.
 uniform sampler2D dados_mapa : filter_nearest, repeat_disable;
 
-// A MESMA textura, lida com filtro linear. Serve so para o canal de ambiente.
-//
-// O ambiente e o nivel difuso, que entra pelo topo de cada coluna e nao tem direcao. Lido celula a
-// celula, um buraco na copa vira uma coluna de ambiente alto descendo reta, e a sombra afrouxa
-// numa listra vertical de borda seca. Com filtro linear o valor se mistura com os vizinhos, e a
-// listra vira degrade - que e o que um buraco na copa faz de verdade.
-uniform sampler2D dados_suaves : filter_linear, repeat_disable;
-
 // Tamanho da janela em celulas. A textura tem exatamente este tamanho.
 uniform vec2 grade;
 
@@ -48,8 +40,9 @@ uniform float profundidade;
 uniform bool terreno_ligado;
 uniform bool ar_ligado;
 
-// Abertura do cone de raios, em radianos. 0 e um raio so, com borda dura.
-uniform float suavidade;
+// Abertura do cone de raios, em radianos: a LARGURA da faixa de penumbra. 0 e um raio so, com
+// borda dura de um pixel.
+uniform float penumbra;
 
 // Quanto a luz do ambiente enfraquece a sombra. Lugar aberto tem luz vindo de todo lado, que
 // preenche a sombra; lugar fechado nao tem, e a sombra fica cheia. 0 ignora o ambiente.
@@ -62,7 +55,12 @@ uniform float corte;
 const int MAX_PASSOS = 512;
 
 // Quantos raios formam o cone. Impar de proposito: o do meio e a direcao exata do sol.
-const int AMOSTRAS = 5;
+//
+// Tres bastam. So o cone INTEIRO livre conta como luz, entao o que decide e "algum raio bate?" -
+// e para um oclusor convexo isso e resolvido pelos dois extremos. O do meio so pega oclusor fino
+// passando bem no meio do cone. Eram cinco quando a media dos raios virava rampa; sem a rampa, os
+// dois do meio nao mudavam o desenho e custavam 40% do fragmento.
+const int AMOSTRAS = 3;
 
 vec2 rodar(vec2 v, float a) {
     float s = sin(a);
@@ -160,60 +158,50 @@ void fragment() {
 
     bool materia = dados.r > 0.5;
 
-    // A difusa ja vem pronta da CPU; o ar nunca e escurecido por ela.
-    float brilho = materia ? dados.g : 1.0;
+    // ISOLADO: so a sombra projetada NO AR.
+    //
+    // Tudo o mais esta desligado de proposito, para trabalhar uma peca por vez:
+    //   - a difusa (dados.g) nao entra: materia sai intacta, brilho 1
+    //   - a sombra no terreno nao entra
+    //   - o ambiente (dados.b) nao entra: o piso e constante
+    //
+    // O backup do shader inteiro esta em .backup/antes-do-isolamento/.
+    float brilho = 1.0;
 
-    bool ligada = materia ? terreno_ligado : ar_ligado;
-
-    if (ligada) {
+    if (ar_ligado && !materia) {
         float profundidade_percorrida;
 
         float t;
 
-        if (suavidade <= 0.0) {
-            t = transmissao(celula, -direcao, materia, profundidade_percorrida);
+        if (penumbra <= 0.0) {
+            t = transmissao(celula, -direcao, false, profundidade_percorrida);
         } else {
             // O cone: varios raios abertos em torno da direcao do sol, com a media. Perto do
             // oclusor eles concordam e a borda fica nitida; longe divergem e ela abre sozinha.
-            // A penumbra sai da geometria, sem precisar medir distancia ate o oclusor.
             float soma = 0.0;
-            float soma_profundidade = 0.0;
 
             for (int k = 0; k < AMOSTRAS; k++) {
                 float fatia = float(k) / float(AMOSTRAS - 1) * 2.0 - 1.0;
 
                 float prof_amostra;
 
-                soma += transmissao(celula, rodar(-direcao, fatia * suavidade), materia, prof_amostra);
-                soma_profundidade += prof_amostra;
+                soma += transmissao(celula, rodar(-direcao, fatia * penumbra), false, prof_amostra);
             }
 
             t = soma / float(AMOSTRAS);
-            profundidade_percorrida = soma_profundidade / float(AMOSTRAS);
         }
 
-        float piso = materia ? piso_terreno : piso_ar;
-
-        // A sombra e a razao entre o sol direto e a luz que chega de todo lado. Onde ha muito
-        // ambiente - ceu aberto -, ele preenche a sombra e ela fica fraca; onde ha pouco - dentro
-        // de uma caverna, sob a copa -, sobra pouca luz para preencher e ela fica cheia.
+        // A faixa de penumbra e SOMBRA: mesmo tom, sem degrade e sem tom proprio.
         //
-        // O ambiente vem no canal B, e o AR tambem o carrega. Sem isso o shader nao teria como
-        // saber se um ponto de ar esta em lugar aberto ou fechado, e a sombra no ar teria a mesma
-        // forca nos dois. Lido com filtro linear: ver o comentario do uniforme.
-        float ambiente = texture(dados_suaves, UV).b;
-
-        piso = mix(piso, 1.0, ambiente * influencia_ambiente);
-
-        float sombra = mix(piso, 1.0, t);
-
-        // Dentro do terreno a sombra desvanece com a profundidade, ate sumir. Sem isso ela teria
-        // uma celula de espessura: a coluna sombreada e a iluminada valem o mesmo logo abaixo.
-        if (materia && profundidade > 0.0) {
-            sombra = mix(sombra, 1.0, clamp(profundidade_percorrida / profundidade, 0.0, 1.0));
-        }
-
-        brilho *= sombra;
+        // So o cone inteiro livre conta como luz. Se um raio que seja bate no oclusor, o ponto esta
+        // na sombra - e a faixa onde isso acontece nasce com largura zero encostada no oclusor e
+        // ALARGA proporcional a distancia dele, porque os raios divergem. E so isso que a abertura
+        // do cone controla: o quanto a sombra engorda com a distancia.
+        //
+        // Era mix(piso_ar, 1.0, t), a media dos raios entrando como rampa. Aquilo grudava dois
+        // efeitos num numero so - a abertura definia a largura e a media definia o degrade - e
+        // ainda pintava a faixa de um tom diferente do da sombra.
+        brilho = t >= 1.0 ? 1.0 : piso_ar;
     }
 
     COLOR = vec4(vec3(brilho), 1.0);

@@ -49,6 +49,16 @@ namespace Jogo25D.Light
         private const int Amostras = 16;
         private const int Melhores = Amostras / 4;
 
+        // Quantas passadas de media o ambiente leva no fim. Ver AlisarAmbiente.
+        private const int PassadasDeAlisamento = 4;
+
+        // Quantas celulas de ar o ambiente se espalha antes de acabar. E o alcance do rebote: luz
+        // que bate no que esta iluminado em volta e volta. Ver EspalharAmbienteNoAr.
+        // Quantas celulas de ar o ambiente se espalha antes de acabar. E o alcance do rebote: luz
+        // que bate no que esta iluminado em volta e volta. Ver EspalharAmbienteNoAr.
+        private const float AlcanceDoAmbiente = 20f;
+
+
         #endregion
 
         #region Dinamic properties
@@ -84,6 +94,15 @@ namespace Jogo25D.Light
         private readonly Queue<int> _fila = new();
 
         private float[] _niveis = System.Array.Empty<float>();
+
+        // Quanto do ceu cada celula ve, de 0 a 1 - a MEDIA INTEIRA do leque, nao o melhor quarto.
+        // E o canal B da textura, e o que o shader usa para afrouxar a sombra. Ver CalcularVisaoDoCeu.
+        private float[] _ambiente = System.Array.Empty<float>();
+
+        // Buffer das passadas que nao podem ler o que ja escreveram.
+        private float[] _ambienteAlisado = System.Array.Empty<float>();
+
+
         private float[] _custos = System.Array.Empty<float>();
 
         // A silhueta do terreno, por coluna: a linha da materia mais ALTA dali. _topoEsq guarda o
@@ -124,6 +143,8 @@ namespace Jogo25D.Light
             var total = largura * altura;
 
             _niveis = new float[total];
+            _ambiente = new float[total];
+            _ambienteAlisado = new float[total];
             _custos = new float[total];
 
             _topo = new int[largura];
@@ -379,6 +400,7 @@ namespace Jogo25D.Light
                     if (y < _topoEsq[x] && y < _topoDir[x])
                     {
                         _niveis[y * Largura + x] = MaxLevel;
+                        _ambiente[y * Largura + x] = 1f;
 
                         continue;
                     }
@@ -389,18 +411,33 @@ namespace Jogo25D.Light
                     if (!EhAr(celula))
                     {
                         _niveis[celula] = 0f;
+                        _ambiente[celula] = 0f;
 
                         continue;
                     }
 
-                    _niveis[celula] = MaxLevel * VisaoDoCeu(x, y);
+                    _niveis[celula] = MaxLevel * VisaoDoCeu(x, y, out var fracao);
+                    _ambiente[celula] = fracao;
                 }
             }
 
             ErodirMateria();
+            EspalharAmbienteNoAr();
+            AlisarAmbiente();
+            EspalharAmbiente();
         }
 
-        // Vale a media dos MELHORES raios do leque, nao a do leque inteiro.
+        // Devolve DUAS medidas do mesmo leque, porque sao duas perguntas diferentes:
+        //
+        //   retorno       a media dos MELHORES raios - o quanto a face mais exposta recebe.
+        //   fracaoDoCeu   a media do leque INTEIRO   - que fracao do ceu este ponto ve.
+        //
+        // A primeira semeia a materia; a segunda e o ambiente, que o shader usa para afrouxar a
+        // sombra. Usar a primeira nas duas quantizava o ambiente: media de quatro raios binarios so
+        // pode dar 0, 0.25, 0.5, 0.75 ou 1, e a sombra ganhava manchas de borda seca.
+        //
+        // Por que a primeira nao serve de ambiente ja esta dito abaixo; por que a segunda nao serve
+        // de semente, tambem: ela poe a largura da copa na conta do tronco.
         //
         // A media do circulo mede volume: ela nao distingue "enterrado no meio do bloco" de
         // "pendurado embaixo dele com o aberto dos dois lados" - so muda o grau. E pior, ela poe a
@@ -416,13 +453,17 @@ namespace Jogo25D.Light
         //   tronco sob copa       o quarto lateral sai limpo          -> cheio, em qualquer copa
         //   fresta de caverna     um raio so sai, num quarto de 6     -> fraco
         //   boca de caverna       varios saem                         -> claro
-        private float VisaoDoCeu(int x, int y)
+        private float VisaoDoCeu(int x, int y, out float fracaoDoCeu)
         {
             System.Array.Clear(_melhores, 0, Melhores);
+
+            var total = 0f;
 
             for (int k = 0; k < Amostras; k++)
             {
                 var t = Raio(x, y, _leque[k * 2], _leque[k * 2 + 1]);
+
+                total += t;
 
                 if (t <= _melhores[Melhores - 1])
                 {
@@ -441,6 +482,8 @@ namespace Jogo25D.Light
                 _melhores[i] = t;
             }
 
+            fracaoDoCeu = total / Amostras;
+
             var soma = 0f;
 
             for (int i = 0; i < Melhores; i++)
@@ -451,7 +494,149 @@ namespace Jogo25D.Light
             return soma / Melhores;
         }
 
-        // Quanto deste raio chega ao ceu, de 0 a 1.
+        // O rebote: a luz que bate no que esta iluminado em volta e volta.
+        //
+        // So "que fracao do ceu eu vejo DAQUI" nao basta. Debaixo de uma copa isso e quase zero
+        // mesmo com a faixa iluminada a tres celulas de distancia, e duas sombras vizinhas com a
+        // mesma luz em volta ficam com escuridao muito diferente conforme o que cada uma tem por
+        // cima. Na sombra real quem preenche vem DOS LADOS.
+        //
+        // Entao o ambiente escorre de um ponto de ar para os vizinhos de ar, perdendo
+        // 1 / AlcanceDoAmbiente por celula.
+        //
+        // Passa SO por ar: parede corta. E o que mantem o quarto lacrado preto - do contrario isto
+        // desfaria o conserto do raio binario, vazando luz por dentro da parede.
+        //
+        // Relaxacao em fila, igual a erosao: uma celula pode melhorar depois de ja ter saido dela.
+        private void EspalharAmbienteNoAr()
+        {
+            var perda = 1f / AlcanceDoAmbiente;
+
+            _fila.Clear();
+
+            for (int i = 0; i < _ambiente.Length; i++)
+            {
+                if (EhAr(i) && _ambiente[i] > perda)
+                {
+                    _fila.Enqueue(i);
+                }
+            }
+
+            while (_fila.Count > 0)
+            {
+                var i = _fila.Dequeue();
+
+                var nivel = _ambiente[i] - perda;
+
+                if (nivel <= 0f)
+                {
+                    continue;
+                }
+
+                var x = i % Largura;
+                var y = i / Largura;
+
+                if (x > 0) Vazar(i - 1, nivel);
+                if (x < Largura - 1) Vazar(i + 1, nivel);
+                if (y > 0) Vazar(i - Largura, nivel);
+                if (y < Altura - 1) Vazar(i + Largura, nivel);
+            }
+        }
+
+        private void Vazar(int destino, float nivel)
+        {
+            if (!EhAr(destino) || nivel <= _ambiente[destino])
+            {
+                return;
+            }
+
+            _ambiente[destino] = nivel;
+
+            _fila.Enqueue(destino);
+        }
+
+        // Media do ambiente com os vizinhos de AR, algumas vezes.
+        //
+        // O leque tem um numero fixo de raios, e os mesmos angulos em toda celula. Andar uma celula
+        // faz a borda de uma copa cruzar a fronteira de um raio, e o ambiente pula 1/Amostras de
+        // uma vez - as vezes para cima, as vezes para baixo. Medido subindo ao lado de um tronco:
+        // 63, 63, 63, 47, 63, 47 - sobe e desce sem regra, e todos multiplos exatos de 1/16.
+        //
+        // Como os angulos sao os mesmos em todo lugar, esse erro fica coerente no espaco e vira
+        // MANCHA, nao ruido. Triplicar os raios reduz o degrau mas nao o elimina, e custa o triplo.
+        // A media resolve porque o erro e de alta frequencia e o campo de ambiente nao e.
+        //
+        // Conta so vizinho de ar, e por isso parede continua cortando: quarto lacrado segue em zero.
+        private void AlisarAmbiente()
+        {
+            for (int passada = 0; passada < PassadasDeAlisamento; passada++)
+            {
+                for (int i = 0; i < _ambiente.Length; i++)
+                {
+                    if (!EhAr(i))
+                    {
+                        _ambienteAlisado[i] = _ambiente[i];
+
+                        continue;
+                    }
+
+                    var x = i % Largura;
+                    var y = i / Largura;
+
+                    var soma = _ambiente[i];
+                    var conta = 1;
+
+                    if (x > 0 && EhAr(i - 1)) { soma += _ambiente[i - 1]; conta++; }
+                    if (x < Largura - 1 && EhAr(i + 1)) { soma += _ambiente[i + 1]; conta++; }
+                    if (y > 0 && EhAr(i - Largura)) { soma += _ambiente[i - Largura]; conta++; }
+                    if (y < Altura - 1 && EhAr(i + Largura)) { soma += _ambiente[i + Largura]; conta++; }
+
+                    _ambienteAlisado[i] = soma / conta;
+                }
+
+                (_ambiente, _ambienteAlisado) = (_ambienteAlisado, _ambiente);
+            }
+        }
+
+        // A materia herda o ambiente do ar encostado nela: ela e opaca, entao a luz de ambiente que
+        // banha a face dela e a que existe do lado de fora. Bloco sem vizinho de ar fica em zero.
+        private void EspalharAmbiente()
+        {
+            for (int i = 0; i < _ambiente.Length; i++)
+            {
+                if (EhAr(i))
+                {
+                    continue;
+                }
+
+                var x = i % Largura;
+                var y = i / Largura;
+
+                var maior = 0f;
+
+                if (x > 0 && EhAr(i - 1)) maior = Mathf.Max(maior, _ambiente[i - 1]);
+                if (x < Largura - 1 && EhAr(i + 1)) maior = Mathf.Max(maior, _ambiente[i + 1]);
+                if (y > 0 && EhAr(i - Largura)) maior = Mathf.Max(maior, _ambiente[i - Largura]);
+                if (y < Altura - 1 && EhAr(i + Largura)) maior = Mathf.Max(maior, _ambiente[i + Largura]);
+
+                _ambiente[i] = maior;
+            }
+        }
+
+        // Se este raio chega ao ceu: 1 ou 0, sem meio termo.
+        //
+        // Materia e OPACA. Ja foi absorcao acumulada, e ai o alcance do raio - MaxLevel / custo -
+        // valia como espessura de parede: com 14 e custo 4, o raio atravessava 3,5 celulas, e um
+        // quarto lacrado por parede de UMA celula media 182 de 255 de ceu visivel. Luz passando
+        // por parede.
+        //
+        // Aquele mesmo numero e o que diz quantos blocos a luz penetra no terreno. Sao duas
+        // perguntas opostas - o degrade quer que ela va fundo, a vedacao quer que pare no primeiro
+        // bloco - e nao cabem no mesmo valor. Por isso aqui e binario, e o degrade fica por conta
+        // de ErodirMateria, que e outra passada e tem o custo por celula so dela.
+        //
+        // O degrade espacial nao se perde: o que varia de ponto para ponto e QUANTOS raios do
+        // leque escapam, e isso muda suave.
         //
         // Anda por DDA, saltando de fronteira em fronteira de celula: cada celula cruzada e
         // visitada exatamente uma vez. Com passo fixo, um passo curto conta a mesma celula duas
@@ -479,10 +664,6 @@ namespace Jogo25D.Light
             var proximoX = absX < 1e-6f ? 1e9f : (dx > 0f ? cx + 1f - px : px - cx) / absX;
             var proximoY = absY < 1e-6f ? 1e9f : (dy > 0f ? cy + 1f - py : py - cy) / absY;
 
-            var acumulado = 0f;
-
-            var teto = (float)MaxLevel;
-
             var limite = Largura + Altura;
 
             for (int passo = 0; passo < limite; passo++)
@@ -501,7 +682,7 @@ namespace Jogo25D.Light
                 // Saiu da janela: dali para fora e ceu aberto, nada mais tapa.
                 if (cx < 0 || cy < 0 || cx >= Largura || cy >= Altura)
                 {
-                    return 1f - acumulado / teto;
+                    return 1f;
                 }
 
                 // Ja passou por cima de tudo que ainda podia tapa-lo. O raio so sobe, entao daqui
@@ -513,12 +694,10 @@ namespace Jogo25D.Light
 
                 if (cy < silhueta)
                 {
-                    return 1f - acumulado / teto;
+                    return 1f;
                 }
 
-                acumulado += _custos[cy * Largura + cx];
-
-                if (acumulado >= teto)
+                if (!EhAr(cy * Largura + cx))
                 {
                     return 0f;
                 }
@@ -569,10 +748,10 @@ namespace Jogo25D.Light
                 _pixels[p] = noAr ? (byte)0 : (byte)255;
                 _pixels[p + 1] = (byte)Mathf.Clamp(BrilhoDaMateria(i) * 255f, 0f, 255f);
 
-                // O ar tambem leva o nivel difuso, mesmo sem ser escurecido por ele. E o que
-                // deixa o shader saber se aquele ponto esta num lugar aberto ou fechado: sem
-                // isso, a sombra no ar tem a mesma forca dentro de uma caverna e a ceu aberto.
-                _pixels[p + 2] = (byte)Mathf.Clamp(NivelDifuso(i) * 255f, 0f, 255f);
+                // O ambiente: que fracao do ceu esta celula ve, ar incluido. E o que deixa o
+                // shader saber se um ponto esta em lugar aberto ou fechado - sem isso a sombra no
+                // ar tem a mesma forca dentro de uma caverna e a ceu aberto.
+                _pixels[p + 2] = (byte)Mathf.Clamp(_ambiente[i] * 255f, 0f, 255f);
             }
 
             _imagem = Image.CreateFromData(Largura, Altura, false, Image.Format.Rgb8, _pixels);
