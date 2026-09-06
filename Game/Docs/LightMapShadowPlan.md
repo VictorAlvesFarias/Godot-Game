@@ -1,5 +1,10 @@
 # Sombra projetada — plano de ação
 
+> **Superado em 2026-09-06.** Este plano descreve a arquitetura anterior (varredura na CPU,
+> penumbra por amostras). O sistema atual calcula cobertura angular continua no shader e esta
+> descrito em [LightMap.md](LightMap.md). Mantido so como registro do que ja foi tentado.
+
+
 Refazer a sombra projetada do zero, por varredura, sobre o mapa de luz difusa que ficou de pé.
 A versão anterior está em `.backup/sombra-projetada/`, junto com o registro dos defeitos que cada
 peça dela existia para resolver.

@@ -1,51 +1,33 @@
-﻿namespace Jogo25D.Constants
+namespace Jogo25D.Constants
 {
-    // Mapa de luz por tile. Cada celula guarda um nivel de 0 a MAX_LEVEL; a luz do ceu entra por
-    // cima e se propaga perdendo intensidade, mais ao atravessar bloco do que ar. E o que da o
-    // degrade na boca da caverna e a escuridao que aumenta com a profundidade - coisas que a
-    // sombra projetada nao faz, porque o oclusor do Godot e binario: bloqueia ou nao bloqueia.
     public static class LightMapConstants
     {
-        public const int MAX_LEVEL = 24;
+        public const float AMBIENT_INFLUENCE = 0.65f;
+        public const float AIR_SHADOW_OPACITY = 0.85f;
+        public const float SOLID_SHADOW_OPACITY = 0.55f;
+        public const float PENUMBRA = 0.92f;
+        // Meia abertura angular da fonte quando `Penumbra` esta em 0. E o unico controle fisico da
+        // largura da penumbra: com 8 graus a rampa ficava mais estreita que um tile perto do
+        // oclusor, e o degrau quadrado do tile aparecia inteiro.
+        public const float PENUMBRA_MAX_DEGREES = 25f;
+        public const float MATERIAL_ABSORPTION = 0.45f;
 
-        // Quanto a luz perde ao atravessar uma celula. Ar quase nao consome; bloco solido consome
-        // muito, entao poucos blocos de profundidade ja levam ao escuro. Folhagem fica no meio, e
-        // por isso copa de arvore filtra a luz em vez de cortar.
-        // Quanto a luz perde por celula de AR percorrida. Fracionario de proposito: com 1 e
-        // orcamento 9, o ar come 1/9 da luz por celula, e a luz que entra por baixo de uma copa
-        // larga morre antes de chegar no tronco - mesmo nao havendo nada entre ele e o ceu. Ar nao
-        // deveria cobrar quase nada; quem cobra caro e bloco e folhagem.
-        // O ar NAO absorve: quem escurece um ponto e a materia que tapa a vista dele para o
-        // ceu, nao a distancia que a luz andou pelo vazio.
-        public const int COST_FOLIAGE = 2;
-        public const int COST_SOLID = 2;
+        // Ate onde a oclusao e considerada, em celulas. Nao e regulagem de aparencia: e o
+        // orcamento de busca do shader.
+        public const int SUN_RANGE_CELLS = 96;
+        public const int SKY_RANGE_CELLS = 24;
 
-        // Piso de luminosidade. Sem isso o fundo do mundo fica preto absoluto e nada e legivel.
-        public const float MIN_BRIGHTNESS = 0.12f;
+        // Amostras de luz por celula em cada eixo. E o que define se o contorno da sombra pode ser
+        // uma reta ou so uma escada de tiles.
+        public const int SUBDIVISIONS = 3;
 
-        // --- Sombra projetada ---
-
-        // Influencia do ambiente na sombra, de 0 a 1. Ver a propriedade AmbientInfluence.
-        public const float AMBIENT_INFLUENCE = 0.5f;
-
-        // Opacidade da sombra no ar: 1 e preto absoluto, 0 e invisivel. Vira o piso do feixe no
-        // shader - o valor do pixel onde a transmissao e zero.
-        public const float AIR_SHADOW_OPACITY = 0.6f;
-
-        // Teto da meia-abertura do cone, em graus. Acima disto a sombra deixa de parecer com o
-        // objeto: com 10 graus, a sombra de uma copa de 16 celulas vira 26 de largura a trinta
-        // celulas de distancia. Referencia: o sol de verdade tem raio angular de 0.27 grau.
-        public const float PENUMBRA_MAX_DEGREES = 10f;
-
-        // Distancia da fonte de luz, de 0 a 1. Ver a propriedade Penumbra.
-        public const float PENUMBRA = 0.95f;
-
-        // O shader que desenha a sombra projetada, por fragmento.
         public const string SHADER_PATH = "res://Assets/Shaders/light_map.gdshader";
+        public const string PRESENT_SHADER_PATH = "res://Assets/Shaders/light_map_present.gdshader";
 
+        public const string VIEWPORT_NODE_NAME = "LightMapGpuPass";
+        public const string PASS_NODE_NAME = "LightMapPass";
         public const string OVERLAY_NODE_NAME = "LightMapOverlay";
 
-        // Acima da cena e abaixo da UI, que vive em CanvasLayer proprio.
         public const int OVERLAY_Z_INDEX = 900;
     }
 }
