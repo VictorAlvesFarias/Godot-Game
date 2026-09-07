@@ -71,16 +71,10 @@ namespace Jogo25D.Light
 
             _copia.ShowRawMap = LerBool(bruto, nameof(LightMapData.ShowRawMap), padrao.ShowRawMap);
             _copia.SunAngleDegrees = LerFloat(bruto, nameof(LightMapData.SunAngleDegrees), padrao.SunAngleDegrees);
-            _copia.SunLightColor = LerColor(bruto, nameof(LightMapData.SunLightColor), padrao.SunLightColor);
-            _copia.SunIntensity = LerFloat(bruto, nameof(LightMapData.SunIntensity), padrao.SunIntensity);
             _copia.Penumbra = LerFloat(bruto, nameof(LightMapData.Penumbra), padrao.Penumbra);
-            _copia.SkyLightColor = LerColor(bruto, nameof(LightMapData.SkyLightColor), padrao.SkyLightColor);
             _copia.AmbientInfluence = LerFloat(bruto, nameof(LightMapData.AmbientInfluence), padrao.AmbientInfluence);
             _copia.AirShadowEnabled = LerBool(bruto, nameof(LightMapData.AirShadowEnabled), padrao.AirShadowEnabled);
-            _copia.SolidShadowEnabled = LerBool(bruto, nameof(LightMapData.SolidShadowEnabled), padrao.SolidShadowEnabled);
             _copia.AirShadowOpacity = LerFloat(bruto, nameof(LightMapData.AirShadowOpacity), padrao.AirShadowOpacity);
-            _copia.SolidShadowOpacity = LerFloat(bruto, nameof(LightMapData.SolidShadowOpacity), padrao.SolidShadowOpacity);
-            _copia.MaterialAbsorption = LerFloat(bruto, nameof(LightMapData.MaterialAbsorption), padrao.MaterialAbsorption);
 
             return _copia;
         }
@@ -95,12 +89,6 @@ namespace Jogo25D.Light
         {
             Variant valor = bruto.Get(nome);
             return valor.VariantType == Variant.Type.Nil ? padrao : valor.AsBool();
-        }
-
-        private static Color LerColor(Resource bruto, string nome, Color padrao)
-        {
-            Variant valor = bruto.Get(nome);
-            return valor.VariantType == Variant.Type.Nil ? padrao : valor.AsColor();
         }
 
         private static float RotacaoDoSol(LightMapData ajustes)
@@ -362,13 +350,8 @@ namespace Jogo25D.Light
             passe.SetShaderParameter("grade", grade);
             passe.SetShaderParameter("direcao_sol", direcao);
             passe.SetShaderParameter("abertura_sol", Mathf.Atan(aberturaMaxima * (1f - distancia)));
-            passe.SetShaderParameter("cor_sol", ajustes.SunLightColor);
-            passe.SetShaderParameter("cor_ceu", ajustes.SkyLightColor);
-            passe.SetShaderParameter("intensidade_sol", Mathf.Max(0f, ajustes.SunIntensity));
             passe.SetShaderParameter("influencia_ambiente", Mathf.Clamp(ajustes.AmbientInfluence, 0f, 1f));
             passe.SetShaderParameter("ar_ligado", ajustes.AirShadowEnabled);
-            passe.SetShaderParameter("materia_ligada", ajustes.SolidShadowEnabled);
-            passe.SetShaderParameter("absorcao_materia", Mathf.Max(0f, ajustes.MaterialAbsorption));
             passe.SetShaderParameter("alcance_sol", LightMapConstants.SUN_RANGE_CELLS);
             passe.SetShaderParameter("alcance_ceu", LightMapConstants.SKY_RANGE_CELLS);
             passe.SetShaderParameter("mostrar_mapa_cru", ajustes.ShowRawMap);
@@ -376,7 +359,6 @@ namespace Jogo25D.Light
             apresentacao.SetShaderParameter("dados_mapa", _dadosTextura);
             apresentacao.SetShaderParameter("grade", grade);
             apresentacao.SetShaderParameter("piso_ar", 1f - Mathf.Clamp(ajustes.AirShadowOpacity, 0f, 1f));
-            apresentacao.SetShaderParameter("piso_materia", 1f - Mathf.Clamp(ajustes.SolidShadowOpacity, 0f, 1f));
             apresentacao.SetShaderParameter("mostrar_mapa_cru", ajustes.ShowRawMap);
         }
 

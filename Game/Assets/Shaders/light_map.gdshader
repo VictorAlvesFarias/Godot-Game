@@ -10,18 +10,12 @@ uniform vec2 direcao_sol = vec2(0.0, 1.0);
 // Meia abertura angular do sol, em radianos. E ela que da a transicao suave da penumbra.
 uniform float abertura_sol = 0.01;
 
-uniform vec4 cor_sol : source_color = vec4(1.0, 0.96, 0.86, 1.0);
-uniform vec4 cor_ceu : source_color = vec4(0.55, 0.70, 1.0, 1.0);
-
-uniform float intensidade_sol = 1.0;
 uniform float influencia_ambiente = 0.65;
-uniform float absorcao_materia = 0.45;
 
 uniform int alcance_sol = 96;
 uniform int alcance_ceu = 24;
 
 uniform bool ar_ligado = true;
-uniform bool materia_ligada = true;
 uniform bool mostrar_mapa_cru = false;
 
 const int MAX_INTERVALOS = 12;
@@ -159,8 +153,8 @@ float fracao_visivel(float ini[MAX_INTERVALOS], float fim[MAX_INTERVALOS], int t
 
 // O sol e direcional: so o cone que aponta para ele pode ser bloqueado. A varredura anda pelo eixo
 // dominante do cone, uma linha de celulas por vez, e em cada linha visita o intervalo contiguo de
-// celulas que o cone atravessa. Cobertura exata: amostrar pontos ao longo do raio deixaria buracos,
-// e buraco em oclusor vira ponto claro dentro da sombra.
+// celulas que o cone atravessa. Cobertura exata: caminhar por pontos discretos ao longo do raio
+// deixaria buracos, e buraco em oclusor vira ponto claro dentro da sombra.
 float luz_do_sol(vec2 p, ivec2 origem) {
     float limite = max(abertura_sol, EPS);
 
@@ -274,7 +268,7 @@ float luz_do_ceu(vec2 p, ivec2 origem) {
 }
 
 void fragment() {
-    // Posicao continua em celulas. O passe roda com varias amostras por tile, entao o contorno da
+    // Posicao continua em celulas. O passe roda com subdivisao por tile, entao o contorno da
     // sombra nao fica preso na escada da grade.
     vec2 p = UV * grade;
     ivec2 c = ivec2(floor(p));
@@ -283,18 +277,13 @@ void fragment() {
 
     if (mostrar_mapa_cru) {
         COLOR = vec4(vec3(clamp(prof / 8.0, 0.0, 1.0)), 1.0);
-    } else if ((materia && !materia_ligada) || (!materia && !ar_ligado)) {
+    } else if (materia || !ar_ligado) {
         COLOR = vec4(1.0);
     } else {
-        // Dentro da materia a luz ainda entra pela face exposta e vai sendo absorvida.
-        float transmissao = exp(-absorcao_materia * max(prof - 1.0, 0.0));
+        float sol = luz_do_sol(p, c);
+        float ceu = luz_do_ceu(p, c) * influencia_ambiente;
+        float luz = clamp(sol + ceu, 0.0, 1.0);
 
-        float sol = luz_do_sol(p, c) * intensidade_sol * transmissao;
-        float ceu = luz_do_ceu(p, c) * influencia_ambiente * transmissao;
-
-        // O piso da sombra nao entra aqui: ele e aplicado na apresentacao, sobre a geometria real.
-        vec3 luz = cor_sol.rgb * sol + cor_ceu.rgb * ceu;
-
-        COLOR = vec4(clamp(luz, vec3(0.0), vec3(1.0)), 1.0);
+        COLOR = vec4(vec3(luz), 1.0);
     }
 }
