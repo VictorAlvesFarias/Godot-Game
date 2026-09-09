@@ -203,12 +203,12 @@ namespace Jogo25D.Light
         }
 
         /// <summary>Transmission towards the sun. Zero below the horizon; no arbitrary distance cutoff.</summary>
-        public double Sun(double px, double py, double dx, double dy)
+        public double Sun(double px, double py, double dx, double dy, double maxDistance = double.PositiveInfinity)
         {
             if (dy >= -0.001) return 0;
             int top = Math.Min(SkyTop, _highestEdit);
             if (py < top) return 1;
-            double end = (top - py - 1) / dy;
+            double end = Math.Min((top - py - 1) / dy, maxDistance);
             double t = 0, transmission = 1;
             int x = (int)Math.Floor(px);
             int step = dx >= 0 ? 1 : -1;

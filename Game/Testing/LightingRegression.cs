@@ -92,11 +92,60 @@ namespace Jogo25D.Testing
                     await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                     using var distantShadow = pass.GetTexture().GetImage();
                     Check(distantShadow.GetPixel(32 * LightMapComputer.ShadowSubdivisions, 10 * LightMapComputer.ShadowSubdivisions).R < 0.004, "GPU ignored remote logical ceiling");
+
+                    // Measure the whole projection with a point source (zero blur).
+                    // Distance must change its geometry, not just the transition width.
+                    var blocker = new LogicalLightWorld(0, "penumbra", 1, false);
+                    for (int y = 6; y < 14; y++) for (int x = 24; x < 32; x++) blocker.SetTerrain(x, y, 0);
+                    blocker.Field.SetRegion(0, 0, 64, 36); Settle(blocker.Field);
+                    int nearbySourceWidth = 0;
+                    foreach (float distance in new[] { 0f, 0.5f, 1f })
+                    {
+                        raster.Begin(blocker, Vector2I.Zero, new(64, 36), 0, distance, new(28, 6), 0);
+                        while (!raster.Complete) raster.Process(10000);
+                        material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
+                        material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                        material.SetShaderParameter("penumbra", distance);
+                        material.SetShaderParameter("source_reference", new Vector2(28, 6));
+                        material.SetShaderParameter("source_radius", 0f);
+                        pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                        using var result = pass.GetTexture().GetImage();
+                        int near = ShadowWidth(result, 15), far = ShadowWidth(result, 33);
+                        if (distance == 0)
+                        {
+                            Check(far > near + 10, "Nearby point source must expand the whole shadow without blur");
+                            nearbySourceWidth = far;
+                            result.SavePng(folder + "/lighting-source-near.png");
+                        }
+                        if (distance == 1)
+                        {
+                            Check(Math.Abs(far - near) <= 1, "Infinite source must cast parallel shadows");
+                            Check(nearbySourceWidth > far + 10, "Moving the source must change projection width");
+                            for (int x = 25; x < 31; x++)
+                                Check(result.GetPixel(x * LightMapComputer.ShadowSubdivisions + 1, 6 * LightMapComputer.ShadowSubdivisions + 1).R > 0.9,
+                                    "Lit solid top face has a dark internal seam");
+                            result.SavePng(folder + "/lighting-source-distant.png");
+                        }
+                        GD.Print($"SOURCE DISTANCE {distance}: shadow near={near}px far={far}px");
+                    }
                 }
                 GD.Print("LIGHTING REGRESSION PASS");
                 GetTree().Quit();
             }
             catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(1); }
+        }
+
+        private static int ShadowWidth(Image image, int y)
+        {
+            int count = 0, scale = LightMapComputer.ShadowSubdivisions;
+            for (int x = 16 * scale; x < 40 * scale; x++)
+            {
+                float value = image.GetPixel(x, y * scale).R;
+                if (value < 0.5f) count++;
+            }
+            return count;
         }
 
         private void Room(int left, int right)

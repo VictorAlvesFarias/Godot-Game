@@ -73,11 +73,11 @@ interrompe a contribuição, mesmo se estiver dez mil tiles acima e nunca tiver 
 
 Para o sol direcional:
 
-1. `LightMapComputer` prepara uma textura RGBA de ambiente, profundidade visual e material,
+1. `LightMapComputer` prepara uma textura RGBA de ambiente e material (canal G reservado),
    uma textura de emissão RGB e um atlas com a transmissão solar nas bordas da janela.
 2. Cada amostra da borda consulta intervalos das colunas lógicas até atingir o céu ou um bloqueio.
    A distância não tem um corte arbitrário de 96 tiles. Espaços verticais vazios são saltados.
-3. `light_map.gdshader` faz DDA local em cinco direções do disco solar. Quando um raio sai da
+3. `light_map.gdshader` faz DDA local em 33 direções do disco solar. Quando um raio sai da
    janela, continua pela transmissão lógica da borda correspondente. O passe gera somente sol.
 4. `light_map_present.gdshader` combina ambiente, emissão e esse sol, multiplicando as cores do
    mundo. Oclusão solar não apaga a contribuição de uma fonte local.
@@ -86,7 +86,14 @@ O passe solar roda com seis subdivisões por tile, só quando geometria, janela 
 O ambiente tem duas subdivisões para distinguir recepção nas faces dos blocos. A reconstrução
 bilinear de ambiente/emissão não mistura materiais diferentes, evitando halos nas paredes.
 O atlas de borda tem amostras a cada meio tile; sombras distantes são uma aproximação filtrada.
-Penumbra usa nove amostras angulares, não integração analítica nem path tracing.
+Penumbra usa 33 amostras angulares ponderadas pela seção de um disco. A transição cresce com
+a distância ao bloqueador; não é um desfoque uniforme nem path tracing. Mais amostras aumentam
+o custo de reconstrução do cache solar, mas não adicionam raios aos frames com o cache válido.
+
+No material opaco, o sol recebe luz pela face voltada à fonte, com atenuação contínua e alcance
+visual de três tiles. Ambiente e emissão consideram as quatro faces expostas, sem escolher
+abruptamente uma única face mais próxima. Isso evita recortes internos nos cantos. A recepção
+na superfície não altera a propagação lógica e não transmite luz através de paredes.
 
 A janela é alinhada à grade e tem margem para movimento, evitando recalcular ao andar um pixel.
 Uma mudança local reaproveita os receptores fora de uma vizinhança de três tiles. Bordas solares
@@ -129,7 +136,9 @@ Vector2 em parte da persistência: isso limita a precisão de coordenadas muito 
 Em `Assets/Data/LightMap.tres`:
 
 - `SunAngleDegrees`: direção solar; zero é sol acima, positivo desloca o sol para a direita.
-- `Penumbra`: 1 = fonte pontual, 0 = meia abertura de 5 graus; padrão 0,5.
+- `Penumbra`: 0 = fonte pontual/sombra dura, 1 = meia abertura de 8 graus; padrão 0,5.
+  O controle passou a crescer com a suavidade; valores salvos pela versão anterior agora
+  seguem esta convenção. A abertura alarga a transição, enquanto o centro segue a direção solar.
 - `AmbientInfluence`: energia do céu, padrão 0,32.
 - `SunIntensity`: energia direta, padrão 0,85.
 - `SkyColor` e `SunColor`: cor das contribuições.
@@ -179,7 +188,9 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão no editor: passou, incluindo alterações de ângulo e ambiente pelo recurso.
 - Integrações autorada e procedural: passaram, incluindo o sol mudando continuamente.
 - Edição pontual na cena procedural: 37 células processadas, apresentação em 3–4 frames.
-- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 17 ms no total,
+- Regressão de penumbra na GPU: transição com parâmetro 1 cresceu de 6 para 27 pixels
+  entre receptores próximos e distantes; com parâmetro 0 permaneceu dura.
+- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 42 ms no total,
   distribuível em fatias; não é um custo cobrado em todo frame.
 
 Essas medições são cenários de teste, não garantias de FPS para qualquer mundo ou GPU.

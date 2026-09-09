@@ -32,6 +32,7 @@ namespace Jogo25D.Light
             {
                 string name = property["name"].AsString();
                 if (name is not (nameof(LightMapData.SunAngleDegrees) or nameof(LightMapData.Penumbra)
+                    or nameof(LightMapData.SunReferenceTiles) or nameof(LightMapData.SunRadiusTiles)
                     or nameof(LightMapData.AmbientInfluence) or nameof(LightMapData.SunIntensity)
                     or nameof(LightMapData.SkyColor) or nameof(LightMapData.SunColor) or nameof(LightMapData.ShowRawMap))) continue;
                 Variant value = Settings.Get(name);
@@ -132,14 +133,16 @@ namespace Jogo25D.Light
             var settings = ReadSettings();
             bool geometryChanged = _invalid || _computer.Origin != origin || _computer.Size != size
                 || _computer.WorldRevision != World.Revision;
-            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra;
+            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra
+                || _computer.SunReference != settings.SunReferenceTiles || _computer.SunRadius != settings.SunRadiusTiles;
             if (geometryChanged) _building = false;
             // A moving sun queues the next snapshot rather than starving the current build.
             if (World.Field.Settled && (_building || !_published || inputsChanged || _displayedRevision != World.Field.Revision))
             {
                 if (!_building)
                 {
-                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra);
+                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra,
+                        settings.SunReferenceTiles, settings.SunRadiusTiles);
                     _building = true; _invalid = false;
                 }
                 _computer.Process();
@@ -153,6 +156,8 @@ namespace Jogo25D.Light
                     _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
                     _material.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
                     _material.SetShaderParameter("penumbra", _computer.Penumbra);
+                    _material.SetShaderParameter("source_reference", _computer.SunReference - (Vector2)origin);
+                    _material.SetShaderParameter("source_radius", _computer.SunRadius);
                     _pass.Size = size * LightMapComputer.ShadowSubdivisions;
                     _passRect.Size = _pass.Size;
                     if (_computer.RebuiltSun) { _pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once; SolarUpdates++; }

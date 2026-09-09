@@ -10,7 +10,7 @@ namespace Jogo25D.Light
     {
         public const int Subdivisions = 2;
         public const int ShadowSubdivisions = 6;
-        public const int SunSamples = 9;
+        public const int SunSamples = 33;
         private LogicalLightWorld _world;
         private byte[] _light = Array.Empty<byte>(), _emission = Array.Empty<byte>();
         private int _cursor;
@@ -31,13 +31,18 @@ namespace Jogo25D.Light
         public long FieldRevision { get; private set; }
         public float Angle { get; private set; }
         public float Penumbra { get; private set; }
+        public Vector2 SunReference { get; private set; }
+        public float SunRadius { get; private set; }
+        public double InverseSunDistance => Math.Pow(1 - Math.Clamp(Penumbra, 0, 1), 2) / 64;
 
-        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra)
+        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra,
+            Vector2 sunReference = default, float sunRadius = 1.5f)
         {
             bool layout = Complete && _world == world && Origin == origin && Size == size;
+            bool sameSource = SunReference == sunReference && SunRadius == sunRadius;
             _reuseGeometry = layout
-                && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
-            bool reuseBoundary = layout && Angle == angle && Penumbra == penumbra;
+                && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra && sameSource;
+            bool reuseBoundary = layout && Angle == angle && Penumbra == penumbra && sameSource;
             _dirtyReceivers.Clear();
             _reuseReceivers = layout && world.TryGetChanges(WorldRevision, out _);
             if (_reuseReceivers)
@@ -52,22 +57,25 @@ namespace Jogo25D.Light
             }
             else reuseBoundary = false;
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
+            SunReference = sunReference; SunRadius = sunRadius;
             WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;
             if (_light.Length != bytes)
             {
                 _light = new byte[bytes]; _emission = new byte[bytes];
-                _receiverX = new int[bytes / 4]; _receiverY = new int[bytes / 4]; _depth = new double[bytes / 4];
+                _receiverX = new int[bytes]; _receiverY = new int[bytes]; _depth = new double[bytes];
             }
             _cursor = 0;
             int boundaryBytes = BoundaryWidth * (SunSamples * 4);
             if (_boundary.Length != boundaryBytes) _boundary = new byte[boundaryBytes];
             _boundaryCursor = reuseBoundary ? boundaryBytes : 0;
-            double spread = Math.Atan(Math.Tan(5 * Math.PI / 180) * (1 - penumbra));
             for (int i = 0; i < SunSamples; i++)
             {
-                double a = angle * Math.PI / 180 + (i - (SunSamples - 1) / 2) * spread / ((SunSamples - 1) / 2);
-                _dx[i] = Math.Sin(a); _dy[i] = -Math.Cos(a);
+                double a = angle * Math.PI / 180;
+                double offset = (i - (SunSamples - 1) / 2) * sunRadius / ((SunSamples - 1) / 2);
+                // Scaled source coordinates avoid representing a point at infinity.
+                _dx[i] = Math.Sin(a) + Math.Cos(a) * offset * InverseSunDistance;
+                _dy[i] = -Math.Cos(a) + Math.Sin(a) * offset * InverseSunDistance;
             }
         }
 
@@ -83,41 +91,41 @@ namespace Jogo25D.Light
                 int x = (int)Math.Floor(px), y = (int)Math.Floor(py);
                 if (_reuseReceivers && !_dirtyReceivers.Contains(new(x, y)))
                 {
-                    WriteField(_world.Field.Get(_receiverX[_cursor], _receiverY[_cursor]), _depth[_cursor]);
+                    WriteReceivers();
                     _cursor++;
                     continue;
                 }
                 byte opacity = _world.Opacity(x, y);
-                LightValue value = _world.Field.Get(x, y);
-                double depth = 1;
-                _receiverX[_cursor] = x; _receiverY[_cursor] = y;
+                int slot = _cursor * 4;
+                for (int side = 0; side < 4; side++) _depth[slot + side] = 0;
+                _receiverX[slot] = x; _receiverY[slot] = y; _depth[slot] = 1;
                 if (opacity == 255)
                 {
                     // Surface reception is separate from transmission. Light on a rock face
                     // does not become a light source on the other side of the rock.
-                    double nearest = double.PositiveInfinity;
-                    value = default;
-                    for (int distance = 1; distance <= 3; distance++)
-                        foreach (var d in LightingField.Neighbours)
+                    _depth[slot] = 0;
+                    for (int side = 0; side < 4; side++)
+                        for (int distance = 1; distance <= 3; distance++)
                         {
+                            var d = LightingField.Neighbours[side];
                             int nx = x + d.X * distance, ny = y + d.Y * distance;
                             if (_world.Opacity(nx, ny) == 255) continue;
                             double qx = d.X == 0 ? px : d.X > 0 ? nx + 0.001 : nx + 0.999;
                             double qy = d.Y == 0 ? py : d.Y > 0 ? ny + 0.001 : ny + 0.999;
                             double metric = Math.Abs(qx - px) + Math.Abs(qy - py);
-                            if (metric >= nearest) continue;
-                            nearest = metric;
-                            value = _world.Field.Get(nx, ny);
-                            _receiverX[_cursor] = nx; _receiverY[_cursor] = ny;
-                            depth = Math.Pow(0.43, distance - 1);
+                            _receiverX[slot + side] = nx; _receiverY[slot + side] = ny;
+                            // Continuous surface falloff. Keep all exposed faces so switching
+                            // the nearest face cannot cut a dark diagonal into a solid corner.
+                            double fade = Math.Clamp(metric - 2, 0, 1);
+                            _depth[slot + side] = Math.Pow(0.43, Math.Max(0, metric - 0.5))
+                                * (1 - fade * fade * (3 - 2 * fade));
+                            break;
                         }
-                    if (double.IsPositiveInfinity(nearest)) depth = 0;
                 }
                 int p = _cursor * 4;
-                _depth[_cursor] = depth;
-                _light[p + 1] = (byte)Math.Round(depth * 255);
+                _light[p + 1] = 255;
                 _light[p + 2] = opacity;
-                WriteField(value, depth);
+                WriteReceivers();
                 _cursor++;
             }
             while (_boundaryCursor < _boundary.Length)
@@ -128,21 +136,36 @@ namespace Jogo25D.Light
                 double offset = sample / (double)Subdivisions;
                 double x = edge == 0 || edge == 1 ? Math.Min(offset, Size.X) : edge == 2 ? 0 : Size.X;
                 double y = edge == 2 || edge == 3 ? Math.Min(offset, Size.Y) : edge == 0 ? 0 : Size.Y;
-                bool outgoing = edge == 0 ? _dy[direction] < 0 : edge == 1 ? _dy[direction] > 0 : edge == 2 ? _dx[direction] < 0 : _dx[direction] > 0;
-                double value = outgoing ? _world.Sun(Origin.X + x + _dx[direction] * 0.0001,
-                    Origin.Y + y + _dy[direction] * 0.0001, _dx[direction], _dy[direction]) : 0;
+                double dx = _dx[direction] + (SunReference.X - Origin.X - x) * InverseSunDistance;
+                double dy = _dy[direction] + (SunReference.Y - Origin.Y - y) * InverseSunDistance;
+                double length = Math.Sqrt(dx * dx + dy * dy);
+                double remaining = InverseSunDistance == 0 ? double.PositiveInfinity : length / InverseSunDistance;
+                dx /= Math.Max(length, 1e-12); dy /= Math.Max(length, 1e-12);
+                bool outgoing = edge == 0 ? dy < 0 : edge == 1 ? dy > 0 : edge == 2 ? dx < 0 : dx > 0;
+                double value = outgoing ? _world.Sun(Origin.X + x + dx * 0.0001,
+                    Origin.Y + y + dy * 0.0001, dx, dy, Math.Max(0, remaining - 0.0001)) : 0;
                 _boundary[_boundaryCursor++] = (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
             }
         }
 
-        private void WriteField(LightValue value, double depth)
+        private void WriteReceivers()
         {
             int p = _cursor * 4;
-            _light[p] = (byte)(value.Sky * depth);
+            LightValue value = default;
+            for (int side = 0; side < 4; side++)
+            {
+                int slot = p + side;
+                double depth = _depth[slot];
+                if (depth == 0) continue;
+                var source = _world.Field.Get(_receiverX[slot], _receiverY[slot]);
+                value = value.Max(new((byte)(source.Sky * depth), (byte)(source.R * depth),
+                    (byte)(source.G * depth), (byte)(source.B * depth)));
+            }
+            _light[p] = value.Sky;
             _light[p + 3] = 255;
-            _emission[p] = (byte)(value.R * depth);
-            _emission[p + 1] = (byte)(value.G * depth);
-            _emission[p + 2] = (byte)(value.B * depth);
+            _emission[p] = value.R;
+            _emission[p + 1] = value.G;
+            _emission[p + 2] = value.B;
             _emission[p + 3] = 255;
         }
 
