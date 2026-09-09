@@ -77,7 +77,7 @@ Para o sol direcional:
    uma textura de emissão RGB e um atlas com a transmissão solar nas bordas da janela.
 2. Cada amostra da borda consulta intervalos das colunas lógicas até atingir o céu ou um bloqueio.
    A distância não tem um corte arbitrário de 96 tiles. Espaços verticais vazios são saltados.
-3. `light_map.gdshader` faz DDA local em 33 direções do disco solar. Quando um raio sai da
+3. `light_map.gdshader` faz DDA local em 33 direções em torno de SunAngle. Quando um raio sai da
    janela, continua pela transmissão lógica da borda correspondente. O passe gera somente sol.
 4. `light_map_present.gdshader` combina ambiente, emissão e esse sol, multiplicando as cores do
    mundo. Oclusão solar não apaga a contribuição de uma fonte local.
@@ -86,9 +86,15 @@ O passe solar roda com seis subdivisões por tile, só quando geometria, janela 
 O ambiente tem duas subdivisões para distinguir recepção nas faces dos blocos. A reconstrução
 bilinear de ambiente/emissão não mistura materiais diferentes, evitando halos nas paredes.
 O atlas de borda tem amostras a cada meio tile; sombras distantes são uma aproximação filtrada.
-Penumbra usa 33 amostras angulares ponderadas pela seção de um disco. A transição cresce com
-a distância ao bloqueador; não é um desfoque uniforme nem path tracing. Mais amostras aumentam
-o custo de reconstrução do cache solar, mas não adicionam raios aos frames com o cache válido.
+`SunAngleDegrees` é o único eixo da projeção, igual em todos os tiles. `Penumbra` controla
+um cone simétrico em torno desse eixo: meia abertura de `8° × (1 - p)²`, de aberto em 0 a
+paralelo em 1. Não há fonte posicionada, referência de tile nem dependência da câmera.
+
+O passe combina o contorno externo das oclusões do cone, preservando a transmissão parcial
+dos materiais e suavizando sua franja. Assim a sombra inteira se abre com a distância ao
+obstáculo, sem apenas desfocar uma projeção paralela. Este é um controle visual estilizado,
+não uma simulação física de uma única fonte próxima. A resolução do passe permanece fixa.
+São 33 amostras, ou uma no caso paralelo. O custo adicional ocorre na reconstrução do cache.
 
 No material opaco, o sol recebe luz pela face voltada à fonte, com atenuação contínua e alcance
 visual de três tiles. Ambiente e emissão consideram as quatro faces expostas, sem escolher
@@ -136,9 +142,8 @@ Vector2 em parte da persistência: isso limita a precisão de coordenadas muito 
 Em `Assets/Data/LightMap.tres`:
 
 - `SunAngleDegrees`: direção solar; zero é sol acima, positivo desloca o sol para a direita.
-- `Penumbra`: 0 = fonte pontual/sombra dura, 1 = meia abertura de 8 graus; padrão 0,5.
-  O controle passou a crescer com a suavidade; valores salvos pela versão anterior agora
-  seguem esta convenção. A abertura alarga a transição, enquanto o centro segue a direção solar.
+- `Penumbra`: 0 = cone mais aberto; 1 = projeção paralela; padrão 0,5.
+  Controla a abertura dos dois lados do eixo, sem alterar `SunAngleDegrees`.
 - `AmbientInfluence`: energia do céu, padrão 0,32.
 - `SunIntensity`: energia direta, padrão 0,85.
 - `SkyColor` e `SunColor`: cor das contribuições.
@@ -147,6 +152,11 @@ Em `Assets/Data/LightMap.tres`:
 O recurso de configurações executa no editor (`Tool`), e as alterações do Inspector são lidas
 pela prévia. O tamanho da prévia respeita `PreviewSize`. Durante a recarga de scripts, o iluminador
 também lê as propriedades de recursos genéricos para não substituir os ajustes pelos padrões.
+
+Alterações de tiles são comparadas com o estado anterior e aplicadas ao mesmo mundo lógico.
+Além do sinal `Changed`, há uma conferência a cada 250 ms somente no editor: no teste real,
+apagar/recolocar tiles não acionou o callback C#. A conferência percorre os tiles autorados da
+prévia, mas só as diferenças invalidam iluminação. Esse trabalho não existe durante o jogo.
 
 Não há piso artificial de brilho. O overlay ainda afeta o fundo atrás do mundo, como no sistema
 anterior; sombras no ar são um efeito visual estilizado, não simulação volumétrica de névoa.
@@ -188,9 +198,11 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão no editor: passou, incluindo alterações de ângulo e ambiente pelo recurso.
 - Integrações autorada e procedural: passaram, incluindo o sol mudando continuamente.
 - Edição pontual na cena procedural: 37 células processadas, apresentação em 3–4 frames.
-- Regressão de penumbra na GPU: transição com parâmetro 1 cresceu de 6 para 27 pixels
-  entre receptores próximos e distantes; com parâmetro 0 permaneceu dura.
-- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 42 ms no total,
+- Regressão da projeção na GPU: cone aberto cresceu de 62 para 88 pixels; paralelo manteve
+  48 pixels. A simetria em torno do eixo e o bloqueador fora da janela também passaram.
+- Regressão do editor: penumbra preserva o ângulo; apagar e recolocar um tile atualiza a geometria
+  e o cache sem substituir o mundo lógico.
+- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 37 ms no total,
   distribuível em fatias; não é um custo cobrado em todo frame.
 
 Essas medições são cenários de teste, não garantias de FPS para qualquer mundo ou GPU.

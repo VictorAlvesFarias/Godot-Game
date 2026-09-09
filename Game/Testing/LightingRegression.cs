@@ -20,6 +20,7 @@ namespace Jogo25D.Testing
                 var remote = new LogicalLightWorld(0, "test", 1, false);
                 remote.SetTerrain(0, -10000, 0);
                 Check(remote.Sky(0, 0) == 0 && remote.Sun(0.5, 0.5, 0, -1) == 0, "Remote roof must block sky and sun");
+                Check(remote.Sun(0.5, 0.5, 0, -1, 64) == 1, "An obstacle beyond a finite source must not block its light");
                 remote.SetTerrain(0, -10000, -1);
                 Check(remote.Sky(0, 0) == 255 && remote.Sun(0.5, 0.5, 0, -1) == 1, "Removing remote roof must restore sky");
                 remote.SetTerrain(-2, -2, 7);
@@ -92,44 +93,58 @@ namespace Jogo25D.Testing
                     await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                     using var distantShadow = pass.GetTexture().GetImage();
                     Check(distantShadow.GetPixel(32 * LightMapComputer.ShadowSubdivisions, 10 * LightMapComputer.ShadowSubdivisions).R < 0.004, "GPU ignored remote logical ceiling");
-
-                    // Measure the whole projection with a point source (zero blur).
-                    // Distance must change its geometry, not just the transition width.
+                    // Measure cone geometry and symmetry, not just edge softness.
                     var blocker = new LogicalLightWorld(0, "penumbra", 1, false);
                     for (int y = 6; y < 14; y++) for (int x = 24; x < 32; x++) blocker.SetTerrain(x, y, 0);
                     blocker.Field.SetRegion(0, 0, 64, 36); Settle(blocker.Field);
                     int nearbySourceWidth = 0;
                     foreach (float distance in new[] { 0f, 0.5f, 1f })
                     {
-                        raster.Begin(blocker, Vector2I.Zero, new(64, 36), 0, distance, new(28, 6), 0);
+                        raster.Begin(blocker, Vector2I.Zero, new(64, 36), 0, distance);
                         while (!raster.Complete) raster.Process(10000);
                         material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
                         material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
                         material.SetShaderParameter("penumbra", distance);
-                        material.SetShaderParameter("source_reference", new Vector2(28, 6));
-                        material.SetShaderParameter("source_radius", 0f);
                         pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
                         for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                         using var result = pass.GetTexture().GetImage();
                         int near = ShadowWidth(result, 15), far = ShadowWidth(result, 33);
+                        int scale = LightMapComputer.ShadowSubdivisions;
+                        // Mirrored pixels about the block center must agree at every aperture.
+                        for (int x = 16 * scale; x < 28 * scale; x++)
+                            Check(Math.Abs(result.GetPixel(x, 33 * scale).R - result.GetPixel(56 * scale - 1 - x, 33 * scale).R) < 0.015,
+                                "Penumbra shifted the shadow away from the SunAngle axis");
                         if (distance == 0)
                         {
-                            Check(far > near + 10, "Nearby point source must expand the whole shadow without blur");
+                            Check(far > near + 10, "Open cone must expand the whole shadow");
                             nearbySourceWidth = far;
-                            result.SavePng(folder + "/lighting-source-near.png");
+                            result.SavePng(folder + "/lighting-cone-open.png");
                         }
                         if (distance == 1)
                         {
                             Check(Math.Abs(far - near) <= 1, "Infinite source must cast parallel shadows");
-                            Check(nearbySourceWidth > far + 10, "Moving the source must change projection width");
+                            Check(nearbySourceWidth > far + 10, "Penumbra must change projection width");
                             for (int x = 25; x < 31; x++)
                                 Check(result.GetPixel(x * LightMapComputer.ShadowSubdivisions + 1, 6 * LightMapComputer.ShadowSubdivisions + 1).R > 0.9,
                                     "Lit solid top face has a dark internal seam");
-                            result.SavePng(folder + "/lighting-source-distant.png");
+                            result.SavePng(folder + "/lighting-cone-parallel.png");
                         }
-                        GD.Print($"SOURCE DISTANCE {distance}: shadow near={near}px far={far}px");
+                        GD.Print($"CONE {distance}: shadow near={near}px far={far}px");
                     }
+                    // Put the blocker outside the GPU window. Its logical boundary rays
+                    // must preserve the expanding projection in the same world coordinates.
+                    raster.Begin(blocker, new(0, 16), new(64, 36), 0, 0);
+                    while (!raster.Complete) raster.Process(10000);
+                    material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
+                    material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                    material.SetShaderParameter("penumbra", 0f);
+                    pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                    for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var offscreenShadow = pass.GetTexture().GetImage();
+                    Check(Math.Abs(ShadowWidth(offscreenShadow, 17) - nearbySourceWidth) <= 2,
+                        "Moving the window changed the cone geometry");
                 }
                 GD.Print("LIGHTING REGRESSION PASS");
                 GetTree().Quit();

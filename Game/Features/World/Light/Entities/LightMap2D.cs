@@ -19,6 +19,8 @@ namespace Jogo25D.Light
         public long SolarUpdates { get; private set; }
         private readonly LightMapComputer _computer = new();
         private readonly List<TileMapLayer> _layers = new();
+        private Dictionary<Vector2I, int> _previewTerrain = new();
+        private double _editorPoll;
         private readonly LightMapData _defaults = new();
         private readonly LightMapData _editorSettings = new();
 
@@ -32,7 +34,6 @@ namespace Jogo25D.Light
             {
                 string name = property["name"].AsString();
                 if (name is not (nameof(LightMapData.SunAngleDegrees) or nameof(LightMapData.Penumbra)
-                    or nameof(LightMapData.SunReferenceTiles) or nameof(LightMapData.SunRadiusTiles)
                     or nameof(LightMapData.AmbientInfluence) or nameof(LightMapData.SunIntensity)
                     or nameof(LightMapData.SkyColor) or nameof(LightMapData.SunColor) or nameof(LightMapData.ShowRawMap))) continue;
                 Variant value = Settings.Get(name);
@@ -84,15 +85,32 @@ namespace Jogo25D.Light
             var grid = _layers[0];
             if (Engine.IsEditorHint())
             {
-                if (World == null || _invalid)
+                _editorPoll += delta;
+                // The editor does not consistently forward native cell changes to managed
+                // Changed callbacks. Poll only the editor snapshot, never the runtime world.
+                if (World == null || _invalid || _editorPoll >= 0.25)
                 {
-                    World = new LogicalLightWorld(0, "preview", 1, false);
+                    _editorPoll = 0;
+                    if (World == null)
+                    {
+                        World = new LogicalLightWorld(0, "preview", 1, false);
+                        _previewTerrain.Clear();
+                        _requestedSize = Vector2I.Zero;
+                        _published = false;
+                    }
+                    var current = new Dictionary<Vector2I, int>();
+                    long previousRevision = World.Revision;
                     foreach (var layer in _layers)
                         foreach (var cell in layer.GetUsedCells())
-                            if (layer.Name != "Base") World.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(layer, cell));
-                    _published = false;
+                            if (layer.Name != "Base") current[cell] = LogicalLightWorld.TileTerrain(layer, cell);
+                    foreach (var cell in _previewTerrain.Keys)
+                        if (!current.ContainsKey(cell)) World.SetTerrain(cell.X, cell.Y, -1);
+                    foreach (var entry in current)
+                        if (!_previewTerrain.TryGetValue(entry.Key, out int old) || old != entry.Value)
+                            World.SetTerrain(entry.Key.X, entry.Key.Y, entry.Value);
+                    _previewTerrain = current;
+                    if (World.Revision != previousRevision) _building = false;
                     _invalid = false;
-                    _requestedSize = Vector2I.Zero;
                 }
             }
             else
@@ -131,18 +149,16 @@ namespace Jogo25D.Light
             }
             World.Field.Process();
             var settings = ReadSettings();
-            bool geometryChanged = _invalid || _computer.Origin != origin || _computer.Size != size
+            bool geometryChanged = _invalid || !_computer.IsWorld(World) || _computer.Origin != origin || _computer.Size != size
                 || _computer.WorldRevision != World.Revision;
-            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra
-                || _computer.SunReference != settings.SunReferenceTiles || _computer.SunRadius != settings.SunRadiusTiles;
+            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra;
             if (geometryChanged) _building = false;
             // A moving sun queues the next snapshot rather than starving the current build.
             if (World.Field.Settled && (_building || !_published || inputsChanged || _displayedRevision != World.Field.Revision))
             {
                 if (!_building)
                 {
-                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra,
-                        settings.SunReferenceTiles, settings.SunRadiusTiles);
+                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra);
                     _building = true; _invalid = false;
                 }
                 _computer.Process();
@@ -156,8 +172,6 @@ namespace Jogo25D.Light
                     _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
                     _material.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
                     _material.SetShaderParameter("penumbra", _computer.Penumbra);
-                    _material.SetShaderParameter("source_reference", _computer.SunReference - (Vector2)origin);
-                    _material.SetShaderParameter("source_radius", _computer.SunRadius);
                     _pass.Size = size * LightMapComputer.ShadowSubdivisions;
                     _passRect.Size = _pass.Size;
                     if (_computer.RebuiltSun) { _pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once; SolarUpdates++; }

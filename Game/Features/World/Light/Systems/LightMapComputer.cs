@@ -31,18 +31,14 @@ namespace Jogo25D.Light
         public long FieldRevision { get; private set; }
         public float Angle { get; private set; }
         public float Penumbra { get; private set; }
-        public Vector2 SunReference { get; private set; }
-        public float SunRadius { get; private set; }
-        public double InverseSunDistance => Math.Pow(1 - Math.Clamp(Penumbra, 0, 1), 2) / 64;
+        public bool IsWorld(LogicalLightWorld world) => _world == world;
 
-        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra,
-            Vector2 sunReference = default, float sunRadius = 1.5f)
+        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra)
         {
             bool layout = Complete && _world == world && Origin == origin && Size == size;
-            bool sameSource = SunReference == sunReference && SunRadius == sunRadius;
             _reuseGeometry = layout
-                && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra && sameSource;
-            bool reuseBoundary = layout && Angle == angle && Penumbra == penumbra && sameSource;
+                && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
+            bool reuseBoundary = layout && Angle == angle && Penumbra == penumbra;
             _dirtyReceivers.Clear();
             _reuseReceivers = layout && world.TryGetChanges(WorldRevision, out _);
             if (_reuseReceivers)
@@ -57,7 +53,6 @@ namespace Jogo25D.Light
             }
             else reuseBoundary = false;
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
-            SunReference = sunReference; SunRadius = sunRadius;
             WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;
             if (_light.Length != bytes)
@@ -71,11 +66,9 @@ namespace Jogo25D.Light
             _boundaryCursor = reuseBoundary ? boundaryBytes : 0;
             for (int i = 0; i < SunSamples; i++)
             {
-                double a = angle * Math.PI / 180;
-                double offset = (i - (SunSamples - 1) / 2) * sunRadius / ((SunSamples - 1) / 2);
-                // Scaled source coordinates avoid representing a point at infinity.
-                _dx[i] = Math.Sin(a) + Math.Cos(a) * offset * InverseSunDistance;
-                _dy[i] = -Math.Cos(a) + Math.Sin(a) * offset * InverseSunDistance;
+                double spread = 8 * Math.PI / 180 * Math.Pow(1 - Math.Clamp(penumbra, 0, 1), 2);
+                double a = angle * Math.PI / 180 + (i - 16) * spread / 16;
+                _dx[i] = Math.Sin(a); _dy[i] = -Math.Cos(a);
             }
         }
 
@@ -136,14 +129,10 @@ namespace Jogo25D.Light
                 double offset = sample / (double)Subdivisions;
                 double x = edge == 0 || edge == 1 ? Math.Min(offset, Size.X) : edge == 2 ? 0 : Size.X;
                 double y = edge == 2 || edge == 3 ? Math.Min(offset, Size.Y) : edge == 0 ? 0 : Size.Y;
-                double dx = _dx[direction] + (SunReference.X - Origin.X - x) * InverseSunDistance;
-                double dy = _dy[direction] + (SunReference.Y - Origin.Y - y) * InverseSunDistance;
-                double length = Math.Sqrt(dx * dx + dy * dy);
-                double remaining = InverseSunDistance == 0 ? double.PositiveInfinity : length / InverseSunDistance;
-                dx /= Math.Max(length, 1e-12); dy /= Math.Max(length, 1e-12);
+                double dx = _dx[direction], dy = _dy[direction];
                 bool outgoing = edge == 0 ? dy < 0 : edge == 1 ? dy > 0 : edge == 2 ? dx < 0 : dx > 0;
                 double value = outgoing ? _world.Sun(Origin.X + x + dx * 0.0001,
-                    Origin.Y + y + dy * 0.0001, dx, dy, Math.Max(0, remaining - 0.0001)) : 0;
+                    Origin.Y + y + dy * 0.0001, dx, dy) : 0;
                 _boundary[_boundaryCursor++] = (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
             }
         }
