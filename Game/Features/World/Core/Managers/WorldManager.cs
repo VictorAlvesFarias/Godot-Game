@@ -65,6 +65,7 @@ namespace Jogo25D.Systems
 		{
 			if (Dimensions.IsResolved)
 			{
+				Game.Managers.LightMapManager.Node?.AttachToDimensions();
 				return;
 			}
 			
@@ -100,6 +101,7 @@ namespace Jogo25D.Systems
 			// vazio e o player caindo sem fim. Quem precisa limpar e o caminho procedural, que
 			// gera o proprio terreno, e ele ja faz isso.
 			SetChunkStreamingEnabled(false);
+			Game.Managers.LightMapManager.Node?.UseAuthoredWorlds();
 
 			CarregarDocumento(save);
 			RespawnLocalSoloPlayer(character);
@@ -113,6 +115,7 @@ namespace Jogo25D.Systems
 			Dimensions.ClearLayers();
 
             Game.Managers.TileStreamingManager.Node.SetWorldSeed(save.Seed);
+            Game.Managers.LightMapManager.Node?.UseProceduralWorlds();
 
             CarregarDocumento(save);
 

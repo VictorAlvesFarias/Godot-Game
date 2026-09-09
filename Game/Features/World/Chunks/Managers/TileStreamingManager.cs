@@ -288,6 +288,7 @@ namespace Jogo25D.Chunks
 
         public void RecordMutation(string dimensionId, Vector2I cell, string type, string extraData)
         {
+            Game.Managers.LightMapManager.Node?.SetCell(dimensionId, cell, type, extraData);
             var state = ResolveState(dimensionId);
             var chunkCoord = CoordinateUtilities.CellToChunk(cell);
 
@@ -472,9 +473,13 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
-
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
+
+            foreach (var mutation in chunkState.Mutations)
+                Game.Managers.LightMapManager.Node?.SetCell(dimensionId,
+                    new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y), mutation.Type, mutation.ExtraData);
+
+            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             ApplyMutations(layer, chunkState);
             _minimap.RecordChunk(dimensionId, layer, chunkCoord);
@@ -522,6 +527,8 @@ namespace Jogo25D.Chunks
         public void CatchUpPeer(long targetPeerId, Vector2 aroundPosition)
         {
             SetWorldSeedRequest(targetPeerId);
+            SendLightWorld(targetPeerId, ChunkStreamingConstants.OVERWORLD_ID);
+            SendLightWorld(targetPeerId, ChunkStreamingConstants.UPSIDEDOWN_ID);
 
             var aroundChunk = CoordinateUtilities.WorldToChunk(aroundPosition, TileSize);
 
@@ -532,6 +539,31 @@ namespace Jogo25D.Chunks
         private void SetWorldSeedRequest(long targetPeerId)
         {
             RpcId(targetPeerId, nameof(SetWorldSeedReceive), WorldSeed);
+        }
+
+        private void SendLightWorld(long peerId, string dimensionId)
+        {
+            var world = Game.Managers.LightMapManager.Node.GetWorld(dimensionId);
+            var batch = new List<int>(3072);
+            bool reset = true;
+            foreach (var edit in world.Edits())
+            {
+                batch.Add(edit.X); batch.Add(edit.Y); batch.Add(edit.Terrain);
+                if (batch.Count < 3072) continue;
+                RpcId(peerId, nameof(ReceiveLightWorld), dimensionId, world.Procedural, reset, batch.ToArray());
+                reset = false; batch.Clear();
+            }
+            if (reset || batch.Count > 0)
+                RpcId(peerId, nameof(ReceiveLightWorld), dimensionId, world.Procedural, reset, batch.ToArray());
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ReceiveLightWorld(string dimensionId, bool procedural, bool reset, int[] edits)
+        {
+            var manager = Game.Managers.LightMapManager.Node;
+            if (reset) manager.ReplaceWorld(dimensionId, procedural);
+            var world = manager.GetWorld(dimensionId);
+            for (int i = 0; i + 2 < edits.Length; i += 3) world.SetTerrain(edits[i], edits[i + 1], edits[i + 2]);
         }
 
         // Manda pro peer novo so o que esta perto dele. Antes mandava TODO chunk carregado das
@@ -624,6 +656,8 @@ namespace Jogo25D.Chunks
                 var mutacao = bruta.AsGodotDictionary();
                 var cell = new Vector2I(mutacao["x"].AsInt32(), mutacao["y"].AsInt32());
                 var chunk = CoordinateUtilities.CellToChunk(cell);
+                Game.Managers.LightMapManager.Node?.SetCell(dimensionId, cell, mutacao["type"].AsString(),
+                    mutacao.TryGetValue("blockId", out var opticalBlock) ? opticalBlock.AsString() : "");
 
                 if (!state.TryGetValue(chunk, out var chunkState))
                 {

@@ -1020,6 +1020,8 @@ namespace Jogo25D.Biomes
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void BreakBlockBroadcast(Vector2I cell)
         {
+            // A remote edit remains relevant even when this client has no rendered tile here.
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
             if (GetCellSourceId(cell) == -1)
             {
                 var baseLayer = BaseLayer;
@@ -1114,14 +1116,14 @@ namespace Jogo25D.Biomes
         {
             PaintBlockAndReconnect(cell, block);
 
-            Game.Managers.LightMapManager.Node?.Invalidate(DimensionId);
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "place", block.Id);
 
             return true;
         }
 
         public void EraseBlockAndReconnect(Vector2I cell)
         {
-            Game.Managers.LightMapManager.Node?.Invalidate(DimensionId);
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
 
             if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
             {

@@ -4,18 +4,56 @@ using System.Collections.Generic;
 
 namespace Jogo25D.Light
 {
-    // Roteador entre o mundo e os nos de mapa de luz das dimensoes. Quem calcula e desenha e o
-    // LightMap2D autorado em cada cena de dimensao; este manager existe porque o TerrainLayer
-    // so conhece o id da dimensao, e alguem precisa traduzir isso no no certo.
-    //
-    // Ele ja teve uma copia do mapa de luz aqui dentro, criando o overlay por conta propria. Com
-    // o no na cena eram dois desenhando o mesmo terreno, e junto o mundo escurecia em dobro.
+    // Owns logical optical state per dimension. LightMap2D is only its presentation/cache client.
     public partial class LightMapManager : Node
     {
         #region Dinamic properties
 
         /// <summary>Os nos de mapa de luz achados, por id de dimensao.</summary>
         public Dictionary<string, LightMap2D> Nodes { get; } = new();
+        private readonly Dictionary<string, LogicalLightWorld> _worlds = new();
+        private bool _authored;
+
+        public void UseProceduralWorlds()
+        {
+            _authored = false;
+            _worlds.Clear();
+        }
+
+        public void UseAuthoredWorlds()
+        {
+            _authored = true;
+            _worlds.Clear();
+            foreach (var id in Game.Managers.DimensionManager.Node.Ids)
+            {
+                var world = GetWorld(id);
+                var layer = Game.Managers.DimensionManager.Node.ResolveLayer(id);
+                foreach (var cell in layer.GetUsedCells())
+                    world.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(layer, cell));
+            }
+        }
+
+        public LogicalLightWorld GetWorld(string dimensionId)
+        {
+            var streaming = Game.Managers.TileStreamingManager.Node;
+            long seed = streaming?.WorldSeed ?? 0;
+            int scale = Mathf.Max(1, Mathf.RoundToInt(32f / (streaming?.TileSize ?? 32)));
+            if (!_worlds.TryGetValue(dimensionId, out var world) || world.Seed != seed || world.WorldScale != scale)
+                _worlds[dimensionId] = world = new LogicalLightWorld(seed, dimensionId, scale, !_authored);
+            return world;
+        }
+
+        public void ReplaceWorld(string dimensionId, bool procedural)
+        {
+            var old = GetWorld(dimensionId);
+            _worlds[dimensionId] = new LogicalLightWorld(old.Seed, dimensionId, old.WorldScale, procedural);
+        }
+
+        public void SetCell(string dimensionId, Vector2I cell, string type, string blockId = "")
+        {
+            if (dimensionId == null) return;
+            GetWorld(dimensionId).ApplyMutation(cell.X, cell.Y, type, blockId);
+        }
 
         #endregion
 
@@ -51,6 +89,7 @@ namespace Jogo25D.Light
                 if (no != null)
                 {
                     Nodes[id] = no;
+                    no.DimensionId = id;
                 }
             }
         }
@@ -58,7 +97,10 @@ namespace Jogo25D.Light
         /// <summary>Esquece os nos registrados. Chamado quando o mundo e destruido.</summary>
         public void Detach()
         {
+            foreach (var node in Nodes.Values) if (IsInstanceValid(node)) node.DetachWorld();
             Nodes.Clear();
+            _worlds.Clear();
+            _authored = false;
         }
 
         /// <summary>

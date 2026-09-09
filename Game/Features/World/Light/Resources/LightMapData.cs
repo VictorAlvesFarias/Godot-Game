@@ -3,7 +3,7 @@ using Jogo25D.Constants;
 
 namespace Jogo25D.Light
 {
-    [GlobalClass]
+    [Tool, GlobalClass]
     public partial class LightMapData : Resource
     {
         [ExportGroup("Sol")]
@@ -15,9 +15,10 @@ namespace Jogo25D.Light
         [ExportGroup("Ceu")]
         [Export(PropertyHint.Range, "0,1,0.01")] public float AmbientInfluence { get; set; } = LightMapConstants.AMBIENT_INFLUENCE;
 
-        [ExportGroup("Sombra")]
-        [Export] public bool AirShadowEnabled { get; set; } = true;
-        [Export(PropertyHint.Range, "0,1,0.01")] public float AirShadowOpacity { get; set; } = LightMapConstants.AIR_SHADOW_OPACITY;
+        [ExportGroup("Energia e cor")]
+        [Export(PropertyHint.Range, "0,2,0.01")] public float SunIntensity { get; set; } = 0.85f;
+        [Export] public Color SkyColor { get; set; } = new(0.72f, 0.83f, 1f);
+        [Export] public Color SunColor { get; set; } = new(1f, 0.95f, 0.84f);
 
         [ExportGroup("Depuracao")]
         [Export] public bool ShowRawMap { get; set; } = false;

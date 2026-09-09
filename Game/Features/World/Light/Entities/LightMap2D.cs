@@ -1,394 +1,217 @@
 using Godot;
-using Jogo25D.Constants;
+using Jogo25D.Core;
+using System.Collections.Generic;
 
 namespace Jogo25D.Light
 {
     [Tool]
     public partial class LightMap2D : Node2D
     {
-        [ExportCategory("Light Map")]
         [Export] public bool LightMapEnabled { get; set; } = true;
         [Export] public bool PreviewInEditor { get; set; } = true;
         [Export] public Vector2I PreviewSize { get; set; } = new(120, 80);
         [Export] public Godot.Collections.Array<NodePath> Layers { get; set; } = new();
         [Export] public NodePath Camera { get; set; } = new("");
         [Export(PropertyHint.ResourceType, "LightMapData")] public Resource Settings { get; set; }
+        public string DimensionId { get; set; }
+        public LogicalLightWorld World { get; private set; }
+        public bool PresentationReady => _published && !_building && World != null && World.Field.Settled && _displayedRevision == World.Field.Revision;
+        public long SolarUpdates { get; private set; }
+        private readonly LightMapComputer _computer = new();
+        private readonly List<TileMapLayer> _layers = new();
+        private readonly LightMapData _defaults = new();
+        private readonly LightMapData _editorSettings = new();
 
-        private readonly LightMapComputer _geometria = new();
-        private readonly System.Collections.Generic.List<TileMapLayer> _camadas = new();
-
-        private LightMapData _padroes;
-        private LightMapData _copia;
-        private Node2D _camera;
+        private LightMapData ReadSettings()
+        {
+            if (Settings is LightMapData typed) return typed;
+            if (Settings == null) return _defaults;
+            // During editor script reloads Godot can expose a Resource placeholder instead
+            // of the managed type. Read its exported values rather than silently using defaults.
+            foreach (var property in _defaults.GetPropertyList())
+            {
+                string name = property["name"].AsString();
+                if (name is not (nameof(LightMapData.SunAngleDegrees) or nameof(LightMapData.Penumbra)
+                    or nameof(LightMapData.AmbientInfluence) or nameof(LightMapData.SunIntensity)
+                    or nameof(LightMapData.SkyColor) or nameof(LightMapData.SunColor) or nameof(LightMapData.ShowRawMap))) continue;
+                Variant value = Settings.Get(name);
+                _editorSettings.Set(name, value.VariantType == Variant.Type.Nil ? _defaults.Get(name) : value);
+            }
+            return _editorSettings;
+        }
         private Sprite2D _overlay;
-        private SubViewport _gpuPass;
+        private ShaderMaterial _material;
+        private ShaderMaterial _present;
+        private ImageTexture _lightTexture, _emissionTexture, _boundaryTexture;
+        private SubViewport _pass;
         private ColorRect _passRect;
-        private ImageTexture _dadosTextura;
+        private ImageTexture _blackTexture;
+        private Camera2D _camera;
+        private bool _building, _invalid = true, _published;
+        private long _displayedRevision = -1;
+        private Vector2I _requestedOrigin, _requestedSize;
+        private Vector2I _displayedOrigin, _displayedSize;
 
-        private Vector2I _ultimaOrigem;
-        private bool _temDados;
-        private bool _sujo = true;
+        public void Invalidate() => _invalid = true;
+
+        public void DetachWorld()
+        {
+            DimensionId = null;
+            World = null;
+            _published = false;
+            _building = false;
+            _invalid = true;
+            if (IsInstanceValid(_overlay)) _overlay.Visible = false;
+        }
+
+        public override void _ExitTree()
+        {
+            foreach (var layer in _layers)
+                if (IsInstanceValid(layer) && Engine.IsEditorHint()) layer.Changed -= Invalidate;
+        }
 
         public override void _Process(double delta)
         {
             if (!LightMapEnabled || (Engine.IsEditorHint() && !PreviewInEditor))
             {
-                EsconderOverlay();
+                if (IsInstanceValid(_overlay)) _overlay.Visible = false;
                 return;
             }
-
-            ResolverReferencias();
-            Atualizar();
-        }
-
-        public void Invalidate()
-        {
-            _sujo = true;
-        }
-
-        private LightMapData Ajustes
-        {
-            get
+            if (_layers.Count == 0) Resolve();
+            if (_layers.Count == 0 || _layers[0].TileSet == null) return;
+            if (!Engine.IsEditorHint() && DimensionId == null) return;
+            var grid = _layers[0];
+            if (Engine.IsEditorHint())
             {
-                if (Settings is LightMapData tipado)
+                if (World == null || _invalid)
                 {
-                    return tipado;
+                    World = new LogicalLightWorld(0, "preview", 1, false);
+                    foreach (var layer in _layers)
+                        foreach (var cell in layer.GetUsedCells())
+                            if (layer.Name != "Base") World.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(layer, cell));
+                    _published = false;
+                    _invalid = false;
+                    _requestedSize = Vector2I.Zero;
                 }
-
-                if (Settings != null)
-                {
-                    return Copiar(Settings);
-                }
-
-                return _padroes ??= new LightMapData();
-            }
-        }
-
-        private LightMapData Copiar(Resource bruto)
-        {
-            _copia ??= new LightMapData();
-            LightMapData padrao = _padroes ??= new LightMapData();
-
-            _copia.ShowRawMap = LerBool(bruto, nameof(LightMapData.ShowRawMap), padrao.ShowRawMap);
-            _copia.SunAngleDegrees = LerFloat(bruto, nameof(LightMapData.SunAngleDegrees), padrao.SunAngleDegrees);
-            _copia.Penumbra = LerFloat(bruto, nameof(LightMapData.Penumbra), padrao.Penumbra);
-            _copia.AmbientInfluence = LerFloat(bruto, nameof(LightMapData.AmbientInfluence), padrao.AmbientInfluence);
-            _copia.AirShadowEnabled = LerBool(bruto, nameof(LightMapData.AirShadowEnabled), padrao.AirShadowEnabled);
-            _copia.AirShadowOpacity = LerFloat(bruto, nameof(LightMapData.AirShadowOpacity), padrao.AirShadowOpacity);
-
-            return _copia;
-        }
-
-        private static float LerFloat(Resource bruto, string nome, float padrao)
-        {
-            Variant valor = bruto.Get(nome);
-            return valor.VariantType == Variant.Type.Nil ? padrao : valor.AsSingle();
-        }
-
-        private static bool LerBool(Resource bruto, string nome, bool padrao)
-        {
-            Variant valor = bruto.Get(nome);
-            return valor.VariantType == Variant.Type.Nil ? padrao : valor.AsBool();
-        }
-
-        private static float RotacaoDoSol(LightMapData ajustes)
-        {
-            return Mathf.DegToRad(ajustes.SunAngleDegrees);
-        }
-
-        private void ResolverReferencias()
-        {
-            if (_camadas.Count == 0 || !IsInstanceValid(_camadas[0]))
-            {
-                ResolverCamadas();
-            }
-
-            if (_camera == null || !IsInstanceValid(_camera))
-            {
-                _camera = ResolverCamera();
-            }
-        }
-
-        private void ResolverCamadas()
-        {
-            _camadas.Clear();
-
-            foreach (NodePath caminho in Layers)
-            {
-                if (caminho == null || caminho.IsEmpty)
-                {
-                    continue;
-                }
-
-                TileMapLayer apontada = GetNodeOrNull<TileMapLayer>(caminho);
-
-                if (apontada != null)
-                {
-                    _camadas.Add(apontada);
-                }
-            }
-
-            if (_camadas.Count > 0 || GetParent() is not Node parent)
-            {
-                return;
-            }
-
-            foreach (Node filho in parent.GetChildren())
-            {
-                if (filho is TileMapLayer camada)
-                {
-                    _camadas.Add(camada);
-                }
-            }
-        }
-
-        private Node2D ResolverCamera()
-        {
-            if (Camera != null && !Camera.IsEmpty)
-            {
-                Node2D apontada = GetNodeOrNull<Node2D>(Camera);
-
-                if (apontada != null)
-                {
-                    return apontada;
-                }
-            }
-
-            return GetParent()?.GetNodeOrNull<Camera2D>("Camera2D");
-        }
-
-        private void ResolverPipeline()
-        {
-            if (_gpuPass == null || !IsInstanceValid(_gpuPass))
-            {
-                _gpuPass = GetNodeOrNull<SubViewport>(LightMapConstants.VIEWPORT_NODE_NAME);
-            }
-
-            if (_gpuPass == null)
-            {
-                _gpuPass = new SubViewport
-                {
-                    Name = LightMapConstants.VIEWPORT_NODE_NAME,
-                };
-
-                AddChild(_gpuPass);
-            }
-
-            _gpuPass.Disable3D = true;
-            _gpuPass.TransparentBg = true;
-            _gpuPass.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-
-            if (_passRect == null || !IsInstanceValid(_passRect))
-            {
-                _passRect = _gpuPass.GetNodeOrNull<ColorRect>(LightMapConstants.PASS_NODE_NAME);
-            }
-
-            if (_passRect == null)
-            {
-                _passRect = new ColorRect
-                {
-                    Name = LightMapConstants.PASS_NODE_NAME,
-                };
-
-                _gpuPass.AddChild(_passRect);
-            }
-
-            _passRect.Position = Vector2.Zero;
-            _passRect.Color = Colors.White;
-
-            AplicarShader(ref _passRect, LightMapConstants.SHADER_PATH);
-
-            if (_overlay == null || !IsInstanceValid(_overlay))
-            {
-                _overlay = GetNodeOrNull<Sprite2D>(LightMapConstants.OVERLAY_NODE_NAME);
-            }
-
-            if (_overlay == null)
-            {
-                _overlay = new Sprite2D
-                {
-                    Name = LightMapConstants.OVERLAY_NODE_NAME,
-                    Centered = false,
-                    TopLevel = true,
-                    ZIndex = LightMapConstants.OVERLAY_Z_INDEX,
-                    ZAsRelative = false,
-                    TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-                };
-
-                AddChild(_overlay);
-            }
-
-            AplicarShader(ref _overlay, LightMapConstants.PRESENT_SHADER_PATH);
-
-            _overlay.Texture = _gpuPass.GetTexture();
-            _overlay.Visible = _overlay.Material is ShaderMaterial;
-        }
-
-        private static void AplicarShader<T>(ref T item, string caminho) where T : CanvasItem
-        {
-            Shader shader = GD.Load<Shader>(caminho);
-
-            if (shader == null)
-            {
-                item.Material = null;
-                return;
-            }
-
-            if (item.Material is ShaderMaterial material && material.Shader == shader)
-            {
-                return;
-            }
-
-            item.Material = new ShaderMaterial { Shader = shader };
-        }
-
-        private void EsconderOverlay()
-        {
-            if (_overlay != null && IsInstanceValid(_overlay))
-            {
-                _overlay.Visible = false;
-            }
-        }
-
-        private void Atualizar()
-        {
-            if (_camadas.Count == 0 || !IsInstanceValid(_camadas[0]) || _camadas[0].TileSet == null)
-            {
-                EsconderOverlay();
-                return;
-            }
-
-            ResolverPipeline();
-
-            if (_overlay?.Material is not ShaderMaterial)
-            {
-                EsconderOverlay();
-                return;
-            }
-
-            _overlay.Visible = true;
-
-            TileMapLayer grid = _camadas[0];
-            Vector2I celula = grid.TileSet.TileSize;
-            LightMapData ajustes = Ajustes;
-            Vector2 direcaoDoSol = LightMapComputer.DirecaoDaLuz(RotacaoDoSol(ajustes)).Normalized();
-
-            DimensionarJanela(celula, direcaoDoSol, out int largura, out int altura);
-
-            Vector2I centro = grid.LocalToMap(grid.ToLocal(PosicaoDoCentro()));
-            Vector2I origem = new(centro.X - largura / 2, centro.Y - altura / 2);
-
-            Vector2I resolucao = new Vector2I(largura, altura) * LightMapConstants.SUBDIVISIONS;
-
-            if (_gpuPass.Size != resolucao)
-            {
-                _gpuPass.Size = resolucao;
-                _passRect.Size = resolucao;
-                _temDados = false;
-            }
-
-            bool precisaDados = Engine.IsEditorHint() || _sujo || !_temDados || origem != _ultimaOrigem;
-
-            if (precisaDados)
-            {
-                AtualizarDados(grid, origem, largura, altura);
-            }
-
-            if (!_temDados)
-            {
-                EsconderOverlay();
-                return;
-            }
-
-            AlimentarShader(ajustes, direcaoDoSol, largura, altura);
-
-            _overlay.GlobalPosition = grid.ToGlobal(grid.MapToLocal(origem) - (Vector2)celula / 2f);
-            _overlay.Scale = (Vector2)celula / LightMapConstants.SUBDIVISIONS;
-            _gpuPass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
-        }
-
-        private void AtualizarDados(TileMapLayer grid, Vector2I origem, int largura, int altura)
-        {
-            _ultimaOrigem = origem;
-            _sujo = false;
-
-            _geometria.Redimensionar(largura, altura);
-            _geometria.PreencherGrade(_camadas, origem);
-
-            Image imagem = _geometria.Calcular();
-
-            if (imagem == null)
-            {
-                _temDados = false;
-                return;
-            }
-
-            if (_dadosTextura != null && _dadosTextura.GetSize() == new Vector2(largura, altura))
-            {
-                _dadosTextura.Update(imagem);
             }
             else
             {
-                _dadosTextura = ImageTexture.CreateFromImage(imagem);
+                var world = Game.Managers.LightMapManager.Node?.GetWorld(DimensionId);
+                if (world == null) return;
+                if (world != World) { World = world; _invalid = true; _published = false; }
             }
-
-            _temDados = true;
-        }
-
-        private void AlimentarShader(LightMapData ajustes, Vector2 direcao, int largura, int altura)
-        {
-            if (_dadosTextura == null || _passRect.Material is not ShaderMaterial passe || _overlay.Material is not ShaderMaterial apresentacao)
+            EnsureOverlay();
+            _overlay.Visible = true;
+            Vector2 tileSize = grid.TileSet.TileSize;
+            Vector2 view = !Engine.IsEditorHint() && _camera != null ? _camera.GetViewportRect().Size / _camera.Zoom : (Vector2)PreviewSize * tileSize;
+            var center = grid.LocalToMap(grid.ToLocal(_camera?.GlobalPosition ?? GlobalPosition));
+            int w = Mathf.CeilToInt(view.X / tileSize.X), h = Mathf.CeilToInt(view.Y / tileSize.Y);
+            // Chunk-aligned presentation cache with a full chunk of motion reserve.
+            var origin = new Vector2I(LightingField.FloorChunk(center.X - w / 2) * 32 - 16,
+                LightingField.FloorChunk(center.Y - h / 2) * 32 - 16);
+            var size = new Vector2I(((w + 31) / 32 + 2) * 32, ((h + 31) / 32 + 2) * 32);
+            if (_published && (center.X - w / 2 < _displayedOrigin.X || center.Y - h / 2 < _displayedOrigin.Y
+                || center.X + (w + 1) / 2 > _displayedOrigin.X + _displayedSize.X
+                || center.Y + (h + 1) / 2 > _displayedOrigin.Y + _displayedSize.Y)) _published = false;
+            if (!_published)
             {
-                return;
+                // Never reveal an unlit world while a new logical region is converging.
+                _overlay.GlobalPosition = grid.ToGlobal(grid.MapToLocal(origin) - tileSize / 2);
+                _overlay.Scale = tileSize * size;
+                _overlay.Texture = _blackTexture;
+                _present.SetShaderParameter("light_data", _blackTexture);
+                _present.SetShaderParameter("emission_data", _blackTexture);
+                _present.SetShaderParameter("map_size", Vector2.One);
             }
-
-            float aberturaMaxima = Mathf.Tan(Mathf.DegToRad(LightMapConstants.PENUMBRA_MAX_DEGREES));
-            float distancia = Mathf.Clamp(ajustes.Penumbra, 0f, 1f);
-            Vector2 grade = new(largura, altura);
-
-            passe.SetShaderParameter("dados_mapa", _dadosTextura);
-            passe.SetShaderParameter("grade", grade);
-            passe.SetShaderParameter("direcao_sol", direcao);
-            passe.SetShaderParameter("abertura_sol", Mathf.Atan(aberturaMaxima * (1f - distancia)));
-            passe.SetShaderParameter("influencia_ambiente", Mathf.Clamp(ajustes.AmbientInfluence, 0f, 1f));
-            passe.SetShaderParameter("ar_ligado", ajustes.AirShadowEnabled);
-            passe.SetShaderParameter("alcance_sol", LightMapConstants.SUN_RANGE_CELLS);
-            passe.SetShaderParameter("alcance_ceu", LightMapConstants.SKY_RANGE_CELLS);
-            passe.SetShaderParameter("mostrar_mapa_cru", ajustes.ShowRawMap);
-            // O piso da sombra fica na apresentacao para acompanhar a borda real do tile.
-            apresentacao.SetShaderParameter("dados_mapa", _dadosTextura);
-            apresentacao.SetShaderParameter("grade", grade);
-            apresentacao.SetShaderParameter("piso_ar", 1f - Mathf.Clamp(ajustes.AirShadowOpacity, 0f, 1f));
-            apresentacao.SetShaderParameter("mostrar_mapa_cru", ajustes.ShowRawMap);
-        }
-
-        private void DimensionarJanela(Vector2I celula, Vector2 direcaoDoSol, out int largura, out int altura)
-        {
-            if (!Engine.IsEditorHint() && _camera is Camera2D camera)
+            if (origin != _requestedOrigin || size != _requestedSize || _invalid)
             {
-                Vector2 vista = camera.GetViewportRect().Size / camera.Zoom;
-
-                int visivelX = Mathf.CeilToInt(vista.X / celula.X);
-                int visivelY = Mathf.CeilToInt(vista.Y / celula.Y);
-
-                float inclinacao = Mathf.Abs(direcaoDoSol.Y) < 1e-3f
-                    ? visivelY
-                    : Mathf.Abs(direcaoDoSol.X / direcaoDoSol.Y);
-
-                int margem = Mathf.Clamp(Mathf.CeilToInt(inclinacao * visivelY), 4, visivelY);
-
-                largura = visivelX + margem * 2;
-                altura = visivelY + margem * 2;
-                return;
+                World.Field.SetRegion(origin.X, origin.Y, size.X, size.Y);
+                _requestedOrigin = origin; _requestedSize = size;
             }
-
-            largura = Mathf.Max(1, PreviewSize.X);
-            altura = Mathf.Max(1, PreviewSize.Y);
+            World.Field.Process();
+            var settings = ReadSettings();
+            bool geometryChanged = _invalid || _computer.Origin != origin || _computer.Size != size
+                || _computer.WorldRevision != World.Revision;
+            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra;
+            if (geometryChanged) _building = false;
+            // A moving sun queues the next snapshot rather than starving the current build.
+            if (World.Field.Settled && (_building || !_published || inputsChanged || _displayedRevision != World.Field.Revision))
+            {
+                if (!_building)
+                {
+                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra);
+                    _building = true; _invalid = false;
+                }
+                _computer.Process();
+                if (_computer.Complete)
+                {
+                    Upload(ref _lightTexture, _computer.LightImage());
+                    Upload(ref _emissionTexture, _computer.EmissionImage());
+                    Upload(ref _boundaryTexture, _computer.BoundaryImage());
+                    _material.SetShaderParameter("light_data", _lightTexture);
+                    _material.SetShaderParameter("boundary_data", _boundaryTexture);
+                    _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
+                    _material.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
+                    _material.SetShaderParameter("penumbra", _computer.Penumbra);
+                    _pass.Size = size * LightMapComputer.ShadowSubdivisions;
+                    _passRect.Size = _pass.Size;
+                    if (_computer.RebuiltSun) { _pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once; SolarUpdates++; }
+                    _overlay.Texture = _pass.GetTexture();
+                    _present.SetShaderParameter("light_data", _lightTexture);
+                    _present.SetShaderParameter("emission_data", _emissionTexture);
+                    _present.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
+                    _overlay.GlobalPosition = grid.ToGlobal(grid.MapToLocal(origin) - tileSize / 2);
+                    _overlay.Scale = tileSize / LightMapComputer.ShadowSubdivisions;
+                    _displayedRevision = _computer.FieldRevision;
+                    _displayedOrigin = origin; _displayedSize = size;
+                    _published = true; _building = false;
+                }
+            }
+            _present.SetShaderParameter("ambient_energy", settings.AmbientInfluence);
+            _present.SetShaderParameter("sun_energy", settings.SunIntensity);
+            _present.SetShaderParameter("sky_color", settings.SkyColor);
+            _present.SetShaderParameter("sun_color", settings.SunColor);
+            _present.SetShaderParameter("show_raw", settings.ShowRawMap);
         }
 
-        private Vector2 PosicaoDoCentro()
+        private static void Upload(ref ImageTexture texture, Image image)
         {
-            return _camera != null && IsInstanceValid(_camera) ? _camera.GlobalPosition : GlobalPosition;
+            if (texture != null && texture.GetSize() == image.GetSize()) texture.Update(image);
+            else texture = ImageTexture.CreateFromImage(image);
+            image.Dispose();
+        }
+
+        private void Resolve()
+        {
+            foreach (var path in Layers)
+                if (GetNodeOrNull<TileMapLayer>(path) is { } layer) _layers.Add(layer);
+            if (_layers.Count == 0)
+                foreach (var child in GetParent().GetChildren()) if (child is TileMapLayer layer) _layers.Add(layer);
+            if (Engine.IsEditorHint()) foreach (var layer in _layers) layer.Changed += Invalidate;
+            _camera = Camera != null && !Camera.IsEmpty ? GetNodeOrNull<Camera2D>(Camera) : GetParent().GetNodeOrNull<Camera2D>("Camera2D");
+        }
+
+        private void EnsureOverlay()
+        {
+            if (IsInstanceValid(_overlay)) return;
+            _material = new ShaderMaterial { Shader = GD.Load<Shader>("res://Assets/Shaders/light_map.gdshader") };
+            _pass = new SubViewport { Name = "LightMapGpuPass", Disable3D = true, TransparentBg = true,
+                RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled };
+            AddChild(_pass);
+            _passRect = new ColorRect { Material = _material, Color = Colors.White };
+            _pass.AddChild(_passRect);
+            var black = Image.CreateEmpty(1, 1, false, Image.Format.Rgb8);
+            black.Fill(Colors.Black);
+            _blackTexture = ImageTexture.CreateFromImage(black);
+            _present = new ShaderMaterial { Shader = GD.Load<Shader>("res://Assets/Shaders/light_map_present.gdshader") };
+            _present.SetShaderParameter("light_data", _blackTexture);
+            _present.SetShaderParameter("emission_data", _blackTexture);
+            _overlay = new Sprite2D { Name = "LightMapOverlay", Centered = false, TopLevel = true,
+                ZIndex = 900, ZAsRelative = false,
+                Material = _present,
+                Texture = _blackTexture, TextureFilter = TextureFilterEnum.Linear };
+            black.Dispose();
+            AddChild(_overlay);
         }
     }
 }

@@ -16,6 +16,8 @@ namespace Jogo25D.Structures
         #region Core - Abstract
 
         public abstract StructureBounds GetBounds(long worldSeed, string dimensionId, int worldX, int worldScale);
+        /// <summary>Conservative maximum height, used to prove that a ray has reached open sky.</summary>
+        public abstract int GetMaxTopExtent(int worldScale);
 
         public abstract List<StructureCellGroup> CollectCells(Vector2I groundCell, long worldSeed, string dimensionId, int worldScale);
 

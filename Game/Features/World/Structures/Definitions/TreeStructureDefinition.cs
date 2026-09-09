@@ -38,6 +38,8 @@ namespace Jogo25D.Structures
 			return StructurePlacementConstants.TreeMaxRightExtent;
 		}
 
+        public override int GetMaxTopExtent(int worldScale) => 32;
+
 		public override List<StructureCellGroup> CollectCells(Vector2I groundCell, long worldSeed, string dimensionId, int worldScale)
 		{
 			var trunkCells = new List<Vector2I>();
