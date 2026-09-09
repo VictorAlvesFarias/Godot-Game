@@ -1,13 +1,13 @@
 shader_type canvas_item;
 render_mode blend_mul, unshaded;
-uniform sampler2D light_data : filter_nearest, repeat_disable;
+#include "res://Assets/Shaders/analytic_sun.gdshaderinc"
 uniform sampler2D emission_data : filter_nearest, repeat_disable;
-uniform vec2 map_size = vec2(1.0);
 uniform float ambient_energy = 0.32;
 uniform float sun_energy = 0.85;
 uniform vec4 sky_color : source_color = vec4(0.72, 0.83, 1.0, 1.0);
 uniform vec4 sun_color : source_color = vec4(1.0, 0.95, 0.84, 1.0);
 uniform bool show_raw = false;
+uniform bool geometry_ready = false;
 
 void fragment() {
     vec2 p = UV * map_size - 0.5;
@@ -30,7 +30,10 @@ void fragment() {
     }
     sky /= max(weight_sum, 0.0001);
     emission /= max(weight_sum, 0.0001);
-    float sun = texture(TEXTURE, UV).r;
+    // Evaluate coverage at the actual display pixel, not a magnified cached texel.
+    vec2 world_pixel = UV * map_size / 2.0;
+    float sun = 0.0;
+    if (geometry_ready) sun = analytic_sun(world_pixel, fwidth(world_pixel));
     vec3 energy = sky_color.rgb * sky * ambient_energy + sun_color.rgb * sun * sun_energy + emission;
     COLOR = vec4(show_raw ? vec3(sky, sun, material) : clamp(energy, vec3(0.0), vec3(1.0)), 1.0);
 }

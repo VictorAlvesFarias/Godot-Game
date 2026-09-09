@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_eycpx")
 SunAngleDegrees = -10.0
-Penumbra = 0.38
-AmbientInfluence = 0.5
+Penumbra = 0.0
+AmbientInfluence = 0.81
 SunIntensity = 1.0
 SkyColor = Color(1, 1, 1, 1)
 SunColor = Color(1, 1, 1, 1)

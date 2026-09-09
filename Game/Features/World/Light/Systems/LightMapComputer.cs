@@ -9,24 +9,20 @@ namespace Jogo25D.Light
     public sealed class LightMapComputer
     {
         public const int Subdivisions = 2;
-        public const int ShadowSubdivisions = 6;
-        public const int SunSamples = 33;
+        public const int ShadowSubdivisions = 4;
         private LogicalLightWorld _world;
         private byte[] _light = Array.Empty<byte>(), _emission = Array.Empty<byte>();
         private int _cursor;
-        private byte[] _boundary = Array.Empty<byte>();
-        private int _boundaryCursor;
-        private int BoundaryWidth => Math.Max(Size.X, Size.Y) * Subdivisions + 1;
+        private readonly AnalyticShadowGeometry _geometry = new();
         private bool _reuseGeometry;
         private bool _reuseReceivers;
         private readonly HashSet<LightCell> _dirtyReceivers = new();
         public bool RebuiltSun => !_reuseGeometry;
         private int[] _receiverX = Array.Empty<int>(), _receiverY = Array.Empty<int>();
         private double[] _depth = Array.Empty<double>();
-        private readonly double[] _dx = new double[SunSamples], _dy = new double[SunSamples];
         public Vector2I Origin { get; private set; }
         public Vector2I Size { get; private set; }
-        public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && _boundaryCursor >= _boundary.Length;
+        public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && _geometry.Complete;
         public long WorldRevision { get; private set; }
         public long FieldRevision { get; private set; }
         public float Angle { get; private set; }
@@ -38,7 +34,6 @@ namespace Jogo25D.Light
             bool layout = Complete && _world == world && Origin == origin && Size == size;
             _reuseGeometry = layout
                 && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
-            bool reuseBoundary = layout && Angle == angle && Penumbra == penumbra;
             _dirtyReceivers.Clear();
             _reuseReceivers = layout && world.TryGetChanges(WorldRevision, out _);
             if (_reuseReceivers)
@@ -46,12 +41,10 @@ namespace Jogo25D.Light
                 world.TryGetChanges(WorldRevision, out var changes);
                 foreach (var cell in changes)
                 {
-                    if (cell.X < origin.X || cell.Y < origin.Y || cell.X >= origin.X + size.X || cell.Y >= origin.Y + size.Y) reuseBoundary = false;
                     for (int y = -3; y <= 3; y++) for (int x = -3; x <= 3; x++)
                         _dirtyReceivers.Add(new(cell.X + x, cell.Y + y));
                 }
             }
-            else reuseBoundary = false;
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
             WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;
@@ -61,15 +54,7 @@ namespace Jogo25D.Light
                 _receiverX = new int[bytes]; _receiverY = new int[bytes]; _depth = new double[bytes];
             }
             _cursor = 0;
-            int boundaryBytes = BoundaryWidth * (SunSamples * 4);
-            if (_boundary.Length != boundaryBytes) _boundary = new byte[boundaryBytes];
-            _boundaryCursor = reuseBoundary ? boundaryBytes : 0;
-            for (int i = 0; i < SunSamples; i++)
-            {
-                double spread = 8 * Math.PI / 180 * Math.Pow(1 - Math.Clamp(penumbra, 0, 1), 2);
-                double a = angle * Math.PI / 180 + (i - 16) * spread / 16;
-                _dx[i] = Math.Sin(a); _dy[i] = -Math.Cos(a);
-            }
+            if (!_reuseGeometry) _geometry.Begin(world, origin, size, angle, penumbra);
         }
 
         public void Process(double milliseconds = 3)
@@ -121,20 +106,7 @@ namespace Jogo25D.Light
                 WriteReceivers();
                 _cursor++;
             }
-            while (_boundaryCursor < _boundary.Length)
-            {
-                if ((_boundaryCursor & 15) == 0 && Stopwatch.GetElapsedTime(start).TotalMilliseconds >= milliseconds) return;
-                int row = _boundaryCursor / BoundaryWidth, sample = _boundaryCursor % BoundaryWidth;
-                int direction = row / 4, edge = row % 4;
-                double offset = sample / (double)Subdivisions;
-                double x = edge == 0 || edge == 1 ? Math.Min(offset, Size.X) : edge == 2 ? 0 : Size.X;
-                double y = edge == 2 || edge == 3 ? Math.Min(offset, Size.Y) : edge == 0 ? 0 : Size.Y;
-                double dx = _dx[direction], dy = _dy[direction];
-                bool outgoing = edge == 0 ? dy < 0 : edge == 1 ? dy > 0 : edge == 2 ? dx < 0 : dx > 0;
-                double value = outgoing ? _world.Sun(Origin.X + x + dx * 0.0001,
-                    Origin.Y + y + dy * 0.0001, dx, dy) : 0;
-                _boundary[_boundaryCursor++] = (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
-            }
+            _geometry.Process(Math.Max(0.01, milliseconds - Stopwatch.GetElapsedTime(start).TotalMilliseconds));
         }
 
         private void WriteReceivers()
@@ -158,7 +130,7 @@ namespace Jogo25D.Light
             _emission[p + 3] = 255;
         }
 
-        public Image BoundaryImage() => Image.CreateFromData(BoundaryWidth, SunSamples * 4, false, Image.Format.R8, _boundary);
+        public Image ShadowGeometryImage() => _geometry.Image();
         public Image LightImage() => Image.CreateFromData(Size.X * Subdivisions, Size.Y * Subdivisions, false, Image.Format.Rgba8, _light);
         public Image EmissionImage() => Image.CreateFromData(Size.X * Subdivisions, Size.Y * Subdivisions, false, Image.Format.Rgba8, _emission);
     }

@@ -44,7 +44,7 @@ namespace Jogo25D.Light
         private Sprite2D _overlay;
         private ShaderMaterial _material;
         private ShaderMaterial _present;
-        private ImageTexture _lightTexture, _emissionTexture, _boundaryTexture;
+        private ImageTexture _lightTexture, _emissionTexture, _shadowGeometryTexture;
         private SubViewport _pass;
         private ColorRect _passRect;
         private ImageTexture _blackTexture;
@@ -141,6 +141,7 @@ namespace Jogo25D.Light
                 _present.SetShaderParameter("light_data", _blackTexture);
                 _present.SetShaderParameter("emission_data", _blackTexture);
                 _present.SetShaderParameter("map_size", Vector2.One);
+                _present.SetShaderParameter("geometry_ready", false);
             }
             if (origin != _requestedOrigin || size != _requestedSize || _invalid)
             {
@@ -166,9 +167,9 @@ namespace Jogo25D.Light
                 {
                     Upload(ref _lightTexture, _computer.LightImage());
                     Upload(ref _emissionTexture, _computer.EmissionImage());
-                    Upload(ref _boundaryTexture, _computer.BoundaryImage());
+                    Upload(ref _shadowGeometryTexture, _computer.ShadowGeometryImage());
                     _material.SetShaderParameter("light_data", _lightTexture);
-                    _material.SetShaderParameter("boundary_data", _boundaryTexture);
+                    _material.SetShaderParameter("shadow_geometry", _shadowGeometryTexture);
                     _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
                     _material.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
                     _material.SetShaderParameter("penumbra", _computer.Penumbra);
@@ -179,6 +180,10 @@ namespace Jogo25D.Light
                     _present.SetShaderParameter("light_data", _lightTexture);
                     _present.SetShaderParameter("emission_data", _emissionTexture);
                     _present.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
+                    _present.SetShaderParameter("shadow_geometry", _shadowGeometryTexture);
+                    _present.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
+                    _present.SetShaderParameter("penumbra", _computer.Penumbra);
+                    _present.SetShaderParameter("geometry_ready", true);
                     _overlay.GlobalPosition = grid.ToGlobal(grid.MapToLocal(origin) - tileSize / 2);
                     _overlay.Scale = tileSize / LightMapComputer.ShadowSubdivisions;
                     _displayedRevision = _computer.FieldRevision;

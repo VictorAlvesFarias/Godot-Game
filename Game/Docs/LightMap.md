@@ -10,7 +10,7 @@ Implementação de setembro de 2026. Substitui a oclusão angular dependente da 
 - Sol direto percorre linhas retas. As sombras atingem ar, personagens e superfícies dos tiles.
 - Uma superfície pode receber luz sem transmiti-la através do bloco. O interior do terreno
   escurece; a recepção visual se estende por até três células, com atenuação de 0,43 por camada.
-- Folhas (terrain 7) têm extinção 72/255. Terreno e madeira são opacos. Base é acabamento visual,
+- Todos os blocos, incluindo folhas, terreno e madeira, são opacos. Base é acabamento visual,
   não uma segunda parede: sua presença não fecha uma passagem que foi aberta na geometria Compose.
 
 ## Fonte de verdade
@@ -68,49 +68,50 @@ sobre o mesmo ILightGeometry. O céu normalizado e a emissão são separados da 
 ## Sol e renderização
 
 O céu vertical é consultado nas colunas lógicas. Não se injeta luz no topo de cada chunk.
-A luz vertical atravessa ar sem atenuação e folhas com transmissão parcial; uma parede opaca
+A luz vertical atravessa ar sem atenuação; qualquer bloco, incluindo folhas,
 interrompe a contribuição, mesmo se estiver dez mil tiles acima e nunca tiver sido renderizada.
 
-Para o sol direcional:
+### Experimento: projeção analítica
 
-1. `LightMapComputer` prepara uma textura RGBA de ambiente e material (canal G reservado),
-   uma textura de emissão RGB e um atlas com a transmissão solar nas bordas da janela.
-2. Cada amostra da borda consulta intervalos das colunas lógicas até atingir o céu ou um bloqueio.
-   A distância não tem um corte arbitrário de 96 tiles. Espaços verticais vazios são saltados.
-3. `light_map.gdshader` faz DDA local em 33 direções em torno de SunAngle. Quando um raio sai da
-   janela, continua pela transmissão lógica da borda correspondente. O passe gera somente sol.
-4. `light_map_present.gdshader` combina ambiente, emissão e esse sol, multiplicando as cores do
-   mundo. Oclusão solar não apaga a contribuição de uma fonte local.
+`AnalyticShadowGeometry` combina intervalos verticais iguais de colunas adjacentes em
+retângulos de material. Inclui as colunas lógicas acima da janela que podem projetar sombra
+nela, até o teto lógico do mundo. Não depende dos tiles renderizados. Retângulos são indexados
+em regiões de 16 × 16 tiles pela área de sua projeção, reduzindo os candidatos por fragmento.
 
-O passe solar roda com seis subdivisões por tile, só quando geometria, janela ou direção mudam.
-O ambiente tem duas subdivisões para distinguir recepção nas faces dos blocos. A reconstrução
-bilinear de ambiente/emissão não mistura materiais diferentes, evitando halos nas paredes.
-O atlas de borda tem amostras a cada meio tile; sombras distantes são uma aproximação filtrada.
-`SunAngleDegrees` é o único eixo da projeção, igual em todos os tiles. `Penumbra` controla
-um cone simétrico em torno desse eixo: meia abertura de `8° × (1 - p)²`, de aberto em 0 a
-paralelo em 1. Não há fonte posicionada, referência de tile nem dependência da câmera.
+A textura `shadow_geometry` contém retângulos, opacidade e listas espaciais em RGBA32F.
+Não contém amostras angulares nem transmissão amostrada nas bordas. O shader calcula os
+limites esquerdo/direito do cone projetado e uma distância assinada à sua borda. A cobertura
+do pixel é aproximada analiticamente usando essa distância e as derivadas da posição.
+Não há o laço anterior de 33 raios. Um DDA curto permanece somente para encontrar a face
+receptora dentro de um bloco sólido, limitado à profundidade visual de três tiles.
 
-O passe combina o contorno externo das oclusões do cone, preservando a transmissão parcial
-dos materiais e suavizando sua franja. Assim a sombra inteira se abre com a distância ao
-obstáculo, sem apenas desfocar uma projeção paralela. Este é um controle visual estilizado,
-não uma simulação física de uma única fonte próxima. A resolução do passe permanece fixa.
-São 33 amostras, ou uma no caso paralelo. O custo adicional ocorre na reconstrução do cache.
+`SunAngleDegrees` continua sendo o único eixo. `Penumbra` controla uma meia abertura de
+`8° × (1 - p)²`: 0 abre o cone, 1 mantém a projeção paralela. Não existe fonte posicionada
+nem referência de tile. Esta abertura é um controle visual estilizado, não uma fonte física.
+As inclinações extremas são limitadas a 89,5 graus para evitar tangentes infinitas junto ao
+horizonte; abaixo dele a contribuição solar é zero.
 
-No material opaco, o sol recebe luz pela face voltada à fonte, com atenuação contínua e alcance
-visual de três tiles. Ambiente e emissão consideram as quatro faces expostas, sem escolher
-abruptamente uma única face mais próxima. Isso evita recortes internos nos cantos. A recepção
-na superfície não altera a propagação lógica e não transmite luz através de paredes.
+O passe auxiliar permanece com quatro pixels por tile para inspeção e regressões. A apresentação
+final não amplia essa textura: usa `analytic_sun.gdshaderinc` para calcular a cobertura diretamente
+por pixel da tela, com derivadas antes de alterar a posição do receptor. Assim o zoom não amplia
+os degraus da textura intermediária. Não há amostras angulares nem filtro de várias direções.
+A geometria e o campo lógico continuam em cache, mas a avaliação solar GPU agora ocorre em cada
+frame na resolução da tela: esse é o custo da reconstrução direta, ainda sem benchmark de FPS.
+Antes de publicar a geometria, `geometry_ready` mantém a contribuição solar zerada.
+A escuridão e a emissão continuam vindo do solver incremental; não são determinadas pelo cone.
 
-A janela é alinhada à grade e tem margem para movimento, evitando recalcular ao andar um pixel.
-Uma mudança local reaproveita os receptores fora de uma vizinhança de três tiles. Bordas solares
-são reaproveitadas se a edição ocorreu dentro da janela. Emissão móvel não refaz os raios solares.
-A preparação das texturas é dividida em fatias de 3 ms. Uma região inicial fica preta até estar
-pronta; depois as texturas são publicadas completas. Mudanças do ângulo durante uma preparação
-agendam o próximo resultado, em vez de reiniciar indefinidamente a preparação atual.
+A construção dos retângulos e do índice é cooperativa, com orçamento de 3 ms. A lista solar
+é reaproveitada quando só a emissão/iluminação lógica muda. Ao editar geometria, a lista da
+janela é reconstruída nesta versão experimental; o solver de luz e seus receptores continuam
+incrementais. A janela continua alinhada à grade e com margem de movimento. Mudanças de
+ângulo agendam a próxima apresentação sem reiniciar indefinidamente a atual.
 
-Os orçamentos são cooperativos: geração inicial de colunas, uploads e GPU têm custos adicionais.
-Um raio quase horizontal pode consultar muitas colunas. Não há garantia de custo constante para
-sombras extremamente longas; um índice hierárquico adicional seria necessário nesse caso extremo.
+Todos os blocos usam o mesmo bloqueio de luz e a mesma composição de sombras, sem tratamento
+especial para folhas. Sombras opacas usam a maior cobertura, evitando acumular
+escurecimento nas franjas de retângulos sobrepostos. Muitos retângulos
+projetados na mesma região aumentam o custo GPU. Teto muito distante e sol quase horizontal
+podem exigir muitas colunas e memória de índice: ainda não há hierarquia de oclusores para
+esse caso extremo. Upload, compactação e geração de uma coluna podem exceder a fatia cooperativa.
 
 ## Fontes locais
 
@@ -198,11 +199,17 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão no editor: passou, incluindo alterações de ângulo e ambiente pelo recurso.
 - Integrações autorada e procedural: passaram, incluindo o sol mudando continuamente.
 - Edição pontual na cena procedural: 37 células processadas, apresentação em 3–4 frames.
-- Regressão da projeção na GPU: cone aberto cresceu de 62 para 88 pixels; paralelo manteve
-  48 pixels. A simetria em torno do eixo e o bloqueador fora da janela também passaram.
+- Regressão da projeção na GPU: cone aberto cresceu de 38 para 50 pixels; paralelo manteve
+  32 pixels. A simetria em torno do eixo e o bloqueador fora da janela também passaram.
+  A composição filtrada foi verificada junto à borda interna de um teto fechado, sem vazamento.
 - Regressão do editor: penumbra preserva o ângulo; apagar e recolocar um tile atualiza a geometria
   e o cache sem substituir o mundo lógico.
-- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 37 ms no total,
+- Regressão de antialiasing a 8× de zoom: as 320 linhas verificadas têm cobertura subpixel,
+  com transição de no máximo dois pixels na tela, sem ampliação da textura intermediária.
+- A penumbra aberta tem degradê além do antialiasing: a faixa entre 5% e 95% de luz cresceu
+  de 31 para 73 pixels com a distância ao bloqueador no teste a 8×. A transição usa smoothstep
+  entre o limite externo do cone e 85% do caminho até a projeção central, sem raios adicionais.
+- Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 16–21 ms no total nesta versão experimental,
   distribuível em fatias; não é um custo cobrado em todo frame.
 
 Essas medições são cenários de teste, não garantias de FPS para qualquer mundo ou GPU.

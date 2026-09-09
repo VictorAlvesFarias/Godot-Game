@@ -38,6 +38,8 @@ namespace Jogo25D.Light
         public long Revision { get; private set; }
         public LightingField Field { get; }
         public bool Procedural => _procedural;
+        public int OpticalSkyTop => Math.Min(SkyTop, _highestEdit);
+        public IReadOnlyList<Run> OpticalColumn(int x) => Column(x);
 
         public static int TileTerrain(TileMapLayer layer, Vector2I cell)
         {
@@ -159,7 +161,7 @@ namespace Jogo25D.Light
             return -1;
         }
 
-        public static byte TerrainOpacity(int terrain) => terrain < 0 ? (byte)0 : terrain == TerrainsConstants.LIME_LEAF ? (byte)72 : (byte)255;
+        public static byte TerrainOpacity(int terrain) => terrain < 0 ? (byte)0 : (byte)255;
         public byte Opacity(int x, int y) => TerrainOpacity(Material(x, y));
 
         public byte Sky(int x, int y)

@@ -24,7 +24,8 @@ namespace Jogo25D.Testing
                 remote.SetTerrain(0, -10000, -1);
                 Check(remote.Sky(0, 0) == 255 && remote.Sun(0.5, 0.5, 0, -1) == 1, "Removing remote roof must restore sky");
                 remote.SetTerrain(-2, -2, 7);
-                Check(remote.Sky(-2, 0) > 0 && remote.Sky(-2, 0) < 255, "Leaves must transmit partial sky");
+                Check(remote.Opacity(-2, -2) == 255 && remote.Sky(-2, 0) == 0
+                    && remote.Sun(-1.5, 0.5, 0, -1) == 0, "Leaves must block light like every other solid block");
                 remote.SetTerrain(100, -100, 0);
                 Check(remote.Sun(0.5, 0.5, 1, -1) == 0, "Oblique distant roof must block sun");
                 var restored = new LogicalLightWorld(0, "test", 1, false);
@@ -59,7 +60,7 @@ namespace Jogo25D.Testing
                 material.SetShaderParameter("light_data", light);
                 material.SetShaderParameter("map_size", new Vector2(128, 72));
                 material.SetShaderParameter("sun_angle", Mathf.DegToRad(-32));
-                material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
                 var pass = new SubViewport { Size = new(64 * LightMapComputer.ShadowSubdivisions, 36 * LightMapComputer.ShadowSubdivisions), Disable3D = true, RenderTargetUpdateMode = SubViewport.UpdateMode.Once };
                 AddChild(pass);
                 pass.AddChild(new ColorRect { Size = pass.Size, Material = material, Color = Colors.White });
@@ -67,7 +68,16 @@ namespace Jogo25D.Testing
                 present.SetShaderParameter("light_data", light);
                 present.SetShaderParameter("emission_data", emission);
                 present.SetShaderParameter("map_size", new Vector2(128, 72));
+                present.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                present.SetShaderParameter("sun_angle", Mathf.DegToRad(-32));
+                present.SetShaderParameter("geometry_ready", true);
                 AddChild(new Sprite2D { Texture = pass.GetTexture(), Material = present, Centered = false, Scale = new(16f / LightMapComputer.ShadowSubdivisions, 16f / LightMapComputer.ShadowSubdivisions), ZIndex = 900, TextureFilter = TextureFilterEnum.Linear });
+                var filteredPass = new SubViewport { Size = pass.Size, Disable3D = true,
+                    RenderTargetUpdateMode = SubViewport.UpdateMode.Always };
+                AddChild(filteredPass);
+                filteredPass.AddChild(new ColorRect { Size = filteredPass.Size, Color = Colors.White });
+                filteredPass.AddChild(new Sprite2D { Texture = pass.GetTexture(), Material = present,
+                    Centered = false, TextureFilter = TextureFilterEnum.Linear });
                 QueueRedraw();
                 for (int i = 0; i < 5; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                 if (DisplayServer.GetName() != "headless")
@@ -75,7 +85,13 @@ namespace Jogo25D.Testing
                     await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                     string folder = ProjectSettings.GlobalizePath("res://../.images");
                     DirAccess.MakeDirRecursiveAbsolute(folder);
-                    GetViewport().GetTexture().GetImage().SavePng(folder + "/lighting-regression.png");
+                    using var composed = GetViewport().GetTexture().GetImage();
+                    composed.SavePng(folder + "/lighting-regression.png");
+                    // Check the final filter at the air/roof boundary, not only the raw sun map.
+                    using var filtered = filteredPass.GetTexture().GetImage();
+                    for (int x = 4 * LightMapComputer.ShadowSubdivisions; x < 18 * LightMapComputer.ShadowSubdivisions; x++)
+                        Check(filtered.GetPixel(x, 18 * LightMapComputer.ShadowSubdivisions).R < 0.004,
+                            "Presentation filtering leaked light across the sealed roof");
                     using var shadow = pass.GetTexture().GetImage();
                     for (int y = 19; y < 27; y++) for (int x = 5; x < 17; x++)
                         Check(shadow.GetPixel(x * LightMapComputer.ShadowSubdivisions + 1, y * LightMapComputer.ShadowSubdivisions + 1).R < 0.004, "GPU sun leaked into sealed room");
@@ -85,7 +101,7 @@ namespace Jogo25D.Testing
                     raster.Begin(_world, Vector2I.Zero, new(64, 36), 0, 1);
                     while (!raster.Complete) raster.Process(10000);
                     material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
-                    material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                    material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
                     material.SetShaderParameter("sun_angle", 0f);
                     material.SetShaderParameter("penumbra", 1f);
                     pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
@@ -103,7 +119,7 @@ namespace Jogo25D.Testing
                         raster.Begin(blocker, Vector2I.Zero, new(64, 36), 0, distance);
                         while (!raster.Complete) raster.Process(10000);
                         material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
-                        material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                        material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
                         material.SetShaderParameter("penumbra", distance);
                         pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
                         for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -137,7 +153,7 @@ namespace Jogo25D.Testing
                     raster.Begin(blocker, new(0, 16), new(64, 36), 0, 0);
                     while (!raster.Complete) raster.Process(10000);
                     material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
-                    material.SetShaderParameter("boundary_data", ImageTexture.CreateFromImage(raster.BoundaryImage()));
+                    material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
                     material.SetShaderParameter("penumbra", 0f);
                     pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
                     for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -145,11 +161,67 @@ namespace Jogo25D.Testing
                     using var offscreenShadow = pass.GetTexture().GetImage();
                     Check(Math.Abs(ShadowWidth(offscreenShadow, 17) - nearbySourceWidth) <= 2,
                         "Moving the window changed the cone geometry");
+                    // At 8x presentation zoom a hard diagonal must still cover only
+                    // one or two display pixels, rather than magnifying solar texels.
+                    raster.Begin(blocker, Vector2I.Zero, new(64, 36), -11.5f, 1);
+                    while (!raster.Complete) raster.Process(10000);
+                    present.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
+                    present.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                    present.SetShaderParameter("sun_angle", Mathf.DegToRad(-11.5f));
+                    present.SetShaderParameter("penumbra", 1f);
+                    present.SetShaderParameter("ambient_energy", 0f);
+                    present.SetShaderParameter("sun_energy", 1f);
+                    present.SetShaderParameter("sun_color", Colors.White);
+                    filteredPass.Size = new(2048, 1152);
+                    filteredPass.GetChild<ColorRect>(0).Size = filteredPass.Size;
+                    filteredPass.GetChild<Sprite2D>(1).Scale = new(8, 8);
+                    for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var zoomed = filteredPass.GetTexture().GetImage();
+                    int smoothRows = 0;
+                    for (int y = 20 * 32; y < 30 * 32; y++)
+                    {
+                        int transition = 0;
+                        for (int x = 32 * 32; x < 42 * 32; x++)
+                        {
+                            float value = zoomed.GetPixel(x, y).R;
+                            if (value > 0.05 && value < 0.95) transition++;
+                        }
+                        Check(transition <= 2, "Zoom magnified the cached shadow edge");
+                        if (transition > 0) smoothRows++;
+                    }
+                    Check(smoothRows > 250, "Zoomed diagonal lacks subpixel coverage");
+                    zoomed.SavePng(folder + "/lighting-edge-zoom.png");
+                    GD.Print($"DISPLAY AA PASS: {smoothRows}/320 rows have subpixel coverage at 8x zoom");
+                    raster.Begin(blocker, Vector2I.Zero, new(64, 36), -11.5f, 0);
+                    while (!raster.Complete) raster.Process(10000);
+                    present.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                    present.SetShaderParameter("penumbra", 0f);
+                    for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var soft = filteredPass.GetTexture().GetImage();
+                    int nearTransition = SoftTransition(soft, 16 * 32);
+                    int farTransition = SoftTransition(soft, 30 * 32);
+                    Check(nearTransition > 8 && farTransition > nearTransition + 15,
+                        "Penumbra must contain a real gradient that widens with distance");
+                    soft.SavePng(folder + "/lighting-edge-soft.png");
+                    GD.Print($"SOFT TRANSITION PASS: near={nearTransition}px far={farTransition}px");
                 }
                 GD.Print("LIGHTING REGRESSION PASS");
                 GetTree().Quit();
             }
             catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(1); }
+        }
+
+        private static int SoftTransition(Image image, int y)
+        {
+            int count = 0;
+            for (int x = 32 * 32; x < 48 * 32; x++)
+            {
+                float value = image.GetPixel(x, y).R;
+                if (value > 0.05 && value < 0.95) count++;
+            }
+            return count;
         }
 
         private static int ShadowWidth(Image image, int y)
