@@ -39,14 +39,18 @@ namespace Jogo25D.Light
             long seed = streaming?.WorldSeed ?? 0;
             int scale = Mathf.Max(1, Mathf.RoundToInt(32f / (streaming?.TileSize ?? 32)));
             if (!_worlds.TryGetValue(dimensionId, out var world) || world.Seed != seed || world.WorldScale != scale)
-                _worlds[dimensionId] = world = new LogicalLightWorld(seed, dimensionId, scale, !_authored);
+            {
+                _worlds[dimensionId] = world = new LogicalLightWorld(seed, dimensionId, scale, !_authored) { DepthLightEnabled = true };
+                var walls = Game.Managers.DimensionManager.Node?.ResolveParent(dimensionId)?.GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
+                if (walls != null) foreach (var cell in walls.LogicalCells) world.SetBackground(cell.X,cell.Y,true);
+            }
             return world;
         }
 
         public void ReplaceWorld(string dimensionId, bool procedural)
         {
             var old = GetWorld(dimensionId);
-            _worlds[dimensionId] = new LogicalLightWorld(old.Seed, dimensionId, old.WorldScale, procedural);
+            _worlds[dimensionId] = new LogicalLightWorld(old.Seed, dimensionId, old.WorldScale, procedural) { DepthLightEnabled = true };
         }
 
         public void SetCell(string dimensionId, Vector2I cell, string type, string blockId = "")

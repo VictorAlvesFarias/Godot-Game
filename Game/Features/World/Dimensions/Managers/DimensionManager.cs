@@ -195,6 +195,7 @@ namespace Jogo25D.Dimensions
         {
             foreach (var dimensionId in _dimensions.Keys)
             {
+                ResolveParent(dimensionId)?.GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.ClearRenderedForStreaming();
                 ResolveBaseLayer(dimensionId)?.Clear();
                 ResolveLayer(dimensionId)?.Clear();
             }

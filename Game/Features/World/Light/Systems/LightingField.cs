@@ -133,6 +133,21 @@ namespace Jogo25D.Light
             return true;
         }
 
+        // A depth opening changes only this cell's seed, not the vertical sky column.
+        public void SeedChanged(int x, int y)
+        {
+            var cell = new LightCell(x,y);
+            if (_chunks.TryGetValue(Key(cell), out var chunk))
+            {
+                int i = Index(cell);
+                byte sky = _geometry.Sky(x,y);
+                if (chunk.Sky[i] == sky) return;
+                chunk.Sky[i] = sky;
+                Enqueue(cell);
+                Revision++;
+            }
+        }
+
         public void GeometryChanged(int x, int y)
         {
             // The vertical sky oracle can change below the edit, even across unloaded chunks.

@@ -57,12 +57,66 @@ namespace Jogo25D.Testing
                 for (int i = 0; i < 20; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
                 if (light.World.Field.Revision != revision) throw new Exception("Static world lighting did not stay idle");
                 GD.Print($"LIGHTING INTEGRATION {(procedural ? "procedural" : "authored")}: ready in {frames} frames, {light.World.Field.ResidentChunks} light chunks");
+                var walls = shown.GetNode<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
+                if (walls.CollisionEnabled || walls.NavigationEnabled || walls.OcclusionEnabled)
+                    throw new Exception("Background walls enabled foreground physics/occlusion");
+                var wallCell = new Vector2I(-3, -40);
+                walls.RestoreChunk(new Vector2I(-1, -2));
+                long opticalRevision = light.World.Revision;
+                if (!walls.EditAuthoritative(wallCell, "wall_wood", false)) throw new Exception("Wall placement failed");
+                if (walls.GetCellSourceId(wallCell) < 0) throw new Exception("Wall item not painted");
+                var wallChunk = new Vector2I(-1, -2);
+                walls.UnloadChunk(wallChunk);
+                if (walls.GetCellSourceId(wallCell) >= 0) throw new Exception("Wall chunk stayed rendered");
+                walls.RestoreChunk(wallChunk);
+                if (walls.GetCellSourceId(wallCell) < 0) throw new Exception("Wall lost during chunk unload");
+                if (!walls.EditAuthoritative(wallCell, "", true)) throw new Exception("Wall hammer removal failed");
+                walls.UnloadChunk(wallChunk); walls.RestoreChunk(wallChunk);
+                if (walls.GetCellSourceId(wallCell) >= 0) throw new Exception("Removed wall came back");
+                if (light.World.Revision != opticalRevision) throw new Exception("Background wall blocked foreground light");
+                bool savedPlace = false, savedBreak = false;
+                foreach (var value in Game.Managers.TileStreamingManager.Node.ExportMutations("overworld"))
+                {
+                    var record = value.AsGodotDictionary();
+                    savedPlace |= record["type"].AsString() == "wall_place";
+                    savedBreak |= record["type"].AsString() == "wall_break";
+                }
+                if (!savedPlace || !savedBreak) throw new Exception("Wall edits missing from save mutations");
+                var savedCell = wallCell + Vector2I.Right;
+                walls.EditAuthoritative(savedCell, "wall_dirt", false);
+                var savedWalls = Game.Managers.TileStreamingManager.Node.ExportMutations("overworld");
+                walls.ReceiveEdit(savedCell, "", true);
+                Game.Managers.TileStreamingManager.Node.ImportMutations("overworld", savedWalls);
+                if (walls.GetCellSourceId(savedCell) < 0 || walls.GetCellSourceId(wallCell) >= 0)
+                    throw new Exception("Wall save replay failed");
+                walls.ClearRenderedForStreaming();
+                walls.ReceiveEdit(new Vector2I(32000, 32000), "wall_wood", false);
+                if (walls.GetCellSourceId(new Vector2I(32000, 32000)) >= 0)
+                    throw new Exception("Remote wall rendered outside resident chunks");
+                walls.RestoreChunk(new Vector2I(1000, 1000));
+                if (walls.GetCellSourceId(new Vector2I(32000, 32000)) < 0)
+                    throw new Exception("Remote logical wall was lost");
+                walls.UnloadChunk(new Vector2I(1000, 1000));
+
+                if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--walls") >= 0)
+                {
+                    var center = walls.LocalToMap(camera.Position);
+                    for (int cy = (int)Math.Floor((center.Y - 10) / 32.0); cy <= (int)Math.Floor((center.Y + 10) / 32.0); cy++)
+                    for (int cx = (int)Math.Floor((center.X - 14) / 32.0); cx <= (int)Math.Floor((center.X + 14) / 32.0); cx++)
+                        walls.RestoreChunk(new Vector2I(cx, cy));
+                    for (int y = center.Y - 10; y < center.Y + 10; y++)
+                    for (int x = center.X - 14; x < center.X + 14; x++)
+                        walls.ApplyMutation(new Jogo25D.Features.World.Chunks.Resources.ChunkMutationData
+                        { Type = "wall_place", Position = new Vector2(x,y), ExtraData = "wall_wood" });
+                    for (int i = 0; i < 4; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                }
+                GD.Print("BACKGROUND WALLS PASS: placement, removal, chunk restore, save records, no optical obstruction");
                 if (DisplayServer.GetName() != "headless")
                 {
                     await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                     string folder = ProjectSettings.GlobalizePath("res://../.images");
                     DirAccess.MakeDirRecursiveAbsolute(folder);
-                    GetViewport().GetTexture().GetImage().SavePng(folder + (procedural ? "/lighting-procedural.png" : "/lighting-authored.png"));
+                    GetViewport().GetTexture().GetImage().SavePng(folder + (Array.IndexOf(OS.GetCmdlineUserArgs(), "--walls") >= 0 ? "/lighting-background-walls.png" : procedural ? "/lighting-procedural.png" : "/lighting-authored.png"));
                 }
                 var terrainLayer = dimensions.ResolveLayer("overworld");
                 var editCell = terrainLayer.LocalToMap(camera.Position) + new Vector2I(0, -4);

@@ -25,6 +25,7 @@ namespace Jogo25D.Light
         public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && _geometry.Complete;
         public long WorldRevision { get; private set; }
         public long FieldRevision { get; private set; }
+        public long BackgroundRevision { get; private set; }
         public float Angle { get; private set; }
         public float Penumbra { get; private set; }
         public float TerrainTransition { get; private set; } = 3;
@@ -56,7 +57,7 @@ namespace Jogo25D.Light
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
             TerrainTransition = terrainTransition;
             ShadowSoftness = shadowSoftness; AmbientSoftness = ambientSoftness;
-            WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
+            WorldRevision = world.Revision; FieldRevision = world.Field.Revision; BackgroundRevision = world.BackgroundRevision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;
             if (_light.Length != bytes)
             {
@@ -137,6 +138,26 @@ namespace Jogo25D.Light
             _emission[p + 1] = value.G;
             _emission[p + 2] = value.B;
             _emission[p + 3] = 255;
+        }
+
+        public const int BeamMargin = 24;
+        public Image DepthBeamImage()
+        {
+            int width = Size.X + BeamMargin * 2, height = Size.Y + BeamMargin * 2;
+            byte[] data = new byte[width * height * 4];
+            for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)
+            {
+                int wx = Origin.X + x - BeamMargin, wy = Origin.Y + y - BeamMargin;
+                int i = (y * width + x) * 4;
+                bool solid = _world.Opacity(wx,wy) == 255;
+                data[i] = (byte)(_world.DepthLightEnabled && !solid && !_world.HasBackground(wx,wy) ? 255 : 0);
+                data[i+1] = solid ? (byte)255 : (byte)0;
+                data[i+2] = _world.HasBackground(wx,wy) ? (byte)255 : (byte)0;
+                data[i+3] = 255;
+            }
+            var image = Image.CreateFromData(width,height,false,Image.Format.Rgba8,data);
+            image.GenerateMipmaps();
+            return image;
         }
 
         public Image ShadowGeometryImage() => _geometry.Image();

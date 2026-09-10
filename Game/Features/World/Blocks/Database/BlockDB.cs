@@ -9,6 +9,8 @@ namespace Jogo25D.Blocks
     {
         private static readonly Dictionary<string, BlockDefinition> _blocks = new()
         {
+            ["wall_wood"] = new BlockDefinition { Id = "wall_wood", DropItemId = "wall_wood", IsBackground = true, SourceId = TerrainsConstants.WOOD, AtlasCoord = new Vector2I(1, 1) },
+            ["wall_dirt"] = new BlockDefinition { Id = "wall_dirt", DropItemId = "wall_dirt", IsBackground = true, SourceId = 0, AtlasCoord = new Vector2I(1, 1) },
             ["grass"] = new BlockDefinition
             {
                 Id = "grass",

@@ -164,8 +164,20 @@ namespace Jogo25D.Light
         public static byte TerrainOpacity(int terrain) => terrain < 0 ? (byte)0 : (byte)255;
         public byte Opacity(int x, int y) => TerrainOpacity(Material(x, y));
 
+        public bool DepthLightEnabled { get; init; }
+        public long BackgroundRevision { get; private set; }
+        private readonly HashSet<LightCell> _background = new();
+        public IEnumerable<LightCell> BackgroundCells => _background;
+        public bool HasBackground(int x, int y) => _background.Contains(new(x,y));
+        public void SetBackground(int x, int y, bool present)
+        {
+            bool changed = present ? _background.Add(new(x,y)) : _background.Remove(new(x,y));
+            if (changed) { BackgroundRevision++; if (DepthLightEnabled) Field.SeedChanged(x,y); }
+        }
+
         public byte Sky(int x, int y)
         {
+            if (DepthLightEnabled && !_background.Contains(new(x,y)) && Opacity(x,y) == 0) return 255;
             double transmission = 1;
             foreach (var run in Column(x))
             {
@@ -200,7 +212,9 @@ namespace Jogo25D.Light
 
         public void ApplyMutation(int x, int y, string type, string blockId)
         {
-            if (type == "break") SetTerrain(x, y, -1);
+            if (type == "wall_break") SetBackground(x,y,false);
+            else if (type == "wall_place") SetBackground(x,y,true);
+            else if (type == "break") SetTerrain(x, y, -1);
             else if (type == "place" && BlockDB.TryGet(blockId, out var block)) SetTerrain(x, y, block.TerrainSet ?? block.SourceId);
         }
 

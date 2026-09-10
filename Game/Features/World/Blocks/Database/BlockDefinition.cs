@@ -6,6 +6,7 @@ namespace Jogo25D.Blocks
     {
         #region Dinamic properties
 
+        public bool IsBackground { get; init; }
         public string Id { get; init; }
         public string DropItemId { get; init; }
         public int SourceId { get; init; }

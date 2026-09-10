@@ -105,6 +105,28 @@ namespace Jogo25D.Items
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
+                ["wall_wood"] = () => new BlockItemDefinition
+                {
+                    Id = "wall_wood", Name = "Parede de madeira", Type = ItemType.Block,
+                    Description = "Parede de fundo sem colisao", BlockId = "wall_wood", Background = true,
+                    Stackable = true, MaxStackSize = 999, Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.ITEM_WOOD_ICON),
+                },
+                ["wall_dirt"] = () => new BlockItemDefinition
+                {
+                    Id = "wall_dirt", Name = "Parede de terra", Type = ItemType.Block,
+                    Description = "Parede de fundo sem colisao", BlockId = "wall_dirt", Background = true,
+                    Stackable = true, MaxStackSize = 999, Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.BLOCK_GRASS_ICON),
+                },
+                ["wall_hammer"] = () => new BlockItemDefinition
+                {
+                    Id = "wall_hammer", Name = "Martelo de paredes", Type = ItemType.Tool,
+                    Description = "Remove somente paredes de fundo", Background = true, RemoveBackground = true,
+                    Stackable = false, MaxStackSize = 1, Cooldown = 0.25f,
+                    Icon = GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON),
+                },
+
                 ["block_grass"] = () => new BlockItemDefinition
                 {
                     Id = "block_grass",

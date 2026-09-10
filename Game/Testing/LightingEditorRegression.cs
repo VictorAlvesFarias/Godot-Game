@@ -22,6 +22,9 @@ namespace Jogo25D.Testing
             if (_light == null || !_light.PresentationReady) return;
             if (_stage == 0)
             {
+                var walls = GetParent().GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
+                if (walls == null || walls.CollisionEnabled) throw new Exception("Editor background layer missing or solid");
+                walls.SetCell(new Vector2I(1000, -1000), 0, new Vector2I(1,1));
                 _light.Settings = (Resource)_light.Settings.Duplicate();
                 _updates = _light.SolarUpdates;
                 _light.Settings.Set(nameof(LightMapData.SunAngleDegrees), 24f);
@@ -29,6 +32,7 @@ namespace Jogo25D.Testing
             }
             else if (_stage == 1 && _light.SolarUpdates > _updates)
             {
+                if (_light.World.Opacity(1000, -1000) != 0) throw new Exception("Editor wall became foreground occluder");
                 var pass = _light.GetNode<SubViewport>("LightMapGpuPass");
                 var material = (ShaderMaterial)pass.GetChild<ColorRect>(0).Material;
                 if (Math.Abs(material.GetShaderParameter("sun_angle").AsDouble() - Mathf.DegToRad(24)) > 0.001) return;
@@ -60,7 +64,7 @@ namespace Jogo25D.Testing
                 if (Math.Abs(material.GetShaderParameter("sun_angle").AsDouble() - Mathf.DegToRad(24)) > 0.001)
                     throw new Exception("Penumbra changed SunAngle");
                 foreach (var node in GetParent().GetChildren())
-                    if (node is TileMapLayer layer && layer.Name != "Base" && layer.GetUsedCells().Count > 0)
+                    if (node is TileMapLayer layer && layer.Name != "Base" && layer is not Jogo25D.Blocks.BackgroundWallLayer && layer.GetUsedCells().Count > 0)
                     { _editLayer = layer; break; }
                 if (_editLayer == null) throw new Exception("No editor tile fixture");
                 _cell = _editLayer.GetUsedCells()[0];

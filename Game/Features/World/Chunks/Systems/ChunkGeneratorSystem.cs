@@ -33,6 +33,8 @@ namespace Jogo25D.Chunks
 
         public async Task PaintTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
+            target.GetParent().GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.RestoreChunk(chunkCoord);
+
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
             // The exact same logical geometry feeds both rendering and lighting. Structures
@@ -85,6 +87,8 @@ namespace Jogo25D.Chunks
 
         public async Task EraseTilesAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
+            target.GetParent().GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.UnloadChunk(chunkCoord);
+
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;
             var processedSinceYield = 0;
@@ -97,6 +101,7 @@ namespace Jogo25D.Chunks
 
                     target.SetCell(cell, -1);
                     baseTarget?.SetCell(cell, -1);
+
 
                     processedSinceYield++;
 

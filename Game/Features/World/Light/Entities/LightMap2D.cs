@@ -20,6 +20,7 @@ namespace Jogo25D.Light
         private readonly LightMapComputer _computer = new();
         private readonly List<TileMapLayer> _layers = new();
         private Dictionary<Vector2I, int> _previewTerrain = new();
+        private HashSet<Vector2I> _previewBackground = new();
         private double _editorPoll;
         private readonly LightMapData _defaults = new();
         private readonly LightMapData _editorSettings = new();
@@ -46,7 +47,7 @@ namespace Jogo25D.Light
         private Sprite2D _overlay;
         private ShaderMaterial _material;
         private ShaderMaterial _present;
-        private ImageTexture _lightTexture, _emissionTexture, _shadowGeometryTexture;
+        private ImageTexture _lightTexture, _emissionTexture, _shadowGeometryTexture, _depthBeamTexture;
         private SubViewport _pass;
         private ColorRect _passRect;
         private ImageTexture _blackTexture;
@@ -95,8 +96,9 @@ namespace Jogo25D.Light
                     _editorPoll = 0;
                     if (World == null)
                     {
-                        World = new LogicalLightWorld(0, "preview", 1, false);
+                        World = new LogicalLightWorld(0, "preview", 1, false) { DepthLightEnabled = true };
                         _previewTerrain.Clear();
+                        _previewBackground.Clear();
                         _requestedSize = Vector2I.Zero;
                         _published = false;
                     }
@@ -104,13 +106,22 @@ namespace Jogo25D.Light
                     long previousRevision = World.Revision;
                     foreach (var layer in _layers)
                         foreach (var cell in layer.GetUsedCells())
-                            if (layer.Name != "Base") current[cell] = LogicalLightWorld.TileTerrain(layer, cell);
+                            if (layer.Name != "Base" && layer is not Jogo25D.Blocks.BackgroundWallLayer) current[cell] = LogicalLightWorld.TileTerrain(layer, cell);
                     foreach (var cell in _previewTerrain.Keys)
                         if (!current.ContainsKey(cell)) World.SetTerrain(cell.X, cell.Y, -1);
                     foreach (var entry in current)
                         if (!_previewTerrain.TryGetValue(entry.Key, out int old) || old != entry.Value)
                             World.SetTerrain(entry.Key.X, entry.Key.Y, entry.Value);
                     _previewTerrain = current;
+                    var background = new HashSet<Vector2I>();
+                    foreach (var layer in _layers)
+                        if (layer is Jogo25D.Blocks.BackgroundWallLayer)
+                            foreach (var cell in layer.GetUsedCells()) background.Add(cell);
+                    foreach (var cell in _previewBackground)
+                        if (!background.Contains(cell)) World.SetBackground(cell.X,cell.Y,false);
+                    foreach (var cell in background)
+                        if (!_previewBackground.Contains(cell)) World.SetBackground(cell.X,cell.Y,true);
+                    _previewBackground = background;
                     if (World.Revision != previousRevision) _building = false;
                     _invalid = false;
                 }
@@ -154,7 +165,7 @@ namespace Jogo25D.Light
             var settings = ReadSettings();
             bool geometryChanged = _invalid || !_computer.IsWorld(World) || _computer.Origin != origin || _computer.Size != size
                 || _computer.WorldRevision != World.Revision;
-            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra
+            bool inputsChanged = geometryChanged || _computer.BackgroundRevision != World.BackgroundRevision || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra
                 || _computer.TerrainTransition != Mathf.Clamp(settings.TerrainTransitionTiles, 0.25f, 16f)
                 || _computer.ShadowSoftness != settings.PenumbraShadowTransition
                 || _computer.AmbientSoftness != settings.PenumbraAmbientTransition;
@@ -175,6 +186,9 @@ namespace Jogo25D.Light
                     Upload(ref _lightTexture, _computer.LightImage());
                     Upload(ref _emissionTexture, _computer.EmissionImage());
                     Upload(ref _shadowGeometryTexture, _computer.ShadowGeometryImage());
+                    Upload(ref _depthBeamTexture, _computer.DepthBeamImage());
+                    _present.SetShaderParameter("depth_beam_data", _depthBeamTexture);
+                    _present.SetShaderParameter("depth_beam_enabled", World.DepthLightEnabled);
                     _material.SetShaderParameter("light_data", _lightTexture);
                     _material.SetShaderParameter("shadow_geometry", _shadowGeometryTexture);
                     _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);

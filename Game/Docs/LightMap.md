@@ -4,7 +4,8 @@ Implementação de setembro de 2026. Substitui a oclusão angular dependente da 
 
 ## Comportamento
 
-- O mundo começa sem luz. Ar em uma sala opaca, sem entradas nem emissores, converge para zero.
+- O mundo começa sem luz. Ar em uma sala opaca, com fundo fechado e sem entradas nem emissores, converge para zero.
+- Sem parede de fundo, o ar recebe ceu pelo eixo de profundidade. Essa semente e atualizada incrementalmente; veja `BackgroundWalls.md`.
 - Abrir uma passagem permite luz; fechá-la retira a iluminação que dependia dela.
 - Céu ambiente e emissão RGB se propagam por quatro vizinhos, com atenuação positiva.
 - Sol direto percorre linhas retas. As sombras atingem ar, personagens e superfícies dos tiles.

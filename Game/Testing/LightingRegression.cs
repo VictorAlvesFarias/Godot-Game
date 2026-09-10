@@ -17,6 +17,23 @@ namespace Jogo25D.Testing
         {
             try
             {
+                var depthWorld = new LogicalLightWorld(0, "depth", 1, false) { DepthLightEnabled = true };
+                for (int y = 0; y <= 12; y++) for (int x = 0; x <= 12; x++)
+                    if (x == 0 || y == 0 || x == 12 || y == 12) depthWorld.SetTerrain(x,y,0);
+                depthWorld.Field.SetRegion(0,0,64,36); Settle(depthWorld.Field);
+                Check(depthWorld.Field.Get(6,6).Sky == 255, "Closed outline without background must receive depth light");
+                for (int y = 1; y < 12; y++) for (int x = 1; x < 12; x++) depthWorld.SetBackground(x,y,true);
+                Settle(depthWorld.Field);
+                Check(depthWorld.Field.Get(6,6).Sky == 0, "Closed background retained depth light");
+                depthWorld.SetBackground(6,6,false); Settle(depthWorld.Field);
+                Check(depthWorld.Field.Get(6,6).Sky == 255 && depthWorld.Field.Get(8,6).Sky > 0,
+                    "Depth opening failed to propagate sideways");
+                depthWorld.SetBackground(6,6,true); Settle(depthWorld.Field);
+                Check(depthWorld.Field.Get(8,6).Sky == 0, "Closing depth opening left stale indirect light");
+                depthWorld.Field.SetRegion(1000,1000,32,32); Settle(depthWorld.Field);
+                depthWorld.Field.SetRegion(0,0,64,36); Settle(depthWorld.Field);
+                Check(depthWorld.Field.Get(6,6).Sky == 0, "Cache reconstruction lost logical background");
+                GD.Print("DEPTH LIGHT PASS: open back, closed back, incremental propagation/removal, cache reconstruction");
                 var remote = new LogicalLightWorld(0, "test", 1, false);
                 remote.SetTerrain(0, -10000, 0);
                 Check(remote.Sky(0, 0) == 0 && remote.Sun(0.5, 0.5, 0, -1) == 0, "Remote roof must block sky and sun");
@@ -356,6 +373,51 @@ namespace Jogo25D.Testing
                     float middle = daylight.GetPixel(32 * 32, 13 * 32).R;
                     Check(shallow < 0.99 && shallow > middle + 0.15, "Daylight saturation erased the terrain gradient");
                     Check(daylight.GetPixel(32 * 32, 17 * 32).R < 0.004, "Daylight normalization lifted complete darkness");
+                    foreach (bool opening in new[] { false, true, false })
+                    {
+                        depthWorld.SetBackground(6,6,!opening); Settle(depthWorld.Field);
+                        raster.Begin(depthWorld,Vector2I.Zero,new(64,36),0,1);
+                        while (!raster.Complete) raster.Process(10000);
+                        present.SetShaderParameter("light_data",ImageTexture.CreateFromImage(raster.LightImage()));
+                        present.SetShaderParameter("emission_data",ImageTexture.CreateFromImage(raster.EmissionImage()));
+                        present.SetShaderParameter("shadow_geometry",ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                        present.SetShaderParameter("ambient_energy",1f);
+                        present.SetShaderParameter("sun_energy",0f);
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                        using var depthFrame = filteredPass.GetTexture().GetImage();
+                        float brightness = depthFrame.GetPixel(6*32+16,6*32+16).R;
+                        Check(opening ? brightness > 0.8f : brightness < 0.008f,
+                            "Final GPU composition does not reflect depth opening");
+                    }
+                    present.SetShaderParameter("depth_beam_enabled",true);
+                    present.SetShaderParameter("ambient_energy",0f);
+                    present.SetShaderParameter("sun_energy",1f);
+                    present.SetShaderParameter("sun_angle",0f);
+                    present.SetShaderParameter("penumbra",1f);
+                    foreach (int state in new[] { 0, 1, 2, 3 })
+                    {
+                        depthWorld.SetBackground(6,4,state == 1);
+                        depthWorld.SetTerrain(6,7,state == 2 ? 0 : -1);
+                        Settle(depthWorld.Field);
+                        raster.Begin(depthWorld,Vector2I.Zero,new(64,36),0,1);
+                        while (!raster.Complete) raster.Process(10000);
+                        present.SetShaderParameter("depth_beam_data",ImageTexture.CreateFromImage(raster.DepthBeamImage()));
+                        present.SetShaderParameter("light_data",ImageTexture.CreateFromImage(raster.LightImage()));
+                        present.SetShaderParameter("shadow_geometry",ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                        present.SetShaderParameter("sun_angle",state == 3 ? Mathf.DegToRad(35) : 0f);
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+                        using var beamFrame = filteredPass.GetTexture().GetImage();
+                        float inside = beamFrame.GetPixel(6*32+16,9*32+16).R;
+                        float outside = beamFrame.GetPixel(3*32+16,9*32+16).R;
+                        Check(state == 0 ? inside > 0.3f : inside < 0.01f,
+                            "Window beam failed projection, closure, obstacle or angle check");
+                        if (state == 0) Check(outside < 0.01f,"Window beam illuminates off-axis receiver");
+                        if (state == 0) beamFrame.SavePng(folder + "/lighting-window-beam.png");
+                    }
+                    GD.Print("WINDOW BEAM GPU PASS: projected shaft, off-axis darkness, closure, obstacle and sun angle");
+                    GD.Print("DEPTH GPU PASS: background close/open/close reaches final composition");
                     GD.Print("FINAL GRADIENT PASS: softness preserves midpoint; 0.5 ambient + 1.03 sun has no white plateau");
                 }
                 GD.Print("LIGHTING REGRESSION PASS");

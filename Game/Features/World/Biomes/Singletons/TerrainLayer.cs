@@ -1114,6 +1114,7 @@ namespace Jogo25D.Biomes
 
         public bool PlaceBlock(Vector2I cell, BlockDefinition block)
         {
+            if (block.IsBackground) return false;
             PaintBlockAndReconnect(cell, block);
 
             Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "place", block.Id);

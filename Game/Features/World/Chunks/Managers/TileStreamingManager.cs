@@ -370,7 +370,9 @@ namespace Jogo25D.Chunks
         {
             foreach (var mutation in chunkState.Mutations)
             {
-                layer.ApplyChunkMutation(mutation);
+                if (mutation.Type is "wall_place" or "wall_break")
+                    layer.GetParent().GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.ApplyMutation(mutation);
+                else layer.ApplyChunkMutation(mutation);
             }
         }
 
@@ -555,6 +557,22 @@ namespace Jogo25D.Chunks
             }
             if (reset || batch.Count > 0)
                 RpcId(peerId, nameof(ReceiveLightWorld), dimensionId, world.Procedural, reset, batch.ToArray());
+            batch.Clear();
+            foreach (var cell in world.BackgroundCells)
+            {
+                batch.Add(cell.X); batch.Add(cell.Y);
+                if (batch.Count < 2048) continue;
+                RpcId(peerId, nameof(ReceiveBackgroundLight), dimensionId, batch.ToArray());
+                batch.Clear();
+            }
+            if (batch.Count > 0) RpcId(peerId, nameof(ReceiveBackgroundLight), dimensionId, batch.ToArray());
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ReceiveBackgroundLight(string dimensionId, int[] cells)
+        {
+            var world = Game.Managers.LightMapManager.Node.GetWorld(dimensionId);
+            for (int i = 0; i + 1 < cells.Length; i += 2) world.SetBackground(cells[i],cells[i+1],true);
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -665,12 +683,15 @@ namespace Jogo25D.Chunks
                     state[chunk] = chunkState;
                 }
 
-                chunkState.Mutations.Add(new ChunkMutationData
+                var restoredMutation = new ChunkMutationData
                 {
                     Type = mutacao["type"].AsString(),
                     Position = new Vector2(cell.X, cell.Y),
                     ExtraData = mutacao.TryGetValue("blockId", out var b) ? b.AsString() : "",
-                });
+                };
+                chunkState.Mutations.Add(restoredMutation);
+                if (restoredMutation.Type is "wall_place" or "wall_break")
+                    Dimensions.ResolveParent(dimensionId)?.GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.ApplyMutation(restoredMutation);
             }
         }
 

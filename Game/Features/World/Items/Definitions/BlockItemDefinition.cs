@@ -1,4 +1,5 @@
 ﻿using Godot;
+using Jogo25D.Blocks;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
@@ -9,6 +10,8 @@ namespace Jogo25D.Items
     {
         #region Dinamic properties
 
+        public bool Background { get; init; }
+        public bool RemoveBackground { get; init; }
         public string BlockId { get; init; }
         public float Reach { get; init; } = 120f;
 
@@ -25,6 +28,14 @@ namespace Jogo25D.Items
         // Lado autoritativo: converte a posicao de volta pra celula, pinta e consome.
         public override void UseAt(Player player, ItemData data, Vector2 position)
         {
+            if (Background)
+            {
+                var walls = ResolveTarget(player) as BackgroundWallLayer;
+                if (walls == null || player.GlobalPosition.DistanceTo(position) > Reach + walls.TileSet.TileSize.X) return;
+                if (walls.EditAuthoritative(walls.LocalToMap(walls.ToLocal(position)), BlockId, RemoveBackground) && !RemoveBackground)
+                    player.RemoveItemRequest(data.InstanceId, 1);
+                return;
+            }
             if (player.GetActiveTileLayer() is not TerrainLayer layer)
             {
                 return;
@@ -52,7 +63,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var layer = player.GetActiveTileLayer();
+            var layer = ResolveTarget(player);
 
             if (layer == null)
             {
@@ -64,6 +75,12 @@ namespace Jogo25D.Items
             TriggerCooldownTimer(instance);
 
             player.UseItemAtRequest(instance.InstanceId, layer.ToGlobal(layer.MapToLocal(targetCell)));
+        }
+
+        private TileMapLayer ResolveTarget(Player player)
+        {
+            var layer = player.GetActiveTileLayer();
+            return Background ? layer?.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls") : layer;
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)
@@ -92,7 +109,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            var layer = player.GetActiveTileLayer();
+            var layer = ResolveTarget(player);
 
             if (layer == null)
             {
@@ -102,9 +119,9 @@ namespace Jogo25D.Items
             }
 
             var cell = ResolveCellInRange(player, layer, Reach);
-            var baseLayer = player.GetActiveBaseLayer();
+            var baseLayer = Background ? null : player.GetActiveBaseLayer();
 
-            if (layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
+            if ((RemoveBackground ? layer.GetCellSourceId(cell) == -1 : layer.GetCellSourceId(cell) != -1) || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
             {
                 HideIndicator(player);
 

@@ -15,6 +15,9 @@
 [ext_resource type="Script" uid="uid://c6a5vqqvx8okh" path="res://Features/World/Light/Entities/LightMap2D.cs" id="14_lightmap"]
 [ext_resource type="Resource" path="res://Assets/Data/LightMap.tres" id="15_lmdata"]
 
+[ext_resource type="Script" path="res://Features/World/Blocks/BackgroundWallLayer.cs" id="wall_script"]
+[ext_resource type="TileSet" path="res://Assets/Textures/Tiles/background_walls_tileset.tres" id="wall_tiles"]
+
 [sub_resource type="Resource" id="Resource_40gko"]
 script = ExtResource("9_cg0d3")
 TerrainSetB = 1
@@ -101,6 +104,15 @@ texture_filter = 1
 position = Vector2(0, 2916)
 scale = Vector2(9, -9)
 texture = ExtResource("7_bg6tx")
+
+[node name="BackgroundWalls" type="TileMapLayer" parent="."]
+texture_filter = 1
+self_modulate = Color(0.65, 0.65, 0.65, 1)
+tile_set = ExtResource("wall_tiles")
+collision_enabled = false
+navigation_enabled = false
+occlusion_enabled = false
+script = ExtResource("wall_script")
 
 [node name="Base" type="TileMapLayer" parent="." unique_id=351296527]
 texture_filter = 1
