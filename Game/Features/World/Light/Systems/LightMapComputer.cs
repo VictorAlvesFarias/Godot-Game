@@ -27,25 +27,36 @@ namespace Jogo25D.Light
         public long FieldRevision { get; private set; }
         public float Angle { get; private set; }
         public float Penumbra { get; private set; }
+        public float TerrainTransition { get; private set; } = 3;
+        public float Gradient { get; private set; } = 1.4f;
+        public float ShadowSoftness { get; private set; } = 1;
+        public float AmbientSoftness { get; private set; } = 1;
         public bool IsWorld(LogicalLightWorld world) => _world == world;
 
-        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra)
+        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra,
+            float terrainTransition = 3, float gradient = 1.4f, float shadowSoftness = 1, float ambientSoftness = 1)
         {
             bool layout = Complete && _world == world && Origin == origin && Size == size;
-            _reuseGeometry = layout
+            terrainTransition = Math.Clamp(terrainTransition, 0.25f, 16);
+            bool reuseGeometryData = layout
                 && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
+            _reuseGeometry = reuseGeometryData && TerrainTransition == terrainTransition && Gradient == gradient
+                && ShadowSoftness == shadowSoftness && AmbientSoftness == ambientSoftness;
             _dirtyReceivers.Clear();
-            _reuseReceivers = layout && world.TryGetChanges(WorldRevision, out _);
+            _reuseReceivers = layout && TerrainTransition == terrainTransition && world.TryGetChanges(WorldRevision, out _);
             if (_reuseReceivers)
             {
                 world.TryGetChanges(WorldRevision, out var changes);
                 foreach (var cell in changes)
                 {
-                    for (int y = -3; y <= 3; y++) for (int x = -3; x <= 3; x++)
+                    int radius = (int)Math.Ceiling(terrainTransition);
+                    for (int y = -radius; y <= radius; y++) for (int x = -radius; x <= radius; x++)
                         _dirtyReceivers.Add(new(cell.X + x, cell.Y + y));
                 }
             }
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
+            TerrainTransition = terrainTransition; Gradient = gradient;
+            ShadowSoftness = shadowSoftness; AmbientSoftness = ambientSoftness;
             WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;
             if (_light.Length != bytes)
@@ -54,7 +65,7 @@ namespace Jogo25D.Light
                 _receiverX = new int[bytes]; _receiverY = new int[bytes]; _depth = new double[bytes];
             }
             _cursor = 0;
-            if (!_reuseGeometry) _geometry.Begin(world, origin, size, angle, penumbra);
+            if (!reuseGeometryData) _geometry.Begin(world, origin, size, angle, penumbra);
         }
 
         public void Process(double milliseconds = 3)
@@ -83,7 +94,7 @@ namespace Jogo25D.Light
                     // does not become a light source on the other side of the rock.
                     _depth[slot] = 0;
                     for (int side = 0; side < 4; side++)
-                        for (int distance = 1; distance <= 3; distance++)
+                        for (int distance = 1; distance <= (int)Math.Ceiling(TerrainTransition); distance++)
                         {
                             var d = LightingField.Neighbours[side];
                             int nx = x + d.X * distance, ny = y + d.Y * distance;
@@ -94,9 +105,8 @@ namespace Jogo25D.Light
                             _receiverX[slot + side] = nx; _receiverY[slot + side] = ny;
                             // Continuous surface falloff. Keep all exposed faces so switching
                             // the nearest face cannot cut a dark diagonal into a solid corner.
-                            double fade = Math.Clamp(metric - 2, 0, 1);
-                            _depth[slot + side] = Math.Pow(0.43, Math.Max(0, metric - 0.5))
-                                * (1 - fade * fade * (3 - 2 * fade));
+                            double t = Math.Clamp(metric / TerrainTransition, 0, 1);
+                            _depth[slot + side] = 1 - t * t * (3 - 2 * t);
                             break;
                         }
                 }

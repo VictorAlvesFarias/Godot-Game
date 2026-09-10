@@ -34,6 +34,8 @@ namespace Jogo25D.Light
             {
                 string name = property["name"].AsString();
                 if (name is not (nameof(LightMapData.SunAngleDegrees) or nameof(LightMapData.Penumbra)
+                    or nameof(LightMapData.PenumbraShadowSoftness) or nameof(LightMapData.PenumbraAmbientSoftness)
+                    or nameof(LightMapData.PenumbraGradient) or nameof(LightMapData.TerrainTransitionTiles)
                     or nameof(LightMapData.AmbientInfluence) or nameof(LightMapData.SunIntensity)
                     or nameof(LightMapData.SkyColor) or nameof(LightMapData.SunColor) or nameof(LightMapData.ShowRawMap))) continue;
                 Variant value = Settings.Get(name);
@@ -152,14 +154,20 @@ namespace Jogo25D.Light
             var settings = ReadSettings();
             bool geometryChanged = _invalid || !_computer.IsWorld(World) || _computer.Origin != origin || _computer.Size != size
                 || _computer.WorldRevision != World.Revision;
-            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra;
+            bool inputsChanged = geometryChanged || _computer.Angle != settings.SunAngleDegrees || _computer.Penumbra != settings.Penumbra
+                || _computer.TerrainTransition != Mathf.Clamp(settings.TerrainTransitionTiles, 0.25f, 16f)
+                || _computer.Gradient != settings.PenumbraGradient
+                || _computer.ShadowSoftness != settings.PenumbraShadowSoftness
+                || _computer.AmbientSoftness != settings.PenumbraAmbientSoftness;
             if (geometryChanged) _building = false;
             // A moving sun queues the next snapshot rather than starving the current build.
             if (World.Field.Settled && (_building || !_published || inputsChanged || _displayedRevision != World.Field.Revision))
             {
                 if (!_building)
                 {
-                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra);
+                    _computer.Begin(World, origin, size, settings.SunAngleDegrees, settings.Penumbra,
+                        settings.TerrainTransitionTiles, settings.PenumbraGradient,
+                        settings.PenumbraShadowSoftness, settings.PenumbraAmbientSoftness);
                     _building = true; _invalid = false;
                 }
                 _computer.Process();
@@ -173,6 +181,10 @@ namespace Jogo25D.Light
                     _material.SetShaderParameter("map_size", (Vector2)size * LightMapComputer.Subdivisions);
                     _material.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
                     _material.SetShaderParameter("penumbra", _computer.Penumbra);
+                    _material.SetShaderParameter("terrain_transition_tiles", _computer.TerrainTransition);
+                    _material.SetShaderParameter("penumbra_gradient", _computer.Gradient);
+                    _material.SetShaderParameter("penumbra_shadow_softness", _computer.ShadowSoftness);
+                    _material.SetShaderParameter("penumbra_ambient_softness", _computer.AmbientSoftness);
                     _pass.Size = size * LightMapComputer.ShadowSubdivisions;
                     _passRect.Size = _pass.Size;
                     if (_computer.RebuiltSun) { _pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once; SolarUpdates++; }
@@ -183,6 +195,10 @@ namespace Jogo25D.Light
                     _present.SetShaderParameter("shadow_geometry", _shadowGeometryTexture);
                     _present.SetShaderParameter("sun_angle", Mathf.DegToRad(_computer.Angle));
                     _present.SetShaderParameter("penumbra", _computer.Penumbra);
+                    _present.SetShaderParameter("terrain_transition_tiles", _computer.TerrainTransition);
+                    _present.SetShaderParameter("penumbra_gradient", _computer.Gradient);
+                    _present.SetShaderParameter("penumbra_shadow_softness", _computer.ShadowSoftness);
+                    _present.SetShaderParameter("penumbra_ambient_softness", _computer.AmbientSoftness);
                     _present.SetShaderParameter("geometry_ready", true);
                     _overlay.GlobalPosition = grid.ToGlobal(grid.MapToLocal(origin) - tileSize / 2);
                     _overlay.Scale = tileSize / LightMapComputer.ShadowSubdivisions;

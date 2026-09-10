@@ -41,6 +41,10 @@ namespace Jogo25D.Testing
                 if (Math.Abs(material.GetShaderParameter("ambient_energy").AsDouble() - 0.12) > 0.001) return;
                 _updates = _light.SolarUpdates;
                 _light.Settings.Set(nameof(LightMapData.Penumbra), 0.25f);
+                _light.Settings.Set(nameof(LightMapData.PenumbraGradient), 2f);
+                _light.Settings.Set(nameof(LightMapData.PenumbraShadowSoftness), 3f);
+                _light.Settings.Set(nameof(LightMapData.PenumbraAmbientSoftness), 0.5f);
+                _light.Settings.Set(nameof(LightMapData.TerrainTransitionTiles), 6f);
                 _stage++;
             }
             else if (_stage == 3 && _light.SolarUpdates > _updates)
@@ -48,6 +52,14 @@ namespace Jogo25D.Testing
                 var pass = _light.GetNode<SubViewport>("LightMapGpuPass");
                 var material = (ShaderMaterial)pass.GetChild<ColorRect>(0).Material;
                 if (Math.Abs(material.GetShaderParameter("penumbra").AsDouble() - 0.25) > 0.001) return;
+                if (Math.Abs(material.GetShaderParameter("penumbra_gradient").AsDouble() - 2) > 0.001
+                    || Math.Abs(material.GetShaderParameter("terrain_transition_tiles").AsDouble() - 6) > 0.001) return;
+                var presentation = (ShaderMaterial)_light.GetNode<Sprite2D>("LightMapOverlay").Material;
+                if (Math.Abs(presentation.GetShaderParameter("penumbra_gradient").AsDouble() - 2) > 0.001
+                    || Math.Abs(presentation.GetShaderParameter("terrain_transition_tiles").AsDouble() - 6) > 0.001) return;
+                foreach (var shader in new[] { material, presentation })
+                    if (Math.Abs(shader.GetShaderParameter("penumbra_shadow_softness").AsDouble() - 3) > 0.001
+                        || Math.Abs(shader.GetShaderParameter("penumbra_ambient_softness").AsDouble() - 0.5) > 0.001) return;
                 if (Math.Abs(material.GetShaderParameter("sun_angle").AsDouble() - Mathf.DegToRad(24)) > 0.001)
                     throw new Exception("Penumbra changed SunAngle");
                 foreach (var node in GetParent().GetChildren())

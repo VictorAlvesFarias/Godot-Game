@@ -9,7 +9,7 @@ Implementação de setembro de 2026. Substitui a oclusão angular dependente da 
 - Céu ambiente e emissão RGB se propagam por quatro vizinhos, com atenuação positiva.
 - Sol direto percorre linhas retas. As sombras atingem ar, personagens e superfícies dos tiles.
 - Uma superfície pode receber luz sem transmiti-la através do bloco. O interior do terreno
-  escurece; a recepção visual se estende por até três células, com atenuação de 0,43 por camada.
+  escurece; a profundidade da recepção visual é configurada em `TerrainTransitionTiles`.
 - Todos os blocos, incluindo folhas, terreno e madeira, são opacos. Base é acabamento visual,
   não uma segunda parede: sua presença não fecha uma passagem que foi aberta na geometria Compose.
 
@@ -80,10 +80,12 @@ em regiões de 16 × 16 tiles pela área de sua projeção, reduzindo os candida
 
 A textura `shadow_geometry` contém retângulos, opacidade e listas espaciais em RGBA32F.
 Não contém amostras angulares nem transmissão amostrada nas bordas. O shader calcula os
-limites esquerdo/direito do cone projetado e uma distância assinada à sua borda. A cobertura
-do pixel é aproximada analiticamente usando essa distância e as derivadas da posição.
+intervalos angulares bloqueados pelos retângulos e une todos os intervalos antes de integrar
+a fração ocultada de um disco de luz. Isso produz umbra, penumbra e luz exterior sem degradês
+individuais nas divisões internas dos blocos. No limite pontual, a cobertura do pixel usa
+distância à borda e derivadas da posição.
 Não há o laço anterior de 33 raios. Um DDA curto permanece somente para encontrar a face
-receptora dentro de um bloco sólido, limitado à profundidade visual de três tiles.
+receptora dentro de um bloco sólido, limitado à profundidade visual configurada (até 16 tiles).
 
 `SunAngleDegrees` continua sendo o único eixo. `Penumbra` controla uma meia abertura de
 `8° × (1 - p)²`: 0 abre o cone, 1 mantém a projeção paralela. Não existe fonte posicionada
@@ -107,8 +109,9 @@ incrementais. A janela continua alinhada à grade e com margem de movimento. Mud
 ângulo agendam a próxima apresentação sem reiniciar indefinidamente a atual.
 
 Todos os blocos usam o mesmo bloqueio de luz e a mesma composição de sombras, sem tratamento
-especial para folhas. Sombras opacas usam a maior cobertura, evitando acumular
-escurecimento nas franjas de retângulos sobrepostos. Muitos retângulos
+especial para folhas. A união angular evita contar sobreposições mais de uma vez. A varredura
+exata de intervalos pode ter custo quadrático no número de retângulos em casos fragmentados;
+não usa número fixo de amostras nem descarta intervalos por um limite de capacidade. Muitos retângulos
 projetados na mesma região aumentam o custo GPU. Teto muito distante e sol quase horizontal
 podem exigir muitas colunas e memória de índice: ainda não há hierarquia de oclusores para
 esse caso extremo. Upload, compactação e geração de uma coluna podem exceder a fatia cooperativa.
@@ -145,10 +148,30 @@ Em `Assets/Data/LightMap.tres`:
 - `SunAngleDegrees`: direção solar; zero é sol acima, positivo desloca o sol para a direita.
 - `Penumbra`: 0 = cone mais aberto; 1 = projeção paralela; padrão 0,5.
   Controla a abertura dos dois lados do eixo, sem alterar `SunAngleDegrees`.
+- `PenumbraGradient`: suavidade do contraste da fração ocultada, padrão 1,4. 1 usa a integração
+  do disco; aumentar suaviza simetricamente os dois lados da transição, preservando o ponto
+  de 50% e os limites geométricos. Não cria transições separadas para cada retângulo.
+  A curva é `c^a / (c^a + (1-c)^a)`, com `a = 1 / PenumbraGradient`.
+- `PenumbraShadowSoftness` / `PenumbraAmbientSoftness`: controles independentes da borda
+  junto a sombra / ao ambiente (0,25 a 4). 1 preserva a curva; menor marca o corte,
+  maior suaviza a chegada. Cada controle atua somente em sua metade, preservando extremos,
+  ponto central, abertura e angulo. No limite paralelo permanece apenas o antialiasing.
+- `TerrainTransitionTiles`: profundidade visual até preto completo, de 0,25 a 16 tiles,
+  padrão 3. Aceita frações (0,5 é meio tile). Aplica-se igualmente a todos os blocos, à luz solar,
+  ao ambiente e à emissão recebida. Não transmite luz para o ar do outro lado da parede.
+  A distância solar é medida em direção à luz; a recepção ambiente usa as faces expostas.
+  A intensidade é `1 - smoothstep(0, 1, distância / profundidade)`, desde a superfície até
+  preto completo, sem patamar inicial iluminado nem faixa de transição só no final.
+  Valores maiores aumentam o trabalho de procura dessas faces, sem mudar o solver lógico.
 - `AmbientInfluence`: energia do céu, padrão 0,32.
 - `SunIntensity`: energia direta, padrão 0,85.
 - `SkyColor` e `SunColor`: cor das contribuições.
 - `ShowRawMap`: vermelho = ambiente, verde = sol, azul = opacidade.
+
+A soma máxima das cores ambiente e solar é normalizada antes da atenuação local quando
+ultrapassa 1. Isso evita que o corte final de cor apague o início do degradê: por exemplo,
+ambiente 0,5 e sol 1,03 somavam 1,53 e mantinham uma faixa saturada. A normalização também
+reduz a contribuição ambiente nas regiões sem sol. A emissão local é adicionada separadamente.
 
 O recurso de configurações executa no editor (`Tool`), e as alterações do Inspector são lidas
 pela prévia. O tamanho da prévia respeita `PreviewSize`. Durante a recarga de scripts, o iluminador
@@ -199,16 +222,22 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão no editor: passou, incluindo alterações de ângulo e ambiente pelo recurso.
 - Integrações autorada e procedural: passaram, incluindo o sol mudando continuamente.
 - Edição pontual na cena procedural: 37 células processadas, apresentação em 3–4 frames.
-- Regressão da projeção na GPU: cone aberto cresceu de 38 para 50 pixels; paralelo manteve
-  32 pixels. A simetria em torno do eixo e o bloqueador fora da janela também passaram.
+- Regressão da projeção na GPU: contorno com pelo menos 5% de sombra cresceu de 42 para 60 pixels;
+  paralelo manteve 34 pixels. A simetria em torno do eixo e o bloqueador fora da janela passaram.
   A composição filtrada foi verificada junto à borda interna de um teto fechado, sem vazamento.
 - Regressão do editor: penumbra preserva o ângulo; apagar e recolocar um tile atualiza a geometria
   e o cache sem substituir o mundo lógico.
 - Regressão de antialiasing a 8× de zoom: as 320 linhas verificadas têm cobertura subpixel,
   com transição de no máximo dois pixels na tela, sem ampliação da textura intermediária.
 - A penumbra aberta tem degradê além do antialiasing: a faixa entre 5% e 95% de luz cresceu
-  de 31 para 73 pixels com a distância ao bloqueador no teste a 8×. A transição usa smoothstep
-  entre o limite externo do cone e 85% do caminho até a projeção central, sem raios adicionais.
+  de 85 para 205 pixels com a distância ao bloqueador no teste a 8×, com gradiente 1,4.
+  A transição integra a união das silhuetas, sem raios adicionais.
+- Um retângulo sólido e a mesma silhueta subdividida em xadrez produzem a mesma sombra na GPU
+  com gradiente 3, verificando a ausência de emendas internas geradas pela decomposição.
+- Transição do terreno: 1 e 6 tiles validados na CPU e GPU, com preto além da profundidade
+  escolhida. Os dois novos parâmetros também foram alterados e verificados no editor.
+- Composição final: ambiente 0,5 + sol 1,03 testados na GPU, sem patamar branco na transição
+  do terreno. Gradientes de penumbra 0,5 e 3 preservam o ponto de 50% e aumentam a faixa suave.
 - Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 16–21 ms no total nesta versão experimental,
   distribuível em fatias; não é um custo cobrado em todo frame.
 

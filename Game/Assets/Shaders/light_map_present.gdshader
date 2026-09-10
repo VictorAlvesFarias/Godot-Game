@@ -34,6 +34,10 @@ void fragment() {
     vec2 world_pixel = UV * map_size / 2.0;
     float sun = 0.0;
     if (geometry_ready) sun = analytic_sun(world_pixel, fwidth(world_pixel));
-    vec3 energy = sky_color.rgb * sky * ambient_energy + sun_color.rgb * sun * sun_energy + emission;
+    // Reserve the display range for unoccluded daylight BEFORE applying attenuation.
+    // Clipping ambient + sun afterwards erases the first portion of every gradient.
+    vec3 daylight = sky_color.rgb * ambient_energy + sun_color.rgb * sun_energy;
+    float daylight_scale = max(1.0, max(daylight.r, max(daylight.g, daylight.b)));
+    vec3 energy = (sky_color.rgb * sky * ambient_energy + sun_color.rgb * sun * sun_energy) / daylight_scale + emission;
     COLOR = vec4(show_raw ? vec3(sky, sun, material) : clamp(energy, vec3(0.0), vec3(1.0)), 1.0);
 }

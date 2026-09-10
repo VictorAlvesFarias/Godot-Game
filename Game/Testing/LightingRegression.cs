@@ -206,6 +206,130 @@ namespace Jogo25D.Testing
                         "Penumbra must contain a real gradient that widens with distance");
                     soft.SavePng(folder + "/lighting-edge-soft.png");
                     GD.Print($"SOFT TRANSITION PASS: near={nearTransition}px far={farTransition}px");
+                    var solid = new LogicalLightWorld(0, "terrain-depth", 1, false);
+                    for (int x = 0; x < 64; x++) for (int y = 10; y < 36; y++) solid.SetTerrain(x, y, 0);
+                    solid.Field.SetRegion(0, 0, 64, 36); Settle(solid.Field);
+                    foreach (float transition in new[] { 1f, 6f })
+                    {
+                        raster.Begin(solid, Vector2I.Zero, new(64, 36), 0, 1, transition);
+                        while (!raster.Complete) raster.Process(10000);
+                        using var fieldImage = raster.LightImage();
+                        float ambientAtDepth = fieldImage.GetPixel(32 * 2, 13 * 2).R;
+                        Check(fieldImage.GetPixel(32 * 2, 10 * 2).R < 1,
+                            "Terrain transition has an unattenuated plateau after the surface");
+                        Check(transition == 1 ? ambientAtDepth == 0 : ambientAtDepth > 0.1,
+                            "Terrain transition did not update ambient surface reception");
+                        Check(fieldImage.GetPixel(32 * 2, 17 * 2).R == 0, "Ambient exceeds requested terrain depth");
+                        material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(fieldImage));
+                        material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                        material.SetShaderParameter("sun_angle", 0f);
+                        material.SetShaderParameter("penumbra", 1f);
+                        material.SetShaderParameter("terrain_transition_tiles", transition);
+                        pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                        using var surface = pass.GetTexture().GetImage();
+                        float sunAtDepth = surface.GetPixel(32 * LightMapComputer.ShadowSubdivisions, 13 * LightMapComputer.ShadowSubdivisions).R;
+                        Check(transition == 1 ? sunAtDepth == 0 : sunAtDepth > 0.1, "Terrain transition did not update solar reception");
+                        Check(surface.GetPixel(32 * LightMapComputer.ShadowSubdivisions, 17 * LightMapComputer.ShadowSubdivisions).R == 0,
+                            "Sun exceeds requested terrain depth");
+                    }
+                    GD.Print("TERRAIN TRANSITION PASS: 1 and 6 tiles, ambient and sun");
+                    // Identical opaque silhouette, different rectangle decomposition.
+                    // Increasing gradient must not reveal the internal checkerboard.
+                    Image unifiedShadow = null;
+                    for (int variant = 0; variant < 2; variant++)
+                    {
+                        if (variant == 1)
+                            for (int x = 24; x < 32; x++) for (int y = 6; y < 14; y++)
+                                blocker.SetTerrain(x, y, (x + y) % 2 == 0 ? 0 : 6);
+                        Settle(blocker.Field);
+                        raster.Begin(blocker, Vector2I.Zero, new(64, 36), 0, 0, 3, 3);
+                        while (!raster.Complete) raster.Process(10000);
+                        material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
+                        material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                        material.SetShaderParameter("penumbra", 0f);
+                        material.SetShaderParameter("penumbra_gradient", 3f);
+                        material.SetShaderParameter("terrain_transition_tiles", 3f);
+                        pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                        var variantImage = pass.GetTexture().GetImage();
+                        if (variant == 0) unifiedShadow = variantImage;
+                        else
+                        {
+                            int scale = LightMapComputer.ShadowSubdivisions;
+                            for (int x = 16 * scale; x < 42 * scale; x++) for (int y = 15 * scale; y < 34 * scale; y++)
+                                Check(Math.Abs(variantImage.GetPixel(x, y).R - unifiedShadow.GetPixel(x, y).R) < 0.008,
+                                    "Rectangle decomposition created internal penumbra seams");
+                            variantImage.Dispose(); unifiedShadow.Dispose();
+                        }
+                    }
+                    GD.Print("SILHOUETTE UNION PASS: solid rectangle matches checkerboard decomposition at gradient 3");
+                    int previousMidpoint = -1, previousTransition = -1;
+                    foreach (float gradient in new[] { 0.5f, 3f })
+                    {
+                        material.SetShaderParameter("penumbra_gradient", gradient);
+                        pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                        using var curve = pass.GetTexture().GetImage();
+                        int midpoint = -1, transitionPixels = 0, scale = LightMapComputer.ShadowSubdivisions;
+                        for (int x = 28 * scale; x < 42 * scale; x++)
+                        {
+                            float value = curve.GetPixel(x, 25 * scale).R;
+                            if (value >= 0.5 && midpoint < 0) midpoint = x;
+                            if (value > 0.05 && value < 0.95) transitionPixels++;
+                        }
+                        if (previousMidpoint >= 0)
+                        {
+                            Check(Math.Abs(midpoint - previousMidpoint) <= 1, "Softness shifted the gradient midpoint");
+                            Check(transitionPixels > previousTransition + 3, "Softness did not broaden the intensity range");
+                        }
+                        previousMidpoint = midpoint; previousTransition = transitionPixels;
+                    }
+                    using (var baseline = pass.GetTexture().GetImage())
+                    {
+                        foreach (string edge in new[] { "shadow", "ambient" })
+                        {
+                            material.SetShaderParameter("penumbra_" + edge + "_softness", 3f);
+                            pass.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+                            for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                            using var adjusted = pass.GetTexture().GetImage();
+                            int changed = 0;
+                            for (int x = 28 * 4; x < 42 * 4; x++)
+                            {
+                                float before = baseline.GetPixel(x, 25 * 4).R;
+                                float after = adjusted.GetPixel(x, 25 * 4).R;
+                                bool target = edge == "shadow" ? before < 0.5f : before > 0.5f;
+                                if (!target) Check(Math.Abs(before - after) < 0.008, "Edge control changed the opposite half");
+                                else if (Math.Abs(before - after) > 0.02) changed++;
+                            }
+                            Check(changed > 2, "Edge control did not shape its transition");
+                            material.SetShaderParameter("penumbra_" + edge + "_softness", 1f);
+                        }
+                    }
+                    GD.Print("INDEPENDENT PENUMBRA EDGES PASS");
+                    raster.Begin(solid, Vector2I.Zero, new(64, 36), 0, 1, 6);
+                    while (!raster.Complete) raster.Process(10000);
+                    present.SetShaderParameter("light_data", ImageTexture.CreateFromImage(raster.LightImage()));
+                    present.SetShaderParameter("emission_data", ImageTexture.CreateFromImage(raster.EmissionImage()));
+                    present.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                    present.SetShaderParameter("sun_angle", 0f);
+                    present.SetShaderParameter("penumbra", 1f);
+                    present.SetShaderParameter("terrain_transition_tiles", 6f);
+                    present.SetShaderParameter("ambient_energy", 0.5f);
+                    present.SetShaderParameter("sun_energy", 1.03f);
+                    present.SetShaderParameter("sky_color", Colors.White);
+                    for (int i = 0; i < 3; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+                    await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var daylight = filteredPass.GetTexture().GetImage();
+                    float shallow = daylight.GetPixel(32 * 32, 11 * 32).R;
+                    float middle = daylight.GetPixel(32 * 32, 13 * 32).R;
+                    Check(shallow < 0.99 && shallow > middle + 0.15, "Daylight saturation erased the terrain gradient");
+                    Check(daylight.GetPixel(32 * 32, 17 * 32).R < 0.004, "Daylight normalization lifted complete darkness");
+                    GD.Print("FINAL GRADIENT PASS: softness preserves midpoint; 0.5 ambient + 1.03 sun has no white plateau");
                 }
                 GD.Print("LIGHTING REGRESSION PASS");
                 GetTree().Quit();
@@ -230,7 +354,8 @@ namespace Jogo25D.Testing
             for (int x = 16 * scale; x < 40 * scale; x++)
             {
                 float value = image.GetPixel(x, y * scale).R;
-                if (value < 0.5f) count++;
+                // Measure the outer projection (5% shadow), independent of its inner tone.
+                if (value < 0.95f) count++;
             }
             return count;
         }
