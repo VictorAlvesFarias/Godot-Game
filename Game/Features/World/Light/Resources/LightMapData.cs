@@ -11,12 +11,11 @@ namespace Jogo25D.Light
 
         // Abertura simetrica em torno de SunAngle: 0 = aberta; 1 = paralela.
         [Export(PropertyHint.Range, "0,1,0.01")] public float Penumbra { get; set; } = LightMapConstants.PENUMBRA;
-        // Distribuicao da intensidade dentro do cone; nao altera suas direcoes limites.
-        [Export(PropertyHint.Range, "0.25,3,0.05")] public float PenumbraGradient { get; set; } = 1.4f;
 
-        // 1 preserva a curva; valores maiores suavizam a chegada em cada extremidade.
-        [Export(PropertyHint.Range, "0.25,4,0.05")] public float PenumbraShadowSoftness { get; set; } = 1f;
-        [Export(PropertyHint.Range, "0.25,4,0.05")] public float PenumbraAmbientSoftness { get; set; } = 1f;
+        // Curva de intensidade em toda a faixa: 0 = borda marcada; 1 = chegada suave.
+        // Nao altera largura, inicio ou fim da penumbra.
+        [Export(PropertyHint.Range, "0,1,0.01")] public float PenumbraShadowTransition { get; set; } = 1f;
+        [Export(PropertyHint.Range, "0,1,0.01")] public float PenumbraAmbientTransition { get; set; } = 1f;
 
         [ExportGroup("Transicao do terreno")]
         // Distancia visual ate escurecer totalmente. Vale para todos os blocos.

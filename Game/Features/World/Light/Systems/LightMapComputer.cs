@@ -28,19 +28,18 @@ namespace Jogo25D.Light
         public float Angle { get; private set; }
         public float Penumbra { get; private set; }
         public float TerrainTransition { get; private set; } = 3;
-        public float Gradient { get; private set; } = 1.4f;
         public float ShadowSoftness { get; private set; } = 1;
         public float AmbientSoftness { get; private set; } = 1;
         public bool IsWorld(LogicalLightWorld world) => _world == world;
 
         public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra,
-            float terrainTransition = 3, float gradient = 1.4f, float shadowSoftness = 1, float ambientSoftness = 1)
+            float terrainTransition = 3, float shadowSoftness = 1, float ambientSoftness = 1)
         {
             bool layout = Complete && _world == world && Origin == origin && Size == size;
             terrainTransition = Math.Clamp(terrainTransition, 0.25f, 16);
             bool reuseGeometryData = layout
                 && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
-            _reuseGeometry = reuseGeometryData && TerrainTransition == terrainTransition && Gradient == gradient
+            _reuseGeometry = reuseGeometryData && TerrainTransition == terrainTransition
                 && ShadowSoftness == shadowSoftness && AmbientSoftness == ambientSoftness;
             _dirtyReceivers.Clear();
             _reuseReceivers = layout && TerrainTransition == terrainTransition && world.TryGetChanges(WorldRevision, out _);
@@ -55,7 +54,7 @@ namespace Jogo25D.Light
                 }
             }
             _world = world; Origin = origin; Size = size; Angle = angle; Penumbra = penumbra;
-            TerrainTransition = terrainTransition; Gradient = gradient;
+            TerrainTransition = terrainTransition;
             ShadowSoftness = shadowSoftness; AmbientSoftness = ambientSoftness;
             WorldRevision = world.Revision; FieldRevision = world.Field.Revision;
             int bytes = size.X * size.Y * Subdivisions * Subdivisions * 4;

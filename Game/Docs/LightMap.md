@@ -81,7 +81,7 @@ em regiões de 16 × 16 tiles pela área de sua projeção, reduzindo os candida
 A textura `shadow_geometry` contém retângulos, opacidade e listas espaciais em RGBA32F.
 Não contém amostras angulares nem transmissão amostrada nas bordas. O shader calcula os
 intervalos angulares bloqueados pelos retângulos e une todos os intervalos antes de integrar
-a fração ocultada de um disco de luz. Isso produz umbra, penumbra e luz exterior sem degradês
+a fração angular ocultada da fonte. Isso produz umbra, penumbra e luz exterior sem degradês
 individuais nas divisões internas dos blocos. No limite pontual, a cobertura do pixel usa
 distância à borda e derivadas da posição.
 Não há o laço anterior de 33 raios. Um DDA curto permanece somente para encontrar a face
@@ -148,14 +148,12 @@ Em `Assets/Data/LightMap.tres`:
 - `SunAngleDegrees`: direção solar; zero é sol acima, positivo desloca o sol para a direita.
 - `Penumbra`: 0 = cone mais aberto; 1 = projeção paralela; padrão 0,5.
   Controla a abertura dos dois lados do eixo, sem alterar `SunAngleDegrees`.
-- `PenumbraGradient`: suavidade do contraste da fração ocultada, padrão 1,4. 1 usa a integração
-  do disco; aumentar suaviza simetricamente os dois lados da transição, preservando o ponto
-  de 50% e os limites geométricos. Não cria transições separadas para cada retângulo.
-  A curva é `c^a / (c^a + (1-c)^a)`, com `a = 1 / PenumbraGradient`.
-- `PenumbraShadowSoftness` / `PenumbraAmbientSoftness`: controles independentes da borda
-  junto a sombra / ao ambiente (0,25 a 4). 1 preserva a curva; menor marca o corte,
-  maior suaviza a chegada. Cada controle atua somente em sua metade, preservando extremos,
-  ponto central, abertura e angulo. No limite paralelo permanece apenas o antialiasing.
+- `PenumbraShadowTransition` / `PenumbraAmbientTransition`: curva de intensidade em
+  cada metade da penumbra, de 0 (sem degrade, apenas antialiasing) a 1 (degrade completo). Sempre usam toda
+  a faixa existente. Nao alteram inicio, fim, largura ou angulo; somente `Penumbra`
+  controla a expansao. Uma unica curva `pow(q*q*(2-q), controle)` altera a dureza, sem mistura de perfis. Em zero, a meia
+  penumbra fica uniforme; a borda geometrica recebe somente cobertura de pixel.
+  Nao ha controle Gradient global nem recorte de largura por porcentagem.
 - `TerrainTransitionTiles`: profundidade visual até preto completo, de 0,25 a 16 tiles,
   padrão 3. Aceita frações (0,5 é meio tile). Aplica-se igualmente a todos os blocos, à luz solar,
   ao ambiente e à emissão recebida. Não transmite luz para o ar do outro lado da parede.
@@ -222,7 +220,7 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão no editor: passou, incluindo alterações de ângulo e ambiente pelo recurso.
 - Integrações autorada e procedural: passaram, incluindo o sol mudando continuamente.
 - Edição pontual na cena procedural: 37 células processadas, apresentação em 3–4 frames.
-- Regressão da projeção na GPU: contorno com pelo menos 5% de sombra cresceu de 42 para 60 pixels;
+- Regressão da projeção na GPU: contorno com pelo menos 5% de sombra cresceu de 38 para 52 pixels;
   paralelo manteve 34 pixels. A simetria em torno do eixo e o bloqueador fora da janela passaram.
   A composição filtrada foi verificada junto à borda interna de um teto fechado, sem vazamento.
 - Regressão do editor: penumbra preserva o ângulo; apagar e recolocar um tile atualiza a geometria
@@ -230,14 +228,14 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 - Regressão de antialiasing a 8× de zoom: as 320 linhas verificadas têm cobertura subpixel,
   com transição de no máximo dois pixels na tela, sem ampliação da textura intermediária.
 - A penumbra aberta tem degradê além do antialiasing: a faixa entre 5% e 95% de luz cresceu
-  de 85 para 205 pixels com a distância ao bloqueador no teste a 8×, com gradiente 1,4.
+  de 63 para 150 pixels com a distância ao bloqueador no teste a 8×, com gradiente 1,4.
   A transição integra a união das silhuetas, sem raios adicionais.
 - Um retângulo sólido e a mesma silhueta subdividida em xadrez produzem a mesma sombra na GPU
   com gradiente 3, verificando a ausência de emendas internas geradas pela decomposição.
 - Transição do terreno: 1 e 6 tiles validados na CPU e GPU, com preto além da profundidade
   escolhida. Os dois novos parâmetros também foram alterados e verificados no editor.
 - Composição final: ambiente 0,5 + sol 1,03 testados na GPU, sem patamar branco na transição
-  do terreno. Gradientes de penumbra 0,5 e 3 preservam o ponto de 50% e aumentam a faixa suave.
+  do terreno. Gradientes de penumbra 0,5 e 3 preservam o ponto de 50%; o maior reforca o contraste.
 - Preparação da textura do fixture de 64 × 36 tiles: aproximadamente 16–21 ms no total nesta versão experimental,
   distribuível em fatias; não é um custo cobrado em todo frame.
 

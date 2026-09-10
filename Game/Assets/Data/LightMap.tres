@@ -6,9 +6,7 @@
 script = ExtResource("1_eycpx")
 SunAngleDegrees = -10.0
 Penumbra = 0.0
-PenumbraGradient = 3.0
-PenumbraShadowSoftness = 3.0
-PenumbraAmbientSoftness = 4.0
+PenumbraShadowTransition = 0.85
 TerrainTransitionTiles = 4.25
 AmbientInfluence = 1.0
 SunIntensity = 1.03

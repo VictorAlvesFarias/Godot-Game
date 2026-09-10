@@ -4,9 +4,8 @@ uniform sampler2D shadow_geometry : filter_nearest, repeat_disable;
 uniform vec2 map_size = vec2(1.0);
 uniform float sun_angle = -0.5585;
 uniform float penumbra = 0.5;
-uniform float penumbra_gradient = 1.4;
-uniform float penumbra_shadow_softness = 1.0;
-uniform float penumbra_ambient_softness = 1.0;
+uniform float penumbra_shadow_transition = 1.0;
+uniform float penumbra_ambient_transition = 1.0;
 uniform float terrain_transition_tiles = 3.0;
 
 vec4 geometry(int index) {
@@ -27,9 +26,16 @@ vec2 shadow_interval(vec4 r, vec2 p, float lower, float upper) {
     float right = max(atan(r.z - p.x, far_y), atan(r.z - p.x, near_y));
     return vec2(max(lower, left), min(upper, right));
 }
-float source_integral(float angle, float spread) {
-    float u = clamp((angle - sun_angle) / spread, -1.0, 1.0);
-    return (u * sqrt(max(0.0, 1.0 - u * u)) + asin(u) + 1.57079632679) / 3.14159265359;
+// One intensity curve with variable hardness, not a blend of two images.
+// Its domain and endpoints stay fixed. As the exponent approaches zero the
+// curve approaches a step at the seam; the pixel footprint limits aliasing.
+float penumbra_edge_profile(float coordinate, float softness, float pixel_coverage) {
+    float q = clamp(coordinate, 0.0, 1.0);
+    float hardness_exponent = clamp(softness, 0.0, 1.0);
+    float aa_coverage = clamp(q / max(pixel_coverage, 0.000001), 0.0, 1.0);
+    if (hardness_exponent == 0.0) return aa_coverage;
+    float profile = pow(q * q * (2.0 - q), hardness_exponent);
+    return min(profile, aa_coverage);
 }
 
 float analytic_sun(vec2 p, vec2 pixel_footprint) {
@@ -102,24 +108,16 @@ float analytic_sun(vec2 p, vec2 pixel_footprint) {
                 if (extended <= end) break;
                 end = extended;
             }
-            covered += source_integral(end, spread) - source_integral(start, spread);
+            covered += (end - start) / (2.0 * spread);
             cursor = end;
         }
-        // Tone inside the fixed umbra/penumbra bounds, not a separate cone per tile.
-        // Symmetric softness preserves 50% coverage instead of moving the gradient
-        // toward its dark end, as a one-sided power curve did.
+        // Only Penumbra determines the angular extent. These controls change
+        // intensity, never coordinate scale, clipping thresholds or ramp width.
         covered = clamp(covered, 0.0, 1.0);
-        float contrast = 1.0 / max(0.25, penumbra_gradient);
-        float dark = pow(covered, contrast);
-        float light = pow(1.0 - covered, contrast);
-        covered = dark / max(dark + light, 0.000001);
-        // Independent endpoint shaping: zero, midpoint and full coverage stay fixed.
-        // Each control affects only its half of the transition.
-        if (covered < 0.5) {
-            covered = 0.5 * pow(covered * 2.0, max(0.25, penumbra_ambient_softness));
-        } else {
-            covered = 1.0 - 0.5 * pow((1.0 - covered) * 2.0, max(0.25, penumbra_shadow_softness));
-        }
+        float coverage_pixel = max(2.0 * fwidth(covered), 0.000001);
+        covered = covered < 0.5
+            ? 0.5 * penumbra_edge_profile(2.0 * covered, penumbra_ambient_transition, coverage_pixel)
+            : 1.0 - 0.5 * penumbra_edge_profile(2.0 * (1.0 - covered), penumbra_shadow_transition, coverage_pixel);
     }
     return (1.0 - covered) * depth;
 }
