@@ -164,7 +164,7 @@ namespace Jogo25D.Light
         public static byte TerrainOpacity(int terrain) => terrain < 0 ? (byte)0 : (byte)255;
         public byte Opacity(int x, int y) => TerrainOpacity(Material(x, y));
 
-        public bool DepthLightEnabled { get; init; }
+        public bool DepthLightEnabled { get; set; }
         public long BackgroundRevision { get; private set; }
         private readonly HashSet<LightCell> _background = new();
         public IEnumerable<LightCell> BackgroundCells => _background;

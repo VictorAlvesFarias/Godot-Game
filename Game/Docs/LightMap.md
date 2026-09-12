@@ -144,28 +144,103 @@ Vector2 em parte da persistência: isso limita a precisão de coordenadas muito 
 
 ## Ajustes
 
-Em `Assets/Data/LightMap.tres`:
+Em `Assets/Data/LightMap.tres`. Um grupo por tipo de iluminação, cada um com o próprio interruptor
+e os próprios parâmetros. O interruptor é **mudo**: desliga a contribuição sem destruir o valor
+ajustado, e por isso não é redundante com colocar o slider em zero.
 
-- `SunAngleDegrees`: direção solar; zero é sol acima, positivo desloca o sol para a direita.
-- `Penumbra`: 0 = cone mais aberto; 1 = projeção paralela; padrão 0,5.
-  Controla a abertura dos dois lados do eixo, sem alterar `SunAngleDegrees`.
-- `PenumbraShadowTransition` / `PenumbraAmbientTransition`: curva de intensidade em
-  cada metade da penumbra, de 0 (sem degrade, apenas antialiasing) a 1 (degrade completo). Sempre usam toda
-  a faixa existente. Nao alteram inicio, fim, largura ou angulo; somente `Penumbra`
-  controla a expansao. Uma unica curva `pow(q*q*(2-q), controle)` altera a dureza, sem mistura de perfis. Em zero, a meia
-  penumbra fica uniforme; a borda geometrica recebe somente cobertura de pixel.
-  Nao ha controle Gradient global nem recorte de largura por porcentagem.
-- `TerrainTransitionTiles`: profundidade visual até preto completo, de 0,25 a 16 tiles,
-  padrão 3. Aceita frações (0,5 é meio tile). Aplica-se igualmente a todos os blocos, à luz solar,
-  ao ambiente e à emissão recebida. Não transmite luz para o ar do outro lado da parede.
-  A distância solar é medida em direção à luz; a recepção ambiente usa as faces expostas.
-  A intensidade é `1 - smoothstep(0, 1, distância / profundidade)`, desde a superfície até
-  preto completo, sem patamar inicial iluminado nem faixa de transição só no final.
-  Valores maiores aumentam o trabalho de procura dessas faces, sem mudar o solver lógico.
-- `AmbientInfluence`: energia do céu, padrão 0,32.
-- `SunIntensity`: energia direta, padrão 0,85.
-- `SkyColor` e `SunColor`: cor das contribuições.
+| Grupo | Interruptor | Parâmetros |
+|---|---|---|
+| Luz global | `GlobalLightEnabled` | `GlobalLightIntensity` (0,32), `GlobalLightColor` |
+| Luz direcionada | `SunEnabled` | `SunAngleDegrees`, `SunIntensity` (0,85), `SunColor`, `SunPenumbra`, `SunPenumbraShadowCurve`, `SunPenumbraAmbientCurve` |
+| Emissão de outras fontes | `EmissionEnabled` | `EmissionIntensity` (1) |
+| Cálculo de profundidade | `DepthEnabled` | — |
+| Feixe de abertura | `BeamEnabled` | `BeamReachTiles` (24) — ver pré-requisito abaixo |
+| Luz volumétrica (poeira) | `DustEnabled` | `DustDensity` (0,12) |
+| Sombra projetada no ar | `AirShadowEnabled` | `AirShadowStrength` (0,35) |
+| Sombra projetada no terreno | `TerrainShadowEnabled` | `TerrainShadowStrength` (1) |
+| Sombra projetada no background | `BackgroundShadowEnabled` | `BackgroundShadowStrength` (1) |
+| Sombra projetada em entidades | `EntityShadowEnabled` | `EntityShadowStrength` (1) |
+| Iluminação do terreno | `TerrainLightEnabled` | `TerrainLightDepthTiles` (3) |
+
+Detalhes que não cabem na tabela:
+
+- `SunAngleDegrees`: zero é sol acima; positivo desloca o sol para a direita.
+- `SunPenumbra`: 0 = cone mais aberto; 1 = projeção paralela. Controla a abertura dos dois lados do
+  eixo, sem alterar o ângulo.
+- `SunPenumbraShadowCurve` / `SunPenumbraAmbientCurve`: curva de intensidade em cada metade da
+  penumbra, de 0 (sem degradê, apenas antialiasing) a 1 (degradê completo). Sempre usam toda a faixa
+  existente; não alteram início, fim, largura nem ângulo. Uma única curva `pow(q*q*(2-q), controle)`
+  altera a dureza, sem mistura de perfis. Não há controle Gradient global nem recorte por porcentagem.
+- `TerrainLightDepthTiles`: profundidade visual até preto completo, de 0,25 a 16 tiles. Aceita
+  frações. Aplica-se a todos os blocos, à luz solar, ao ambiente e à emissão recebida, e **não**
+  transmite luz para o ar do outro lado da parede. A distância solar é medida em direção à luz;
+  a recepção ambiente usa as faces expostas. A intensidade é `1 - smoothstep(0, 1, distância /
+  profundidade)`, sem patamar inicial iluminado. Isto é recepção da superfície para dentro do bloco,
+  e não se confunde com `TerrainShadowStrength`, que é a sombra projetada caindo sobre o terreno.
 - `ShowRawMap`: vermelho = ambiente, verde = sol, azul = opacidade.
+
+### Feixe e poeira: por que são dois grupos
+
+São dois efeitos do mesmo percurso, separados porque respondem a perguntas diferentes:
+
+- **Feixe** (`window_beam`, entra no termo do sol em `sample_world_light`): **onde a luz chega**.
+  Multiplicativo. Acende a parede, o chão e o personagem onde o facho bate.
+- **Poeira** (`window_volume.gdshader`, sprite `blend_add` por cima): **ver a luz atravessando**.
+  Não ilumina nada; soma brilho no ar para desenhar o cone.
+
+A analogia é literal: na vida real não se enxerga o facho, enxerga-se a poeira dentro dele. Um
+quarto de ar limpo mostra só o quadrado claro no chão; sacudir um tapete faz o cone aparecer.
+
+**A dependência é assimétrica e não dá para remover.** Poeira sem luz não espalha nada: desligar
+`BeamEnabled` apaga os dois. Desligar `DustEnabled` tira só o cone, e a superfície continua acesa
+pelo facho. Medido num fixture com janela: com o feixe desligado, a poeira muda **0 pixels**; o
+feixe sozinho dá 113/255 em 240 pixels, e a poeira acrescenta 14/255 em 146 pixels sobre os mesmos.
+
+`DustDensity` não muda o tamanho do cone, só a densidade dele — o tamanho vem da abertura, do
+ângulo do sol e de `BeamReachTiles`.
+
+### Pré-requisito do feixe
+
+`window_beam` sai de zero na primeira linha se o pixel **não tiver parede de fundo atrás**
+(`receiver.b < 0.5`). O facho é luz entrando por um buraco na parede de fundo e precisa dessa parede
+para existir. A geração procedural **não pinta parede de fundo nenhuma**: só o jogador colocando
+`wall_wood`/`wall_dirt`, a reaplicação de mutações do save, ou o autor pintando a camada
+`BackgroundWalls` no editor. Num mundo procedural recém-gerado o facho é zero em toda a tela, e
+então `DustDensity` não tem o que escalar — não é fiação morta, é ausência de entrada.
+A regressão do editor confirma a fiação: `volume_density` chega ao material do volume.
+
+Atenção à camada `Base`: ela é o que se vê como fundo dentro de uma construção, mas é acabamento
+visual e **não** conta como parede de fundo para a luz, por decisão explícita deste documento.
+Uma janela aberta no **terreno** também não aciona o feixe: ele procura buraco na parede de fundo.
+
+### Os quatro alvos da sombra projetada
+
+`receiver_shadow_weight` escolhe um peso por pixel conforme o que está ali, com o sólido tendo
+prioridade sobre a parede de fundo — quem aparece na tela é o tile, não a parede atrás dele:
+
+    solido ? TerrainShadowStrength : (parede_de_fundo ? BackgroundShadowStrength : AirShadowStrength)
+
+**O peso multiplica a oclusão, não a composição.** `analytic_sun_parts` devolve `(oclusão, recepção)`
+separadas, e o sol vira `(1 - oclusão × peso) × recepção`. Peso 0 significa "nada de sombra
+projetada aqui", com a iluminação do alvo inteira. A versão anterior aplicava o peso sobre a
+composição final, e por isso `TerrainShadowStrength = 0` apagava a **iluminação** do terreno junto —
+eram coisas diferentes tratadas pelo mesmo número.
+
+Entidades (Sprite2D/AnimatedSprite2D sem material próprio) não usam esse peso posicional: elas têm
+`EntityShadowStrength`, aplicado em `world_light_receiver.gdshader`.
+
+**Limite conhecido do alvo de entidades.** O overlay vai multiplicar o sprite pela composição da
+célula, então o material do sprite compõe duas vezes — com o peso da célula e com o seu — e divide
+uma pela outra. Quando o peso da entidade deixa ela **mais clara** que a célula, essa divisão
+exigiria escrever acima de 1, e o framebuffer LDR corta. Na prática: dá para deixar a entidade mais
+sombreada que o entorno, não menos. O padrão 1 é o comportamento anterior, então nada regrediu.
+A correção seria desenhar o overlay abaixo das entidades, e não é um ajuste de valor.
+
+### Custo de alternar
+
+`DepthEnabled` é o único que mexe no solver lógico e não só na apresentação: alterná-lo descarta e
+reconstrói o cache de luz. Medido na cena procedural de teste, a apresentação volta a estabilizar
+em **20 frames**. Os outros nove são uniformes e valem no frame seguinte.
 
 A soma máxima das cores ambiente e solar é normalizada antes da atenuação local quando
 ultrapassa 1. Isso evita que o corte final de cor apague o início do degradê: por exemplo,
@@ -243,3 +318,55 @@ Em Godot 4.6 / Vulkan / Radeon RX 7600, build de desenvolvimento:
 Essas medições são cenários de teste, não garantias de FPS para qualquer mundo ou GPU.
 Há avisos de UID e de liberação de texturas no encerramento do jogo. Os avisos de texturas
 foram reproduzidos iniciando e encerrando somente a tela inicial, sem instanciar iluminação.
+
+
+## Composição por camadas (experimento 2.5D)
+
+O multiplicador final tem **peso** por camada, não presença. Terreno e parede de fundo recebem a
+composição inteira; ar aberto recebe uma fração dela, definida por `AirShadowStrength`. Todo
+bloqueador projeta em todo lugar — a diferença entre as camadas é de intensidade.
+
+Uma versão anterior fazia isso com dois cortes: máscara zero em ar aberto e alcance de projeção
+limitado a `AirShadowStrength` fora das paredes. O efeito não era reduzir a força, era
+**apagar**: a sombra projetada só existia onde houvesse parede atrás, e bloqueadores distantes
+paravam de projetar. Os dois cortes foram removidos.
+
+Sprites sem material próprio recebem o mesmo cálculo por material, sem multiplicação em dobro
+quando estão diante de uma parede. Como o overlay multiplica o sprite por `mix(1, luz, peso)`, o
+material do sprite aplica `luz / mix(1, luz, peso)` — e não `1 - peso`, que só fecha nos extremos e
+escureceria demais em pesos fracionários. Materiais personalizados precisam integrar
+`world_light_sampling.gdshaderinc`; não são substituídos automaticamente.
+
+Em `LightMapData`, grupo **Profundidade das camadas**:
+
+- `AirShadowStrength` (padrão 0,35): força da sombra projetada onde não há
+  superfície atrás, isto é, contra o céu aberto. 1 iguala à de uma parede de fundo;
+  0 devolve o comportamento antigo, em que ar aberto não recebia sombra. Não muda
+  onde a sombra existe, nem o ângulo, nem a abertura da penumbra.
+- `WindowBeamReachTiles` (padrão 24): alcance do feixe vindo de aberturas do
+  fundo, limitado pelo halo lógico de 24 tiles. A atenuação acompanha esse alcance.
+- `VolumeDensity` (padrão 0,12): intensidade aditiva da luz visível no ar diante
+  de paredes. Zero desliga essa contribuição visual.
+
+Paredes de fundo conservam o teste completo de bloqueadores: um teto distante
+continua impedindo luz direta em um recinto fechado. O feixe termina ao encontrar
+terreno sólido e desaparece quando a abertura é fechada. O sol e os dois controles
+de gradiente permanecem compartilhados entre as apresentações.
+
+É uma aproximação artística por planos, não transporte volumétrico 3D: não há
+coordenada Z contínua, espalhamento múltiplo nem integração física da profundidade.
+O feixe usa o percurso e a máscara de abertura existentes; sua visibilidade é uma
+passagem aditiva separada, sem escurecer o céu para simular contraste.
+
+Validação: regressão GPU verifica que o céu **iluminado** continua intacto, que o céu em sombra
+escurece exatamente pelo peso (pixel ≈ 1 − `AirShadowStrength`), recinto fechado com teto
+distante, iluminação da parede e volume ao abrir/fechar janela. A regressão do editor verifica
+a atualização dos três parâmetros nas duas passagens.
+
+Comparação no mapa procedural real, peso 0 contra 0,35:
+`.images/sombra_projetada_no_ar_peso_0_vs_035.png`.
+
+Variações dos interruptores, no mesmo mapa: `.images/luz_toggles_tudo_ligado.png` e
+`luz_toggle_sem_ceu`, `_sem_sol`, `_sem_luz_de_profundidade`, `_sem_peso_de_camada`. Emissão, feixe
+e volume não têm captura porque essa cena não tem fonte local nem abertura de fundo; a fiação dos
+três é verificada na regressão do editor.

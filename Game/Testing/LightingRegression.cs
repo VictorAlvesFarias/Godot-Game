@@ -416,6 +416,54 @@ namespace Jogo25D.Testing
                         if (state == 0) Check(outside < 0.01f,"Window beam illuminates off-axis receiver");
                         if (state == 0) beamFrame.SavePng(folder + "/lighting-window-beam.png");
                     }
+                    present.SetShaderParameter("shadow_air",0.35f);
+                    present.SetShaderParameter("volumetric_reach",24f);
+                    present.SetShaderParameter("sun_angle",0f);
+                    var volume = new ShaderMaterial { Shader = GD.Load<Shader>("res://Assets/Shaders/window_volume.gdshader") };
+                    foreach (bool opening in new[] { false, true, false })
+                    {
+                        depthWorld.SetBackground(6,4,!opening);
+                        depthWorld.SetTerrain(6,7,-1);
+                        depthWorld.SetTerrain(20,0,0);
+                        Settle(depthWorld.Field);
+                        raster.Begin(depthWorld,Vector2I.Zero,new(64,36),0,1);
+                        while (!raster.Complete) raster.Process(10000);
+                        present.SetShaderParameter("depth_beam_data",ImageTexture.CreateFromImage(raster.DepthBeamImage()));
+                        present.SetShaderParameter("light_data",ImageTexture.CreateFromImage(raster.LightImage()));
+                        present.SetShaderParameter("shadow_geometry",ImageTexture.CreateFromImage(raster.ShadowGeometryImage()));
+                        var surface = filteredPass.GetChild<Sprite2D>(1);
+                        var backdrop = filteredPass.GetChild<ColorRect>(0);
+                        surface.Material = present;
+                        backdrop.Color = Colors.White;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+                        using (var frame = filteredPass.GetTexture().GetImage())
+                        {
+                            float room = frame.GetPixel(6*32+16,9*32+16).R;
+                            Check(opening ? room > 0.3f : room < 0.01f,"Layered composition leaked through a distant closed roof");
+                            // Ceu aberto agora recebe a sombra projetada com peso, nao zero: o que
+                            // se pede e forca reduzida, nao ausencia. Lit sky continua intacto.
+                            float shaded = frame.GetPixel(20*32+16,9*32+16).R;
+                            Check(Math.Abs(shaded - 0.65f) < 0.06f,
+                                $"Open-air projected shadow ignored its weight (got {shaded:0.000}, expected ~0.65)");
+                            Check(frame.GetPixel(30*32+16,9*32+16).R > 0.99f,"Open-air weight darkened lit sky");
+                        }
+                        foreach (var uniform in present.Shader.GetShaderUniformList())
+                        {
+                            string name = uniform.AsGodotDictionary()["name"].AsString();
+                            volume.SetShaderParameter(name,present.GetShaderParameter(name));
+                        }
+                        volume.SetShaderParameter("volume_density",0.5f);
+                        surface.Material = volume;
+                        backdrop.Color = Colors.Black;
+                        for (int i = 0; i < 3; i++) await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+                        await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+                        using var fog = filteredPass.GetTexture().GetImage();
+                        float shaft = fog.GetPixel(6*32+16,9*32+16).R;
+                        Check(opening ? shaft > 0.1f : shaft < 0.01f,"Window volume did not follow aperture closure");
+                        Check(fog.GetPixel(20*32+16,9*32+16).R < 0.01f,"Volume contaminated open sky");
+                    }
+                    GD.Print("LAYERED GPU PASS: weighted open-air shadow, lit sky unchanged, closed room dark, additive volume follows opening");
                     GD.Print("WINDOW BEAM GPU PASS: projected shaft, off-axis darkness, closure, obstacle and sun angle");
                     GD.Print("DEPTH GPU PASS: background close/open/close reaches final composition");
                     GD.Print("FINAL GRADIENT PASS: softness preserves midpoint; 0.5 ambient + 1.03 sun has no white plateau");

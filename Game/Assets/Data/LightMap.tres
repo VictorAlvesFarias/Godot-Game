@@ -4,11 +4,13 @@
 
 [resource]
 script = ExtResource("1_eycpx")
+GlobalLightIntensity = 1.0
+GlobalLightColor = Color(1, 1, 1, 1)
 SunAngleDegrees = -10.0
-Penumbra = 0.0
-PenumbraShadowTransition = 0.85
-TerrainTransitionTiles = 4.25
-AmbientInfluence = 1.0
-SunIntensity = 1.03
-SkyColor = Color(1, 1, 1, 1)
+SunIntensity = 1.0
 SunColor = Color(1, 1, 1, 1)
+SunPenumbra = 0.0
+SunPenumbraShadowCurve = 0.85
+SunPenumbraAmbientCurve = 0.8
+DustDensity = 1.0
+TerrainLightDepthTiles = 14.5

@@ -38,7 +38,9 @@ float penumbra_edge_profile(float coordinate, float softness, float pixel_covera
     return min(profile, aa_coverage);
 }
 
-float analytic_sun(vec2 p, vec2 pixel_footprint) {
+// Devolve (oclusao, recepcao). Separados porque quem chama precisa poder escalar SO a oclusao:
+// enfraquecer a sombra projetada nao pode significar tirar a iluminacao do alvo.
+vec2 analytic_sun_parts(vec2 p, vec2 pixel_footprint) {
     vec2 ray = vec2(sin(sun_angle), -cos(sun_angle));
     float depth = 1.0;
     // Surface reception only: a short DDA exits the receiving solid. Shadow
@@ -66,7 +68,7 @@ float analytic_sun(vec2 p, vec2 pixel_footprint) {
     ivec2 bin = clamp(ivec2(floor(p / 16.0)), ivec2(0), bins - ivec2(1));
     vec4 header = geometry(bin.y * bins.x + bin.x);
     float spread = radians(8.0) * pow(1.0 - clamp(penumbra, 0.0, 1.0), 2.0);
-    if (depth == 0.0 || ray.y >= -0.001) return 0.0;
+    if (depth == 0.0 || ray.y >= -0.001) return vec2(0.0, 0.0);
     float covered = 0.0;
     int count = int(header.y);
     if (spread < 0.00001) {
@@ -119,5 +121,10 @@ float analytic_sun(vec2 p, vec2 pixel_footprint) {
             ? 0.5 * penumbra_edge_profile(2.0 * covered, penumbra_ambient_transition, coverage_pixel)
             : 1.0 - 0.5 * penumbra_edge_profile(2.0 * (1.0 - covered), penumbra_shadow_transition, coverage_pixel);
     }
-    return (1.0 - covered) * depth;
+    return vec2(covered, depth);
+}
+
+float analytic_sun(vec2 p, vec2 pixel_footprint) {
+    vec2 parts = analytic_sun_parts(p, pixel_footprint);
+    return (1.0 - parts.x) * parts.y;
 }
