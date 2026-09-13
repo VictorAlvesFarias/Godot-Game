@@ -59,7 +59,11 @@ vec2 analytic_sun_parts(vec2 p, vec2 pixel_footprint) {
             if (opacity(c) < 0.99) { found = true; break; }
         }
         if (found) {
-            p += ray * (distance + 0.001);
+            // Centro da celula de saida, e nao o ponto exato da saida. O ponto exato e funcao do
+            // trajeto: dois pixels vizinhos do mesmo bloco saem em lugares diferentes e medem a
+            // oclusao rasante a propria superficie, o que risca o corpo com feixes finos. O centro
+            // da celula e funcao da celula, entao todo pixel que sai na mesma celula concorda.
+            p = vec2(c) + vec2(0.5);
             float normalized_depth = distance / clamp(terrain_transition_tiles, 0.25, 16.0);
             depth = 1.0 - smoothstep(0.0, 1.0, normalized_depth);
         } else depth = 0.0;

@@ -101,7 +101,8 @@ namespace Jogo25D.Testing
                     nameof(LightMapData.EmissionEnabled), nameof(LightMapData.DepthEnabled),
                     nameof(LightMapData.BeamEnabled), nameof(LightMapData.DustEnabled), nameof(LightMapData.AirShadowEnabled),
                     nameof(LightMapData.TerrainShadowEnabled), nameof(LightMapData.BackgroundShadowEnabled),
-                    nameof(LightMapData.EntityShadowEnabled), nameof(LightMapData.TerrainLightEnabled) })
+                    nameof(LightMapData.EntityShadowEnabled), nameof(LightMapData.TerrainLightEnabled),
+                    nameof(LightMapData.EdgeFadeEnabled) })
                     _light.Settings.Set(name, false);
                 _stage++;
             }
@@ -116,6 +117,7 @@ namespace Jogo25D.Testing
                     || presentation.GetShaderParameter("shadow_air").AsDouble() != 0
                     || presentation.GetShaderParameter("shadow_terrain").AsDouble() != 0
                     || presentation.GetShaderParameter("shadow_background").AsDouble() != 0
+                    || presentation.GetShaderParameter("edge_fade_tiles").AsDouble() != 0
                     || presentation.GetShaderParameter("terrain_light_enabled").AsBool()
                     || presentation.GetShaderParameter("depth_beam_enabled").AsBool()) return;
                 if (_light.GetNode<Sprite2D>("WindowVolume").Visible)

@@ -20,6 +20,10 @@ uniform float shadow_background = 1.0;
 uniform float volumetric_reach = 24.0;
 // Recepcao da superficie solida. Desligada, o terreno para de receber luz por completo.
 uniform bool terrain_light_enabled = true;
+// Ate onde a escuridao avanca sobre o vizinho iluminado, em tiles. A regra e de mao unica: o
+// escuro invade, a luz nunca. Por isso a linha de encontro vira rampa sem clarear o interior
+// escuro nem inventar halo. 0 devolve o recorte duro.
+uniform float edge_fade_tiles = 0.0;
 uniform float volume_density = 0.12;
 float window_beam(vec2 p) {
     vec2 size = vec2(textureSize(depth_beam_data, 0));
@@ -104,6 +108,37 @@ vec3 compose_world_light(vec2 uv, vec2 footprint, float shadow_weight) {
     vec3 daylight = sky_color.rgb * ambient_energy + sun_color.rgb * sun_energy;
     float daylight_scale = max(1.0, max(daylight.r, max(daylight.g, daylight.b)));
     vec3 energy = (sky_color.rgb * sky * ambient_energy + sun_color.rgb * sun * sun_energy) / daylight_scale + emission * emission_energy;
+    // Dilatacao do escuro sobre o solido. So o bloco escurece - o ar aberto fica intacto, senao a
+    // escuridao de dentro vazaria como halo no ceu. Compara a media do ceu num raio de N tiles com
+    // o ceu local: longe de escuridao elas empatam e nada muda; encostado nela a razao cai e leva
+    // junto o sol, que e quem mantinha a face do bloco acesa contra o preto. A linha vira rampa.
+    float fade = clamp(edge_fade_tiles, 0.0, 4.0);
+    if (fade > 0.01 && material > 0.5) {
+        // Distancia geometrica ate a face escura, medida em tiles dentro do proprio tile. Sai da
+        // geometria e nao da interpolacao da textura, entao a largura da rampa e exatamente a
+        // pedida - a leitura bilinear ficava presa a meio texel, um quarto de tile.
+        vec2 tile_position = uv * map_size * 0.5;
+        vec2 inside = fract(tile_position);
+        float factor = 1.0;
+        for (int k = 0; k < 8; k++) {
+            vec2 towards = vec2(k == 0 ? 1.0 : k == 1 ? -1.0 : k == 2 ? 0.0 : k == 3 ? 0.0
+                              : k == 4 ? 1.0 : k == 5 ? 1.0 : k == 6 ? -1.0 : -1.0,
+                                k == 0 ? 0.0 : k == 1 ? 0.0 : k == 2 ? 1.0 : k == 3 ? -1.0
+                              : k == 4 ? 1.0 : k == 5 ? -1.0 : k == 6 ? 1.0 : -1.0);
+            ivec2 c = clamp(ivec2(floor((tile_position + towards * 0.6) * 2.0)), ivec2(0), last);
+            vec2 neighbour = texelFetch(light_data, c, 0).rb;  // ceu, material
+            if (neighbour.y > 0.5) continue;                   // vizinho solido nao dissolve nada
+            vec2 gap = vec2(towards.x > 0.0 ? 1.0 - inside.x : towards.x < 0.0 ? inside.x : 0.0,
+                            towards.y > 0.0 ? 1.0 - inside.y : towards.y < 0.0 ? inside.y : 0.0);
+            // Na divisa a distancia e zero e o bloco assume a luz do vizinho: encostado no preto,
+            // preto. Dali para dentro sobe ate o proprio valor ao completar `fade` tiles.
+            float reached = smoothstep(0.0, 1.0, clamp(length(gap) / fade, 0.0, 1.0));
+            factor = min(factor, mix(clamp((neighbour.x + 0.02) / (sky + 0.02), 0.0, 1.0), 1.0, reached));
+        }
+        // Razao, e nao substituicao, para a rampa levar junto o sol - que e quem mantinha a face
+        // do bloco acesa encostada no preto.
+        energy *= factor;
+    }
     return show_raw ? vec3(sky, sun, material) : clamp(energy, vec3(0.0), vec3(1.0));
 }
 

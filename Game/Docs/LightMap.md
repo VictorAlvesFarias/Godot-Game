@@ -161,6 +161,7 @@ ajustado, e por isso não é redundante com colocar o slider em zero.
 | Sombra projetada no background | `BackgroundShadowEnabled` | `BackgroundShadowStrength` (1) |
 | Sombra projetada em entidades | `EntityShadowEnabled` | `EntityShadowStrength` (1) |
 | Iluminação do terreno | `TerrainLightEnabled` | `TerrainLightDepthTiles` (3) |
+| Dissolução da borda | `EdgeFadeEnabled` | `EdgeFadeTiles` (2) |
 
 Detalhes que não cabem na tabela:
 
@@ -177,6 +178,46 @@ Detalhes que não cabem na tabela:
   a recepção ambiente usa as faces expostas. A intensidade é `1 - smoothstep(0, 1, distância /
   profundidade)`, sem patamar inicial iluminado. Isto é recepção da superfície para dentro do bloco,
   e não se confunde com `TerrainShadowStrength`, que é a sombra projetada caindo sobre o terreno.
+- `EdgeFadeTiles`: largura, em tiles, da rampa com que a escuridão dissolve a divisa com o bloco
+  iluminado que a toca. Padrão 0,5. Existe porque um interior preto encostado numa face acesa
+  fecha em linha reta e o escuro passa a ler como recorte sólido.
+  O cálculo é **geométrico**, não vem da textura: para um pixel sólido mede-se a distância, dentro
+  do próprio tile, até cada uma das 8 faces/quinas cujo vizinho é ar, e o bloco assume a luz desse
+  vizinho na divisa, subindo até o próprio valor ao completar `EdgeFadeTiles`. Vale o menor fator
+  entre as faces.
+  Entra como **razão** sobre a energia já composta, e não como substituição do céu, porque quem
+  mantinha a face acesa contra o preto era o termo solar; uma correção só no céu não chega nele.
+  Vale apenas onde `material > 0.5`: aplicada ao ar, a escuridão de dentro vaza como halo cinza no
+  céu aberto.
+  Duas tentativas anteriores foram descartadas e não devem voltar: (a) `edge_blend`, peso do
+  vizinho de outro material na leitura bilinear — com 2 texels por tile ela alcança meio texel e a
+  linha continua; (b) erosão por amostras (`min` de "céu do vizinho + distância"), que dá manchas
+  de vários tiles mas é presa à grade do texel e não resolve meio tile. A leitura interpolada
+  também não serve de rampa: seu ponto médio cai **sobre** a divisa, então ela fundeia em meia luz
+  e sua largura útil é um quarto de tile, não meio.
+### Onde a oclusão é avaliada para receptor sólido
+
+O tile sólido recebe luz na face exposta, então um DDA curto anda pelo raio até sair do sólido e a
+oclusão é medida lá. O ponto usado é o **centro da célula de saída**, não o ponto exato em que o
+raio cruzou a face (`p = vec2(c) + 0.5` em `analytic_sun_parts`).
+
+O ponto exato é função do **trajeto**: dois pixels vizinhos do mesmo bloco saem em lugares
+ligeiramente diferentes e medem a oclusão rasante à própria superfície, onde um deslocamento
+mínimo troca quem bloqueia. Era daí que vinham os feixes de sombra finos riscando copas e terreno.
+O centro da célula é função da **célula**: todo pixel que sai na mesma célula concorda.
+
+Limitação conhecida e aceita: com uma amostra por célula, a penumbra sobre o sólido não tem onde
+existir abaixo da escala do tile, então a sombra projetada em objeto tem borda mais dura que no ar.
+
+Tentativas descartadas para suavizar essa borda, nenhuma aprovada, todas revertidas:
+duas amostras por célula interpoladas; manter o ponto exato ancorando só a distância por célula
+(devolve os feixes inteiros); recortar o bloqueador N linhas acima do receptor com recuo relativo
+ao ponto avaliado (**racha uma sombra única em dois feixes**, porque pixels vizinhos cortam o mesmo
+bloqueador em alturas diferentes); e a mesma ideia com linha de corte vinda da célula mais ponto
+exato. O canal do sol do `ShowRawMap` **não** serve para atribuir culpa em nada disso: é
+`(1 - oclusão) * profundidade` e ainda é composto por cima da textura do tile, então variação da
+rocha aparece nele como se fosse material ou sombra.
+
 - `ShowRawMap`: vermelho = ambiente, verde = sol, azul = opacidade.
 
 ### Feixe e poeira: por que são dois grupos

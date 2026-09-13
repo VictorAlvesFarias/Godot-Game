@@ -267,6 +267,7 @@ namespace Jogo25D.Light
             _present.SetShaderParameter("shadow_terrain", Mute(settings.TerrainShadowEnabled, settings.TerrainShadowStrength));
             _present.SetShaderParameter("shadow_background", Mute(settings.BackgroundShadowEnabled, settings.BackgroundShadowStrength));
             _present.SetShaderParameter("terrain_light_enabled", settings.TerrainLightEnabled);
+            _present.SetShaderParameter("edge_fade_tiles", settings.EdgeFadeEnabled ? Mathf.Clamp(settings.EdgeFadeTiles, 0f, 4f) : 0f);
             _present.SetShaderParameter("show_raw", settings.ShowRawMap);
             foreach (string uniform in _sharedUniforms)
             {

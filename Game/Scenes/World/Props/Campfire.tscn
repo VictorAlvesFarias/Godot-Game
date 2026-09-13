@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" uid="uid://dtft1n1u5n461" path="res://Assets/Textures/Objects/campfire/sprite.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bjx5ixls54s3q" path="res://Features/World/Light/Entities/LightSource2D.cs" id="2_light"]
+
+[node name="Campfire" type="Node2D"]
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 1
+offset = Vector2(0, -11)
+texture = ExtResource("1_tex")
+
+[node name="Light" type="Node2D" parent="."]
+position = Vector2(0, -10)
+script = ExtResource("2_light")
+LightColor = Color(1, 0.62, 0.28, 1)
+Energy = 1.0

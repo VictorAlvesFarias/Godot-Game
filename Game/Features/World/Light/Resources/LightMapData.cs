@@ -79,6 +79,13 @@ namespace Jogo25D.Light
         [Export] public bool TerrainLightEnabled { get; set; } = true;
         [Export(PropertyHint.Range, "0.25,16,0.25")] public float TerrainLightDepthTiles { get; set; } = 3f;
 
+        // ------------------------------------------------------------------ dissolucao da borda
+        [ExportGroup("Dissolucao da borda", "EdgeFade")]
+        // Dissolve a linha de encontro entre o escuro e o bloco iluminado que o toca. Nunca
+        // clareia: so a escuridao avanca, e so sobre o solido. Desligado, o encontro e recorte.
+        [Export] public bool EdgeFadeEnabled { get; set; } = true;
+        [Export(PropertyHint.Range, "0.25,4,0.25")] public float EdgeFadeTiles { get; set; } = 0.5f;
+
         // ------------------------------------------------------------------ depuracao
         [ExportGroup("Depuracao")]
         [Export] public bool ShowRawMap { get; set; } = false;
