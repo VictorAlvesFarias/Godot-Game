@@ -15,6 +15,7 @@ namespace Jogo25D.Light
         private int _cursor;
         private readonly AnalyticShadowGeometry _geometry = new();
         private bool _reuseGeometry;
+        private bool _skipShadow;
         private bool _reuseReceivers;
         private readonly HashSet<LightCell> _dirtyReceivers = new();
         public bool RebuiltSun => !_reuseGeometry;
@@ -22,7 +23,7 @@ namespace Jogo25D.Light
         private double[] _depth = Array.Empty<double>();
         public Vector2I Origin { get; private set; }
         public Vector2I Size { get; private set; }
-        public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && _geometry.Complete;
+        public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && (_skipShadow || _geometry.Complete);
         public long WorldRevision { get; private set; }
         public long FieldRevision { get; private set; }
         public long BackgroundRevision { get; private set; }
@@ -34,11 +35,13 @@ namespace Jogo25D.Light
         public bool IsWorld(LogicalLightWorld world) => _world == world;
 
         public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra,
-            float terrainTransition = 3, float shadowSoftness = 1, float ambientSoftness = 1)
+            float terrainTransition = 3, float shadowSoftness = 1, float ambientSoftness = 1, bool buildShadow = true)
         {
+            bool previouslySkipped = _skipShadow;
             bool layout = Complete && _world == world && Origin == origin && Size == size;
+            _skipShadow = !buildShadow;
             terrainTransition = Math.Clamp(terrainTransition, 0.25f, 16);
-            bool reuseGeometryData = layout
+            bool reuseGeometryData = !previouslySkipped && layout
                 && WorldRevision == world.Revision && Angle == angle && Penumbra == penumbra;
             _reuseGeometry = reuseGeometryData && TerrainTransition == terrainTransition
                 && ShadowSoftness == shadowSoftness && AmbientSoftness == ambientSoftness;
@@ -65,7 +68,7 @@ namespace Jogo25D.Light
                 _receiverX = new int[bytes]; _receiverY = new int[bytes]; _depth = new double[bytes];
             }
             _cursor = 0;
-            if (!reuseGeometryData) _geometry.Begin(world, origin, size, angle, penumbra);
+            if (!_skipShadow && !reuseGeometryData) _geometry.Begin(world, origin, size, angle, penumbra);
         }
 
         public void Process(double milliseconds = 3)
@@ -116,7 +119,7 @@ namespace Jogo25D.Light
                 WriteReceivers();
                 _cursor++;
             }
-            _geometry.Process(Math.Max(0.01, milliseconds - Stopwatch.GetElapsedTime(start).TotalMilliseconds));
+            if (!_skipShadow) _geometry.Process(Math.Max(0.01, milliseconds - Stopwatch.GetElapsedTime(start).TotalMilliseconds));
         }
 
         private void WriteReceivers()

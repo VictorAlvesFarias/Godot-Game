@@ -32,6 +32,8 @@ namespace Jogo25D.Testing
                     using var frame=pass.GetTexture().GetImage();
                     if(frame.GetPixel(16*16,24*16).R>0.01 || frame.GetPixel(2*16,24*16).R<0.99)
                         throw new Exception("Shadow/light endpoints invalid");
+                    if(frame.GetPixel(16*16,6*16).R>0.01)
+                        throw new Exception("Raw projection still excludes a solid receiver or its own caster");
                     int near=0,far=0;
                     for(int x=0;x<512;x++)
                     {
@@ -70,6 +72,22 @@ namespace Jogo25D.Testing
                 }
                 if(gradients<20) throw new Exception("Debug lost penumbra gradient");
                 GD.Print("SHADOW DEBUG PASS: opaque grayscale, penumbra preserved, independent of scene color and strength");
+                // The primary-layer projection does not classify a receiver as wall/air/terrain.
+                // Background mutations therefore cannot change this geometry or its projection.
+                long foregroundRevision=world.Revision;
+                world.SetBackground(16,24,true);
+                if(world.Revision!=foregroundRevision) throw new Exception("Wall edit invalidated primary-only shadow geometry");
+                var remoteWorld=new LogicalLightWorld(0,"remote-shadow",1,false);
+                for(int x=12;x<20;x++) remoteWorld.SetTerrain(x,-10000,0);
+                geometry.Begin(remoteWorld,Vector2I.Zero,new(32,32),0,1);
+                while(!geometry.Complete) geometry.Process(10000);
+                material.SetShaderParameter("shadow_geometry",ImageTexture.CreateFromImage(geometry.Image()));
+                material.SetShaderParameter("penumbra",1f);
+                for(int i=0;i<3;i++) await ToSignal(GetTree(),SceneTree.SignalName.ProcessFrame);
+                await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+                using(var remote=pass.GetTexture().GetImage())
+                    if(remote.GetPixel(256,384).R>0.01) throw new Exception("Raw shadow imposed a distance or rendered-chunk limit");
+                GD.Print("RAW SHADOW PASS: solid self-shadow enabled, walls independent, remote offscreen caster preserved");
                 // ESTAGIO DESLIGADO. Ele cobra a exclusao do trecho solido inicial e a regra de
                 // corpo proprio, que sairam do calculo: a sombra agora projeta tudo sobre tudo.
                 // Volta quando o comportamento voltar como MASCARA DE CAMADA, e nao como regra

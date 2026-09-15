@@ -131,9 +131,8 @@ float penumbra_edge_profile(float coordinate, float softness, float pixel_covera
 //         :1.0-0.5*penumbra_edge_profile(2.0*(1.0-covered),penumbra_shadow_transition,pixel);
 // }
 //
-// Oclusao solar num ponto. Separada porque o receptor solido precisa avalia-la em mais de um ponto.
+// Primary-layer occlusion at the original pixel; no receiver mask or solid-specific branch.
 float sun_occlusion(vec2 p, vec2 pixel_footprint) {
-    vec2 ray = vec2(sin(sun_angle), -cos(sun_angle));
     ivec2 bins = (ivec2(map_size / 2.0) + ivec2(15)) / 16;
     ivec2 bin = clamp(ivec2(floor(p / 16.0)), ivec2(0), bins - ivec2(1));
     vec4 header = geometry(bin.y * bins.x + bin.x);

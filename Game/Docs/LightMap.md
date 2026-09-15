@@ -1,3 +1,32 @@
+# Iluminação por camadas — implementação atual
+
+A sombra projetada usa exclusivamente a geometria lógica da camada principal. O cálculo analítico une os intervalos bloqueados do disco solar, sem excluir o próprio corpo, escadas, corpos conectados ou receptores sólidos. As regras anteriores estão desativadas.
+
+A recepção é uma etapa separada: `wall_projected_shadow.gdshader` aplica essa projeção nos fragmentos da `BackgroundWallLayer`. A própria textura/alpha da wall fornece a máscara. Céu, tiles da frente e personagens não recebem essa projeção. O material anterior da wall é restaurado ao desativar a iluminação.
+
+O mapa lógico considera as duas camadas: os blocos principais bloqueiam a propagação; as walls fecham a entrada de céu pelo fundo. Uma abertura sem wall fornece luz ao ar, que se propaga e perde intensidade. Fechar a abertura remove essa contribuição. Emissores RGB continuam usando o mesmo campo incremental, independente dos chunks renderizados.
+
+`layered_light.gdshader` aplica a escuridão e a emissão do campo lógico. A recepção no interior do terreno mantém o cálculo de profundidade existente de `LightMapComputer`, separado da projeção solar.
+
+## Controles
+
+- `DebugShadow`: mostra somente a projeção bruta, sem máscara de wall e sem escuridão lógica. Branco significa iluminado; preto, oclusão total.
+- `SunAngleDegrees`: direção solar.
+- `SunPenumbra`: abertura existente; 0 abre o disco, 1 produz raios paralelos.
+- `SunPenumbraShadowCurve` e `SunPenumbraAmbientCurve`: perfis das duas transições.
+- `ShadowStrength`: intensidade da sombra recebida pelas walls.
+- `TerrainLightDepthTiles`: profundidade da transição interna do terreno, em tiles.
+
+A prévia do editor importa alterações das duas camadas periodicamente. Durante o jogo, as alterações vêm do mundo lógico. O debug pode ser alternado sem reconstruir a geometria. Não há feixe volumétrico adicional nesta composição.
+
+## Verificação
+
+`ProjectedShadowRegression.tscn` valida a projeção bruta e um bloqueador remoto. `LayeredLightingRegression.tscn` verifica abertura/fechamento de walls, remoção de emissão, reconstrução de chunks e recepção exclusiva nas walls. `LayeredWorldIntegration.tscn` verifica a composição no mundo autorado, alternância de debug e limpeza ao desativar.
+
+---
+
+## Histórico anterior (não descreve a composição ativa)
+
 ﻿# Iluminação lógica e sombras 2D
 
 Implementação de setembro de 2026. Substitui a oclusão angular dependente da janela renderizada.
