@@ -32,8 +32,11 @@ namespace Jogo25D.Testing
                     using var frame=pass.GetTexture().GetImage();
                     if(frame.GetPixel(16*16,24*16).R>0.01 || frame.GetPixel(2*16,24*16).R<0.99)
                         throw new Exception("Shadow/light endpoints invalid");
-                    if(frame.GetPixel(16*16,6*16).R>0.01)
-                        throw new Exception("Raw projection still excludes a solid receiver or its own caster");
+                    // Mascara de corte: o calculo da sombra segue sem regras, mas quem RECEBE e so
+                    // a camada de wall. Um pixel dentro de bloco solido nao recebe nada - era isso
+                    // que deixava o miolo de uma copa preto, com transicao de um pixel.
+                    if(frame.GetPixel(16*16,6*16).R<0.99)
+                        throw new Exception("Cut mask: a solid receiver must not take projected shadow");
                     int near=0,far=0;
                     for(int x=0;x<512;x++)
                     {
@@ -87,7 +90,7 @@ namespace Jogo25D.Testing
                 await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
                 using(var remote=pass.GetTexture().GetImage())
                     if(remote.GetPixel(256,384).R>0.01) throw new Exception("Raw shadow imposed a distance or rendered-chunk limit");
-                GD.Print("RAW SHADOW PASS: solid self-shadow enabled, walls independent, remote offscreen caster preserved");
+                GD.Print("RAW SHADOW PASS: cut mask keeps solids clear, walls independent, remote offscreen caster preserved");
                 // ESTAGIO DESLIGADO. Ele cobra a exclusao do trecho solido inicial e a regra de
                 // corpo proprio, que sairam do calculo: a sombra agora projeta tudo sobre tudo.
                 // Volta quando o comportamento voltar como MASCARA DE CAMADA, e nao como regra
