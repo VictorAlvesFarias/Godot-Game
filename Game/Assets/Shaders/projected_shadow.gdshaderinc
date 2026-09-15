@@ -195,24 +195,7 @@ float sun_occlusion(vec2 p, vec2 pixel_footprint) {
 }
 
 
-// Mascara de corte do receptor: so a camada de wall recebe a sombra projetada. Um pixel que cai
-// dentro de um bloco solido nao recebe nada - e por isso que o miolo de uma copa parava preto, ja
-// que o proprio corpo dela bloqueava o sol para dentro de si. A sombra em si continua sendo
-// calculada sem nenhuma regra: o que muda e QUEM recebe, nao quem projeta.
-bool receiver_is_solid(vec2 p) {
-    ivec2 bins = (ivec2(map_size / 2.0) + ivec2(15)) / 16;
-    ivec2 bin = clamp(ivec2(floor(p / 16.0)), ivec2(0), bins - ivec2(1));
-    vec4 header = geometry(bin.y * bins.x + bin.x);
-    int count = int(header.y);
-    for (int i = 0; i < count; i++) {
-        vec4 r = geometry(int(header.x) + i * 2);
-        if (p.x >= r.x && p.x < r.z && p.y >= r.y && p.y < r.w) return true;
-    }
-    return false;
-}
-
 float projected_shadow(vec2 p, vec2 footprint) {
     if (cos(sun_angle)<=0.001) return 0.0;
-    if (receiver_is_solid(p)) return 0.0;
     return sun_occlusion(p,footprint);
 }
