@@ -83,6 +83,8 @@ namespace Jogo25D.Testing
                 var interior = new HashSet<Vector2I>();   // fundo de madeira dentro das torres
                 var wallTrunks = new HashSet<Vector2I>();
                 var wallLeaves = new HashSet<Vector2I>();
+                var baseTrunks = new HashSet<Vector2I>();
+                var baseLeaves = new HashSet<Vector2I>();
 
                 for (int x = LEFT; x <= RIGHT; x++)
                     for (int y = Ground(x); y <= BOTTOM; y++) earth.Add(new Vector2I(x, y));
@@ -181,7 +183,8 @@ namespace Jogo25D.Testing
                 // Tenta em muitas colunas e deixa a recusa decidir a densidade final.
                 var tomadoCompose = new HashSet<Vector2I>();
                 var tomadoWall = new HashSet<Vector2I>();
-                foreach (var cell in wood) { tomadoCompose.Add(cell); tomadoWall.Add(cell); }
+                var tomadoBase = new HashSet<Vector2I>();
+                foreach (var cell in wood) { tomadoCompose.Add(cell); tomadoWall.Add(cell); tomadoBase.Add(cell); }
                 for (int x = LEFT + 8; x < RIGHT - 8; x += 2)
                 {
                     bool bloqueado = false;
@@ -189,8 +192,10 @@ namespace Jogo25D.Testing
                     int chao = Ground(x);
                     if (cave.Contains(new Vector2I(x, chao)) || cave.Contains(new Vector2I(x, chao + 1))) bloqueado = true;
                     if (bloqueado) continue;
+                    // As tres camadas tem mata: o plano de jogo, o fundo e o Base entre eles.
                     Tree(x, chao, trunks, leaves, tomadoCompose);
                     Tree(x + rng.Next(0, 2), chao, wallTrunks, wallLeaves, tomadoWall);
+                    Tree(x + rng.Next(0, 3), chao, baseTrunks, baseLeaves, tomadoBase);
                 }
 
                 // Torre: bico de 4 linhas e paredes "#.....#" ate o chao, oca, fundo de madeira.
@@ -226,8 +231,10 @@ namespace Jogo25D.Testing
                     foreach (var c in cells) a.Add(c);
                     return a;
                 }
-                // Base: corpo de terra em toda celula solida.
+                // Base: corpo de terra em toda celula solida, mais a mata dessa camada.
                 baseLayer.SetCellsTerrainConnect(A(body), BODY, 0, false);
+                baseLayer.SetCellsTerrainConnect(A(baseTrunks), WOOD, 0, false);
+                baseLayer.SetCellsTerrainConnect(A(baseLeaves), SHEET, 0, false);
 
                 // Compose: grama sobre as mesmas celulas, mais troncos, copas e torres.
                 compose.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
@@ -250,7 +257,8 @@ namespace Jogo25D.Testing
                 GD.Print("UPSIDEDOWN: corpo=" + body.Count + " grama=" + grass.Count + " caverna=" + cave.Count
                     + " troncos=" + trunks.Count + " folhas=" + leaves.Count + " madeira=" + wood.Count
                     + " interior=" + interior.Count + " wall=" + wallCells.Count
-                    + " arvores_wall=" + wallLeaves.Count + " salvar=" + erro);
+                    + " arvores_wall=" + wallLeaves.Count + " arvores_base=" + baseLeaves.Count
+                    + " salvar=" + erro);
                 GetTree().Quit(erro == Error.Ok ? 0 : 1);
             }
             catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
