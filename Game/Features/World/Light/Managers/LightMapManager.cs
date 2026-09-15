@@ -30,6 +30,10 @@ namespace Jogo25D.Light
                 var layer = Game.Managers.DimensionManager.Node.ResolveLayer(id);
                 foreach (var cell in layer.GetUsedCells())
                     world.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(layer, cell));
+                var baseLayer = Game.Managers.DimensionManager.Node.ResolveBaseLayer(id);
+                if (baseLayer != null)
+                    foreach (var cell in baseLayer.GetUsedCells())
+                        world.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(baseLayer, cell));
             }
         }
 

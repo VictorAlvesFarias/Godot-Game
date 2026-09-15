@@ -8,6 +8,8 @@ O mapa lógico considera as duas camadas: os blocos principais bloqueiam a propa
 
 `layered_light.gdshader` aplica a escuridão e a emissão do campo lógico. A recepção no interior do terreno mantém o cálculo de profundidade existente de `LightMapComputer`, separado da projeção solar.
 
+A ocupação do terreno autorado e da prévia inclui `Base` e os blocos da `Compose`. `Base` tem prioridade nas células compartilhadas: uma célula presente só na Base não pode ser tratada como ar. A geração procedural já fornece a ocupação lógica antes de repartir a apresentação entre essas duas TileMapLayers.
+
 ## Controles
 
 - `DebugShadow`: mostra somente a projeção bruta, sem máscara de wall e sem escuridão lógica. Branco significa iluminado; preto, oclusão total.

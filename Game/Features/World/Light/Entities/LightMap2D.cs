@@ -72,6 +72,9 @@ namespace Jogo25D.Light
                 foreach (var child in GetParent().GetChildren())
                     if (child is TileMapLayer layer && layer is not Jogo25D.Blocks.BackgroundWallLayer && layer.Name!="Base") _layers.Add(layer);
             foreach(var child in GetParent().GetChildren()) if(child is Jogo25D.Blocks.BackgroundWallLayer wall) _walls.Add(wall);
+            // Base fills physical terrain cells that Compose does not contain.
+            var baseLayer=GetParent().GetNodeOrNull<TileMapLayer>("Base");
+            if(baseLayer!=null && !_layers.Contains(baseLayer)) _layers.Add(baseLayer);
             _camera=Camera!=null && !Camera.IsEmpty?GetNodeOrNull<Camera2D>(Camera):GetParent().GetNodeOrNull<Camera2D>("Camera2D");
         }
         public override void _Process(double delta)
