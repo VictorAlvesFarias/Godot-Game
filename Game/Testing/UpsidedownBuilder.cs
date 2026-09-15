@@ -5,18 +5,33 @@ using Godot.Collections;
 
 namespace Jogo25D.Testing
 {
-    // Redesenha as camadas de tile da Upsidedown seguindo o padrao que a cena ja usava:
-    //   arvore  = tronco de 1 tile de largura + copa larga, achatada e de borda irregular
-    //   torre   = madeira, parede de 1 tile, OCA, topo em degraus, vao de porta ou janela
-    //   caverna = galerias ligadas entre si E abertas para a superficie por um barranco
+    // Redesenha as camadas de tile da Upsidedown.
     //
-    // Mapeamento conferido renderizando a paleta (.images/paleta-terrenos.png):
-    //   0 lime_grass  capa fina de grama   2 lime_bordercap corpo de terra
-    //   4 lime_base   terra lisa           6 wood           madeira   7 sheet folhagem
+    // Camadas, como pedido:
+    //   BackgroundWalls = terra de fundo, onde ha terra E onde ha caverna, mais arvores de fundo
+    //   Base            = so grama
+    //   Compose         = corpo de terra, troncos, copas e torres
+    //
+    // As formas de copa, tronco e torre NAO sao inventadas: foram extraidas celula por celula da
+    // cena anterior com UpsidedownInspect e estao copiadas abaixo como mascaras.
     public partial class UpsidedownBuilder : Node
     {
         const int GRASS = 0, BODY = 2, DIRT = 4, WOOD = 6, SHEET = 7;
         const int LEFT = -110, RIGHT = 110, BOTTOM = 34;
+
+        // ---- formas extraidas da cena antiga ----
+        static readonly string[] CopaGrande = {
+            "......###......", "....#######....", "..###########..", ".#############.",
+            ".#############.", "###############", "###############", "###############",
+            "###############", "###############", "###############", ".#############.",
+            ".#############.", "..###########..", "....#######...." };
+        static readonly string[] CopaMedia = {
+            "....##...", ".#######.", "#########", "..#######", ".########",
+            "########.", "####.....", "###......", "..##....." };
+        static readonly string[] CopaPequena = {
+            "..##.", ".###.", "#####", "#####", ".####", "..#.." };
+        // Topo em bico da torre; abaixo dele repete "#.....#" ate o chao.
+        static readonly string[] TopoTorre = { "...#...", "..###..", ".##.##.", "##...##" };
 
         static int Surface(int x)
         {
@@ -53,9 +68,7 @@ namespace Jogo25D.Testing
                 var trunks = new HashSet<Vector2I>();
                 var leaves = new HashSet<Vector2I>();
                 var wood = new HashSet<Vector2I>();
-                var woodInside = new HashSet<Vector2I>();
-                var baseTrunks = new HashSet<Vector2I>();
-                var baseLeaves = new HashSet<Vector2I>();
+                var interior = new HashSet<Vector2I>();   // fundo de madeira dentro das torres
                 var wallTrunks = new HashSet<Vector2I>();
                 var wallLeaves = new HashSet<Vector2I>();
 
@@ -92,8 +105,7 @@ namespace Jogo25D.Testing
                         Carve((int)Math.Round(a.X + (b.X - a.X) * t), (int)Math.Round(a.Y + (b.Y - a.Y) * t), 2.4, 1.7, false);
                     }
                 }
-                // Entradas: barrancos que descem da superficie ate a galeria, alargando para cima
-                // como na cena antiga. Sem isto a caverna fica fechada e nao da para entrar nela.
+                // Barrancos abrindo a caverna para a superficie.
                 var entradas = new List<int> { 1, 4, 7 };
                 foreach (int indice in entradas)
                 {
@@ -103,77 +115,74 @@ namespace Jogo25D.Testing
                     for (int y = topo - 1; y <= alvo.Y; y++)
                     {
                         double t = (y - (topo - 1)) / (double)Math.Max(1, alvo.Y - (topo - 1));
-                        double largura = 3.4 - 1.4 * t;                 // mais aberta na boca
                         int desvio = (int)Math.Round(2.5 * Math.Sin((y - topo) * 0.22));
-                        Carve(bocaX + desvio, y, largura, 1.2, true);
+                        Carve(bocaX + desvio, y, 3.4 - 1.4 * t, 1.2, true);
                     }
                 }
                 foreach (var cell in earth) if (!cave.Contains(cell)) body.Add(cell);
-                // Capa de grama em toda superficie exposta ao ceu, inclusive nas bordas do barranco.
+                // Grama: toda celula de corpo com ceu (ou caverna) logo acima. Vai para o Base.
                 foreach (var cell in body)
-                    if (!body.Contains(new Vector2I(cell.X, cell.Y - 1)) && !cave.Contains(new Vector2I(cell.X, cell.Y - 1)))
-                        grass.Add(cell);
-                foreach (var cell in grass) body.Remove(cell);
-
-                // Arvore no padrao da cena: tronco de 1 tile, copa larga e achatada, borda irregular.
-                void Tree(int x, int groundY, HashSet<Vector2I> trunkSet, HashSet<Vector2I> leafSet)
                 {
-                    int height = 3 + rng.Next(0, 4);
-                    int top = groundY - 1;
-                    for (int y = top; y > top - height; y--) trunkSet.Add(new Vector2I(x, y));
-                    int cy = top - height;
-                    int half = 2 + rng.Next(0, 3);          // copa de 5 a 9 de largura
-                    int tall = 2 + rng.Next(0, 2);          // e de 3 a 4 de altura
-                    for (int dx = -half; dx <= half; dx++)
-                    {
-                        int recuo = Math.Abs(dx) >= half ? 1 + rng.Next(0, 2) : (Math.Abs(dx) == half - 1 ? rng.Next(0, 2) : 0);
-                        for (int dy = -tall + recuo; dy <= 1 - recuo; dy++)
-                            leafSet.Add(new Vector2I(x + dx, cy + dy));
-                    }
+                    var acima = new Vector2I(cell.X, cell.Y - 1);
+                    if (!body.Contains(acima)) grass.Add(cell);
                 }
-                for (int x = LEFT + 6; x < RIGHT - 6; x += 5 + rng.Next(0, 4))
+
+                void Carimbo(string[] forma, int x0, int y0, HashSet<Vector2I> alvo)
+                {
+                    for (int j = 0; j < forma.Length; j++)
+                        for (int i = 0; i < forma[j].Length; i++)
+                            if (forma[j][i] == '#') alvo.Add(new Vector2I(x0 + i, y0 + j));
+                }
+                // Arvore: tronco de 1 tile com um toco lateral perto do topo, mais uma das copas.
+                void Tree(int x, int chao, HashSet<Vector2I> trunkSet, HashSet<Vector2I> leafSet)
+                {
+                    int altura = 6 + rng.Next(0, 5);
+                    int topo = chao - 1;
+                    for (int y = topo; y > topo - altura; y--) trunkSet.Add(new Vector2I(x, y));
+                    trunkSet.Add(new Vector2I(x + (rng.Next(0, 2) == 0 ? -1 : 1), topo - altura + 1));
+                    int sorteio = rng.Next(0, 10);
+                    var copa = sorteio < 2 ? CopaGrande : sorteio < 6 ? CopaMedia : CopaPequena;
+                    int largura = copa[0].Length, alturaCopa = copa.Length;
+                    Carimbo(copa, x - largura / 2, topo - altura - alturaCopa + 2, leafSet);
+                }
+                for (int x = LEFT + 8; x < RIGHT - 8; x += 9 + rng.Next(0, 7))
                 {
                     bool ocupado = false;
-                    foreach (var p in Plateaus) if (x > p.X - 4 && x < p.X + p.Width + 4) ocupado = true;
+                    foreach (var p in Plateaus) if (x > p.X - 6 && x < p.X + p.Width + 6) ocupado = true;
                     int chao = Ground(x);
                     if (cave.Contains(new Vector2I(x, chao)) || cave.Contains(new Vector2I(x, chao + 1))) ocupado = true;
                     if (ocupado) continue;
-                    int roll = rng.Next(0, 10);
-                    if (roll < 6) Tree(x, chao, trunks, leaves);
-                    else if (roll < 8) Tree(x, chao, baseTrunks, baseLeaves);
+                    if (rng.Next(0, 10) < 7) Tree(x, chao, trunks, leaves);
                     else Tree(x, chao, wallTrunks, wallLeaves);
                 }
 
-                // Torre de madeira: parede de 1 tile, oca, topo em degraus, como as da cena antiga.
-                void Tower(int x0, int floor, int w, int h, string opening)
+                // Torre: bico de 4 linhas e paredes "#.....#" ate o chao, oca, fundo de madeira.
+                void Tower(int x0, int chao, int altura, string abertura)
                 {
-                    int right = x0 + w - 1, roof = floor - h;
-                    for (int y = roof + 3; y <= floor; y++)          // corpo reto
-                        for (int x = x0; x <= right; x++)
-                        {
-                            bool border = x == x0 || x == right || y == floor;
-                            if (border) wood.Add(new Vector2I(x, y));
-                            else woodInside.Add(new Vector2I(x, y));
-                        }
-                    for (int passo = 0; passo < 3; passo++)          // topo recuando um tile por linha
+                    int yTopo = chao - altura + 1;
+                    Carimbo(TopoTorre, x0, yTopo, wood);
+                    for (int y = yTopo + TopoTorre.Length; y <= chao; y++)
                     {
-                        int y = roof + passo, recuo = 2 - passo;
-                        for (int x = x0 + recuo; x <= right - recuo; x++) wood.Add(new Vector2I(x, y));
+                        wood.Add(new Vector2I(x0, y));
+                        wood.Add(new Vector2I(x0 + 6, y));
+                        for (int i = 1; i <= 5; i++) interior.Add(new Vector2I(x0 + i, y));
                     }
-                    // O vao e vazado nas DUAS camadas: com wall atras ele nao aparece, porque o
-                    // fundo e da mesma madeira da parede. Na cena antiga a janela e um buraco preto.
-                    if (opening == "porta")
-                        for (int y = floor - 3; y <= floor - 1; y++)
-                        { var c = new Vector2I(right, y); wood.Remove(c); woodInside.Remove(c); }
-                    if (opening == "janela")
-                        for (int y = roof + 4; y <= roof + 5; y++)
-                        { var c = new Vector2I(x0, y); wood.Remove(c); woodInside.Remove(c); }
+                    for (int j = 2; j < TopoTorre.Length; j++)      // miolo do bico tambem e oco
+                        for (int i = 1; i <= 5; i++)
+                            if (TopoTorre[j][i] == '.') interior.Add(new Vector2I(x0 + i, yTopo + j));
+                    if (abertura == "porta")
+                        for (int y = chao; y > chao - 3; y--)
+                        { var c = new Vector2I(x0 + 6, y); wood.Remove(c); interior.Remove(c); }
+                    if (abertura == "janela")
+                        for (int y = yTopo + 6; y <= yTopo + 8; y++)
+                            for (int i = 2; i <= 3; i++) interior.Remove(new Vector2I(x0 + i, y));
                 }
-                Tower(Plateaus[0].X + 4, Ground(Plateaus[0].X) - 1, 6, 9, "fechada");
-                Tower(Plateaus[1].X + 4, Ground(Plateaus[1].X) - 1, 6, 10, "porta");
-                Tower(Plateaus[2].X + 4, Ground(Plateaus[2].X) - 1, 6, 11, "janela");
+                Tower(Plateaus[0].X + 4, Ground(Plateaus[0].X) - 1, 12, "fechada");
+                Tower(Plateaus[1].X + 4, Ground(Plateaus[1].X) - 1, 14, "porta");
+                Tower(Plateaus[2].X + 4, Ground(Plateaus[2].X) - 1, 18, "janela");
                 foreach (var cell in wood) { body.Remove(cell); grass.Remove(cell); leaves.Remove(cell); trunks.Remove(cell); }
-                foreach (var cell in woodInside) { body.Remove(cell); grass.Remove(cell); leaves.Remove(cell); trunks.Remove(cell); }
+                foreach (var cell in interior) { body.Remove(cell); grass.Remove(cell); leaves.Remove(cell); trunks.Remove(cell); }
+                foreach (var cell in grass) body.Remove(cell);
 
                 static Array<Vector2I> A(IEnumerable<Vector2I> cells)
                 {
@@ -181,31 +190,31 @@ namespace Jogo25D.Testing
                     foreach (var c in cells) a.Add(c);
                     return a;
                 }
+                // Compose: corpo, troncos, copas e torres.
                 compose.SetCellsTerrainConnect(A(body), BODY, 0, false);
-                compose.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
                 compose.SetCellsTerrainConnect(A(trunks), WOOD, 0, false);
                 compose.SetCellsTerrainConnect(A(leaves), SHEET, 0, false);
                 compose.SetCellsTerrainConnect(A(wood), WOOD, 0, false);
 
-                baseLayer.SetCellsTerrainConnect(A(earth), DIRT, 0, false);
-                baseLayer.SetCellsTerrainConnect(A(baseTrunks), WOOD, 0, false);
-                baseLayer.SetCellsTerrainConnect(A(baseLeaves), SHEET, 0, false);
+                // Base: SO grama.
+                baseLayer.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
 
+                // Wall: terra de fundo onde ha terra E onde ha caverna, mais arvores de fundo e o
+                // forro de madeira das torres. A janela fica sem forro, entao aparece como vao.
                 var wallCells = new HashSet<Vector2I>(earth);
                 foreach (var c in cave) wallCells.Add(c);
                 walls.SetCellsTerrainConnect(A(wallCells), DIRT, 0, false);
                 walls.SetCellsTerrainConnect(A(wallTrunks), WOOD, 0, false);
                 walls.SetCellsTerrainConnect(A(wallLeaves), SHEET, 0, false);
-                walls.SetCellsTerrainConnect(A(woodInside), WOOD, 0, false);
+                walls.SetCellsTerrainConnect(A(interior), WOOD, 0, false);
 
                 var novo = new PackedScene();
                 novo.Pack(root);
                 var erro = ResourceSaver.Save(novo, path);
                 GD.Print("UPSIDEDOWN: corpo=" + body.Count + " grama=" + grass.Count + " caverna=" + cave.Count
-                    + " entradas=" + entradas.Count + " troncos=" + trunks.Count + " folhas=" + leaves.Count
-                    + " madeira=" + wood.Count + " interior=" + woodInside.Count + " wall=" + wallCells.Count
-                    + " arvores_base=" + baseLeaves.Count + " arvores_wall=" + wallLeaves.Count
-                    + " salvar=" + erro);
+                    + " troncos=" + trunks.Count + " folhas=" + leaves.Count + " madeira=" + wood.Count
+                    + " interior=" + interior.Count + " wall=" + wallCells.Count
+                    + " arvores_wall=" + wallLeaves.Count + " salvar=" + erro);
                 GetTree().Quit(erro == Error.Ok ? 0 : 1);
             }
             catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }
