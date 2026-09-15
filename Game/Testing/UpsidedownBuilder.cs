@@ -9,8 +9,8 @@ namespace Jogo25D.Testing
     //
     // Camadas, como pedido:
     //   BackgroundWalls = terra de fundo, onde ha terra E onde ha caverna, mais arvores de fundo
-    //   Base            = corpo de terra, em TODA celula solida
-    //   Compose         = grama SOBRE as mesmas celulas do Base, mais troncos, copas e torres
+    //   Base            = corpo de terra, mais a mata dessa camada e as estruturas
+    //   Compose         = so a grama, SOBRE as mesmas celulas do Base
     //
     // Base e Compose se sobrepoem de proposito: na cena anterior 4006 celulas estavam nas duas, que
     // e exatamente a contagem de grama. Medido com UpsidedownInspect, nao suposto.
@@ -227,14 +227,14 @@ namespace Jogo25D.Testing
                     foreach (var c in cells) a.Add(c);
                     return a;
                 }
-                // Base: corpo de terra em toda celula solida, mais a mata dessa camada.
+                // Base: corpo de terra, a mata dessa camada e as estruturas.
                 baseLayer.SetCellsTerrainConnect(A(body), BODY, 0, false);
                 baseLayer.SetCellsTerrainConnect(A(baseTrunks), WOOD, 0, false);
                 baseLayer.SetCellsTerrainConnect(A(baseLeaves), SHEET, 0, false);
+                baseLayer.SetCellsTerrainConnect(A(wood), WOOD, 0, false);
 
-                // Compose: grama sobre as mesmas celulas do Base, mais as torres. Sem arvores.
+                // Compose: SO a grama, sobre as mesmas celulas do Base. Arvore e estrutura ficam no Base.
                 compose.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
-                compose.SetCellsTerrainConnect(A(wood), WOOD, 0, false);
 
                 // Wall: terra de fundo onde ha terra E onde ha caverna, mais arvores de fundo e o
                 // forro de madeira das torres. A janela fica sem forro, entao aparece como vao.
