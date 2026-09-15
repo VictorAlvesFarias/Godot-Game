@@ -23,17 +23,25 @@ namespace Jogo25D.Testing
         const int GRASS = 0, BODY = 2, WOOD = 6, SHEET = 7;
         const int LEFT = -110, RIGHT = 110, BOTTOM = 34;
 
-        // ---- formas extraidas da cena antiga ----
-        static readonly string[] CopaGrande = {
-            "......###......", "....#######....", "..###########..", ".#############.",
-            ".#############.", "###############", "###############", "###############",
-            "###############", "###############", "###############", ".#############.",
-            ".#############.", "..###########..", "....#######...." };
-        static readonly string[] CopaMedia = {
-            "....##...", ".#######.", "#########", "..#######", ".########",
-            "########.", "####.....", "###......", "..##....." };
-        static readonly string[] CopaPequena = {
-            "..##.", ".###.", "#####", "#####", ".####", "..#.." };
+        // ---- modelos extraidos celula por celula da cena antiga (UpsidedownInspect) ----
+        // S = folha, W = madeira. A ultima linha e a base do tronco; Ancora e a coluna do tronco.
+        static readonly string[] ArvoreGrande = {
+            "......SSS......", "....SSSSSSS....", "..SSSSSSSSSSS..", ".SSSSSSSSSSSSS.",
+            ".SSSSSSSSSSSSS.", "SSSSSSSSSSSSSSS", "SSSSSSSSSSSSSSS", "SSSSSSSSSSSSSSS",
+            "SSSSSSSSSSSSSSS", "SSSSSSSSSSSSSSS", "SSSSSSSSSSSSSSS", ".SSSSSSSSSSSSS.",
+            ".SSSSSSSSSSSSS.", "..SSSSSSSSSSS..", "....SSSSSSS....", ".......W.......",
+            ".......W.......", ".......W.......", ".......W.......", ".......W.......",
+            ".......W.......", ".......W......." };
+        const int AncoraGrande = 7;
+        static readonly string[] ArvoreMedia = {
+            "....SS...", ".SSSSSSS.", "SSSSSSSSS", "..SSSSSSS", ".SSSSSSSS",
+            "SSSSSSSS.", "SSSSW....", "SSSWW....", "..SSW....", "....W....",
+            "....W....", "....W....", "....W....", "....W....", "....W...." };
+        const int AncoraMedia = 4;
+        static readonly string[] ArvorePequena = {
+            "..SS.", ".SSS.", "SSSSS", "SSSSS", ".SSSS",
+            "..SW.", "...W.", "...WW", "....W", "....W" };
+        const int AncoraPequena = 4;
         // Topo em bico da torre; abaixo dele repete "#.....#" ate o chao.
         static readonly string[] TopoTorre = { "...#...", "..###..", ".##.##.", "##...##" };
 
@@ -140,28 +148,35 @@ namespace Jogo25D.Testing
                         for (int i = 0; i < forma[j].Length; i++)
                             if (forma[j][i] == '#') alvo.Add(new Vector2I(x0 + i, y0 + j));
                 }
-                // Arvore: tronco de 1 tile com um toco lateral perto do topo, mais uma das copas.
-                // Monta em conjuntos temporarios para poder RECUSAR a arvore se ela encostar noutra.
+                // Carimba um dos modelos da cena antiga, opcionalmente espelhado. Nada e inventado:
+                // a forma vem inteira do modelo, tronco e copa juntos.
                 bool Tree(int x, int chao, HashSet<Vector2I> trunkSet, HashSet<Vector2I> leafSet,
                           HashSet<Vector2I> ocupado)
                 {
-                    int altura = 6 + rng.Next(0, 5);
-                    int topo = chao - 1;
+                    int sorteio = rng.Next(0, 10);
+                    var modelo = sorteio < 2 ? ArvoreGrande : sorteio < 6 ? ArvoreMedia : ArvorePequena;
+                    int ancora = sorteio < 2 ? AncoraGrande : sorteio < 6 ? AncoraMedia : AncoraPequena;
+                    bool espelha = rng.Next(0, 2) == 0;
+                    int largura = modelo[0].Length, altura = modelo.Length;
+                    if (espelha) ancora = largura - 1 - ancora;
                     var tronco = new HashSet<Vector2I>();
                     var folha = new HashSet<Vector2I>();
-                    for (int y = topo; y > topo - altura; y--) tronco.Add(new Vector2I(x, y));
-                    tronco.Add(new Vector2I(x + (rng.Next(0, 2) == 0 ? -1 : 1), topo - altura + 1));
-                    int sorteio = rng.Next(0, 10);
-                    var copa = sorteio < 2 ? CopaGrande : sorteio < 6 ? CopaMedia : CopaPequena;
-                    Carimbo(copa, x - copa[0].Length / 2, topo - altura - copa.Length + 2, folha);
-                    // Recusa se qualquer celula da arvore, ou vizinha dela, ja estiver tomada:
-                    // encostar conta como colidir, entao fica sempre um tile de folga.
+                    for (int j = 0; j < altura; j++)
+                        for (int i = 0; i < largura; i++)
+                        {
+                            char marca = modelo[j][espelha ? largura - 1 - i : i];
+                            if (marca == '.') continue;
+                            var c = new Vector2I(x - ancora + i, chao - 1 - (altura - 1) + j);
+                            if (marca == 'W') tronco.Add(c); else folha.Add(c);
+                        }
+                    // Encostar conta como colidir, entao sobra sempre um tile de folga.
                     foreach (var c in tronco) if (Encosta(c, ocupado)) return false;
                     foreach (var c in folha) if (Encosta(c, ocupado)) return false;
                     foreach (var c in tronco) { trunkSet.Add(c); ocupado.Add(c); }
                     foreach (var c in folha) { leafSet.Add(c); ocupado.Add(c); }
                     return true;
                 }
+
                 // Uma reserva por camada: a arvore so entra se couber sem encostar em nenhuma outra.
                 // Tenta em muitas colunas e deixa a recusa decidir a densidade final.
                 var tomadoCompose = new HashSet<Vector2I>();

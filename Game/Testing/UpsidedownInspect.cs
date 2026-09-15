@@ -81,31 +81,39 @@ namespace Jogo25D.Testing
                     }
                     return saida;
                 }
-                foreach (var fonte in new[] { 7, 6 })
+                // Arvore completa = copa (sheet) + o tronco de wood grudado nela, como uma peca so.
+                var sheet = porFonte.GetValueOrDefault(7, new HashSet<Vector2I>());
+                var madeira = porFonte.GetValueOrDefault(6, new HashSet<Vector2I>());
+                var copas = Componentes(sheet).OrderByDescending(g => g.Count).ToList();
+                var madeiras = Componentes(madeira).ToList();
+                GD.Print("ARVORES: " + copas.Count + " copas, " + madeiras.Count + " grupos de madeira");
+                foreach (var copa in copas)
                 {
-                    if (!porFonte.TryGetValue(fonte, out var cells)) { GD.Print("sem " + Fonte(fonte)); continue; }
-                    var grupos = Componentes(cells).OrderByDescending(g => g.Count).ToList();
-                    GD.Print("FORMAS de " + Fonte(fonte) + ": " + grupos.Count + " grupos");
-                    foreach (var g in grupos)
+                    var copaSet = new HashSet<Vector2I>(copa);
+                    var tronco = new List<Vector2I>();
+                    foreach (var grupo in madeiras)
                     {
-                        int x0 = g.Min(c => c.X), x1 = g.Max(c => c.X);
-                        int y0 = g.Min(c => c.Y), y1 = g.Max(c => c.Y);
-                        GD.Print("   " + g.Count + " celulas, caixa " + (x1 - x0 + 1) + "x" + (y1 - y0 + 1)
-                            + " em (" + x0 + "," + y0 + ")");
+                        bool encosta = false;
+                        foreach (var c in grupo)
+                            for (int dx = -1; dx <= 1 && !encosta; dx++) for (int dy = -1; dy <= 1 && !encosta; dy++)
+                                if (copaSet.Contains(new Vector2I(c.X + dx, c.Y + dy))) encosta = true;
+                        if (encosta && grupo.Count < 30) tronco.AddRange(grupo);
                     }
-                    // Desenha as tres maiores formas em texto, para eu copiar o formato exato.
-                    foreach (var g in grupos.Take(0))
+                    var todas = new List<Vector2I>(copa); todas.AddRange(tronco);
+                    int x0 = todas.Min(c => c.X), x1 = todas.Max(c => c.X);
+                    int y0 = todas.Min(c => c.Y), y1 = todas.Max(c => c.Y);
+                    int baseX = tronco.Count > 0 ? (int)Math.Round(tronco.Average(c => (double)c.X)) : (x0 + x1) / 2;
+                    GD.Print("   --- arvore " + (x1 - x0 + 1) + "x" + (y1 - y0 + 1)
+                        + "  ancora_x=" + (baseX - x0) + " ---");
+                    for (int y = y0; y <= y1; y++)
                     {
-                        int x0 = g.Min(c => c.X), x1 = g.Max(c => c.X);
-                        int y0 = g.Min(c => c.Y), y1 = g.Max(c => c.Y);
-                        var mapa = new HashSet<Vector2I>(g);
-                        GD.Print("   --- forma " + Fonte(fonte) + " " + (x1 - x0 + 1) + "x" + (y1 - y0 + 1) + " ---");
-                        for (int y = y0; y <= y1; y++)
+                        var linha = "   ";
+                        for (int x = x0; x <= x1; x++)
                         {
-                            var linha = "   ";
-                            for (int x = x0; x <= x1; x++) linha += mapa.Contains(new Vector2I(x, y)) ? "#" : ".";
-                            GD.Print(linha);
+                            var c = new Vector2I(x, y);
+                            linha += copaSet.Contains(c) ? "S" : tronco.Contains(c) ? "W" : ".";
                         }
+                        GD.Print(linha);
                     }
                 }
                 GD.Print("INSPECT OK");
