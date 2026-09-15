@@ -40,6 +40,14 @@ namespace Jogo25D.Testing
                     GD.Print("CAMADA " + nome + ": " + cells.Count + " celulas | " + resumo);
                 }
 
+                var b = porCamada["Base"]; var c2 = porCamada["Compose"]; var w = porCamada["BackgroundWalls"];
+                int ambos = 0; foreach (var cell in b) if (c2.Contains(cell)) ambos++;
+                int soBase = 0; foreach (var cell in b) if (!c2.Contains(cell)) soBase++;
+                int soCompose = 0; foreach (var cell in c2) if (!b.Contains(cell)) soCompose++;
+                GD.Print("SOBREPOSICAO Base/Compose: nas duas=" + ambos + "  so Base=" + soBase + "  so Compose=" + soCompose);
+                int wallSobreTerra = 0; foreach (var cell in w) if (b.Contains(cell)) wallSobreTerra++;
+                GD.Print("Wall sobre celula de Base: " + wallSobreTerra + " de " + w.Count);
+
                 // Formas: componentes conexos de sheet (copas) no Compose, e de wood (casas/troncos).
                 var compose = root.GetNode<TileMapLayer>("Compose");
                 var porFonte = new Dictionary<int, HashSet<Vector2I>>();
@@ -86,7 +94,7 @@ namespace Jogo25D.Testing
                             + " em (" + x0 + "," + y0 + ")");
                     }
                     // Desenha as tres maiores formas em texto, para eu copiar o formato exato.
-                    foreach (var g in grupos)
+                    foreach (var g in grupos.Take(0))
                     {
                         int x0 = g.Min(c => c.X), x1 = g.Max(c => c.X);
                         int y0 = g.Min(c => c.Y), y1 = g.Max(c => c.Y);

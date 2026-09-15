@@ -9,8 +9,11 @@ namespace Jogo25D.Testing
     //
     // Camadas, como pedido:
     //   BackgroundWalls = terra de fundo, onde ha terra E onde ha caverna, mais arvores de fundo
-    //   Base            = so grama
-    //   Compose         = corpo de terra, troncos, copas e torres
+    //   Base            = corpo de terra, em TODA celula solida
+    //   Compose         = grama SOBRE as mesmas celulas do Base, mais troncos, copas e torres
+    //
+    // Base e Compose se sobrepoem de proposito: na cena anterior 4006 celulas estavam nas duas, que
+    // e exatamente a contagem de grama. Medido com UpsidedownInspect, nao suposto.
     //
     // As formas de copa, tronco e torre NAO sao inventadas: foram extraidas celula por celula da
     // cena anterior com UpsidedownInspect e estao copiadas abaixo como mascaras.
@@ -120,12 +123,9 @@ namespace Jogo25D.Testing
                     }
                 }
                 foreach (var cell in earth) if (!cave.Contains(cell)) body.Add(cell);
-                // Grama: toda celula de corpo com ceu (ou caverna) logo acima. Vai para o Base.
-                foreach (var cell in body)
-                {
-                    var acima = new Vector2I(cell.X, cell.Y - 1);
-                    if (!body.Contains(acima)) grass.Add(cell);
-                }
+                // A grama cobre as MESMAS celulas do corpo: quem decide onde ela aparece de fato e
+                // o autotile, que so desenha a faixa verde nas faces expostas.
+                foreach (var cell in body) grass.Add(cell);
 
                 void Carimbo(string[] forma, int x0, int y0, HashSet<Vector2I> alvo)
                 {
@@ -145,15 +145,17 @@ namespace Jogo25D.Testing
                     int largura = copa[0].Length, alturaCopa = copa.Length;
                     Carimbo(copa, x - largura / 2, topo - altura - alturaCopa + 2, leafSet);
                 }
-                for (int x = LEFT + 8; x < RIGHT - 8; x += 9 + rng.Next(0, 7))
+                for (int x = LEFT + 8; x < RIGHT - 8; x += 3 + rng.Next(0, 3))
                 {
                     bool ocupado = false;
-                    foreach (var p in Plateaus) if (x > p.X - 6 && x < p.X + p.Width + 6) ocupado = true;
+                    foreach (var p in Plateaus) if (x > p.X - 5 && x < p.X + p.Width + 5) ocupado = true;
                     int chao = Ground(x);
                     if (cave.Contains(new Vector2I(x, chao)) || cave.Contains(new Vector2I(x, chao + 1))) ocupado = true;
                     if (ocupado) continue;
-                    if (rng.Next(0, 10) < 7) Tree(x, chao, trunks, leaves);
-                    else Tree(x, chao, wallTrunks, wallLeaves);
+                    // Floresta densa nas duas camadas: uma arvore no plano de jogo e, deslocada,
+                    // outra no fundo. Sem a do fundo a mata fica rala quando a luz escurece o wall.
+                    Tree(x, chao, trunks, leaves);
+                    if (rng.Next(0, 10) < 7) Tree(x + 1 + rng.Next(0, 3), chao, wallTrunks, wallLeaves);
                 }
 
                 // Torre: bico de 4 linhas e paredes "#.....#" ate o chao, oca, fundo de madeira.
@@ -182,7 +184,6 @@ namespace Jogo25D.Testing
                 Tower(Plateaus[2].X + 4, Ground(Plateaus[2].X) - 1, 18, "janela");
                 foreach (var cell in wood) { body.Remove(cell); grass.Remove(cell); leaves.Remove(cell); trunks.Remove(cell); }
                 foreach (var cell in interior) { body.Remove(cell); grass.Remove(cell); leaves.Remove(cell); trunks.Remove(cell); }
-                foreach (var cell in grass) body.Remove(cell);
 
                 static Array<Vector2I> A(IEnumerable<Vector2I> cells)
                 {
@@ -190,14 +191,14 @@ namespace Jogo25D.Testing
                     foreach (var c in cells) a.Add(c);
                     return a;
                 }
-                // Compose: corpo, troncos, copas e torres.
-                compose.SetCellsTerrainConnect(A(body), BODY, 0, false);
+                // Base: corpo de terra em toda celula solida.
+                baseLayer.SetCellsTerrainConnect(A(body), BODY, 0, false);
+
+                // Compose: grama sobre as mesmas celulas, mais troncos, copas e torres.
+                compose.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
                 compose.SetCellsTerrainConnect(A(trunks), WOOD, 0, false);
                 compose.SetCellsTerrainConnect(A(leaves), SHEET, 0, false);
                 compose.SetCellsTerrainConnect(A(wood), WOOD, 0, false);
-
-                // Base: SO grama.
-                baseLayer.SetCellsTerrainConnect(A(grass), GRASS, 0, false);
 
                 // Wall: terra de fundo onde ha terra E onde ha caverna, mais arvores de fundo e o
                 // forro de madeira das torres. A janela fica sem forro, entao aparece como vao.
