@@ -159,6 +159,7 @@ Relations = Array[Resource]([SubResource("Resource_blm8h"), SubResource("Resourc
 position = Vector2(6, -5)
 script = ExtResource("13_lightmap")
 PreviewSize = Vector2i(140, 90)
+Layers = Array[NodePath]([NodePath("../Base")])
 Settings = ExtResource("14_lmdata")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]

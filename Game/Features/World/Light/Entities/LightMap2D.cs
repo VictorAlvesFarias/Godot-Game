@@ -66,8 +66,11 @@ namespace Jogo25D.Light
         }
         private void Resolve()
         {
+            // Lista explicita manda: a cena diz quais camadas sao solidas. O descarte por nome so
+            // vale na descoberta automatica, e e chute - a geometria ja morou no Compose e hoje
+            // mora no Base, entao filtrar por nome aqui invertia a sombra sem avisar.
             foreach (var path in Layers)
-                if (GetNodeOrNull<TileMapLayer>(path) is {} layer && layer is not Jogo25D.Blocks.BackgroundWallLayer && layer.Name!="Base") _layers.Add(layer);
+                if (GetNodeOrNull<TileMapLayer>(path) is {} layer && layer is not Jogo25D.Blocks.BackgroundWallLayer) _layers.Add(layer);
             if (_layers.Count==0)
                 foreach (var child in GetParent().GetChildren())
                     if (child is TileMapLayer layer && layer is not Jogo25D.Blocks.BackgroundWallLayer && layer.Name!="Base") _layers.Add(layer);

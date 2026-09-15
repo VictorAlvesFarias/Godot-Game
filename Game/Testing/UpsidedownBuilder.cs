@@ -245,6 +245,17 @@ namespace Jogo25D.Testing
                 walls.SetCellsTerrainConnect(A(wallLeaves), SHEET, 0, false);
                 walls.SetCellsTerrainConnect(A(interior), WOOD, 0, false);
 
+                // A geometria da sombra agora mora no Base. O LightMap2D, por padrao, EXCLUI a camada
+                // chamada Base - regra de quando ela era so acabamento - entao a cena passa a
+                // declarar explicitamente qual camada e solida, que e para isso que o export existe.
+                var lightMap = root.GetNodeOrNull("LightMap");
+                if (lightMap != null)
+                {
+                    var camadas = new Array<NodePath>();
+                    camadas.Add(new NodePath("../Base"));
+                    lightMap.Set("Layers", camadas);
+                }
+
                 var novo = new PackedScene();
                 novo.Pack(root);
                 var erro = ResourceSaver.Save(novo, path);
