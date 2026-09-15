@@ -76,6 +76,19 @@ namespace Jogo25D.Testing
                 await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                 using var frame = pass.GetTexture().GetImage();
                 frame.SavePng(ProjectSettings.GlobalizePath("res://../.images/upsidedown-com-sombra.png"));
+                // Campo de luz cru, em cinza, do mesmo recorte: defeito aparece sem a textura por cima.
+                using (var campo = computer.LightImage())
+                {
+                    int w = campo.GetWidth(), h = campo.GetHeight();
+                    var cinza = Image.CreateEmpty(w, h, false, Image.Format.Rgb8);
+                    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++)
+                    {
+                        float v = campo.GetPixel(x, y).R;
+                        cinza.SetPixel(x, y, new Color(v, v, v));
+                    }
+                    cinza.SavePng(ProjectSettings.GlobalizePath("res://../.images/upsidedown-campo-de-luz.png"));
+                    GD.Print("campo de luz " + w + "x" + h + " salvo");
+                }
                 GD.Print("LIT OK: camadas de geometria = " + geometria.Count
                     + (geometria.Count > 0 ? " (" + geometria[0].Name + ")" : ""));
                 GetTree().Quit();

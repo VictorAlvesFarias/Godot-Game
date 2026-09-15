@@ -21,6 +21,15 @@ namespace Jogo25D.Light
         public bool RebuiltSun => !_reuseGeometry;
         private int[] _receiverX = Array.Empty<int>(), _receiverY = Array.Empty<int>();
         private double[] _depth = Array.Empty<double>();
+        // Quanto a luz ja caminhou dentro do solido ate esta celula, por face. Serve para espalhar:
+        // quanto mais fundo, mais larga a janela de onde ela vem.
+        private double[] _travel = Array.Empty<double>();
+        // Valor cru por subpixel e a distancia que a luz percorreu dentro do solido ate ele. A
+        // imagem final borra o cru na horizontal com raio vindo dessa distancia: colunas vizinhas
+        // tem superficie em degrau, percorrem distancias diferentes e recebem atenuacoes
+        // diferentes - e essa costura entre colunas que aparece como listra vertical na terra.
+        private byte[] _rawSky = Array.Empty<byte>();
+        private double[] _travelUsed = Array.Empty<double>();
         public Vector2I Origin { get; private set; }
         public Vector2I Size { get; private set; }
         public bool Complete => _cursor >= Size.X * Size.Y * Subdivisions * Subdivisions && (_skipShadow || _geometry.Complete);
@@ -66,6 +75,8 @@ namespace Jogo25D.Light
             {
                 _light = new byte[bytes]; _emission = new byte[bytes];
                 _receiverX = new int[bytes]; _receiverY = new int[bytes]; _depth = new double[bytes];
+                _travel = new double[bytes];
+                _rawSky = new byte[bytes]; _travelUsed = new double[bytes];
             }
             _cursor = 0;
             if (!_skipShadow && !reuseGeometryData) _geometry.Begin(world, origin, size, angle, penumbra);
@@ -89,7 +100,7 @@ namespace Jogo25D.Light
                 }
                 byte opacity = _world.Opacity(x, y);
                 int slot = _cursor * 4;
-                for (int side = 0; side < 4; side++) _depth[slot + side] = 0;
+                for (int side = 0; side < 4; side++) { _depth[slot + side] = 0; _travel[slot + side] = 0; }
                 _receiverX[slot] = x; _receiverY[slot] = y; _depth[slot] = 1;
                 if (opacity == 255)
                 {
@@ -110,6 +121,7 @@ namespace Jogo25D.Light
                             // the nearest face cannot cut a dark diagonal into a solid corner.
                             double t = Math.Clamp(metric / TerrainTransition, 0, 1);
                             _depth[slot + side] = 1 - t * t * (3 - 2 * t);
+                            _travel[slot + side] = metric;
                             break;
                         }
                 }
@@ -126,15 +138,20 @@ namespace Jogo25D.Light
         {
             int p = _cursor * 4;
             LightValue value = default;
+            double travelled = 0;
             for (int side = 0; side < 4; side++)
             {
                 int slot = p + side;
                 double depth = _depth[slot];
                 if (depth == 0) continue;
                 var source = _world.Field.Get(_receiverX[slot], _receiverY[slot]);
-                value = value.Max(new((byte)(source.Sky * depth), (byte)(source.R * depth),
-                    (byte)(source.G * depth), (byte)(source.B * depth)));
+                var candidate = new LightValue((byte)(source.Sky * depth), (byte)(source.R * depth),
+                    (byte)(source.G * depth), (byte)(source.B * depth));
+                if (candidate.Sky >= value.Sky) travelled = _travel[slot];
+                value = value.Max(candidate);
             }
+            _rawSky[p] = value.Sky;
+            _travelUsed[p] = travelled;
             _light[p] = value.Sky;
             _light[p + 3] = 255;
             _emission[p] = value.R;
@@ -164,7 +181,37 @@ namespace Jogo25D.Light
         }
 
         public Image ShadowGeometryImage() => _geometry.Image();
-        public Image LightImage() => Image.CreateFromData(Size.X * Subdivisions, Size.Y * Subdivisions, false, Image.Format.Rgba8, _light);
+        // Borra o ceu na horizontal apenas dentro do solido, com raio proporcional a distancia que
+        // a luz percorreu ate chegar ali. Na face o raio e zero, entao a superficie continua nitida;
+        // fundo adentro a costura entre colunas se dissolve. Le sempre do cru, entao reprocessar
+        // nao acumula borrao.
+        private void BlurIntoLight()
+        {
+            int width = Size.X * Subdivisions, height = Size.Y * Subdivisions;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    int p = (y * width + x) * 4;
+                    if (_light[p + 2] != 255 || _travelUsed[p] <= 0.5) { _light[p] = _rawSky[p]; continue; }
+                    int radius = Math.Min(12, (int)Math.Round(_travelUsed[p]));
+                    int sum = 0, taken = 0;
+                    for (int offset = -radius; offset <= radius; offset++)
+                    {
+                        int sx = x + offset;
+                        if (sx < 0 || sx >= width) continue;
+                        int q = (y * width + sx) * 4;
+                        if (_light[q + 2] != 255) continue;   // so mistura terra com terra
+                        sum += _rawSky[q]; taken++;
+                    }
+                    _light[p] = taken > 0 ? (byte)(sum / taken) : _rawSky[p];
+                }
+        }
+
+        public Image LightImage()
+        {
+            BlurIntoLight();
+            return Image.CreateFromData(Size.X * Subdivisions, Size.Y * Subdivisions, false, Image.Format.Rgba8, _light);
+        }
         public Image EmissionImage() => Image.CreateFromData(Size.X * Subdivisions, Size.Y * Subdivisions, false, Image.Format.Rgba8, _emission);
     }
 }
