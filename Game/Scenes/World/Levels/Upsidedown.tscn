@@ -166,10 +166,10 @@ script = ExtResource("11_terrainlayer")
 position = Vector2(109, -306)
 
 [node name="NPC" parent="Entities" unique_id=1932133712 instance=ExtResource("12_kqktc")]
-position = Vector2(-137, -243)
+position = Vector2(-515, -371)
 
 [node name="Campfire" parent="Entities" unique_id=498653628 instance=ExtResource("90_campfire")]
-position = Vector2(-474, -329)
+position = Vector2(-475, -340)
 
 [node name="Compose" type="TileMapLayer" parent="." unique_id=548705804]
 texture_filter = 1
