@@ -4,5 +4,6 @@
 
 [resource]
 script = ExtResource("1_eycpx")
+TerrainLightDepthTiles = 12.0
 SunPenumbraShadowCurve = 0.85
 SunPenumbraAmbientCurve = 0.8

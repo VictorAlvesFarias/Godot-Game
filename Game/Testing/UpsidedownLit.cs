@@ -43,13 +43,24 @@ namespace Jogo25D.Testing
                 geometry.Begin(mundo, new Vector2I(-120, -40), new Vector2I(240, 90), -10, 0);
                 while (!geometry.Complete) geometry.Process(10000);
 
-                var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://Assets/Shaders/projected_shadow.gdshader") };
+                // Campo de luz, que e o que o layered_light desenha - e de onde vem o preto do miolo.
+                mundo.Field.SetRegion(-120, -40, 240, 90);
+                for (int i = 0; i < 20000 && !mundo.Field.Settled; i++) mundo.Field.Process(10000);
+                float profundidade = (float)(GD.Load<Resource>("res://Assets/Data/LightMap.tres")
+                    .Get("TerrainLightDepthTiles").AsDouble());
+                var computer = new LightMapComputer();
+                computer.Begin(mundo, new Vector2I(-120, -40), new Vector2I(240, 90), 0, 1, profundidade, buildShadow: false);
+                while (!computer.Complete) computer.Process(10000);
+
+                var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://Assets/Shaders/layered_light.gdshader") };
+                material.SetShaderParameter("light_data", ImageTexture.CreateFromImage(computer.LightImage()));
+                material.SetShaderParameter("emission_data", ImageTexture.CreateFromImage(computer.EmissionImage()));
                 material.SetShaderParameter("shadow_geometry", ImageTexture.CreateFromImage(geometry.Image()));
                 material.SetShaderParameter("map_size", new Vector2(240, 90) * 2);
                 material.SetShaderParameter("sun_angle", Mathf.DegToRad(-10));
                 material.SetShaderParameter("penumbra", 0f);
-                material.SetShaderParameter("shadow_strength", 0.85f);
                 material.SetShaderParameter("geometry_ready", true);
+                GD.Print("profundidade usada = " + profundidade);
                 var overlay = new Sprite2D
                 {
                     Name = "Sombra", Centered = false, Material = material, ZIndex = 900,
