@@ -19,7 +19,8 @@ namespace Jogo25D.Testing
     // cena anterior com UpsidedownInspect e estao copiadas abaixo como mascaras.
     public partial class UpsidedownBuilder : Node
     {
-        const int GRASS = 0, BODY = 2, DIRT = 4, WOOD = 6, SHEET = 7;
+        // DIRT (lime_base) esta fora de uso: a terra usa bordercap em todo lugar, inclusive no fundo.
+        const int GRASS = 0, BODY = 2, WOOD = 6, SHEET = 7;
         const int LEFT = -110, RIGHT = 110, BOTTOM = 34;
 
         // ---- formas extraidas da cena antiga ----
@@ -127,6 +128,12 @@ namespace Jogo25D.Testing
                 // o autotile, que so desenha a faixa verde nas faces expostas.
                 foreach (var cell in body) grass.Add(cell);
 
+                static bool Encosta(Vector2I c, HashSet<Vector2I> ocupado)
+                {
+                    for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++)
+                        if (ocupado.Contains(new Vector2I(c.X + dx, c.Y + dy))) return true;
+                    return false;
+                }
                 void Carimbo(string[] forma, int x0, int y0, HashSet<Vector2I> alvo)
                 {
                     for (int j = 0; j < forma.Length; j++)
@@ -134,28 +141,41 @@ namespace Jogo25D.Testing
                             if (forma[j][i] == '#') alvo.Add(new Vector2I(x0 + i, y0 + j));
                 }
                 // Arvore: tronco de 1 tile com um toco lateral perto do topo, mais uma das copas.
-                void Tree(int x, int chao, HashSet<Vector2I> trunkSet, HashSet<Vector2I> leafSet)
+                // Monta em conjuntos temporarios para poder RECUSAR a arvore se ela encostar noutra.
+                bool Tree(int x, int chao, HashSet<Vector2I> trunkSet, HashSet<Vector2I> leafSet,
+                          HashSet<Vector2I> ocupado)
                 {
                     int altura = 6 + rng.Next(0, 5);
                     int topo = chao - 1;
-                    for (int y = topo; y > topo - altura; y--) trunkSet.Add(new Vector2I(x, y));
-                    trunkSet.Add(new Vector2I(x + (rng.Next(0, 2) == 0 ? -1 : 1), topo - altura + 1));
+                    var tronco = new HashSet<Vector2I>();
+                    var folha = new HashSet<Vector2I>();
+                    for (int y = topo; y > topo - altura; y--) tronco.Add(new Vector2I(x, y));
+                    tronco.Add(new Vector2I(x + (rng.Next(0, 2) == 0 ? -1 : 1), topo - altura + 1));
                     int sorteio = rng.Next(0, 10);
                     var copa = sorteio < 2 ? CopaGrande : sorteio < 6 ? CopaMedia : CopaPequena;
-                    int largura = copa[0].Length, alturaCopa = copa.Length;
-                    Carimbo(copa, x - largura / 2, topo - altura - alturaCopa + 2, leafSet);
+                    Carimbo(copa, x - copa[0].Length / 2, topo - altura - copa.Length + 2, folha);
+                    // Recusa se qualquer celula da arvore, ou vizinha dela, ja estiver tomada:
+                    // encostar conta como colidir, entao fica sempre um tile de folga.
+                    foreach (var c in tronco) if (Encosta(c, ocupado)) return false;
+                    foreach (var c in folha) if (Encosta(c, ocupado)) return false;
+                    foreach (var c in tronco) { trunkSet.Add(c); ocupado.Add(c); }
+                    foreach (var c in folha) { leafSet.Add(c); ocupado.Add(c); }
+                    return true;
                 }
-                for (int x = LEFT + 8; x < RIGHT - 8; x += 3 + rng.Next(0, 3))
+                // Uma reserva por camada: a arvore so entra se couber sem encostar em nenhuma outra.
+                // Tenta em muitas colunas e deixa a recusa decidir a densidade final.
+                var tomadoCompose = new HashSet<Vector2I>();
+                var tomadoWall = new HashSet<Vector2I>();
+                foreach (var cell in wood) { tomadoCompose.Add(cell); tomadoWall.Add(cell); }
+                for (int x = LEFT + 8; x < RIGHT - 8; x += 2)
                 {
-                    bool ocupado = false;
-                    foreach (var p in Plateaus) if (x > p.X - 5 && x < p.X + p.Width + 5) ocupado = true;
+                    bool bloqueado = false;
+                    foreach (var p in Plateaus) if (x > p.X - 5 && x < p.X + p.Width + 5) bloqueado = true;
                     int chao = Ground(x);
-                    if (cave.Contains(new Vector2I(x, chao)) || cave.Contains(new Vector2I(x, chao + 1))) ocupado = true;
-                    if (ocupado) continue;
-                    // Floresta densa nas duas camadas: uma arvore no plano de jogo e, deslocada,
-                    // outra no fundo. Sem a do fundo a mata fica rala quando a luz escurece o wall.
-                    Tree(x, chao, trunks, leaves);
-                    if (rng.Next(0, 10) < 7) Tree(x + 1 + rng.Next(0, 3), chao, wallTrunks, wallLeaves);
+                    if (cave.Contains(new Vector2I(x, chao)) || cave.Contains(new Vector2I(x, chao + 1))) bloqueado = true;
+                    if (bloqueado) continue;
+                    Tree(x, chao, trunks, leaves, tomadoCompose);
+                    Tree(x + rng.Next(0, 2), chao, wallTrunks, wallLeaves, tomadoWall);
                 }
 
                 // Torre: bico de 4 linhas e paredes "#.....#" ate o chao, oca, fundo de madeira.
@@ -204,7 +224,7 @@ namespace Jogo25D.Testing
                 // forro de madeira das torres. A janela fica sem forro, entao aparece como vao.
                 var wallCells = new HashSet<Vector2I>(earth);
                 foreach (var c in cave) wallCells.Add(c);
-                walls.SetCellsTerrainConnect(A(wallCells), DIRT, 0, false);
+                walls.SetCellsTerrainConnect(A(wallCells), BODY, 0, false);
                 walls.SetCellsTerrainConnect(A(wallTrunks), WOOD, 0, false);
                 walls.SetCellsTerrainConnect(A(wallLeaves), SHEET, 0, false);
                 walls.SetCellsTerrainConnect(A(interior), WOOD, 0, false);
