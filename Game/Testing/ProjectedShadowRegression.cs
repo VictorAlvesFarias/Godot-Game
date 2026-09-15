@@ -70,6 +70,11 @@ namespace Jogo25D.Testing
                 }
                 if(gradients<20) throw new Exception("Debug lost penumbra gradient");
                 GD.Print("SHADOW DEBUG PASS: opaque grayscale, penumbra preserved, independent of scene color and strength");
+                // ESTAGIO DESLIGADO. Ele cobra a exclusao do trecho solido inicial e a regra de
+                // corpo proprio, que sairam do calculo: a sombra agora projeta tudo sobre tudo.
+                // Volta quando o comportamento voltar como MASCARA DE CAMADA, e nao como regra
+                // dentro da sombra - ai o que se testa e quem RECEBE, nao quem projeta.
+                /*
                 for(int y=12;y<16;y++) for(int x=12;x<20;x++) world.SetTerrain(x,y,6);
                 foreach(bool connected in new[]{false,true,false})
                 {
@@ -103,6 +108,7 @@ namespace Jogo25D.Testing
                     if(gap?value>0.01:value<0.99) throw new Exception("Continuous solid / open gap / closed gap rule failed");
                 }
                 GD.Print("AIR GAP SHADOW PASS: solid prefix excluded, gap casts shadow despite remote connection");
+                */
                 GD.Print("PROJECTED SHADOW PASS: endpoints, symmetry, growing penumbra, zero strength");
                 GetTree().Quit();
             }

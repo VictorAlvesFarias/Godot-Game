@@ -25,6 +25,27 @@ Usa o mesmo cálculo e curvas, ignorando ShadowStrength e a cor dos tiles.
 Desativar restaura a composição normal sem reconstruir a geometria.
 
 
+## Sem regras (estado atual)
+
+A sombra projeta **tudo sobre tudo**. Não há exclusão do trecho sólido inicial, regra de escada,
+corpo próprio nem máscara de receptor: o pixel não é classificado, sólido e ar recebem exatamente a
+mesma conta na posição original do pixel.
+
+Consequências medidas, e são esperadas:
+
+| Cena | Resultado |
+| --- | --- |
+| Parede alta ao lado de chão plano | ar sombreado em 8/10 colunas, sólido em 10/10 — o sólido deixou de ficar de fora |
+| Escada descendente de 45° com sol quase vertical | rampa 100% auto-sombreada |
+
+O bloco de regras ficou **comentado** em `projected_shadow.gdshaderinc`, e o estágio de regressão
+que as cobrava ficou comentado em `ProjectedShadowRegression.cs`. Os dois voltam quando o
+comportamento voltar como **máscara de camada** — só a camada de wall recebendo a projeção —, e não
+como regra dentro do cálculo da sombra. Aí o que se testa é quem **recebe**, não quem projeta.
+
+Próximos passos combinados: máscara de corte por camada; mapa de luz usando as duas camadas
+(wall e primária); sistema de escuridão inalterado.
+
 ## Exclusão do trecho sólido inicial
 
 O cálculo não usa corpos conectados. Em cada direção do sol, ignora apenas o
