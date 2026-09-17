@@ -14,6 +14,9 @@ namespace Jogo25D.Blocks
 
         public int? TerrainSet { get; init; }
 
+        public int LightRadius { get; init; } = 0;
+        public Color LightColor { get; init; } = Colors.White;
+
         #endregion
     }
 }

@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Blocks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -15,6 +15,12 @@ namespace Jogo25D.Biomes
     [Tool]
     public partial class TerrainLayer : TileMapLayer
     {
+        // Disparado sempre que uma celula muda (colocar/quebrar bloco, local ou via mutacao de
+        // chunk replicada). E o gancho que o LightingManager usa pra saber quais chunks recalcular,
+        // sem precisar de RPC proprio - luz e so visual, cada cliente recalcula a partir dos tiles
+        // que ja chegaram por aqui.
+        public event System.Action<Vector2I> CellChanged;
+
         private static readonly Vector2I[] NeighborOffsets = new Vector2I[]
         {
             new Vector2I(-1, -1), new Vector2I(0, -1), new Vector2I(1, -1),
@@ -1110,6 +1116,8 @@ namespace Jogo25D.Biomes
             EraseCellWithTerrainConnect(cell);
             ReconnectDecorationsNear(cell);
             RedrawDebugOverlay();
+
+            CellChanged?.Invoke(cell);
         }
 
         public bool PlaceBlock(Vector2I cell, BlockDefinition block)
@@ -1118,6 +1126,8 @@ namespace Jogo25D.Biomes
             PaintBlockAndReconnect(cell, block);
 
             Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "place", block.Id);
+
+            CellChanged?.Invoke(cell);
 
             return true;
         }
@@ -1188,6 +1198,8 @@ namespace Jogo25D.Biomes
 
             ReconnectDecorationsNear(cell);
             baseLayer?.ReconnectDecorationsNear(cell);
+
+            CellChanged?.Invoke(cell);
         }
 
         private void PaintBlockAndReconnect(Vector2I cell, BlockDefinition block)

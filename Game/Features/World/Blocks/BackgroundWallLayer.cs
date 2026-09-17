@@ -83,6 +83,7 @@ namespace Jogo25D.Blocks
             {
                 string dimension = Game.Managers.DimensionManager.Node.ResolveDimensionIdOf(this);
                 Game.Managers.LightMapManager.Node?.GetWorld(dimension).SetBackground(cell.X, cell.Y, !remove);
+                Game.Managers.LightingManager.Node?.OnCellChanged(dimension, cell);
             }
             if (remove) { Store(cell, -1, Vector2I.Zero); EraseCell(cell); return; }
             if (!BlockDB.TryGet(blockId, out var block) || !block.IsBackground) return;

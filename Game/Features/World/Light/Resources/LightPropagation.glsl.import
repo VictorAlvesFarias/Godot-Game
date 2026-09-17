@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://b15xxi17m0dop"
+path="res://.godot/imported/LightPropagation.glsl-59da7f55f52f2c933d1ae8db14ca7793.res"
+
+[deps]
+
+source_file="res://Features/World/Light/Resources/LightPropagation.glsl"
+dest_files=["res://.godot/imported/LightPropagation.glsl-59da7f55f52f2c933d1ae8db14ca7793.res"]
+
+[params]
+

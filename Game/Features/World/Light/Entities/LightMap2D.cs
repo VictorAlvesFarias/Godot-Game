@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using Jogo25D.Core;
 using System.Collections.Generic;
 
@@ -9,6 +9,11 @@ namespace Jogo25D.Light
     public partial class LightMap2D : Node2D
     {
         [Export] public bool LightMapEnabled { get; set; } = true;
+        // O overlay de luz deste sistema esta desligado: quem calcula luz agora e o LightingManager
+        // (porte da copia, em compute shader). Este node continua vivo so pelo caminho da sombra
+        // projetada nas paredes de fundo, que nao mudou. Ligar os dois faz as duas multiplicacoes
+        // se acumularem no mesmo pixel.
+        [Export] public bool LightOverlayEnabled { get; set; } = false;
         [Export] public bool PreviewInEditor { get; set; } = true;
         [Export] public Vector2I PreviewSize { get; set; } = new(120,80);
         [Export] public Godot.Collections.Array<NodePath> Layers { get; set; } = new();
@@ -190,7 +195,7 @@ namespace Jogo25D.Light
             _wallMaterial.SetShaderParameter("map_world_origin",grid.ToGlobal(grid.MapToLocal(_origin)-tileSize/2));
             _wallMaterial.SetShaderParameter("map_world_axis_x",new Vector2(inverse.X.X,inverse.Y.X)/tileSize.X);
             _wallMaterial.SetShaderParameter("map_world_axis_y",new Vector2(inverse.X.Y,inverse.Y.Y)/tileSize.Y);
-            _overlay.Visible=_published && (_debug || _lightPublished);
+            _overlay.Visible=LightOverlayEnabled && _published && (_debug || _lightPublished);
         }
         private static void Upload(ref ImageTexture texture,Image image)
         {

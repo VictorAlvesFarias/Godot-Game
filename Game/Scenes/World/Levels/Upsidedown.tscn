@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/World/Props/Campfire.tscn" id="90_campfire"]
 [ext_resource type="Script" uid="uid://frsyidfqi2it" path="res://Features/World/Blocks/BackgroundWallLayer.cs" id="wall_script"]
 [ext_resource type="TileSet" uid="uid://dcmg5j46t4phg" path="res://Assets/Textures/Tiles/background_walls_tileset.tres" id="wall_tiles"]
+[ext_resource type="Script" path="res://Features/World/Light/Scripts/LightingEditorPreview.cs" id="90_lightpreview"]
 
 [sub_resource type="Image" id="Image_0ofaq"]
 data = {
@@ -186,6 +187,9 @@ script = ExtResource("13_lightmap")
 PreviewSize = Vector2i(140, 90)
 Layers = Array[NodePath]([NodePath("../Base")])
 Settings = ExtResource("14_lmdata")
+
+[node name="LightingPreview" type="Node2D" parent="."]
+script = ExtResource("90_lightpreview")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]
 zoom = Vector2(2.5, 2.5)

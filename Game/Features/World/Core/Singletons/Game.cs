@@ -121,6 +121,13 @@ namespace Jogo25D.Core
                 public static global::Jogo25D.Light.LightMapManager Node { get; internal set; }
             }
 
+            public static class LightingManager
+            {
+                public const string Path = "/root/Main/Managers/LightingManager";
+
+                public static global::Jogo25D.Light.LightingManager Node { get; internal set; }
+            }
+
             public static class DimensionManager
             {
                 public const string Path = "/root/Main/Managers/DimensionManager";

@@ -40,5 +40,10 @@ namespace Jogo25D.Blocks
         {
             return _blocks.TryGetValue(id, out definition);
         }
+
+        public static IEnumerable<BlockDefinition> All()
+        {
+            return _blocks.Values;
+        }
     }
 }
