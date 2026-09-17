@@ -61,6 +61,8 @@ namespace Jogo25D.Testing
                         new Rect2I(origem * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize),
                         root, baseLayer, compose);
                     totalMascara += (Time.GetTicksUsec() - m) / 1000.0;
+                    using var reference=TerrainLightMask.BuildReference(new Rect2I(origem*tileSize,new Vector2I(chunkSize,chunkSize)*tileSize),root,baseLayer,compose);
+                    if(!System.Linq.Enumerable.SequenceEqual(mask.GetData(),reference.GetData())) throw new Exception("Fast mask differs from reference");
 
                     chunks++;
                 }
@@ -72,7 +74,7 @@ namespace Jogo25D.Testing
                 GD.Print("   flood-fill CPU      : " + (totalCpu / chunks).ToString("F2"));
                 GD.Print("   flood-fill GPU      : " + (totalGpu / chunks).ToString("F2"));
                 GD.Print("   mascara de pixel    : " + (totalMascara / chunks).ToString("F2"));
-                GD.Print("BENCHMARK OK");
+                GD.Print("BENCHMARK OK; FAST MASK IDENTICAL TO REFERENCE");
                 GetTree().Quit();
             }
             catch (Exception e) { GD.PushError(e.ToString()); GetTree().Quit(1); }

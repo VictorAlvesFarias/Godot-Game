@@ -22,7 +22,7 @@ namespace Jogo25D.Light
         public string DimensionId { get; set; }
         public LogicalLightWorld World { get; private set; }
         public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision
-            && (_debug || (_lightPublished && !_lightBuilding && World.Field.Settled && _lightComputer.FieldRevision==World.Field.Revision && _lightComputer.BackgroundRevision==World.BackgroundRevision));
+            && (_debug || !LightOverlayEnabled || (_lightPublished && !_lightBuilding && World.Field.Settled && _lightComputer.FieldRevision==World.Field.Revision && _lightComputer.BackgroundRevision==World.BackgroundRevision));
         public long SolarUpdates { get; private set; }
         private readonly AnalyticShadowGeometry _geometry = new();
         private readonly List<TileMapLayer> _layers = new();
@@ -43,7 +43,15 @@ namespace Jogo25D.Light
                 if(IsInstanceValid(pair.Key) && pair.Key.Material==_wallMaterial) pair.Key.Material=pair.Value;
             _originalWallMaterials.Clear();
         }
-        public override void _ExitTree() => ReleaseWallMaterials();
+        private bool _previewDirty=true;
+        private readonly Dictionary<TileMapLayer,long> _previewRevisions=new();
+        private readonly HashSet<TileMapLayer> _previewWatched=new();
+        private void PreviewChanged() => _previewDirty=true;
+        public override void _ExitTree()
+        {
+            ReleaseWallMaterials();
+            foreach(var layer in _previewWatched) if(IsInstanceValid(layer)) layer.Changed -= PreviewChanged;
+        }
         private Shader _normalShader, _debugShader;
         private bool _debug;
         private ImageTexture _texture;
@@ -80,6 +88,11 @@ namespace Jogo25D.Light
             // Base fills physical terrain cells that Compose does not contain.
             var baseLayer=GetParent().GetNodeOrNull<TileMapLayer>("Base");
             if(baseLayer!=null && !_layers.Contains(baseLayer)) _layers.Add(baseLayer);
+            if(Engine.IsEditorHint())
+            {
+                foreach(var layer in _layers) if(_previewWatched.Add(layer)) layer.Changed += PreviewChanged;
+                foreach(var layer in _walls) if(_previewWatched.Add(layer)) layer.Changed += PreviewChanged;
+            }
             _camera=Camera!=null && !Camera.IsEmpty?GetNodeOrNull<Camera2D>(Camera):GetParent().GetNodeOrNull<Camera2D>("Camera2D");
         }
         public override void _Process(double delta)
@@ -92,9 +105,16 @@ namespace Jogo25D.Light
             if (Engine.IsEditorHint())
             {
                 _poll+=delta;
-                if (World==null || _invalid || _poll>=0.25)
+                if(_poll>=0.25)
+                    foreach(var layer in _previewWatched)
+                    {
+                        long revision=EditorTileRevision.Get(layer);
+                        if(!_previewRevisions.TryGetValue(layer,out long oldRevision) || oldRevision!=revision)
+                        { _previewRevisions[layer]=revision;_previewDirty=true; }
+                    }
+                if (World==null || _invalid || (_previewDirty && _poll>=0.25))
                 {
-                    _poll=0;
+                    _poll=0;_previewDirty=false;
                     World ??= new LogicalLightWorld(0,"shadow-preview",1,false) { DepthLightEnabled=true };
                     var cells=new Dictionary<Vector2I,int>();
                     foreach (var layer in _layers) foreach (var c in layer.GetUsedCells()) cells[c]=LogicalLightWorld.TileTerrain(layer,c);
@@ -174,7 +194,7 @@ namespace Jogo25D.Light
             if (!_debug) _material.SetShaderParameter("shadow_strength",Setting(nameof(LightMapData.ShadowStrength),0.65f));
             _material.SetShaderParameter("penumbra_shadow_transition",Setting(nameof(LightMapData.SunPenumbraShadowCurve),1));
             _material.SetShaderParameter("penumbra_ambient_transition",Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1));
-            UpdateLightMap();
+            if(LightOverlayEnabled && !_debug) UpdateLightMap();
             if (!_debug && _lightPublished)
             {
                 _material.SetShaderParameter("light_data",_lightData);
@@ -187,7 +207,7 @@ namespace Jogo25D.Light
             _wallMaterial.SetShaderParameter("map_size",(Vector2)_size*2);
             _wallMaterial.SetShaderParameter("sun_angle",Mathf.DegToRad(_angle));
             _wallMaterial.SetShaderParameter("penumbra",_penumbra);
-            _wallMaterial.SetShaderParameter("geometry_ready",_published && _lightPublished && !_debug);
+            _wallMaterial.SetShaderParameter("geometry_ready",_published && !_debug);
             _wallMaterial.SetShaderParameter("shadow_strength",Setting(nameof(LightMapData.ShadowStrength),0.65f));
             _wallMaterial.SetShaderParameter("penumbra_shadow_transition",Setting(nameof(LightMapData.SunPenumbraShadowCurve),1));
             _wallMaterial.SetShaderParameter("penumbra_ambient_transition",Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1));

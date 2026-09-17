@@ -48,6 +48,7 @@ namespace Jogo25D.Light
                 TextureType = RenderingDevice.TextureType.Type2D,
                 UsageBits = RenderingDevice.TextureUsageBits.StorageBit
                     | RenderingDevice.TextureUsageBits.CanUpdateBit
+                    | RenderingDevice.TextureUsageBits.CanCopyToBit
                     | RenderingDevice.TextureUsageBits.CanCopyFromBit
                     | RenderingDevice.TextureUsageBits.SamplingBit,
             };
@@ -84,7 +85,7 @@ namespace Jogo25D.Light
         }
 
         // Recebe as mesmas entradas do LightPropagationSystem.Compute e devolve o mesmo grid.
-        public Color[,] Compute(Rect2I region, Func<Vector2I, bool> isSolid, IReadOnlyList<LightSource> sources)
+        public Color[,] Compute(Rect2I region, Func<Vector2I, bool> isSolid, IReadOnlyList<LightSource> sources, bool readback = true)
         {
             var size = region.Size;
             Allocate(size);
@@ -152,6 +153,7 @@ namespace Jogo25D.Light
             }
 
             var final = (Iterations % 2 == 0) ? _ping : _pong;
+            if (!readback) return null;
             var data = _device.TextureGetData(final, 0);
             var grid = new Color[size.X, size.Y];
             for (int y = 0; y < size.Y; y++)
@@ -161,6 +163,17 @@ namespace Jogo25D.Light
                 grid[x, y] = new Color(ReadFloat(data, slot), ReadFloat(data, slot + 4), ReadFloat(data, slot + 8));
             }
             return grid;
+        }
+
+        // Called on the render thread with the main RenderingDevice. The output stays
+        // on the GPU; copy it so subsequent jobs can reuse the ping/pong working set.
+        public Rid ComputeOutput(Rect2I region, Func<Vector2I,bool> solid, IReadOnlyList<LightSource> sources)
+        {
+            Compute(region,solid,sources,readback:false);
+            var output=CreateImage(RenderingDevice.DataFormat.R32G32B32A32Sfloat,region.Size);
+            var final=(Iterations%2==0)?_ping:_pong;
+            _device.TextureCopy(final,output,Vector3.Zero,Vector3.Zero,new Vector3(region.Size.X,region.Size.Y,1),0,0,0,0);
+            return output;
         }
 
         private static void WriteFloat(byte[] target, int offset, float value) =>

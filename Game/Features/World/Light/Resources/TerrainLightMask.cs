@@ -1,12 +1,45 @@
 using Godot;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Jogo25D.Light
 {
     // Separate, pixel-resolution coverage: never resample the light grid to trace tile edges.
     public static class TerrainLightMask
     {
+        private sealed class TexturePixels
+        {
+            public byte[] Data;
+            public int Width;
+        }
+        private sealed class ReachCache { public float Value; public bool Valid; }
+        private static readonly ConditionalWeakTable<Texture2D,TexturePixels> PixelCache=new();
+        private static readonly ConditionalWeakTable<TileSet,ReachCache> ReachCaches=new();
+        private static TexturePixels Pixels(Texture2D texture)
+        {
+            var cached=PixelCache.GetValue(texture,key =>
+            {
+                var entry=new TexturePixels();
+                key.Changed += () => entry.Data=null;
+                return entry;
+            });
+            if(cached.Data==null)
+            {
+                using var image=texture.GetImage();
+                if(image.IsCompressed()) image.Decompress();
+                image.Convert(Image.Format.Rgba8);
+                cached.Data=image.GetData();cached.Width=image.GetWidth();
+            }
+            return cached;
+        }
+
         public static Image Build(Rect2I bounds, Node2D overlayRoot, params TileMapLayer[] layers)
+            => BuildCore(bounds,overlayRoot,true,layers);
+
+        internal static Image BuildReference(Rect2I bounds,Node2D overlayRoot,params TileMapLayer[] layers)
+            => BuildCore(bounds,overlayRoot,false,layers);
+
+        private static Image BuildCore(Rect2I bounds,Node2D overlayRoot,bool fastCopy,params TileMapLayer[] layers)
         {
             var pixels = new byte[bounds.Size.X * bounds.Size.Y];
             var textures = new Dictionary<Texture2D, (byte[] Data, int Width)>();
@@ -63,16 +96,33 @@ namespace Jogo25D.Light
 
                     if (!textures.TryGetValue(atlas.Texture, out var texture))
                     {
-                        using var image = atlas.Texture.GetImage();
-                        if (image.IsCompressed())
-                            image.Decompress();
-                        image.Convert(Image.Format.Rgba8);
-                        texture = (image.GetData(), image.GetWidth());
+                        var cached=Pixels(atlas.Texture);
+                        texture=(cached.Data,cached.Width);
                         textures.Add(atlas.Texture, texture);
                     }
 
                     var inverse = transform.AffineInverse();
                     var opacity = data.Modulate.A * layer.Modulate.A * layer.SelfModulate.A;
+                    // Common tile placement: integer translation, no scale or rotation.
+                    // Copy alpha directly instead of transforming every individual pixel.
+                    if(fastCopy && transform.X==Vector2.Right && transform.Y==Vector2.Down
+                        && transform.Origin.X==Mathf.Floor(transform.Origin.X)
+                        && transform.Origin.Y==Mathf.Floor(transform.Origin.Y) && opacity==1f)
+                    {
+                        int ox=(int)transform.Origin.X,oy=(int)transform.Origin.Y;
+                        for(int py=start.Y;py<end.Y;py++)
+                        {
+                            int src=((source.Position.Y+py-oy)*texture.Width+source.Position.X+start.X-ox)*4+3;
+                            int dst=(py-bounds.Position.Y)*bounds.Size.X+start.X-bounds.Position.X;
+                            for(int px=start.X;px<end.X;px++,src+=4,dst++)
+                            {
+                                int alpha=texture.Data[src];
+                                if(alpha==255) pixels[dst]=255;
+                                else if(alpha!=0) pixels[dst]=(byte)(alpha+(pixels[dst]*(255-alpha)+127)/255);
+                            }
+                        }
+                        continue;
+                    }
                     for (var py = start.Y; py < end.Y; py++)
                     for (var px = start.X; px < end.X; px++)
                     {
@@ -104,6 +154,11 @@ namespace Jogo25D.Light
 
         private static float GetTextureReach(TileSet tileSet)
         {
+            var cached=ReachCaches.GetValue(tileSet,key =>
+            {
+                var entry=new ReachCache();key.Changed += () => entry.Valid=false;return entry;
+            });
+            if(cached.Valid) return cached.Value;
             var reach = 0f;
             for (var s = 0; s < tileSet.GetSourceCount(); s++)
             {
@@ -121,6 +176,7 @@ namespace Jogo25D.Light
                     }
                 }
             }
+            cached.Value=reach;cached.Valid=true;
             return reach;
         }
 

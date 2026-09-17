@@ -10,7 +10,7 @@ namespace Jogo25D.Testing
     // se o grid bater com o da CPU dentro da precisao de half float.
     public partial class LightPortGpuCheck : Node
     {
-        public override void _Ready()
+        public override async void _Ready()
         {
             try
             {
@@ -42,6 +42,19 @@ namespace Jogo25D.Testing
                 var grid = gpu.Compute(region, IsSolid, sources);
                 double msGpu = (Time.GetTicksUsec() - marca) / 1000.0;
 
+                using var dispatcher=new LightPropagationDispatcher();
+                using var output=await dispatcher.ComputeTextureAsync(region,IsSolid,sources);
+                if(output.Texture is not Texture2Drd) throw new Exception("Direct GPU path fell back to CPU");
+                await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
+                using var direct=output.Texture.GetImage();
+                float directError=0;
+                for(int y=0;y<region.Size.Y;y++) for(int x=0;x<region.Size.X;x++)
+                {
+                    var a=cpu[x,y];var b=direct.GetPixel(x,y);
+                    directError=Mathf.Max(directError,Mathf.Max(Mathf.Abs(a.R-b.R),Mathf.Max(Mathf.Abs(a.G-b.G),Mathf.Abs(a.B-b.B))));
+                }
+                if(directError>0.002f) throw new Exception("Direct GPU output differs: "+directError);
+                GD.Print("DIRECT GPU PASS max error="+directError);
                 GD.Print("REGIAO " + region.Size + "  fontes=" + sources.Count + "  iteracoes=" + LightPropagationGpu.Iterations);
                 GD.Print("CPU " + msCpu.ToString("F1") + " ms   GPU " + msGpu.ToString("F1")
                     + " ms (primeira " + msPrimeiro.ToString("F1") + " ms)");

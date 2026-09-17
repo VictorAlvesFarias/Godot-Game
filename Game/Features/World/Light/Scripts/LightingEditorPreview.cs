@@ -27,12 +27,45 @@ namespace Jogo25D.Light
         private TerrainLayer _baseLayer;
         private TileMapLayer _walls;
         private Sprite2D _sprite;
-        private ImageTexture _texture;
+        private LightTextureOutput _output;
+        private bool _building;
         private ImageTexture _maskTexture;
         private Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> _lightEmittingBlocks;
         private double _timer;
-        private readonly LightPropagationDispatcher _propagacao = new();
+        private LightPropagationDispatcher _propagacao;
+        private int _lifecycle;
         private bool _warnedAboutSize;
+        private bool _dirty=true;
+        private readonly HashSet<TileMapLayer> _watched=new();
+        private readonly HashSet<TileSet> _watchedSets=new();
+        private int _visualState;
+        private int _maskVersion;
+        private int _publishedMaskVersion=-1;
+        private Rect2I _maskBounds;
+        private int _maskVisualState;
+        public long RebuildCount { get; private set; }
+        private void MarkDirty() { _dirty=true;_maskVersion++; }
+        private void Watch(TileMapLayer layer)
+        {
+            if(layer==null) return;
+            if(_watched.Add(layer)) layer.Changed += MarkDirty;
+            if(layer.TileSet!=null && _watchedSets.Add(layer.TileSet)) layer.TileSet.Changed += MarkDirty;
+        }
+        private int VisualState(bool maskOnly=false)
+        {
+            var hash=new System.HashCode();
+            if(!maskOnly) hash.Add(IncludeSkylight);hash.Add(Padding);hash.Add(GlobalTransform);
+            foreach(var layer in new TileMapLayer[]{_layer,_baseLayer,_walls})
+                if(layer!=null) { hash.Add(EditorTileRevision.Get(layer));hash.Add(layer.GetInstanceId());hash.Add(layer.GlobalTransform);hash.Add(layer.Modulate);hash.Add(layer.SelfModulate);hash.Add(layer.Enabled);hash.Add(layer.IsVisibleInTree()); }
+            return hash.ToHashCode();
+        }
+
+        public override void _EnterTree()
+        {
+            _lifecycle++;
+            _propagacao=new LightPropagationDispatcher();
+            _building=false;_dirty=true;_publishedMaskVersion=-1;
+        }
 
         public override void _Ready()
         {
@@ -50,7 +83,13 @@ namespace Jogo25D.Light
 
         public override void _ExitTree()
         {
-            _propagacao.Dispose();
+            foreach(var layer in _watched) if(IsInstanceValid(layer)) layer.Changed -= MarkDirty;
+            foreach(var set in _watchedSets) if(IsInstanceValid(set)) set.Changed -= MarkDirty;
+            _lifecycle++;
+            _watched.Clear();_watchedSets.Clear();
+            _propagacao?.Dispose();_propagacao=null;
+            _building=false;_dirty=true;
+            _output?.Dispose();_output=null;
         }
 
         public override void _Process(double delta)
@@ -86,21 +125,20 @@ namespace Jogo25D.Light
                 return;
             }
 
+            int state=VisualState();
+            if(state!=_visualState) { _visualState=state;_dirty=true; }
+            if(!_dirty) { if(_sprite!=null) _sprite.Visible=true;return; }
+            if(_building) return;
+            _dirty=false;
             Rebuild();
         }
 
         private void ResolveReferences()
         {
             _walls = GetParent()?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
-            if (_layer == null || !IsInstanceValid(_layer))
-            {
-                _layer = GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
-            }
-
-            if (_baseLayer == null || !IsInstanceValid(_baseLayer))
-            {
-                _baseLayer = GetNodeOrNull<TerrainLayer>(BaseLayerPath);
-            }
+            _layer = GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
+            _baseLayer = GetNodeOrNull<TerrainLayer>(BaseLayerPath);
+            Watch(_layer);Watch(_baseLayer);Watch(_walls);
         }
 
         private void EnsureSprite()
@@ -128,7 +166,7 @@ namespace Jogo25D.Light
             }
         }
 
-        private void Rebuild()
+        private async void Rebuild()
         {
             // O editor recria a instancia C# deste [Tool] quando recompila o assembly, e nem sempre
             // chama _Ready de novo - mas o _Process volta a rodar. Sem isto, o indice de emissores e
@@ -184,39 +222,38 @@ namespace Jogo25D.Light
             }
 
             var sources = LightSourceScanner.CollectSources(_layer, _baseLayer, region, _lightEmittingBlocks, IsSolid, IncludeSkylight);
-            var grid = _propagacao.Compute(region, IsSolid, sources);
-
-            var image = Image.CreateEmpty(region.Size.X, region.Size.Y, false, Image.Format.Rgba8);
-
-            for (var x = 0; x < region.Size.X; x++)
+            _propagacao ??= new LightPropagationDispatcher();
+            int lifecycle=_lifecycle;
+            int requestedState=VisualState();
+            int requestedMaskVersion=_maskVersion;
+            _building=true;
+            try
             {
-                for (var y = 0; y < region.Size.Y; y++)
+                var output=await _propagacao.ComputeTextureAsync(region,IsSolid,sources);
+                if(!IsInstanceValid(this) || !IsInsideTree() || lifecycle!=_lifecycle) { output.Dispose();return; }
+                if(requestedState!=VisualState() || requestedMaskVersion!=_maskVersion)
+                { output.Dispose();_dirty=true;return; }
+                var tileSize = _layer.TileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
+                var bounds=new Rect2I(region.Position*tileSize,region.Size*tileSize);
+                var material=(ShaderMaterial)_sprite.Material;
+                int maskState=VisualState(maskOnly:true);
+                if(_maskTexture==null || _publishedMaskVersion!=_maskVersion || _maskBounds!=bounds || _maskVisualState!=maskState)
                 {
-                    var value = grid[x, y];
-
-                    image.SetPixel(x, y, new Color(
-                        Mathf.Max(value.R, LightingConstants.AMBIENT_MIN),
-                        Mathf.Max(value.G, LightingConstants.AMBIENT_MIN),
-                        Mathf.Max(value.B, LightingConstants.AMBIENT_MIN)));
+                    using var mask=TerrainLightMask.Build(bounds,this,_baseLayer,_layer,_walls);
+                    TerrainLightMask.UpdateMaterial(material,ref _maskTexture,mask);
+                    _publishedMaskVersion=_maskVersion;_maskBounds=bounds;_maskVisualState=maskState;
                 }
+                material.SetShaderParameter("ambient_min",LightingConstants.AMBIENT_MIN);
+                _sprite.Texture=output.Texture;
+                _output?.Dispose();_output=output;
+                _sprite.Position=new Vector2(region.Position.X*tileSize,region.Position.Y*tileSize);
+                _sprite.Scale=new Vector2(tileSize,tileSize);
+                RebuildCount++;
             }
+            catch(System.ObjectDisposedException) { if(lifecycle==_lifecycle) _dirty=true; }
+            catch(System.Exception error) { GD.PushError(error.ToString());_dirty=true; }
+            finally { if(lifecycle==_lifecycle) _building=false; }
 
-            var tileSize = _layer.TileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-            using var mask = TerrainLightMask.Build(new Rect2I(region.Position * tileSize, region.Size * tileSize), this, _baseLayer, _layer, _walls);
-            TerrainLightMask.UpdateMaterial((ShaderMaterial)_sprite.Material, ref _maskTexture, mask);
-
-            if (_texture == null || _texture.GetSize() != image.GetSize())
-            {
-                _texture = ImageTexture.CreateFromImage(image);
-                _sprite.Texture = _texture;
-            }
-            else
-            {
-                _texture.Update(image);
-            }
-
-            _sprite.Position = new Vector2(region.Position.X * tileSize, region.Position.Y * tileSize);
-            _sprite.Scale = new Vector2(tileSize, tileSize);
         }
     }
 }

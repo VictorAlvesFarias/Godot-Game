@@ -27,6 +27,9 @@ namespace Jogo25D.Light
         private readonly Dictionary<string, Rect2I> _authoredRectByDimension = new();
         private readonly LightPropagationDispatcher _propagacao = new();
 
+        private readonly HashSet<(string,Vector2I)> _inFlight=new();
+        private bool _disposed;
+
         private Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> _lightEmittingBlocks;
 
         public override void _Ready()
@@ -59,7 +62,9 @@ namespace Jogo25D.Light
 
         public override void _ExitTree()
         {
+            _disposed=true;
             _propagacao.Dispose();
+            foreach(var overlays in _overlaysByDimension.Values) foreach(var overlay in overlays.Values) overlay.Dispose();
         }
 
         public override void _Process(double delta)
@@ -231,7 +236,7 @@ namespace Jogo25D.Light
                     continue;
                 }
 
-                if (processed >= LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME)
+                if (_inFlight.Contains((dimensionId,chunkCoord)) || processed >= LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME)
                 {
                     continue;
                 }
@@ -251,7 +256,7 @@ namespace Jogo25D.Light
             }
         }
 
-        private void RebuildChunk(string dimensionId, Node2D overlayRoot, TerrainLayer layer, TerrainLayer baseLayer, Vector2I chunkCoord)
+        private async void RebuildChunk(string dimensionId, Node2D overlayRoot, TerrainLayer layer, TerrainLayer baseLayer, Vector2I chunkCoord)
         {
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
             var padding = LightingConstants.CHUNK_PADDING;
@@ -266,45 +271,25 @@ namespace Jogo25D.Light
             }
 
             var sources = LightSourceScanner.CollectSources(layer, baseLayer, region, _lightEmittingBlocks, IsSolid);
-            var grid = _propagacao.Compute(region, IsSolid, sources);
-
-            ApplyToOverlay(dimensionId, overlayRoot, chunkCoord, grid, layer, baseLayer);
-        }
-
-        private void ApplyToOverlay(string dimensionId, Node2D overlayRoot, Vector2I chunkCoord, Color[,] grid, TerrainLayer layer, TerrainLayer baseLayer)
-        {
-            var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
-            var padding = LightingConstants.CHUNK_PADDING;
-            var image = Image.CreateEmpty(chunkSize, chunkSize, false, Image.Format.Rgba8);
-
-            for (var localX = 0; localX < chunkSize; localX++)
+            _inFlight.Add((dimensionId,chunkCoord));
+            try
             {
-                for (var localY = 0; localY < chunkSize; localY++)
+                var output=await _propagacao.ComputeTextureAsync(region,IsSolid,sources);
+                if(_disposed || !_loadedByDimension[dimensionId].Contains(chunkCoord) || !IsInstanceValid(overlayRoot)) { output.Dispose();return; }
+                var overlays=_overlaysByDimension[dimensionId];
+                if(!overlays.TryGetValue(chunkCoord,out var overlay))
                 {
-                    var value = grid[localX + padding, localY + padding];
-
-                    image.SetPixel(localX, localY, new Color(
-                        Mathf.Max(value.R, LightingConstants.AMBIENT_MIN),
-                        Mathf.Max(value.G, LightingConstants.AMBIENT_MIN),
-                        Mathf.Max(value.B, LightingConstants.AMBIENT_MIN)));
+                    overlay=new LightChunkOverlay(overlayRoot,chunkCoord,Game.Managers.DimensionManager.Node.TileSize);
+                    overlays[chunkCoord]=overlay;
                 }
+                int tileSize=Game.Managers.DimensionManager.Node.TileSize;
+                var walls=Game.Managers.DimensionManager.Node.ResolveParent(dimensionId)?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
+                using var mask=TerrainLightMask.Build(new Rect2I(chunkOrigin*tileSize,new Vector2I(chunkSize,chunkSize)*tileSize),overlayRoot,baseLayer,layer,walls);
+                overlay.UpdateOutput(output,mask,padding,region.Size.X);
             }
-
-            var overlays = _overlaysByDimension[dimensionId];
-
-            if (!overlays.TryGetValue(chunkCoord, out var overlay))
-            {
-                overlay = new LightChunkOverlay(overlayRoot, chunkCoord, Game.Managers.DimensionManager.Node.TileSize);
-                overlays[chunkCoord] = overlay;
-            }
-
-            var tileSize = Game.Managers.DimensionManager.Node.TileSize;
-            var walls = Game.Managers.DimensionManager.Node.ResolveParent(dimensionId)
-                ?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
-            using var mask = TerrainLightMask.Build(new Rect2I(
-                CoordinateUtilities.ChunkToCell(chunkCoord) * tileSize,
-                new Vector2I(chunkSize, chunkSize) * tileSize), overlayRoot, baseLayer, layer, walls);
-            overlay.UpdateTexture(image, mask);
+            catch(System.ObjectDisposedException) { }
+            catch(System.Exception error) { GD.PushError(error.ToString()); }
+            finally { _inFlight.Remove((dimensionId,chunkCoord)); }
         }
 
         private Node2D GetOverlayRoot(string dimensionId)
