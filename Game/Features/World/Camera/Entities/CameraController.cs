@@ -14,6 +14,17 @@ namespace Jogo25D.Systems
 		public float FreeCameraSpeed { get; set; } = 800f;
 		public float FreeCameraZoomStep { get; set; } = 0.1f;
 
+		// Suavizacao: a camera persegue o player em vez de ficar colada nele. O corpo do player
+		// nao tem aceleracao (velocidade vai de 0 a 300 em um frame), pula a -750 e sobe degrau
+		// de 64 px em ~0,14 s - cada uma dessas quebras chegava inteira na tela. Perseguindo a
+		// 12/s o solavanco por frame cai de 12,1 px para 2,4 px e o atraso volta a zero assim
+		// que o player para. Medido em Testing/CameraSmoothProbe.
+		public float SmoothingSpeed { get; set; } = 12f;
+
+		// Acima disso o alvo nao andou: trocou de lugar (troca de dimensao, load, respawn). Ai a
+		// camera corta em vez de varrer o mundo inteiro ate alcancar.
+		public float SmoothingCutDistance { get; set; } = 512f;
+
 		#endregion
 
 		#region Node references
@@ -26,6 +37,9 @@ namespace Jogo25D.Systems
 		public override void _Ready()
 		{
 			Enabled = true;
+
+			PositionSmoothingEnabled = true;
+			PositionSmoothingSpeed = SmoothingSpeed;
 
 			AddToGroup("cameras");
 
@@ -79,7 +93,15 @@ namespace Jogo25D.Systems
 
             if (PlayerRef != null && IsInstanceValid(PlayerRef))
 			{
-				GlobalPosition = PlayerRef.GlobalPosition;
+				var target = PlayerRef.GlobalPosition;
+				var teleported = GlobalPosition.DistanceTo(target) > SmoothingCutDistance;
+
+				GlobalPosition = target;
+
+				if (teleported)
+				{
+					ResetSmoothing();
+				}
 			}
 		}
 
