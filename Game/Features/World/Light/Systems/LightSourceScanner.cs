@@ -32,35 +32,26 @@ namespace Jogo25D.Light
             Rect2I region,
             IReadOnlyDictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> lightEmittingBlocks,
             Func<Vector2I, bool> isSolid,
-            bool includeSkylight = true)
+            bool includeSkylight = true, Func<Vector2I,bool> hasBackground = null)
         {
+            // Background openness is a depth-axis sky entrance, independent of a roof
+            // in the foreground. Walls receive light but do not obstruct lateral travel.
+            if(hasBackground==null)
+            {
+                var walls=layer.GetParent()?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
+                hasBackground=cell => walls!=null && walls.GetCellSourceId(cell)!=-1;
+            }
             var sources = new List<LightSource>();
             var right = region.Position.X + region.Size.X;
             var bottom = region.Position.Y + region.Size.Y;
 
             for (var x = region.Position.X; x < right; x++)
             {
-                if (includeSkylight)
-                {
-                    // "Ceu" e por coluna, nao pela borda de cima da regiao inteira: escaneia de
-                    // cima pra baixo e semeia toda celula aberta ate achar o primeiro solido. O ceu
-                    // aberto e luz ambiente direta (todo tile exposto ja nasce no claro maximo), nao
-                    // um unico ponto de luz se espalhando por flood-fill - um so ponto por coluna
-                    // criava um "raio" saindo de cada pico em vez de uma faixa uniforme de luz.
-                    for (var y = region.Position.Y; y < bottom; y++)
-                    {
-                        if (isSolid(new Vector2I(x, y)))
-                        {
-                            break;
-                        }
-
-                        sources.Add(new LightSource(new Vector2I(x, y), Colors.White));
-                    }
-                }
-
                 for (var y = region.Position.Y; y < bottom; y++)
                 {
                     var cell = new Vector2I(x, y);
+                    if(includeSkylight && !isSolid(cell) && !hasBackground(cell))
+                        sources.Add(new LightSource(cell,Colors.White));
                     var block = FindLightEmittingBlockAt(layer, baseLayer, cell, lightEmittingBlocks);
 
                     if (block == null)

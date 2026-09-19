@@ -270,7 +270,9 @@ namespace Jogo25D.Light
                 return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);
             }
 
-            var sources = LightSourceScanner.CollectSources(layer, baseLayer, region, _lightEmittingBlocks, IsSolid);
+            var background=Game.Managers.DimensionManager.Node.ResolveParent(dimensionId)?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
+            var sources = LightSourceScanner.CollectSources(layer, baseLayer, region, _lightEmittingBlocks, IsSolid,
+                includeSkylight: false, hasBackground: cell => background!=null && background.GetCellSourceId(cell)!=-1);
             _inFlight.Add((dimensionId,chunkCoord));
             try
             {

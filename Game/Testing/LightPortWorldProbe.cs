@@ -83,6 +83,21 @@ namespace Jogo25D.Testing
                 if (lightMap != null) lightMap.LightOverlayEnabled = false;
                 await Capturar("comparacao-copia-portada");
 
+                // Window transmission must remain visible without ambient shadow fill.
+                if(lightMap?.Settings is Jogo25D.Light.LightMapData solarSettings)
+                {
+                    float previousInfluence=solarSettings.AmbientLightInfluence;
+                    float previousShadow=solarSettings.ShadowStrength;
+                    var previousPosition=camera.GlobalPosition;
+                    solarSettings.AmbientLightInfluence=0;
+                    solarSettings.ShadowStrength=1;
+                    camera.GlobalPosition=grid.ToGlobal(grid.MapToLocal(new Vector2I(-40,-25)));
+                    await Capturar("janela-sem-influencia-ambiente");
+                    solarSettings.AmbientLightInfluence=previousInfluence;
+                    solarSettings.ShadowStrength=previousShadow;
+                    camera.GlobalPosition=previousPosition;
+                }
+
                 // 2) so a luz antiga deste projeto
                 if (overlayRootUp != null) overlayRootUp.Visible = false;
                 if (lightMap != null) lightMap.LightOverlayEnabled = true;
@@ -91,6 +106,16 @@ namespace Jogo25D.Testing
                 // 3) sem luz nenhuma, pra ver o terreno cru
                 if (lightMap != null) lightMap.LightOverlayEnabled = false;
                 await Capturar("comparacao-sem-luz");
+                var walls=mostrar.GetNode<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
+                var usedWalls=walls.GetUsedCells();
+                dims.ClearEntities("upsidedown");
+                if(dims.ResolveEntities("upsidedown").GetChildCount()!=0) throw new Exception("Entities remained after clear");
+                dims.ClearLayers(discardBackground:true);
+                foreach(var cell in usedWalls)
+                    walls.RestoreChunk(new Vector2I((int)Math.Floor(cell.X/32.0),(int)Math.Floor(cell.Y/32.0)));
+                if(walls.GetUsedCells().Count!=0 || System.Linq.Enumerable.Any(walls.LogicalCells))
+                    throw new Exception("Discarded authored walls reappeared after chunk restore");
+                GD.Print("PROCEDURAL CLEANUP PASS: walls cache and entities cleared");
                 GD.Print("PROBE OK");
                 GetTree().Quit();
             }

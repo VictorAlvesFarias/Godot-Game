@@ -135,7 +135,8 @@ namespace Jogo25D.Light
 
         private void ResolveReferences()
         {
-            _walls = GetParent()?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+            var level=GetParent() is LightMap2D ? GetParent().GetParent() : GetParent();
+            _walls = level?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
             _layer = GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
             _baseLayer = GetNodeOrNull<TerrainLayer>(BaseLayerPath);
             Watch(_layer);Watch(_baseLayer);Watch(_walls);
@@ -160,10 +161,7 @@ namespace Jogo25D.Light
 
             AddChild(_sprite);
 
-            if (GetTree()?.EditedSceneRoot != null)
-            {
-                _sprite.Owner = GetTree().EditedSceneRoot;
-            }
+            // Generated GPU output is transient; never serialize it into the scene.
         }
 
         private async void Rebuild()
@@ -221,7 +219,7 @@ namespace Jogo25D.Light
                 return _layer.GetCellSourceId(cell) != -1 || (_baseLayer != null && _baseLayer.GetCellSourceId(cell) != -1);
             }
 
-            var sources = LightSourceScanner.CollectSources(_layer, _baseLayer, region, _lightEmittingBlocks, IsSolid, IncludeSkylight);
+            var sources = LightSourceScanner.CollectSources(_layer, _baseLayer, region, _lightEmittingBlocks, IsSolid, false, cell => _walls!=null && _walls.GetCellSourceId(cell)!=-1);
             _propagacao ??= new LightPropagationDispatcher();
             int lifecycle=_lifecycle;
             int requestedState=VisualState();

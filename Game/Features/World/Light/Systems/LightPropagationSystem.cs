@@ -92,8 +92,13 @@ namespace Jogo25D.Light
                     }
 
                     var worldNeighbor = neighbor + region.Position;
-                    var falloff = isSolid(worldNeighbor) ? LightingConstants.SOLID_FALLOFF : LightingConstants.AIR_FALLOFF;
-                    var propagated = currentColor * Mathf.Pow(falloff, distance);
+                    Color propagated;
+                    if(isSolid(worldNeighbor)) propagated=currentColor*Mathf.Pow(LightingConstants.SOLID_FALLOFF,distance);
+                    else
+                    {
+                        float loss=LightingConstants.AIR_LIGHT_LOSS*distance;
+                        propagated=new Color(Mathf.Max(0,currentColor.R-loss),Mathf.Max(0,currentColor.G-loss),Mathf.Max(0,currentColor.B-loss));
+                    }
 
                     if (propagated.R < LightingConstants.MIN_LIGHT_THRESHOLD && propagated.G < LightingConstants.MIN_LIGHT_THRESHOLD && propagated.B < LightingConstants.MIN_LIGHT_THRESHOLD)
                     {

@@ -5,14 +5,12 @@ using System.Collections.Generic;
 
 namespace Jogo25D.Light
 {
-    // Mesma propagacao do LightPropagationSystem, executada em compute shader. A regra nao muda:
-    // 8 vizinhos, falloff multiplicativo da celula de destino, combinacao por max e corte em
-    // MIN_LIGHT_THRESHOLD. So o lugar onde a conta roda e que mudou.
+    // Same eight-neighbor solver as CPU: linear loss in air, multiplicative absorption in solids.
     public sealed class LightPropagationGpu : IDisposable
     {
-        // 0.85^n < 0.02 => n = 24. Passos alem disso nao mudam mais nada.
+        // Unit intensity travels at most 24 air tiles; solid absorption shortens the path.
         public static readonly int Iterations =
-            Mathf.CeilToInt(Mathf.Log(LightingConstants.MIN_LIGHT_THRESHOLD) / Mathf.Log(LightingConstants.AIR_FALLOFF));
+            Mathf.CeilToInt(1f / LightingConstants.AIR_LIGHT_LOSS);
 
         private readonly RenderingDevice _device;
         private readonly bool _ownsDevice;
@@ -128,7 +126,7 @@ namespace Jogo25D.Light
             Buffer.BlockCopy(new[] { size.X, size.Y }, 0, constants, 0, 8);
             Buffer.BlockCopy(new[]
             {
-                LightingConstants.AIR_FALLOFF,
+                LightingConstants.AIR_LIGHT_LOSS,
                 LightingConstants.SOLID_FALLOFF,
                 LightingConstants.MIN_LIGHT_THRESHOLD,
                 0f, 0f, 0f,

@@ -117,6 +117,7 @@ namespace Jogo25D.Dimensions
                 return;
             }
 
+            parent.RemoveChild(entities);
             entities.Name = "EntitiesDiscarded";
             entities.QueueFree();
 
@@ -191,11 +192,12 @@ namespace Jogo25D.Dimensions
 
         // Zera o terreno desenhado das duas dimensoes. O que o cliente tinha por padrao sai daqui
         // antes de receber os chunks do servidor.
-        public void ClearLayers()
+        public void ClearLayers(bool discardBackground = false)
         {
             foreach (var dimensionId in _dimensions.Keys)
             {
-                ResolveParent(dimensionId)?.GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls")?.ClearRenderedForStreaming();
+                var walls=ResolveParent(dimensionId)?.GetNodeOrNull<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
+                if(discardBackground) walls?.ResetForNewWorld(); else walls?.ClearRenderedForStreaming();
                 ResolveBaseLayer(dimensionId)?.Clear();
                 ResolveLayer(dimensionId)?.Clear();
             }
@@ -204,7 +206,8 @@ namespace Jogo25D.Dimensions
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void ClearLayersReceive()
         {
-            ClearLayers();
+            ClearEntities();
+            ClearLayers(discardBackground:true);
         }
 
         public void Reset()

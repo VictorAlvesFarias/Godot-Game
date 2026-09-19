@@ -13,7 +13,14 @@ public partial class LightPerformanceEditorCheck : Node
     private int _source;
     private Vector2I _atlas;
     private byte[] _before;
-    private byte[] Pixels() => _preview.GetNode<Sprite2D>("PreviewSprite").Texture.GetImage().GetData();
+    private byte[] Pixels() {
+            var sprite=_preview.GetNode<Sprite2D>("PreviewSprite");
+            using var emission=sprite.Texture.GetImage();
+            var sky=((ShaderMaterial)sprite.Material).GetShaderParameter("sky_access").AsGodotObject() as Texture2D;
+            if(sky==null) return emission.GetData();
+            using var field=sky.GetImage();
+            return System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(emission.GetData(),field.GetData()));
+        }
     private void Patch(TileMapLayer layer)
     { for(int y=-4;y<=4;y++) for(int x=-4;x<=4;x++) layer.SetCell(new(x,y),_source,_atlas); }
     private void CheckChanged(string label)
@@ -24,7 +31,9 @@ public partial class LightPerformanceEditorCheck : Node
     public override void _Ready()
     {
         if(!Engine.IsEditorHint() || System.Environment.GetEnvironmentVariable("LIGHT_PERF_EDITOR_TEST")!="1") { SetProcess(false);return; }
-        foreach(var child in GetParent().GetChildren()) if(child is LightingEditorPreview preview) _preview=preview;
+        var light=GetParent().GetNode<LightMap2D>("LightMap");
+        light._Process(0);
+        _preview=light.EditorPreview;
         if(_preview==null) { GD.PushError("Missing preview");GetTree().Quit(1); }
     }
     public override void _Process(double delta)
@@ -40,7 +49,7 @@ public partial class LightPerformanceEditorCheck : Node
         {
             if(_preview.RebuildCount!=_count) { GD.PushError("Idle preview rebuilt");GetTree().Quit(1);return; }
             GD.Print("EDITOR IDLE PASS: zero rebuilds in 3 seconds");
-            _preview.IncludeSkylight=!_preview.IncludeSkylight;_stage=2;_time=0;
+            GetParent().GetNode<LightMap2D>("LightMap").IncludeSkylight=!_preview.IncludeSkylight;_stage=2;_time=0;
         }
         else if(_stage==2 && _preview.RebuildCount>_count)
         {
@@ -58,7 +67,7 @@ public partial class LightPerformanceEditorCheck : Node
             var cell=_base.GetUsedCells()[0];_source=_base.GetCellSourceId(cell);_atlas=_base.GetCellAtlasCoords(cell);
             _base.Clear();_compose.Clear();GetParent().GetNode<TileMapLayer>("BackgroundWalls").Clear();
             _base.SetCell(new(-16,-16),_source,_atlas);_base.SetCell(new(16,16),_source,_atlas);
-            _preview.IncludeSkylight=true;_count=_preview.RebuildCount;_stage=4;_time=0;
+            GetParent().GetNode<LightMap2D>("LightMap").IncludeSkylight=true;_count=_preview.RebuildCount;_stage=4;_time=0;
         }
         else if(_stage==4 && _preview.RebuildCount>_count && _time>2)
         { _before=Pixels();Patch(_base);_count=_preview.RebuildCount;_stage=5;_time=0; }
@@ -82,7 +91,23 @@ public partial class LightPerformanceEditorCheck : Node
             _before=Pixels();_count=_preview.RebuildCount;_compose.Clear();_stage=9;_time=0;
         }
         else if(_stage==9 && _preview.RebuildCount>_count && _time>2)
-        { CheckChanged("EDITOR REENTER AND EDIT");GetTree().Quit(); }
+        {
+            CheckChanged("EDITOR REENTER AND EDIT");
+            GetParent().GetNode<LightMap2D>("LightMap").PreviewInEditor=false;
+            _stage=10;_time=0;
+        }
+        else if(_stage==10 && _time>1)
+        {
+            if(_preview.GetNode<Sprite2D>("PreviewSprite").Visible) throw new Exception("Unified preview toggle did not hide light");
+            GetParent().GetNode<LightMap2D>("LightMap").PreviewInEditor=true;
+            _stage=11;_time=0;
+        }
+        else if(_stage==11 && _time>2)
+        {
+            if(!_preview.GetNode<Sprite2D>("PreviewSprite").Visible) throw new Exception("Unified preview did not return");
+            if(GetParent().GetNodeOrNull("LightingPreview")!=null) throw new Exception("Separate preview node remains");
+            GD.Print("UNIFIED NODE PASS: preview toggle and single authored node");GetTree().Quit();
+        }
         if(_time>30) { GD.PushError("Preview timeout");GetTree().Quit(1); }
     }
 }

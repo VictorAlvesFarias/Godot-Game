@@ -19,12 +19,41 @@ namespace Jogo25D.Light
         [Export] public Godot.Collections.Array<NodePath> Layers { get; set; } = new();
         [Export] public NodePath Camera { get; set; } = new("");
         [Export(PropertyHint.ResourceType,"LightMapData")] public Resource Settings { get; set; }
+        [ExportGroup("Preview do mapa de luz")]
+        [Export] public bool IncludeSkylight { get; set; } = true;
+        [Export] public NodePath ComposeLayerPath { get; set; } = new("../Compose");
+        [Export] public NodePath BaseLayerPath { get; set; } = new("../Base");
+        [Export(PropertyHint.Range,"8,64,1")] public int PreviewPadding { get; set; } = 16;
+        [Export(PropertyHint.Range,"0.1,3,0.1")] public float PreviewRefreshIntervalSeconds { get; set; } = 0.5f;
+        public LightingEditorPreview EditorPreview { get; private set; }
+        private void UpdateEditorPreview()
+        {
+            if(!Engine.IsEditorHint()) return;
+            if(!IsInstanceValid(EditorPreview))
+            {
+                EditorPreview=GetNodeOrNull<LightingEditorPreview>("TerrainPreview");
+                if(EditorPreview==null)
+                {
+                    EditorPreview=new LightingEditorPreview { Name="TerrainPreview",Enabled=false };
+                    AddChild(EditorPreview,false,InternalMode.Back);
+                }
+            }
+            // The grid belongs to the level, not to the movable LightMap node.
+            EditorPreview.Transform=Transform.AffineInverse();
+            EditorPreview.ComposeLayerPath=new NodePath(ComposeLayerPath.ToString().StartsWith("/")?ComposeLayerPath.ToString():"../"+ComposeLayerPath);
+            EditorPreview.BaseLayerPath=new NodePath(BaseLayerPath.ToString().StartsWith("/")?BaseLayerPath.ToString():"../"+BaseLayerPath);
+            EditorPreview.IncludeSkylight=IncludeSkylight;
+            EditorPreview.Padding=PreviewPadding;
+            EditorPreview.RefreshIntervalSeconds=PreviewRefreshIntervalSeconds;
+            EditorPreview.Enabled=LightMapEnabled && PreviewInEditor;
+        }
         public string DimensionId { get; set; }
         public LogicalLightWorld World { get; private set; }
         public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision
             && (_debug || !LightOverlayEnabled || (_lightPublished && !_lightBuilding && World.Field.Settled && _lightComputer.FieldRevision==World.Field.Revision && _lightComputer.BackgroundRevision==World.BackgroundRevision));
         public long SolarUpdates { get; private set; }
         private readonly AnalyticShadowGeometry _geometry = new();
+        private readonly WindowBeamCache _windowBeam = new();
         private readonly List<TileMapLayer> _layers = new();
         private Dictionary<Vector2I,int> _preview = new();
         private readonly LightMapComputer _lightComputer=new();
@@ -50,6 +79,7 @@ namespace Jogo25D.Light
         public override void _ExitTree()
         {
             ReleaseWallMaterials();
+            DisableWindowBeam();
             foreach(var layer in _previewWatched) if(IsInstanceValid(layer)) layer.Changed -= PreviewChanged;
         }
         private Shader _normalShader, _debugShader;
@@ -73,6 +103,7 @@ namespace Jogo25D.Light
         public void DetachWorld()
         {
             ReleaseWallMaterials();
+            DisableWindowBeam();
             _lightWorld=null; _lightBuilding=false; _lightPublished=false;
             DimensionId=null; World=null; _published=false; _building=false; _invalid=true;
             if (IsInstanceValid(_overlay)) _overlay.Visible=false;
@@ -97,8 +128,11 @@ namespace Jogo25D.Light
         }
         public override void _Process(double delta)
         {
+            UpdateEditorPreview();
+            var terrainOverlay=GetParent().GetNodeOrNull<Node2D>("LightOverlay");
+            if(terrainOverlay!=null) terrainOverlay.Visible=LightMapEnabled;
             if (!LightMapEnabled || (Engine.IsEditorHint() && !PreviewInEditor))
-            { if (IsInstanceValid(_overlay)) _overlay.Visible=false; ReleaseWallMaterials(); return; }
+            { if (IsInstanceValid(_overlay)) _overlay.Visible=false; ReleaseWallMaterials(); DisableWindowBeam(); return; }
             if (_layers.Count==0) Resolve();
             if (_layers.Count==0 || _layers[0].TileSet==null) return;
             var grid=_layers[0];
@@ -203,19 +237,52 @@ namespace Jogo25D.Light
             }
             foreach(var wall in _walls)
                 if(!_originalWallMaterials.ContainsKey(wall)) { _originalWallMaterials[wall]=wall.Material; wall.Material=_wallMaterial; }
-            _wallMaterial.SetShaderParameter("shadow_geometry",_texture);
-            _wallMaterial.SetShaderParameter("map_size",(Vector2)_size*2);
-            _wallMaterial.SetShaderParameter("sun_angle",Mathf.DegToRad(_angle));
-            _wallMaterial.SetShaderParameter("penumbra",_penumbra);
-            _wallMaterial.SetShaderParameter("geometry_ready",_published && !_debug);
-            _wallMaterial.SetShaderParameter("shadow_strength",Setting(nameof(LightMapData.ShadowStrength),0.65f));
-            _wallMaterial.SetShaderParameter("penumbra_shadow_transition",Setting(nameof(LightMapData.SunPenumbraShadowCurve),1));
-            _wallMaterial.SetShaderParameter("penumbra_ambient_transition",Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1));
-            var inverse=grid.GlobalTransform.AffineInverse();
-            _wallMaterial.SetShaderParameter("map_world_origin",grid.ToGlobal(grid.MapToLocal(_origin)-tileSize/2));
-            _wallMaterial.SetShaderParameter("map_world_axis_x",new Vector2(inverse.X.X,inverse.Y.X)/tileSize.X);
-            _wallMaterial.SetShaderParameter("map_world_axis_y",new Vector2(inverse.X.Y,inverse.Y.Y)/tileSize.Y);
+
+
+
+
+
+
+
+
+            var colorValue=Settings?.Get(nameof(LightMapData.SunColor));
+            Color sunColor=colorValue.HasValue && colorValue.Value.VariantType==Variant.Type.Color?colorValue.Value.AsColor():Colors.White;
+            _windowBeam.Update(this,World,_origin,_size,angle,penumbra,
+                Setting(nameof(LightMapData.SunPenumbraShadowCurve),1),Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1),
+                Setting(nameof(LightMapData.TerrainLightDepthTiles),3));
+            var previewSprite=EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite");
+            if(previewSprite?.Material is ShaderMaterial previewMaterial) { _windowBeam.Bind(previewMaterial,grid,!_debug,sunColor); BindSolarComposition(previewMaterial); }
+            var runtimeOverlay=GetParent().GetNodeOrNull<Node2D>("LightOverlay");
+            if(runtimeOverlay!=null) foreach(var child in runtimeOverlay.GetChildren())
+                if(child is Sprite2D sprite && sprite.Material is ShaderMaterial lightMaterial) { _windowBeam.Bind(lightMaterial,grid,!_debug,sunColor); BindSolarComposition(lightMaterial); }
+
+
+
             _overlay.Visible=LightOverlayEnabled && _published && (_debug || _lightPublished);
+        }
+        private void BindSolarComposition(ShaderMaterial material)
+        {
+            material.SetShaderParameter("include_skylight",IncludeSkylight);
+            material.SetShaderParameter("shadow_geometry",_texture);
+            material.SetShaderParameter("map_size",(Vector2)_size*2);
+            material.SetShaderParameter("sun_angle",Mathf.DegToRad(_angle));
+            material.SetShaderParameter("penumbra",_penumbra);
+            material.SetShaderParameter("geometry_ready",_published && !_debug);
+            material.SetShaderParameter("shadow_strength",Setting(nameof(LightMapData.ShadowStrength),0.65f));
+            material.SetShaderParameter("ambient_light_influence",Setting(nameof(LightMapData.AmbientLightInfluence),0.75f));
+            material.SetShaderParameter("penumbra_shadow_transition",Setting(nameof(LightMapData.SunPenumbraShadowCurve),1));
+            material.SetShaderParameter("penumbra_ambient_transition",Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1));
+        }
+        private void DisableWindowBeam()
+        {
+            var parent=GetParent();
+            if(parent==null) return;
+            if(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material is ShaderMaterial preview)
+                preview.SetShaderParameter("window_beam_ready",false);
+            var runtime=parent.GetNodeOrNull<Node2D>("LightOverlay");
+            if(runtime!=null) foreach(var child in runtime.GetChildren())
+                if(child is Sprite2D sprite && sprite.Material is ShaderMaterial material)
+                    material.SetShaderParameter("window_beam_ready",false);
         }
         private static void Upload(ref ImageTexture texture,Image image)
         {

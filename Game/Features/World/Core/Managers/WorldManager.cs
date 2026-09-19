@@ -112,7 +112,8 @@ namespace Jogo25D.Systems
 		public async void CreateProceduralWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
 		{
 			SpawnWorld();
-			Dimensions.ClearLayers();
+            Dimensions.ClearEntities();
+			Dimensions.ClearLayers(discardBackground:true);
 
             Game.Managers.TileStreamingManager.Node.SetWorldSeed(save.Seed);
             Game.Managers.LightMapManager.Node?.UseProceduralWorlds();

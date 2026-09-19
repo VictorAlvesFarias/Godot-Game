@@ -41,6 +41,11 @@ namespace Jogo25D.Blocks
             if (_chunks.TryGetValue(chunk, out var cells))
                 foreach (var (cell, tile) in cells) SetCell(cell, tile.Source, tile.Atlas, tile.Alternative);
         }
+        public void ResetForNewWorld()
+        {
+            _chunks.Clear();
+            ClearRenderedForStreaming();
+        }
         public void ClearRenderedForStreaming()
         {
             _streaming = true;
