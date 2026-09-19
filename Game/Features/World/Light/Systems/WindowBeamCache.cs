@@ -11,6 +11,9 @@ internal sealed class WindowBeamCache
     private long _revision=-1,_background=-1;
     private Vector2I _origin,_size;
     private float _angle=-999,_penumbra=-999,_shadowCurve=-999,_ambientCurve=-999,_depth=-999;
+    // Sobe a cada reconstrucao real do campo. Quem liga materiais usa isto pra nao reescrever
+    // os mesmos parametros em todo frame.
+    public long Revision { get; private set; }
     public void Update(Node parent,LogicalLightWorld world,Vector2I origin,Vector2I size,float angle,float penumbra,float shadowCurve=1,float ambientCurve=1,float terrainDepth=3)
     {
         if(_viewport==null) {
@@ -20,6 +23,7 @@ internal sealed class WindowBeamCache
             parent.AddChild(_viewport);
         }
         if(_world==world && _revision==world.Revision && _background==world.BackgroundRevision && _origin==origin && _size==size && _angle==angle && _penumbra==penumbra && _shadowCurve==shadowCurve && _ambientCurve==ambientCurve && _depth==terrainDepth) return;
+        Revision++;
         _world=world;_revision=world.Revision;_background=world.BackgroundRevision;_origin=origin;_size=size;_angle=angle;_penumbra=penumbra;_shadowCurve=shadowCurve;_ambientCurve=ambientCurve;_depth=terrainDepth;
         var bytes=SkyAccessField.Build(world,origin,size,terrainDepth);
         using var image=Image.CreateFromData(size.X,size.Y,false,Image.Format.Rgba8,bytes);

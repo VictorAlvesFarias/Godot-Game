@@ -54,6 +54,14 @@ namespace Jogo25D.Light
         public long SolarUpdates { get; private set; }
         private readonly AnalyticShadowGeometry _geometry = new();
         private readonly WindowBeamCache _windowBeam = new();
+        // Os parametros de feixe e composicao sao os mesmos para todos os sprites de overlay e so
+        // mudam quando muda o campo, a regiao, o sol ou o Settings. Reescrever os 19 uniforms em
+        // cada sprite a cada frame custa ~1,7 ms com 32 chunks e ~3 ms com 64. Aqui a escrita so
+        // acontece quando a chave muda, e sprites novos sao ligados sozinhos.
+        private readonly HashSet<ShaderMaterial> _boundMaterials = new();
+        private (long Beam, Rid Geometry, Vector2I Size, float Angle, float Penumbra, bool Published,
+            bool Debug, bool Skylight, Color Sun, float Strength, float Influence,
+            float ShadowCurve, float AmbientCurve, Transform2D Grid) _bindKey;
         private readonly List<TileMapLayer> _layers = new();
         private Dictionary<Vector2I,int> _preview = new();
         private readonly LightMapComputer _lightComputer=new();
@@ -250,11 +258,24 @@ namespace Jogo25D.Light
             _windowBeam.Update(this,World,_origin,_size,angle,penumbra,
                 Setting(nameof(LightMapData.SunPenumbraShadowCurve),1),Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1),
                 Setting(nameof(LightMapData.TerrainLightDepthTiles),3));
-            var previewSprite=EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite");
-            if(previewSprite?.Material is ShaderMaterial previewMaterial) { _windowBeam.Bind(previewMaterial,grid,!_debug,sunColor); BindSolarComposition(previewMaterial); }
+            var chave=(_windowBeam.Revision,_texture?.GetRid()??default,_size,_angle,_penumbra,
+                _published,_debug,IncludeSkylight,sunColor,
+                Setting(nameof(LightMapData.ShadowStrength),0.65f),
+                Setting(nameof(LightMapData.AmbientLightInfluence),0.75f),
+                Setting(nameof(LightMapData.SunPenumbraShadowCurve),1),
+                Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1),
+                grid.GlobalTransform);
+            if(!_bindKey.Equals(chave)) { _bindKey=chave; _boundMaterials.Clear(); }
+            void Ligar(ShaderMaterial material)
+            {
+                if(material==null || !_boundMaterials.Add(material)) return;
+                _windowBeam.Bind(material,grid,!_debug,sunColor);
+                BindSolarComposition(material);
+            }
+            Ligar(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material as ShaderMaterial);
             var runtimeOverlay=GetParent().GetNodeOrNull<Node2D>("LightOverlay");
             if(runtimeOverlay!=null) foreach(var child in runtimeOverlay.GetChildren())
-                if(child is Sprite2D sprite && sprite.Material is ShaderMaterial lightMaterial) { _windowBeam.Bind(lightMaterial,grid,!_debug,sunColor); BindSolarComposition(lightMaterial); }
+                if(child is Sprite2D sprite) Ligar(sprite.Material as ShaderMaterial);
 
 
 
@@ -275,6 +296,8 @@ namespace Jogo25D.Light
         }
         private void DisableWindowBeam()
         {
+            // Este caminho escreve nos materiais por fora do cache; forca religar depois.
+            _boundMaterials.Clear();
             var parent=GetParent();
             if(parent==null) return;
             if(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material is ShaderMaterial preview)
