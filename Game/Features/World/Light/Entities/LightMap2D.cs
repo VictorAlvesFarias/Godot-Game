@@ -9,11 +9,6 @@ namespace Jogo25D.Light
     public partial class LightMap2D : Node2D
     {
         [Export] public bool LightMapEnabled { get; set; } = true;
-        // O overlay de luz deste sistema esta desligado: quem calcula luz agora e o LightingManager
-        // (porte da copia, em compute shader). Este node continua vivo so pelo caminho da sombra
-        // projetada nas paredes de fundo, que nao mudou. Ligar os dois faz as duas multiplicacoes
-        // se acumularem no mesmo pixel.
-        [Export] public bool LightOverlayEnabled { get; set; } = false;
         [Export] public bool PreviewInEditor { get; set; } = true;
         [Export] public Vector2I PreviewSize { get; set; } = new(120,80);
         [Export] public Godot.Collections.Array<NodePath> Layers { get; set; } = new();
@@ -49,8 +44,7 @@ namespace Jogo25D.Light
         }
         public string DimensionId { get; set; }
         public LogicalLightWorld World { get; private set; }
-        public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision
-            && (_debug || !LightOverlayEnabled || (_lightPublished && !_lightBuilding && World.Field.Settled && _lightComputer.FieldRevision==World.Field.Revision && _lightComputer.BackgroundRevision==World.BackgroundRevision));
+        public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision;
         public long SolarUpdates { get; private set; }
         private readonly AnalyticShadowGeometry _geometry = new();
         private readonly WindowBeamCache _windowBeam = new();
@@ -64,13 +58,8 @@ namespace Jogo25D.Light
             float ShadowCurve, float AmbientCurve, Transform2D Grid) _bindKey;
         private readonly List<TileMapLayer> _layers = new();
         private Dictionary<Vector2I,int> _preview = new();
-        private readonly LightMapComputer _lightComputer=new();
         private readonly List<TileMapLayer> _walls=new();
         private HashSet<Vector2I> _previewWalls=new();
-        private LogicalLightWorld _lightWorld;
-        private Vector2I _lightOrigin,_lightSize;
-        private bool _lightBuilding,_lightPublished;
-        private ImageTexture _lightData,_emissionData;
         private Sprite2D _overlay;
         private ShaderMaterial _material,_wallMaterial;
         private readonly Dictionary<TileMapLayer,Material> _originalWallMaterials=new();
@@ -80,17 +69,39 @@ namespace Jogo25D.Light
                 if(IsInstanceValid(pair.Key) && pair.Key.Material==_wallMaterial) pair.Key.Material=pair.Value;
             _originalWallMaterials.Clear();
         }
+        private CanvasItem _background;
+        private Color _backgroundBase=Colors.White;
+        private Color _backgroundApplied=Colors.White;
+        private void RestoreBackground()
+        {
+            if(IsInstanceValid(_background) && _background.Modulate==_backgroundApplied)
+                _background.Modulate=_backgroundBase;
+            _background=null;
+        }
+        private void UpdateBackground(Color color)
+        {
+            var target=GetParent().GetNodeOrNull<CanvasItem>("Background");
+            if(target!=_background) {
+                RestoreBackground();_background=target;
+                if(target!=null) _backgroundBase=target.Modulate;
+            }
+            if(target==null) return;
+            var tinted=_backgroundBase*new Color(color.R,color.G,color.B,1);
+            if(target.Modulate!=tinted) target.Modulate=tinted;
+            _backgroundApplied=tinted;
+        }
         private bool _previewDirty=true;
         private readonly Dictionary<TileMapLayer,long> _previewRevisions=new();
         private readonly HashSet<TileMapLayer> _previewWatched=new();
         private void PreviewChanged() => _previewDirty=true;
         public override void _ExitTree()
         {
+            RestoreBackground();
             ReleaseWallMaterials();
             DisableWindowBeam();
             foreach(var layer in _previewWatched) if(IsInstanceValid(layer)) layer.Changed -= PreviewChanged;
         }
-        private Shader _normalShader, _debugShader;
+        private Shader _debugShader;
         private bool _debug;
         private ImageTexture _texture;
         private Camera2D _camera;
@@ -110,9 +121,9 @@ namespace Jogo25D.Light
         public void Invalidate() => _invalid=true;
         public void DetachWorld()
         {
+            RestoreBackground();
             ReleaseWallMaterials();
             DisableWindowBeam();
-            _lightWorld=null; _lightBuilding=false; _lightPublished=false;
             DimensionId=null; World=null; _published=false; _building=false; _invalid=true;
             if (IsInstanceValid(_overlay)) _overlay.Visible=false;
         }
@@ -140,7 +151,7 @@ namespace Jogo25D.Light
             var terrainOverlay=GetParent().GetNodeOrNull<Node2D>("LightOverlay");
             if(terrainOverlay!=null) terrainOverlay.Visible=LightMapEnabled;
             if (!LightMapEnabled || (Engine.IsEditorHint() && !PreviewInEditor))
-            { if (IsInstanceValid(_overlay)) _overlay.Visible=false; ReleaseWallMaterials(); DisableWindowBeam(); return; }
+            { if (IsInstanceValid(_overlay)) _overlay.Visible=false; ReleaseWallMaterials(); RestoreBackground(); DisableWindowBeam(); return; }
             if (_layers.Count==0) Resolve();
             if (_layers.Count==0 || _layers[0].TileSet==null) return;
             var grid=_layers[0];
@@ -181,9 +192,8 @@ namespace Jogo25D.Light
             if (!IsInstanceValid(_overlay))
             {
                 using var white=Image.CreateEmpty(1,1,false,Image.Format.Rgba8); white.Fill(Colors.White);
-                _normalShader=GD.Load<Shader>("res://Assets/Shaders/layered_light.gdshader");
                 _debugShader=GD.Load<Shader>("res://Assets/Shaders/projected_shadow_debug.gdshader");
-                _material=new ShaderMaterial { Shader=_normalShader };
+                _material=new ShaderMaterial { Shader=_debugShader };
                 _wallMaterial=new ShaderMaterial { Shader=GD.Load<Shader>("res://Assets/Shaders/wall_projected_shadow.gdshader") };
                 _overlay=new Sprite2D { Name="ProjectedShadow",Centered=false,ZIndex=900,ZAsRelative=false,Material=_material,Texture=ImageTexture.CreateFromImage(white),Visible=false };
                 AddChild(_overlay);
@@ -226,7 +236,7 @@ namespace Jogo25D.Light
             if (debug!=_debug)
             {
                 _debug=debug;
-                _material.Shader=debug?_debugShader:_normalShader;
+                _material.Shader=_debugShader;
                 _material.SetShaderParameter("shadow_geometry",_texture);
                 _material.SetShaderParameter("map_size",(Vector2)_size*2);
                 _material.SetShaderParameter("sun_angle",Mathf.DegToRad(_angle));
@@ -236,13 +246,6 @@ namespace Jogo25D.Light
             if (!_debug) _material.SetShaderParameter("shadow_strength",Setting(nameof(LightMapData.ShadowStrength),0.65f));
             _material.SetShaderParameter("penumbra_shadow_transition",Setting(nameof(LightMapData.SunPenumbraShadowCurve),1));
             _material.SetShaderParameter("penumbra_ambient_transition",Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1));
-            if(LightOverlayEnabled && !_debug) UpdateLightMap();
-            if (!_debug && _lightPublished)
-            {
-                _material.SetShaderParameter("light_data",_lightData);
-                _material.SetShaderParameter("emission_data",_emissionData);
-
-            }
             foreach(var wall in _walls)
                 if(!_originalWallMaterials.ContainsKey(wall)) { _originalWallMaterials[wall]=wall.Material; wall.Material=_wallMaterial; }
 
@@ -255,6 +258,7 @@ namespace Jogo25D.Light
 
             var colorValue=Settings?.Get(nameof(LightMapData.SunColor));
             Color sunColor=colorValue.HasValue && colorValue.Value.VariantType==Variant.Type.Color?colorValue.Value.AsColor():Colors.White;
+            UpdateBackground(sunColor);
             _windowBeam.Update(this,World,_origin,_size,angle,penumbra,
                 Setting(nameof(LightMapData.SunPenumbraShadowCurve),1),Setting(nameof(LightMapData.SunPenumbraAmbientCurve),1),
                 Setting(nameof(LightMapData.TerrainLightDepthTiles),3));
@@ -279,7 +283,7 @@ namespace Jogo25D.Light
 
 
 
-            _overlay.Visible=LightOverlayEnabled && _published && (_debug || _lightPublished);
+            _overlay.Visible=_published && _debug;
         }
         private void BindSolarComposition(ShaderMaterial material)
         {
@@ -306,38 +310,6 @@ namespace Jogo25D.Light
             if(runtime!=null) foreach(var child in runtime.GetChildren())
                 if(child is Sprite2D sprite && sprite.Material is ShaderMaterial material)
                     material.SetShaderParameter("window_beam_ready",false);
-        }
-        private static void Upload(ref ImageTexture texture,Image image)
-        {
-            using(image) { if(texture==null) texture=ImageTexture.CreateFromImage(image); else texture.SetImage(image); }
-        }
-        private void UpdateLightMap()
-        {
-            if(_lightWorld!=World || _lightOrigin!=_origin || _lightSize!=_size)
-            {
-                _lightWorld=World; _lightOrigin=_origin; _lightSize=_size;
-                World.Field.SetRegion(_origin.X,_origin.Y,_size.X,_size.Y);
-                _lightBuilding=false; _lightPublished=false;
-            }
-            World.Field.Process();
-            float depth=Mathf.Clamp(Setting(nameof(LightMapData.TerrainLightDepthTiles),3),0.25f,16);
-            bool changed=!_lightComputer.IsWorld(World) || _lightComputer.Origin!=_origin || _lightComputer.Size!=_size
-                || _lightComputer.WorldRevision!=World.Revision || _lightComputer.FieldRevision!=World.Field.Revision
-                || _lightComputer.BackgroundRevision!=World.BackgroundRevision || _lightComputer.TerrainTransition!=depth;
-            if(changed) _lightBuilding=false;
-            if(!World.Field.Settled) return;
-            if(!_lightBuilding && (changed || !_lightPublished))
-            {
-                _lightComputer.Begin(World,_origin,_size,0,1,depth,buildShadow:false);
-                _lightBuilding=true;
-            }
-            if(!_lightBuilding) return;
-            _lightComputer.Process(3);
-            if(!_lightComputer.Complete) return;
-            Upload(ref _lightData,_lightComputer.LightImage());
-            Upload(ref _emissionData,_lightComputer.EmissionImage());
-
-            _lightBuilding=false; _lightPublished=true;
         }
     }
 }

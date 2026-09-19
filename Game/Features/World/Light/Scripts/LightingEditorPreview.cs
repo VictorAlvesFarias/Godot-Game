@@ -54,7 +54,7 @@ namespace Jogo25D.Light
         private int VisualState(bool maskOnly=false)
         {
             var hash=new System.HashCode();
-            if(!maskOnly) hash.Add(IncludeSkylight);hash.Add(Padding);hash.Add(GlobalTransform);
+            if(!maskOnly) { hash.Add(IncludeSkylight);hash.Add(SceneLightSources.Revision(_layer?.GetParent())); }hash.Add(Padding);hash.Add(GlobalTransform);
             foreach(var layer in new TileMapLayer[]{_layer,_baseLayer,_walls})
                 if(layer!=null) { hash.Add(EditorTileRevision.Get(layer));hash.Add(layer.GetInstanceId());hash.Add(layer.GlobalTransform);hash.Add(layer.Modulate);hash.Add(layer.SelfModulate);hash.Add(layer.Enabled);hash.Add(layer.IsVisibleInTree()); }
             return hash.ToHashCode();

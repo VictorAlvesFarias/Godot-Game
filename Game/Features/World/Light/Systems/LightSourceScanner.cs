@@ -65,6 +65,7 @@ namespace Jogo25D.Light
                 }
             }
 
+            SceneLightSources.Collect(layer.GetParent(),region,sources);
             return sources;
         }
 

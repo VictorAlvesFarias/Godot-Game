@@ -283,3 +283,43 @@ carregadas depois da limpeza do mundo procedural.
 
 LightPortWorldProbe verifica que restaurar chunks após o descarte não traz
 walls antigas de volta e que Entities fica vazio após a limpeza.
+
+## Campfire e fontes de cena no mapa ativo
+
+LightSource2D agora registra célula, cor e energia em SceneLightSources, isolado
+por nível/dimensão. LightSourceScanner inclui essas fontes no mesmo lote dos
+blocos emissores. Alterações invalidam os chunks antigos e novos no runtime;
+o preview acompanha a revisão do registro. Fontes paradas não invalidam o
+mapa a cada frame. Desligar, ocultar, remover ou mudar de nível retira o registro.
+A sombra solar não multiplica a emissão local já propagada.
+
+Removidos o caminho antigo de overlay de LightMap2D, LightOverlayEnabled,
+LightMapComputer, layered_light.gdshader e os testes LayeredLightingRegression/
+LayeredWorldIntegration exclusivos desse caminho substituído. O overlay
+ProjectedShadow agora serve exclusivamente ao DebugShadow. Componentes
+lógicos ainda referenciados pelo mundo e por testes de geometria foram mantidos.
+As instruções históricas deste documento sobre ativar LightOverlayEnabled
+não se aplicam mais.
+
+SceneLightRegression instancia Campfire.tscn e verifica coleta, saída GPU,
+propagação, estabilidade ociosa, enabled, energia/cor, movimento e remoção.
+Executar com `godot_console --path Game res://Testing/SceneLightRegression.tscn`.
+No editor, definir SCENE_LIGHT_TEST=1 e adicionar --editor ao comando.
+
+## Cor global no background e contribuição local em superfícies claras
+
+SunColor também modula o node Background (céu e parallax), preservando sua
+modulação original e restaurando-a ao desligar/desanexar a iluminação.
+A emissão local é somada depois da iluminação solar/sombra, em vez de usar
+max entre as contribuições. Não há limite artificial de ganho 1 antes da
+multiplicação pela cor da superfície.
+
+TerrainLightOverlay lê a cor da cena via hint_screen_texture e compõe
+explicitamente com blend_disabled; o blend_mul fixo limitava ganhos acima
+de 1 e fazia a fogueira desaparecer sobre regiões já iluminadas. A máscara
+continua limitando o efeito aos receptores. Isso exige uma cópia da cor da
+cena pelo renderer por viewport; não foi feita outra otimização de desempenho.
+
+O teste GPU de composição verifica ganho de brilho e tonalidade quente numa
+superfície já iluminada. LightPortWorldProbe verifica a mudança de SunColor
+no Background e salva background-cor-solar.png.

@@ -80,7 +80,6 @@ namespace Jogo25D.Testing
 
                 // 1) so a luz portada da copia
                 if (overlayRootUp != null) overlayRootUp.Visible = true;
-                if (lightMap != null) lightMap.LightOverlayEnabled = false;
                 await Capturar("comparacao-copia-portada");
 
                 // Window transmission must remain visible without ambient shadow fill.
@@ -98,14 +97,16 @@ namespace Jogo25D.Testing
                     camera.GlobalPosition=previousPosition;
                 }
 
-                // 2) so a luz antiga deste projeto
-                if (overlayRootUp != null) overlayRootUp.Visible = false;
-                if (lightMap != null) lightMap.LightOverlayEnabled = true;
-                await Capturar("comparacao-sistema-antigo");
-
-                // 3) sem luz nenhuma, pra ver o terreno cru
-                if (lightMap != null) lightMap.LightOverlayEnabled = false;
-                await Capturar("comparacao-sem-luz");
+                if(lightMap?.Settings is Jogo25D.Light.LightMapData colorSettings)
+                {
+                    var previousColor=colorSettings.SunColor;
+                    var background=mostrar.GetNode<CanvasItem>("Background");
+                    var previousModulate=background.Modulate;
+                    colorSettings.SunColor=new Color(.6f,.8f,1f);
+                    await Capturar("background-cor-solar");
+                    if(background.Modulate==previousModulate) throw new Exception("SunColor did not tint Background");
+                    colorSettings.SunColor=previousColor;
+                }
                 var walls=mostrar.GetNode<Jogo25D.Blocks.BackgroundWallLayer>("BackgroundWalls");
                 var usedWalls=walls.GetUsedCells();
                 dims.ClearEntities("upsidedown");

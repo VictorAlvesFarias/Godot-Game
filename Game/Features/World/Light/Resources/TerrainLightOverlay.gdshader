@@ -1,5 +1,6 @@
 shader_type canvas_item;
-render_mode blend_mul, unshaded;
+render_mode blend_disabled, unshaded;
+uniform sampler2D scene_color : hint_screen_texture, filter_nearest, repeat_disable;
 
 #include "res://Assets/Shaders/window_beam_sampling.gdshaderinc"
 #include "res://Assets/Shaders/projected_shadow.gdshaderinc"
@@ -17,7 +18,7 @@ void fragment() {
 	// Coverage follows actual texture pixels; only the light grid is smoothed.
 	float occupied = texture(terrain_mask, UV).r;
 	vec3 emission=texture(TEXTURE,light_uv_rect.xy+UV*light_uv_rect.zw).rgb;
-    vec3 light=max(emission,window_sun_color.rgb*environment_sky(beam_world_position));
+    vec3 light=window_sun_color.rgb*environment_sky(beam_world_position);
 	float beam=include_skylight?window_light(beam_world_position):0.0;
     if(window_wall_receiver(beam_world_position)) {
         vec2 offset=beam_world_position-beam_origin;
@@ -35,6 +36,11 @@ void fragment() {
         light=max(light,window_sun_color.rgb*beam);
     }
 	// Display floor is not incoming light and must never fill a shadow.
-    light=max(light,vec3(ambient_min));
-	COLOR = vec4(mix(vec3(1.0), light, occupied), 1.0);
+    // Independent sources add irradiance, including on sunlit surfaces.
+    // Do not clamp to one before multiplying the surface albedo.
+    light=max(light+emission,vec3(ambient_min));
+	// Explicitly shade the scene color: fixed-function multiply clamps gains
+    // above one and would hide local emitters on sunlit surfaces.
+    vec4 surface=texture(scene_color,SCREEN_UV);
+	COLOR = vec4(surface.rgb*mix(vec3(1.0),light,occupied),surface.a);
 }

@@ -7,9 +7,9 @@ public partial class EnvironmentCompositionRegression : Node
   try {
    var vp=new SubViewport { Size=new Vector2I(32,32),Disable3D=true,RenderTargetUpdateMode=SubViewport.UpdateMode.Always };
    AddChild(vp);
-   vp.AddChild(new ColorRect { Size=new Vector2(32,32),Color=Colors.White });
+   var surface=new ColorRect { Size=new Vector2(32,32),Color=Colors.White };vp.AddChild(surface);
    ImageTexture Tex(Color c) { using var image=Image.CreateEmpty(1,1,false,Image.Format.Rgba8);image.Fill(c);return ImageTexture.CreateFromImage(image); }
-   using var light=Tex(new Color(.5f,.5f,.5f));using var mask=Tex(Colors.White);using var cells=Tex(new Color(0,1,0));using var beam=Tex(Colors.Black);
+   using var light=Tex(Colors.Black);using var mask=Tex(Colors.White);using var cells=Tex(new Color(0,1,0));using var beam=Tex(Colors.Black);
    // Feed full occlusion to the actual composition shader, independently of geometry.
    var source=GD.Load<Shader>("res://Features/World/Light/Resources/TerrainLightOverlay.gdshader");
    var shader=new Shader { Code=source.Code.Replace("geometry_ready?projected_shadow(p,fwidth(p)):0.0","1.0") };
@@ -18,7 +18,7 @@ public partial class EnvironmentCompositionRegression : Node
    mat.SetShaderParameter("window_beam_ready",true);mat.SetShaderParameter("beam_size",new Vector2(32,32));mat.SetShaderParameter("beam_axis_x",Vector2.Right);mat.SetShaderParameter("beam_axis_y",Vector2.Down);
    vp.AddChild(new Sprite2D { Texture=light,Centered=false,Scale=new Vector2(32,32),Material=mat });
    async System.Threading.Tasks.Task<float> Pixel() { for(int i=0;i<4;i++) await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);using var image=vp.GetTexture().GetImage();return image.GetPixel(16,16).R; }
-   void SetLight(float value) { using var image=Image.CreateEmpty(1,1,false,Image.Format.Rgba8);image.Fill(new Color(value,value,value));light.Update(image); }
+   void SetLight(float value) { using var image=Image.CreateEmpty(1,1,false,Image.Format.Rgba8);image.Fill(new Color(0,1,value));cells.Update(image);mat.SetShaderParameter("sky_access",cells); }
    SetLight(.8f);
    mat.SetShaderParameter("shadow_strength",0f);float unshadowed=await Pixel();
    mat.SetShaderParameter("ambient_light_influence",0f);
@@ -69,6 +69,15 @@ public partial class EnvironmentCompositionRegression : Node
    var shallow=Jogo25D.Light.SkyAccessField.Build(world,Vector2I.Zero,new Vector2I(32,32),2);
    var deep=Jogo25D.Light.SkyAccessField.Build(world,Vector2I.Zero,new Vector2I(32,32),12);
    if(deep[(16*32+12)*4+2]<=shallow[(16*32+12)*4+2]) throw new Exception("Terrain depth did not change penetration");
+   // A lamp must change an already sunlit surface, not just its shadows.
+   surface.Color=new Color(.25f,.25f,.25f);SetLight(1);
+   mat.SetShaderParameter("window_cells",cells);mat.SetShaderParameter("sky_access",cells);
+   mat.SetShaderParameter("window_sun_color",Colors.White);mat.SetShaderParameter("shadow_strength",0f);
+   float sunlit=await Pixel();
+   using(var image=Image.CreateEmpty(1,1,false,Image.Format.Rgba8)) { image.Fill(new Color(1,.3f,.05f));light.Update(image); }
+   float withFire=await Pixel();
+   if(withFire<sunlit+.15f) throw new Exception("Campfire cannot brighten sunlit surface");
+   using(var image=vp.GetTexture().GetImage()) { var c=image.GetPixel(16,16);if(c.R<=c.B+.1f) throw new Exception("Campfire color lost on sunlit surface"); }
    GD.Print($"ENVIRONMENT COMPOSITION PASS: unshadowed={unshadowed}, opaque={opaque}, open={open}, closed={closed}, window={window}; influence leaves unshadowed light unchanged");GetTree().Quit();
   } catch(Exception e) { GD.PushError(e.ToString());GetTree().Quit(1); }
  }
