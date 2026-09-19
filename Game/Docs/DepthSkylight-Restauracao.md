@@ -323,3 +323,28 @@ cena pelo renderer por viewport; não foi feita outra otimização de desempenho
 O teste GPU de composição verifica ganho de brilho e tonalidade quente numa
 superfície já iluminada. LightPortWorldProbe verifica a mudança de SunColor
 no Background e salva background-cor-solar.png.
+
+## Fontes locais atravessando aberturas
+
+WindowBeamCache mantém também LocalWindowBeamCache, com RGB transmitido por
+fontes registradas em SceneLightSources. A direção é do receptor à posição da
+fonte, e não SunAngle. A travessia exige uma abertura de background e continua
+até a fonte: sólidos antes ou depois da abertura bloqueiam o feixe. Fechar a
+janela elimina essa contribuição. A cor/energia é própria da fonte, alcance
+24 tiles e uma pequena área emissora suaviza a borda. A revisão das fontes
+invalida o campo ao mover, remover ou alterar uma luz.
+
+O overlay combina max(emissão propagada, transmissão local) antes de somar
+à luz solar, evitando contar duas vezes a mesma contribuição local. O campo
+local não depende de IncludeSkylight. WindowBeamRegression verifica cor,
+janela fechada e um bloqueador entre a abertura e a fonte. A captura isolada
+é `.images/local-window-beam.png`.
+
+### Origem externa obrigatória para projeção local
+
+Fontes sobre uma célula com wall (ou sólido primário) são excluídas somente
+do campo de projeção pela abertura. Continuam registradas e iluminando pelo
+mapa de emissão local normal. A classificação usa a célula do LightSource2D,
+não o sprite visual da fogueira. Alterações nas walls invalidam o campo.
+O teste cobre fonte externa projetando, a mesma célula recebendo wall e
+perdendo a projeção sem perder o registro local, e fechamento físico da janela.

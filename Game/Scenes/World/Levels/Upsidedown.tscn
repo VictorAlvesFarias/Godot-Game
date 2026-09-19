@@ -148,7 +148,7 @@ position = Vector2(109, -306)
 position = Vector2(-515, -371)
 
 [node name="Campfire" parent="Entities" unique_id=498653628 instance=ExtResource("90_campfire")]
-position = Vector2(-475, -342)
+position = Vector2(-474, -341)
 
 [node name="Compose" type="TileMapLayer" parent="." unique_id=548705804]
 texture_filter = 1

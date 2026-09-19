@@ -25,6 +25,37 @@ public partial class WindowBeamRegression : Node
                 open.Resize(512,512,Image.Interpolation.Nearest);
                 open.SavePng("res://../.images/window-beam-regression.png");
             }
+            world.SetBackground(14,2,false);
+            for(int x=0;x<32;x++) if(x<12 || x>=18) world.SetTerrain(x,8,0);
+            SceneLightSources.Set(GetParent(),987654,new Vector2I(14,2),new Color(1,.4f,.1f));
+            using(var ignored=await Render()) { }
+            using(var local=GetNode<SubViewport>("LocalWindowBeamCache").GetTexture().GetImage()) {
+                var c=local.GetPixel(72,64);
+                if(c.R<.25f || c.R<c.G+.1f) throw new Exception("Local source did not transmit its color through window");
+                local.SavePng("res://../.images/local-window-beam.png");
+            }
+            world.SetBackground(14,2,true);
+            using(var ignored=await Render()) { }
+            using(var interior=GetNode<SubViewport>("LocalWindowBeamCache").GetTexture().GetImage())
+                if(interior.GetPixel(72,64).R>.01f) throw new Exception("Interior source projected an aperture beam");
+            var registered=new System.Collections.Generic.List<LightSource>();
+            SceneLightSources.Collect(GetParent(),new Rect2I(0,0,32,32),registered);
+            if(registered.Count!=1) throw new Exception("Interior source lost its normal local illumination");
+            world.SetBackground(14,2,false);
+            world.SetTerrain(14,3,0);
+            using(var ignored=await Render()) { }
+            using(var blockedLocal=GetNode<SubViewport>("LocalWindowBeamCache").GetTexture().GetImage())
+                if(blockedLocal.GetPixel(72,64).R>.01f) throw new Exception("Local beam ignored blocker beyond aperture");
+            world.SetTerrain(14,3,-1);
+            for(int x=12;x<18;x++) world.SetTerrain(x,8,0);
+            for(int y=4;y<8;y++) for(int x=12;x<16;x++) world.SetBackground(x,y,true);
+            using(var ignored=await Render()) { }
+            using(var local=GetNode<SubViewport>("LocalWindowBeamCache").GetTexture().GetImage())
+                if(local.GetPixel(72,64).R>.01f) throw new Exception("Closed window retained local beam");
+            SceneLightSources.Remove(GetParent(),987654);
+            world.SetBackground(14,2,true);
+            for(int x=0;x<32;x++) world.SetTerrain(x,8,-1);
+            for(int y=4;y<8;y++) for(int x=12;x<16;x++) world.SetBackground(x,y,false);
             using(var rotated=await Render(35)) {
                 if(rotated.GetPixel(32,64).R<0.15 || rotated.GetPixel(76,64).R>0.01) throw new Exception("Sun angle did not rotate the beam");
             }

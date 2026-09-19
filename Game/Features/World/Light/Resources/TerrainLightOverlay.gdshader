@@ -38,7 +38,7 @@ void fragment() {
 	// Display floor is not incoming light and must never fill a shadow.
     // Independent sources add irradiance, including on sunlit surfaces.
     // Do not clamp to one before multiplying the surface albedo.
-    light=max(light+emission,vec3(ambient_min));
+    light=max(light+max(emission,local_window_light(beam_world_position)),vec3(ambient_min));
 	// Explicitly shade the scene color: fixed-function multiply clamps gains
     // above one and would hide local emitters on sunlit surfaces.
     vec4 surface=texture(scene_color,SCREEN_UV);

@@ -15,6 +15,7 @@ public partial class EnvironmentCompositionRegression : Node
    var shader=new Shader { Code=source.Code.Replace("geometry_ready?projected_shadow(p,fwidth(p)):0.0","1.0") };
    var mat=new ShaderMaterial { Shader=shader };
    mat.SetShaderParameter("terrain_mask",mask);mat.SetShaderParameter("window_cells",cells);mat.SetShaderParameter("window_beam",beam);
+   mat.SetShaderParameter("local_window_beam",beam);
    mat.SetShaderParameter("window_beam_ready",true);mat.SetShaderParameter("beam_size",new Vector2(32,32));mat.SetShaderParameter("beam_axis_x",Vector2.Right);mat.SetShaderParameter("beam_axis_y",Vector2.Down);
    vp.AddChild(new Sprite2D { Texture=light,Centered=false,Scale=new Vector2(32,32),Material=mat });
    async System.Threading.Tasks.Task<float> Pixel() { for(int i=0;i<4;i++) await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);using var image=vp.GetTexture().GetImage();return image.GetPixel(16,16).R; }

@@ -36,3 +36,12 @@ float environment_sky(vec2 world) {
     if(cell.r<0.5 && cell.b==0.0) return 0.0;
     return texture(sky_access,uv).b;
 }
+
+uniform sampler2D local_window_beam : filter_linear, repeat_disable;
+vec3 local_window_light(vec2 world) {
+    if(!window_beam_ready) return vec3(0.0);
+    vec2 d=world-beam_origin;
+    vec2 uv=vec2(dot(d,beam_axis_x),dot(d,beam_axis_y))/beam_size;
+    if(any(lessThan(uv,vec2(0.0))) || any(greaterThanEqual(uv,vec2(1.0)))) return vec3(0.0);
+    return texture(local_window_beam,uv).rgb;
+}
