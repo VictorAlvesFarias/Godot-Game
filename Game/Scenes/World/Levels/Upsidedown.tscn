@@ -148,7 +148,7 @@ position = Vector2(109, -306)
 position = Vector2(-515, -371)
 
 [node name="Campfire" parent="Entities" unique_id=498653628 instance=ExtResource("90_campfire")]
-position = Vector2(-474, -341)
+position = Vector2(-475, -340)
 
 [node name="Compose" type="TileMapLayer" parent="." unique_id=548705804]
 texture_filter = 1
@@ -167,6 +167,7 @@ Layers = Array[NodePath]([NodePath("../Base")])
 Settings = ExtResource("14_lmdata")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=472080214]
+position = Vector2(-493, -395)
 zoom = Vector2(2.5, 2.5)
 script = ExtResource("4_jbnhx")
 

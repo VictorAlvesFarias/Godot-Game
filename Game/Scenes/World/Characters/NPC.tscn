@@ -6,5 +6,8 @@
 [node name="NPC" unique_id=1689291308 instance=ExtResource("1")]
 script = ExtResource("2")
 
+[node name="Sprite" parent="Visuals" parent_id_path=PackedInt32Array(496822047) index="0" unique_id=496822046]
+frame_progress = 0.68200964
+
 [node name="Shape" parent="." index="3" unique_id=857000654]
 visible = false
