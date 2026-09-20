@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Biomes;
+using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -15,13 +16,6 @@ using System.Linq;
 
 namespace Jogo25D.Dimensions
 {
-    // Dono unico das dimensoes: os parents (Overworld/Upsidedown), os SubViewportContainer de cada
-    // uma, as TileMapLayer Base/Compose, e a criacao de tudo que nasce dentro delas (player, NPC,
-    // item no chao, prop). Ninguem mais guarda essas referencias - quem precisa pergunta aqui.
-    //
-    // Por que manager e nao script na raiz de Overworld.tscn: as raizes nascem e morrem junto com
-    // o World.tscn, entao um script nelas ficaria fora do registro Game. Este no e estatico,
-    // sobrevive a destruicao do mundo e re-resolve as referencias quando o mundo volta.
     public partial class DimensionManager : Node
     {
         #region Dinamic properties
@@ -29,7 +23,6 @@ namespace Jogo25D.Dimensions
         public int TileSize => ResolveLayer(ChunkStreamingConstants.OVERWORLD_ID)?.TileSet?.TileSize.X
             ?? ResolveLayer(ChunkStreamingConstants.UPSIDEDOWN_ID)?.TileSet?.TileSize.X
             ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-
 
         public IEnumerable<string> Ids => _dimensions.Keys;
 
@@ -117,6 +110,7 @@ namespace Jogo25D.Dimensions
                 return;
             }
 
+            parent.RemoveChild(entities);
             entities.Name = "EntitiesDiscarded";
             entities.QueueFree();
 
@@ -141,7 +135,6 @@ namespace Jogo25D.Dimensions
             return dimension?.BaseLayer;
         }
 
-        // Dimensao a que um no pertence, pelo parent em que ele esta pendurado.
         public string ResolveDimensionIdOf(Node node)
         {
             foreach (var (dimensionId, dimension) in _dimensions)
@@ -155,7 +148,6 @@ namespace Jogo25D.Dimensions
             return ChunkStreamingConstants.UPSIDEDOWN_ID;
         }
 
-        // Deixa visivel so o container da dimensao informada.
         public void ShowOnly(string dimensionId)
         {
             foreach (var (currentId, dimension) in _dimensions)
@@ -189,12 +181,21 @@ namespace Jogo25D.Dimensions
 
         #region Core - Limpeza
 
-        // Zera o terreno desenhado das duas dimensoes. O que o cliente tinha por padrao sai daqui
-        // antes de receber os chunks do servidor.
-        public void ClearLayers()
+        public void ClearLayers(bool discardBackground = false)
         {
             foreach (var dimensionId in _dimensions.Keys)
             {
+                var walls = ResolveParent(dimensionId)?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+
+                if (discardBackground)
+                {
+                    walls?.ResetForNewWorld();
+                }
+                else
+                {
+                    walls?.ClearRenderedForStreaming();
+                }
+
                 ResolveBaseLayer(dimensionId)?.Clear();
                 ResolveLayer(dimensionId)?.Clear();
             }
@@ -203,7 +204,8 @@ namespace Jogo25D.Dimensions
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void ClearLayersReceive()
         {
-            ClearLayers();
+            ClearEntities();
+            ClearLayers(discardBackground:true);
         }
 
         public void Reset()
@@ -215,15 +217,12 @@ namespace Jogo25D.Dimensions
                 dimension.Layer = null;
                 dimension.BaseLayer = null;
             }
-
         }
 
         #endregion
 
         #region Core - Posicionamento
 
-        // Varre a coluna de cima pra baixo ate achar chao solido; devolve a posicao em que um corpo
-        // com halfBodyHeight fica apoiado nele.
         public Vector2 FindGroundSpawnPosition(string dimensionId, float worldX, float halfBodyHeight = 15f)
         {
             var layer = ResolveLayer(dimensionId);
@@ -348,20 +347,11 @@ namespace Jogo25D.Dimensions
 
         #region Core - Spawn generico
 
-        // Um caminho para qualquer entidade de mundo. O EntityData descreve tudo: a cena a
-        // instanciar, onde, e o estado - que continua vivo depois do node morrer.
-        //
-        // Entidade nova nao precisa de metodo nem de RPC aqui: precisa de uma cena e de um
-        // EntityData. Player e NPC ficam de fora, sao conteudo de sessao.
-        // Chaves do record. Sao o que o node nao consegue declarar sozinho: a cena de onde ele
-        // veio, a identidade, a dimensao e a posicao (que e do Node2D, nao dele).
         public const string RECORD_SCENE = "ScenePath";
         public const string RECORD_DIMENSION = "DimensionId";
         public const string RECORD_INSTANCE = "InstanceId";
         public const string RECORD_POSITION = "Position";
 
-        // O NOME do no e a identidade. Deterministico de proposito: RPC do Godot resolve por
-        // caminho, entao o mesmo no precisa ter o mesmo nome em todos os peers.
         public static string EntityNameOf(long instanceId)
         {
             return $"E{instanceId}";
@@ -395,7 +385,6 @@ namespace Jogo25D.Dimensions
                 dict.TryGetValue("y", out var y) ? y.AsSingle() : 0f);
         }
 
-        // Instancia e coloca no lugar. Se o node ja existir com essa identidade, nao duplica.
         public Node2D Spawn(Godot.Collections.Dictionary record)
         {
             var node = Build(record);
@@ -419,8 +408,6 @@ namespace Jogo25D.Dimensions
             return node;
         }
 
-        // Instancia SEM anexar na arvore. E o que o streaming usa pra carregar o mundo do disco:
-        // o node existe e guarda o proprio estado, mas nao processa ate ser pendurado.
         public Node2D Build(Godot.Collections.Dictionary record)
         {
             if (record == null || !record.ContainsKey(RECORD_SCENE))
@@ -452,7 +439,6 @@ namespace Jogo25D.Dimensions
             return node;
         }
 
-        // Cria no lado autoritativo e replica. targetPeerId != 0 manda so pra um (catch-up).
         public void SpawnRequest(Godot.Collections.Dictionary record, long targetPeerId = 0)
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
@@ -488,7 +474,6 @@ namespace Jogo25D.Dimensions
             Rpc(nameof(DespawnReceive), instanceId);
         }
 
-        // Tira o no de UM peer so. O servidor continua com o dele e continua simulando.
         public void DespawnForPeer(long targetPeerId, long instanceId)
         {
             if (Multiplayer != null && Multiplayer.HasMultiplayerPeer())
@@ -529,8 +514,6 @@ namespace Jogo25D.Dimensions
 
         #region Core - Item no chao
 
-        // Dropar item: instancia, poe no mundo e deixa o streaming cuidar do resto. O
-        // registro acontece sozinho no _EnterTree.
         public long SpawnWorldItemRequest(ItemData itemData, Vector2 position, string dimensionId)
         {
             if (itemData == null)
@@ -555,7 +538,6 @@ namespace Jogo25D.Dimensions
             return instanceId;
         }
 
-        // Recolher e ESQUECER: QueueFree, nao RemoveChild. O node sai do save e nao volta.
         public void RemoveWorldItemRequest(long worldItemId)
         {
             DespawnRequest(worldItemId);

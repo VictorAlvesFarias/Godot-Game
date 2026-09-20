@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -7,6 +7,7 @@ using Jogo25D.Items;
 using Jogo25D.Systems;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace Jogo25D.UI
@@ -681,6 +682,58 @@ namespace Jogo25D.UI
                     console.PrintSuccess($"Camera livre {(camera.FreeCameraEnabled ? "ativada" : "desativada")}.");
                 },
                 getCompletions: partial => new List<string> { "enable", "disable" }
+                    .Where(option => option.StartsWith(partial))
+                    .ToList()
+            );
+
+            Register(
+                name: "cam_smooth",
+                usage: "cam_smooth off/<velocidade>",
+                description: "Regula a perseguicao da camera ao player (maior = mais colada, off = colada)",
+                execute: (args, console) =>
+                {
+                    var camera = GetTree().GetNodesInGroup("cameras").OfType<CameraController>().FirstOrDefault();
+
+                    if (camera == null)
+                    {
+                        console.PrintError("Nenhuma camera encontrada na cena.");
+
+                        return;
+                    }
+
+                    if (args.Length < 1)
+                    {
+                        console.PrintSuccess(camera.PositionSmoothingEnabled
+                            ? $"Suavizacao em {camera.PositionSmoothingSpeed}."
+                            : "Suavizacao desligada.");
+
+                        return;
+                    }
+
+                    if (args[0] == "off")
+                    {
+                        camera.PositionSmoothingEnabled = false;
+
+                        console.PrintSuccess("Suavizacao desligada.");
+
+                        return;
+                    }
+
+                    if (!float.TryParse(args[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var speed) || speed <= 0f)
+                    {
+                        console.PrintError("Uso: cam_smooth off/<velocidade>");
+
+                        return;
+                    }
+
+                    camera.SmoothingSpeed = speed;
+                    camera.PositionSmoothingSpeed = speed;
+                    camera.PositionSmoothingEnabled = true;
+                    camera.ResetSmoothing();
+
+                    console.PrintSuccess($"Suavizacao em {speed}.");
+                },
+                getCompletions: partial => new List<string> { "off", "8", "12", "16", "20" }
                     .Where(option => option.StartsWith(partial))
                     .ToList()
             );

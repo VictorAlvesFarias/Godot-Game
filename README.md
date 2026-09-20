@@ -638,7 +638,16 @@ Recording a source and a category on `BasePropertyData` would reach the whole sy
 
 ### 3. Lighting
 
-Lighting is prototyped on two branches, `ilumination-feature` and `ilumination-hdr-feature`, present locally and on the remote. It is exploratory work: it still has to be developed and merged back.
+Lighting uses the logical primary and background-wall layers, analytic projected
+shadows, sky access through openings, window transmission and RGB local emitters.
+`LightMap2D` coordinates the editor preview and runtime materials. Local emission
+runs on a compute shader with a CPU fallback; sky access and geometry preparation
+still use the CPU. No engine Light2D is required by this path.
+
+Start at the [feature README](Game/Features/World/Light/README.md); see also
+[current architecture](Game/Docs/LightMap.md),
+[restoration guide](Game/Docs/DepthSkylight-Restauracao.md) and
+[performance](Game/Docs/LightingPerformance.md).
 
 ---
 

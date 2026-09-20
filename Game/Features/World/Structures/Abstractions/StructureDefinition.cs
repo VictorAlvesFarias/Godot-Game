@@ -17,6 +17,8 @@ namespace Jogo25D.Structures
 
         public abstract StructureBounds GetBounds(long worldSeed, string dimensionId, int worldX, int worldScale);
 
+        public abstract int GetMaxTopExtent(int worldScale);
+
         public abstract List<StructureCellGroup> CollectCells(Vector2I groundCell, long worldSeed, string dimensionId, int worldScale);
 
         #endregion

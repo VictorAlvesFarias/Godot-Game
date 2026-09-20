@@ -1,5 +1,6 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Biomes;
+using Jogo25D.Blocks;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -15,22 +16,19 @@ using System.Threading.Tasks;
 
 namespace Jogo25D.Chunks
 {
-    // Streaming de TILE: decide qual chunk pintar e apagar conforme os players andam, e
-    // replica a decisao pros peers. So mexe em celula de tilemap - nao instancia nada.
-    //
-    // Emite ChunkLoaded/ChunkUnloaded pra quem precisa reagir (minimapa hoje, streaming de
-    // entidade depois). Nao conhece nenhum dos dois.
     public partial class TileStreamingManager : Node
     {
         #region Events
 
-        // dimensionId, chunkCoord
         public event System.Action<string, Vector2I> ChunkLoaded;
         public event System.Action<string, Vector2I> ChunkUnloaded;
 
         #endregion
 
         #region Dinamic properties
+
+        private const int TerrainBatchLimit = 3072;
+        private const int BackgroundBatchLimit = 2048;
 
         public bool Enabled { get; set; } = false;
         public int TileSize => Dimensions.TileSize;
@@ -62,14 +60,12 @@ namespace Jogo25D.Chunks
 
         #region Node references
 
-
         #endregion
 
         #region Godot implementation
 
         public override void _Ready()
         {
-
             if (IsServerAuthoritative())
             {
                 WorldSeed = (uint)GD.Randi();
@@ -189,9 +185,6 @@ namespace Jogo25D.Chunks
                 await LoadChunkAsync(dimensionId, chunkCoord, loaded, state, loadedPeers, requestingPeers);
             }
 
-            // Chunk que o servidor ja tinha pintado por causa de OUTRO player nunca chegava em
-            // quem chegou depois: o filtro acima olha o 'loaded' global. Aqui a decisao e por
-            // peer - quem precisa e ainda nao recebeu, recebe agora.
             SendPendingChunksToPeers(dimensionId, needed, loaded, state, loadedPeers, neededByPeer);
 
             var toUnload = new List<Vector2I>();
@@ -288,6 +281,7 @@ namespace Jogo25D.Chunks
 
         public void RecordMutation(string dimensionId, Vector2I cell, string type, string extraData)
         {
+            Game.Managers.LightMapManager.Node?.SetCell(dimensionId, cell, type, extraData);
             var state = ResolveState(dimensionId);
             var chunkCoord = CoordinateUtilities.CellToChunk(cell);
 
@@ -305,7 +299,6 @@ namespace Jogo25D.Chunks
             });
         }
 
-        // Fachada pro minimapa: a UI fala com o manager, o manager fala com o system.
         public Texture2D GetDiscoveredTexture(TileMapLayer layer, out Vector2I origin)
         {
             foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
@@ -321,9 +314,6 @@ namespace Jogo25D.Chunks
             return null;
         }
 
-        // Ponto único de resolução de layer: Base/Compose sempre existem por padrão (pré-criadas
-        // em Overworld.tscn/Upsidedown.tscn, com TileSet e script já atribuídos), então aqui é só
-        // resolver e cachear - nunca cria layer em runtime.
         public BiomeDefinition ResolveBiome(string dimensionId, int worldX, int worldY)
         {
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(WorldSeed, dimensionId, worldX, worldY));
@@ -369,7 +359,14 @@ namespace Jogo25D.Chunks
         {
             foreach (var mutation in chunkState.Mutations)
             {
-                layer.ApplyChunkMutation(mutation);
+                if (mutation.Type is "wall_place" or "wall_break")
+                {
+                    layer.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls")?.ApplyMutation(mutation);
+                }
+                else
+                {
+                    layer.ApplyChunkMutation(mutation);
+                }
             }
         }
 
@@ -472,9 +469,18 @@ namespace Jogo25D.Chunks
 
             loaded.Add(chunkCoord);
 
-            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
-
             var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
+
+            foreach (var mutation in chunkState.Mutations)
+            {
+                Game.Managers.LightMapManager.Node?.SetCell(
+                    dimensionId,
+                    new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y),
+                    mutation.Type,
+                    mutation.ExtraData);
+            }
+
+            await _generator.PaintTilesAsync(layer, baseLayer, WorldSeed, dimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
             ApplyMutations(layer, chunkState);
             _minimap.RecordChunk(dimensionId, layer, chunkCoord);
@@ -518,10 +524,11 @@ namespace Jogo25D.Chunks
             CatchUpPeer(targetPeerId, Vector2.Zero);
         }
 
-        // aroundPosition e onde o peer vai nascer: e o centro do que ele precisa receber agora.
         public void CatchUpPeer(long targetPeerId, Vector2 aroundPosition)
         {
             SetWorldSeedRequest(targetPeerId);
+            SendLightWorld(targetPeerId, ChunkStreamingConstants.OVERWORLD_ID);
+            SendLightWorld(targetPeerId, ChunkStreamingConstants.UPSIDEDOWN_ID);
 
             var aroundChunk = CoordinateUtilities.WorldToChunk(aroundPosition, TileSize);
 
@@ -534,9 +541,87 @@ namespace Jogo25D.Chunks
             RpcId(targetPeerId, nameof(SetWorldSeedReceive), WorldSeed);
         }
 
-        // Manda pro peer novo so o que esta perto dele. Antes mandava TODO chunk carregado das
-        // duas dimensoes - com varios players espalhados, o peer pintava regiao onde nunca ia
-        // chegar, e recebia o unload de cada uma logo depois.
+        private void SendLightWorld(long peerId, string dimensionId)
+        {
+            var world = Game.Managers.LightMapManager.Node.GetWorld(dimensionId);
+            var batch = new List<int>(TerrainBatchLimit);
+            var reset = true;
+
+            foreach (var edit in world.Edits())
+            {
+                batch.Add(edit.X);
+                batch.Add(edit.Y);
+                batch.Add(edit.Terrain);
+
+                if (batch.Count < TerrainBatchLimit)
+                {
+                    continue;
+                }
+
+                RpcId(peerId, nameof(ReceiveLightWorld), dimensionId, world.Procedural, reset, batch.ToArray());
+
+                reset = false;
+
+                batch.Clear();
+            }
+
+            if (reset || batch.Count > 0)
+            {
+                RpcId(peerId, nameof(ReceiveLightWorld), dimensionId, world.Procedural, reset, batch.ToArray());
+            }
+
+            batch.Clear();
+
+            foreach (var cell in world.BackgroundCells)
+            {
+                batch.Add(cell.X);
+                batch.Add(cell.Y);
+
+                if (batch.Count < BackgroundBatchLimit)
+                {
+                    continue;
+                }
+
+                RpcId(peerId, nameof(ReceiveBackgroundLight), dimensionId, batch.ToArray());
+
+                batch.Clear();
+            }
+
+            if (batch.Count > 0)
+            {
+                RpcId(peerId, nameof(ReceiveBackgroundLight), dimensionId, batch.ToArray());
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ReceiveBackgroundLight(string dimensionId, int[] cells)
+        {
+            var world = Game.Managers.LightMapManager.Node.GetWorld(dimensionId);
+
+            for (int i = 0; i + 1 < cells.Length; i += 2)
+            {
+                world.SetBackground(cells[i], cells[i + 1], true);
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ReceiveLightWorld(string dimensionId, bool procedural, bool reset, int[] edits)
+        {
+            var manager = Game.Managers.LightMapManager.Node;
+
+            if (reset)
+            {
+                manager.ReplaceWorld(dimensionId, procedural);
+            }
+
+            var world = manager.GetWorld(dimensionId);
+
+            for (int i = 0; i + 2 < edits.Length; i += 3)
+            {
+                world.SetTerrain(edits[i], edits[i + 1], edits[i + 2]);
+            }
+        }
+
         private void CatchUpDimension(string dimensionId, HashSet<Vector2I> loaded, Dictionary<Vector2I, ChunkStateData> state, Dictionary<Vector2I, HashSet<long>> loadedPeers, long targetPeerId, Vector2I aroundChunk)
         {
             foreach (var chunkCoord in loaded)
@@ -624,6 +709,8 @@ namespace Jogo25D.Chunks
                 var mutacao = bruta.AsGodotDictionary();
                 var cell = new Vector2I(mutacao["x"].AsInt32(), mutacao["y"].AsInt32());
                 var chunk = CoordinateUtilities.CellToChunk(cell);
+                Game.Managers.LightMapManager.Node?.SetCell(dimensionId, cell, mutacao["type"].AsString(),
+                    mutacao.TryGetValue("blockId", out var opticalBlock) ? opticalBlock.AsString() : "");
 
                 if (!state.TryGetValue(chunk, out var chunkState))
                 {
@@ -631,12 +718,18 @@ namespace Jogo25D.Chunks
                     state[chunk] = chunkState;
                 }
 
-                chunkState.Mutations.Add(new ChunkMutationData
+                var restoredMutation = new ChunkMutationData
                 {
                     Type = mutacao["type"].AsString(),
                     Position = new Vector2(cell.X, cell.Y),
                     ExtraData = mutacao.TryGetValue("blockId", out var b) ? b.AsString() : "",
-                });
+                };
+                chunkState.Mutations.Add(restoredMutation);
+
+                if (restoredMutation.Type is "wall_place" or "wall_break")
+                {
+                    Dimensions.ResolveParent(dimensionId)?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls")?.ApplyMutation(restoredMutation);
+                }
             }
         }
 

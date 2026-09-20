@@ -1,14 +1,7 @@
-﻿using System;
+using System;
 
 namespace Jogo25D.Core
 {
-    // Registro dos nodes estaticos da arvore - os que existem desde o estado inicial e nunca sao
-    // reinstanciados. A estrutura espelha a arvore da cena, entao o acesso e sempre
-    // Game.<NodeName>.Node ou Game.<NodeName>.<SubNodeName>.Node.
-    //
-    // O Bootstrap preenche tudo de uma vez e so entao chama NotifyReady. Enquanto IsReady for
-    // false o registro nao pode ser lido: quem depende de outro node registra a acao em
-    // WhenReady em vez de rodar direto no proprio _Ready.
     public static class Game
     {
         #region Dinamic properties
@@ -21,10 +14,6 @@ namespace Jogo25D.Core
 
         #region Core - Ciclo de inicializacao
 
-        // Roda a acao agora se o Bootstrap ja fechou, senao enfileira pra rodar quando fechar.
-        // Isso deixa a classe consumidora indiferente a ordem: node estatico (que fica pronto
-        // antes do Bootstrap) e node instanciado em runtime (que fica pronto depois) usam a
-        // mesma chamada.
         public static void WhenReady(Action action)
         {
             if (action == null)
@@ -53,10 +42,6 @@ namespace Jogo25D.Core
             callbacks?.Invoke();
         }
 
-        // Chamado pelo Bootstrap no inicio do registro. NAO pode limpar ReadyCallbacks: o _Ready
-        // das telas roda ANTES do _Ready do Bootstrap (o Godot propaga de baixo pra cima), entao
-        // quando isso aqui executa a fila ja esta cheia de Initialize esperando. Limpar aqui
-        // descarta todos - e nenhum botao chega a ser ligado.
         internal static void Reset()
         {
             IsReady = false;
@@ -112,6 +97,20 @@ namespace Jogo25D.Core
                 public const string Path = "/root/Main/Managers/SessionManager";
 
                 public static global::Jogo25D.Session.SessionManager Node { get; internal set; }
+            }
+
+            public static class LightMapManager
+            {
+                public const string Path = "/root/Main/Managers/LightMapManager";
+
+                public static global::Jogo25D.Light.LightMapManager Node { get; internal set; }
+            }
+
+            public static class LightingManager
+            {
+                public const string Path = "/root/Main/Managers/LightingManager";
+
+                public static global::Jogo25D.Light.LightingManager Node { get; internal set; }
             }
 
             public static class DimensionManager

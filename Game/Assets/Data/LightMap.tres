@@ -1,0 +1,21 @@
+[gd_resource type="Resource" format=3 uid="uid://dejmyfrw0ttci"]
+
+[ext_resource type="Script" uid="uid://cv53hboh06phq" path="res://Features/World/Light/Resources/LightMapData.cs" id="1_eycpx"]
+
+[resource]
+script = ExtResource("1_eycpx")
+AmbientLightInfluence = 0.5
+TerrainLightDepthTiles = 5.25
+SunAngleDegrees = -3.5
+SunPenumbraShadowCurve = 0.85
+SunPenumbraAmbientCurve = 0.8
+ShadowStrength = 1.0
+_terrainLightDepthTiles = 5.25
+_debugShadow = false
+_sunColor = Color(1, 1, 1, 1)
+_sunAngleDegrees = -3.5
+_sunPenumbra = 0.0
+_sunPenumbraShadowCurve = 0.85
+_sunPenumbraAmbientCurve = 0.8
+_ambientLightInfluence = 0.5
+_shadowStrength = 1.0

@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Blocks;
 using Jogo25D.Characters;
@@ -25,280 +25,282 @@ using System.Linq;
 
 namespace Jogo25D.Systems
 {
-	public partial class WorldManager : Node
-	{
-		#region Events
+    public partial class WorldManager : Node
+    {
+        #region Events
 
-		#endregion
+        #endregion
 
-		#region Dinamic properties
+        #region Dinamic properties
 
+        #endregion
 
+        #region Node references
 
-		#endregion
+        #endregion
 
-		#region Node references
+        #region Managers
 
+        private static DimensionManager Dimensions => Game.Managers.DimensionManager.Node;
 
-		#endregion
+        #endregion
 
-		#region Managers
+        #region Godot implementation
 
-		private static DimensionManager Dimensions => Game.Managers.DimensionManager.Node;
+        public override void _Ready()
+        {
+            GD.Print("[WorldManager._Ready] _Ready()");
+        }
 
-		#endregion
+        #endregion
 
-		#region Godot implementation
+        public WorldStreaming Streaming => Game.Main.Node?.GetNodeOrNull<WorldStreaming>("World");
 
-		public override void _Ready()
-		{
-			GD.Print("[WorldManager._Ready] _Ready()");
-		}
+        #region Core - World spawning
 
-		#endregion
+        public void SpawnWorld()
+        {
+            if (Dimensions.IsResolved)
+            {
+                Game.Managers.LightMapManager.Node?.AttachToDimensions();
+                return;
+            }
 
-		public WorldStreaming Streaming => Game.Main.Node?.GetNodeOrNull<WorldStreaming>("World");
+            var main = Game.Main.Node;
 
-		#region Core - World spawning
+            if (main == null || main.HasNode("World"))
+            {
+                Dimensions.ResolveReferences();
 
-		public void SpawnWorld()
-		{
-			if (Dimensions.IsResolved)
-			{
-				return;
-			}
-			
-			var main = Game.Main.Node;
+                Game.Managers.LightMapManager.Node?.AttachToDimensions();
 
-			if (main == null || main.HasNode("World"))
-			{
-				Dimensions.ResolveReferences();
+                return;
+            }
 
-				return;
-			}
+            var world = GD.Load<PackedScene>("res://Scenes/World/World.tscn").Instantiate<Node2D>();
 
-			var world = GD.Load<PackedScene>("res://Scenes/World/World.tscn").Instantiate<Node2D>();
+            main.AddChild(world);
 
-			main.AddChild(world);
+            Dimensions.ResolveReferences();
 
-			Dimensions.ResolveReferences();
+            Game.Managers.LightMapManager.Node?.AttachToDimensions();
 
-			GD.Print("[WorldManager.SpawnWorld] world instantiated");
-		}
+            GD.Print("[WorldManager.SpawnWorld] world instantiated");
+        }
 
-		public void SpawnLocalWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
-		{
-			SpawnWorld();
-			SetChunkStreamingEnabled(false);
+        public void SpawnLocalWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
+        {
+            SpawnWorld();
 
-			CarregarDocumento(save);
-			RespawnLocalSoloPlayer(character);
+            SetChunkStreamingEnabled(false);
+            Game.Managers.LightMapManager.Node?.UseAuthoredWorlds();
 
-			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
-		}
+            CarregarDocumento(save);
+            RespawnLocalSoloPlayer(character);
 
-		public async void CreateProceduralWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
-		{
-			SpawnWorld();
-			Dimensions.ClearLayers();
+            Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
+        }
+
+        public async void CreateProceduralWorldAndPlayer(WorldSaveData save, CharacterSaveData character)
+        {
+            SpawnWorld();
+            Dimensions.ClearEntities();
+            Dimensions.ClearLayers(discardBackground:true);
 
             Game.Managers.TileStreamingManager.Node.SetWorldSeed(save.Seed);
+            Game.Managers.LightMapManager.Node?.UseProceduralWorlds();
 
             CarregarDocumento(save);
 
-			SetChunkStreamingEnabled(true);
+            SetChunkStreamingEnabled(true);
 
-			var loadingUi = Game.Ui.LoadingUI.Node;
+            var loadingUi = Game.Ui.LoadingUI.Node;
 
-			loadingUi?.Open();
+            loadingUi?.Open();
 
-			await Game.Managers.TileStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), Vector2.Zero);
-		
-			RespawnLocalSoloPlayer(character);
+            await Game.Managers.TileStreamingManager.Node.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), Vector2.Zero);
 
-			loadingUi?.Close();
+            RespawnLocalSoloPlayer(character);
 
-			Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
-		}
+            loadingUi?.Close();
 
-		private void CarregarDocumento(WorldSaveData save)
-		{
-			var documento = SaveStorage.LoadWorldDocument(save.WorldId);
+            Game.Managers.RouterManager.Node.Open(Game.Ui.HudUI.Node);
+        }
 
-			if (documento == null)
-			{
-				return;
-			}
+        private void CarregarDocumento(WorldSaveData save)
+        {
+            var documento = SaveStorage.LoadWorldDocument(save.WorldId);
 
-			foreach (var bruta in WorldDocument.Dimensoes(documento))
-			{
-				var entrada = bruta.AsGodotDictionary();
-				var dimensionId = WorldDocument.Texto(entrada, WorldDocument.TYPE);
-				var parent = Dimensions.ResolveParent(dimensionId);
+            if (documento == null)
+            {
+                return;
+            }
 
-				if (parent == null)
-				{
-					continue;
-				}
+            foreach (var bruta in WorldDocument.Dimensoes(documento))
+            {
+                var entrada = bruta.AsGodotDictionary();
+                var dimensionId = WorldDocument.Texto(entrada, WorldDocument.TYPE);
+                var parent = Dimensions.ResolveParent(dimensionId);
 
-				SaveSerializer.Ler(parent, WorldDocument.Estado(entrada));
+                if (parent == null)
+                {
+                    continue;
+                }
 
-				foreach (var brutaNo in WorldDocument.Nos(entrada))
-				{
-					var no = brutaNo.AsGodotDictionary();
+                SaveSerializer.Ler(parent, WorldDocument.Estado(entrada));
 
-					if (WorldDocument.EhReferencia(no))
-					{
-						continue;
-					}
+                foreach (var brutaNo in WorldDocument.Nos(entrada))
+                {
+                    var no = brutaNo.AsGodotDictionary();
 
-					var node = WorldDocument.Construir(no);
+                    if (WorldDocument.EhReferencia(no))
+                    {
+                        continue;
+                    }
 
-					if (node == null)
-					{
-						continue;
-					}
+                    var node = WorldDocument.Construir(no);
 
-					if (Streaming != null && Streaming.Enabled)
-					{
-						Streaming.Adotar(node, dimensionId);
-					}
-					else
-					{
-						Dimensions.ResolveEntities(dimensionId)?.AddChild(node);
-					}
-				}
-			}
-		}
+                    if (node == null)
+                    {
+                        continue;
+                    }
 
-		public void SalvarDocumento(WorldSaveData save)
-		{
-			if (save == null || Streaming == null)
-			{
-				return;
-			}
+                    if (Streaming != null && Streaming.Enabled)
+                    {
+                        Streaming.Adotar(node, dimensionId);
+                    }
+                    else
+                    {
+                        Dimensions.ResolveEntities(dimensionId)?.AddChild(node);
+                    }
+                }
+            }
+        }
 
-			var dimensoes = new List<Node2D>();
+        public void SalvarDocumento(WorldSaveData save)
+        {
+            if (save == null || Streaming == null)
+            {
+                return;
+            }
 
-			foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
-			{
-				var parent = Dimensions.ResolveParent(dimensionId);
+            var dimensoes = new List<Node2D>();
 
-				if (parent != null)
-				{
-					dimensoes.Add(parent);
-				}
-			}
+            foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
+            {
+                var parent = Dimensions.ResolveParent(dimensionId);
 
-			var documento = WorldDocument.Escrever(Streaming, dimensoes, d => Streaming.Descarregados(d is Dimension dim ? dim.DimensionId : d.Name));
+                if (parent != null)
+                {
+                    dimensoes.Add(parent);
+                }
+            }
 
-			documento[WorldDocument.STATE] = WorldDocument.EstadoDe(save);
+            var documento = WorldDocument.Escrever(Streaming, dimensoes, d => Streaming.Descarregados(d is Dimension dim ? dim.DimensionId : d.Name));
 
-			SaveStorage.SaveWorldDocument(save.WorldId, documento);
-		}
+            documento[WorldDocument.STATE] = WorldDocument.EstadoDe(save);
 
-		private void SetChunkStreamingEnabled(bool enabled)
-		{
-			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
+            SaveStorage.SaveWorldDocument(save.WorldId, documento);
+        }
 
-			if (tileStreamingManager != null)
-			{
-				tileStreamingManager.Enabled = enabled;
-			}
+        private void SetChunkStreamingEnabled(bool enabled)
+        {
+            var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
 
-			var streaming = Streaming;
+            if (tileStreamingManager != null)
+            {
+                tileStreamingManager.Enabled = enabled;
+            }
 
-			if (streaming != null)
-			{
-				streaming.Enabled = enabled;
-			}
-		}
+            var streaming = Streaming;
 
-		public void DespawnWorld()
-		{
-			Streaming?.ResetState();
+            if (streaming != null)
+            {
+                streaming.Enabled = enabled;
+            }
+        }
 
-			Dimensions.ClearEntities();
-			Dimensions.ClearLayers();
+        public void DespawnWorld()
+        {
+            Streaming?.ResetState();
 
-			Game.Managers.TileStreamingManager.Node?.ResetState();
+            Dimensions.ClearEntities();
+            Dimensions.ClearLayers();
 
-			Game.Managers.RouterManager.Node.Close(Game.Ui.HudUI.Node);
-		}
+            Game.Managers.TileStreamingManager.Node?.ResetState();
+            Game.Managers.LightMapManager.Node?.Detach();
 
-		public void RespawnLocalSoloPlayer(CharacterSaveData character)
-		{
-			var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+            Game.Managers.RouterManager.Node.Close(Game.Ui.HudUI.Node);
+        }
 
-			localPlayer.Name = "Player";
-			localPlayer.PeerId = 1;
-			localPlayer.Position = Dimensions.FindGroundSpawnPosition(ChunkStreamingConstants.UPSIDEDOWN_ID, 0f);
+        public void RespawnLocalSoloPlayer(CharacterSaveData character)
+        {
+            var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
-			if (character != null)
-			{
-				localPlayer.CharacterId = character.CharacterId;
-				GodotDictionaryParser.ApplyTo(localPlayer, character.State);
-				localPlayer.Loaded = true;
-			}
-			else
-			{
-				localPlayer.GiveItem(ItemFactory.CreateInstance("portal"));
-			}
+            localPlayer.Name = "Player";
+            localPlayer.PeerId = 1;
+            localPlayer.Position = Dimensions.FindGroundSpawnPosition(ChunkStreamingConstants.UPSIDEDOWN_ID, 0f);
 
-			Dimensions.SpawnPlayer(localPlayer);
+            if (character != null)
+            {
+                localPlayer.CharacterId = character.CharacterId;
+                GodotDictionaryParser.ApplyTo(localPlayer, character.State);
+                localPlayer.Loaded = true;
+            }
+            else
+            {
+                localPlayer.GiveItem(ItemFactory.CreateInstance("portal"));
+            }
 
-			Dimensions.SpawnTestNPC();
+            Dimensions.SpawnPlayer(localPlayer);
 
-			GD.Print("[WorldManager.Disconnect] respawned local solo player");
-		}
+            Dimensions.SpawnTestNPC();
 
-		#endregion
+            GD.Print("[WorldManager.Disconnect] respawned local solo player");
+        }
 
-		#region Core - Player lookup
+        #endregion
 
-		// Sem log: telas chamam isto de dentro do _Process enquanto ainda nao ha player
-		// (DeathScreenUI faz exatamente isso), entao imprimir aqui e centenas de linhas por segundo.
-		public Player GetLocalPlayer()
-		{
-			var localPeerId = 1;
+        #region Core - Player lookup
 
-			if (
-				Multiplayer != null &&
-				Multiplayer.MultiplayerPeer != null &&
-				Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
-			)
-			{
-				localPeerId = Multiplayer.GetUniqueId();
-			}
+        public Player GetLocalPlayer()
+        {
+            var localPeerId = 1;
 
-			return FindPlayerByPeerId(localPeerId);
-		}
+            if (
+                Multiplayer != null &&
+                Multiplayer.MultiplayerPeer != null &&
+                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected
+            )
+            {
+                localPeerId = Multiplayer.GetUniqueId();
+            }
 
-		public Player FindPlayerByPeerId(long peerId)
-		{
-			return GetAllPlayers().FirstOrDefault(p => p.PeerId == peerId);
-		}
+            return FindPlayerByPeerId(localPeerId);
+        }
 
-		// Todo Player da arvore, NPC incluso - quem precisa filtrar filtra.
-		public List<Player> GetAllPlayers()
-		{
-			return GetTree().GetNodesInGroup("players").OfType<Player>().ToList();
-		}
+        public Player FindPlayerByPeerId(long peerId)
+        {
+            return GetAllPlayers().FirstOrDefault(p => p.PeerId == peerId);
+        }
 
-		// Players que estao no parent daquela dimensao. E o que o streaming usa pra decidir
-		// o que carregar: raio ao redor de quem esta ali, nao de quem esta em outra dimensao.
-		public List<Player> GetPlayersInDimension(string dimensionId)
-		{
-			var parent = Dimensions.ResolveEntities(dimensionId);
+        public List<Player> GetAllPlayers()
+        {
+            return GetTree().GetNodesInGroup("players").OfType<Player>().ToList();
+        }
 
-			if (parent == null)
-			{
-				return new List<Player>();
-			}
+        public List<Player> GetPlayersInDimension(string dimensionId)
+        {
+            var parent = Dimensions.ResolveEntities(dimensionId);
 
-			return GetAllPlayers().Where(p => p.GetParent() == parent).ToList();
-		}
+            if (parent == null)
+            {
+                return new List<Player>();
+            }
 
-		#endregion
-	}
+            return GetAllPlayers().Where(p => p.GetParent() == parent).ToList();
+        }
+
+        #endregion
+    }
 }

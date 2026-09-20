@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Blocks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -15,6 +15,8 @@ namespace Jogo25D.Biomes
     [Tool]
     public partial class TerrainLayer : TileMapLayer
     {
+        public event System.Action<Vector2I> CellChanged;
+
         private static readonly Vector2I[] NeighborOffsets = new Vector2I[]
         {
             new Vector2I(-1, -1), new Vector2I(0, -1), new Vector2I(1, -1),
@@ -914,8 +916,6 @@ namespace Jogo25D.Biomes
 
         #region Edicao de bloco
 
-        // A dimensao a que esta layer pertence, deduzida do proprio pai (o node raiz de
-        // Overworld.tscn / Upsidedown.tscn). E o que dispensa passar dimensionId em toda chamada.
         private string _dimensionId;
 
         public string DimensionId
@@ -937,8 +937,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // A layer Base e irma da Compose dentro da mesma dimensao. Quando 'this' ja e a Base,
-        // resolve pra ela mesma - que e o comportamento que o WorldManager tinha.
         private TerrainLayer _baseLayer;
 
         private TerrainLayer BaseLayer
@@ -956,8 +954,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        // Ponto de entrada do jogador: pede pro servidor quebrar, ou quebra direto se for
-        // autoritativo. O alvo do RPC e a propria layer - mesmo caminho de node nos dois peers.
         public void BreakBlockClientRequest(Vector2I cell)
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
@@ -1020,6 +1016,7 @@ namespace Jogo25D.Biomes
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void BreakBlockBroadcast(Vector2I cell)
         {
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
             if (GetCellSourceId(cell) == -1)
             {
                 var baseLayer = BaseLayer;
@@ -1108,17 +1105,30 @@ namespace Jogo25D.Biomes
             EraseCellWithTerrainConnect(cell);
             ReconnectDecorationsNear(cell);
             RedrawDebugOverlay();
+
+            CellChanged?.Invoke(cell);
         }
 
         public bool PlaceBlock(Vector2I cell, BlockDefinition block)
         {
+            if (block.IsBackground)
+            {
+                return false;
+            }
+
             PaintBlockAndReconnect(cell, block);
+
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "place", block.Id);
+
+            CellChanged?.Invoke(cell);
 
             return true;
         }
 
         public void EraseBlockAndReconnect(Vector2I cell)
         {
+            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
+
             if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
             {
                 SetCell(cell, -1);
@@ -1181,6 +1191,8 @@ namespace Jogo25D.Biomes
 
             ReconnectDecorationsNear(cell);
             baseLayer?.ReconnectDecorationsNear(cell);
+
+            CellChanged?.Invoke(cell);
         }
 
         private void PaintBlockAndReconnect(Vector2I cell, BlockDefinition block)
