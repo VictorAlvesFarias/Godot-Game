@@ -5,10 +5,10 @@ namespace Jogo25D.Biomes
     [GlobalClass]
     public partial class TileDirectionRelation : Resource
     {
-        [Export] 
+        [Export]
         public int TerrainSet { get; set; }
-        
-        [Export] 
+
+        [Export]
         public Vector2I AtlasCoord { get; set; }
 
         [Export(PropertyHint.Enum)]

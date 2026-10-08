@@ -1,10 +1,17 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Core;
+using Jogo25D.Session;
 
 namespace Jogo25D.UI
 {
     public partial class LoadingUI : ScreenUI
     {
+        #region Node children references
+
+        public Label StatusLabel { get; private set; }
+
+        #endregion
+
         #region Dinamic properties
 
         public float DotsTimer { get; set; }
@@ -18,6 +25,21 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
+            ResolveChildren();
+
+            SessionContext.LoadingStarted += Open;
+            SessionContext.LoadingFinished += Close;
+        }
+
+        public override void _ExitTree()
+        {
+            SessionContext.LoadingStarted -= Open;
+            SessionContext.LoadingFinished -= Close;
+        }
+
+        private void ResolveChildren()
+        {
+            StatusLabel = GetNode<Label>("Background/CenterContainer/Column/StatusLabel");
         }
 
         public override void _Process(double delta)
@@ -37,7 +59,7 @@ namespace Jogo25D.UI
             DotsTimer = 0f;
             DotsCount = (DotsCount + 1) % 4;
 
-            Game.Ui.LoadingUI.StatusLabel.Node.Text = "Carregando" + new string('.', DotsCount);
+            StatusLabel.Text = "Carregando" + new string('.', DotsCount);
         }
 
         #endregion
@@ -49,14 +71,14 @@ namespace Jogo25D.UI
             DotsTimer = 0f;
             DotsCount = 0;
 
-            Game.Ui.LoadingUI.StatusLabel.Node.Text = "Carregando";
+            StatusLabel.Text = "Carregando";
 
-            Game.Managers.RouterManager.Node.Open(this);
+            RouterContext.Open(this);
         }
 
         public void Close()
         {
-            Game.Managers.RouterManager.Node.Close(this);
+            RouterContext.Close(this);
         }
 
         #endregion

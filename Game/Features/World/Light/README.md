@@ -26,8 +26,8 @@ sol e escreve o resultado sobre a cor da cena.
 
 ```
 Features/World/Light/
-├── Entities/     LightMap2D, LightSource2D, LightingEditorPreview   (nós da cena)
-├── Managers/     LightMapManager, LightingManager                   (ciclo e coordenação)
+├── Entities/     LightMap2D, LightSource2D, LightingEditorPreview   (nós da cena;
+│                 o LightMap2D guarda o ciclo por chunk da sua dimensão)
 ├── Systems/      LogicalLightWorld, SkyAccessField, AnalyticShadowGeometry,
 │                 WindowBeamCache, LightPropagation*, LightSourceScanner,
 │                 SceneLightSources, EditorTileRevision               (cálculo puro)
@@ -154,11 +154,11 @@ ganhos acima de 1 realmente clareiam superfícies já claras.
 
 ## Quem dispara o cálculo
 
-### Em jogo — `LightingManager`
+### Em jogo — `LightMap2D`
 
 Trabalha por chunk, acompanhando o streaming:
 
-- `ChunkLoaded` / `ChunkUnloaded` do `TileStreamingManager` e `OnCellChanged` de
+- `ChunkLoaded` / `ChunkUnloaded` do `Dimension` e `OnCellChanged` de
   cada edição marcam o chunk **e os 8 vizinhos** como sujos (a luz atravessa
   fronteiras);
 - por frame, no máximo `MAX_CHUNK_REBUILDS_PER_FRAME` (2) chunks são reconstruídos;
@@ -229,7 +229,7 @@ frame) ficam em `Constants/LightingConstants.cs`.
 
 ## Rede
 
-O mundo lógico é replicado, não recalculado por peer: `TileStreamingManager`
+O mundo lógico é replicado, não recalculado por peer: o `Dimension`
 envia as edições (`ReceiveLightWorld`, em lotes de 3072 inteiros) e as células de
 wall (`ReceiveBackgroundLight`, lotes de 2048) ao peer que entra. Cada cliente
 então calcula sua própria iluminação a partir do mesmo estado lógico.

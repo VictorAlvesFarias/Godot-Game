@@ -32,7 +32,7 @@ namespace Jogo25D.Systems
 
             AddToGroup("cameras");
 
-            Game.WhenReady(() => PlayerRef = Game.Managers.WorldManager.Node.GetLocalPlayer());
+            PlayerRef = Players.GetLocal();
         }
 
         public override void _Input(InputEvent @event)
@@ -77,7 +77,7 @@ namespace Jogo25D.Systems
 
             if (PlayerRef == null || !IsInstanceValid(PlayerRef))
             {
-                PlayerRef = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+                PlayerRef = Players.GetLocal();
             }
 
             if (PlayerRef != null && IsInstanceValid(PlayerRef))

@@ -1,19 +1,34 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
-using Jogo25D.Features.Managers.Save.Resources;
+using Jogo25D.Network;
+using Jogo25D.Save.Resources;
+using Jogo25D.Save.Types;
+using Jogo25D.Session;
 using Jogo25D.Systems;
+using Jogo25D.Utils.GodotDictionaryParser;
 using System.Collections.Generic;
 
 namespace Jogo25D.UI
 {
     public partial class CharacterSelectUI : ScreenUI
     {
+        #region Node children references
+
+        public LineEdit SearchInput { get; private set; }
+        public VBoxContainer ListContainer { get; private set; }
+        public Button BackButton { get; private set; }
+        public Button CreateCharacterButton { get; private set; }
+        public PanelContainer CharacterRowTemplate { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
@@ -22,7 +37,7 @@ namespace Jogo25D.UI
 
         public override void OnOpened()
         {
-            if (Game.Managers.SessionManager.Node.SelectionContext == CharacterSelectContext.PeerJoinServer)
+            if (SelectionContext() == CharacterSelectContext.PeerJoinServer)
             {
                 ShowServer();
 
@@ -34,26 +49,49 @@ namespace Jogo25D.UI
 
         public override bool CanOpen()
         {
-            var session = Game.Managers.SessionManager.Node;
+            return SelectionContext() != CharacterSelectContext.OwnWorld || SessionContext.PendingWorld != null;
+        }
 
-            return session.SelectionContext != CharacterSelectContext.OwnWorld || session.PendingWorld != null;
+        #endregion
+
+        #region Core - Variante da tela
+
+        private CharacterSelectContext SelectionContext()
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                return CharacterSelectContext.OwnWorld;
+            }
+
+            return SessionContext.CharacterMode == WorldCharacterMode.LocalCharacters
+                ? CharacterSelectContext.PeerJoinLocal
+                : CharacterSelectContext.PeerJoinServer;
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            SearchInput = GetNode<LineEdit>("MarginContainer/Root/SearchInput");
+            ListContainer = GetNode<VBoxContainer>("MarginContainer/Root/ListScroll/ListContainer");
+            BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
+            CreateCharacterButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateCharacterButton");
+            CharacterRowTemplate = GetNode<PanelContainer>("MarginContainer/Root/ListScroll/ListContainer/CharacterRowTemplate");
+        }
+
         private void Initialize()
         {
-            Game.Ui.CharacterSelectUI.BackButton.Node.Pressed += OnBackPressed;
-            Game.Ui.CharacterSelectUI.CreateCharacterButton.Node.Pressed += OnCreateCharacterPressed;
+            BackButton.Pressed += OnBackPressed;
+            CreateCharacterButton.Pressed += OnCreateCharacterPressed;
         }
 
         private void ShowLocal()
         {
             ClearList();
 
-            var characters = Game.Managers.SaveManager.Node?.ListLocalCharacters() ?? new List<CharacterSaveData>();
+            var characters = SaveStorage.ListLocalCharacters() ?? new List<CharacterSaveData>();
 
             foreach (var character in characters)
             {
@@ -64,12 +102,9 @@ namespace Jogo25D.UI
                     },
                     () =>
                     {
-                        Game.Managers.SaveManager.Node?.DeleteLocalCharacter(character.CharacterId);
+                        SaveStorage.DeleteLocalCharacter(character.CharacterId);
 
-                        if (Game.Managers.SessionManager.Node.PendingCharacter?.CharacterId == character.CharacterId)
-                        {
-                            Game.Managers.SessionManager.Node.PendingCharacter = null;
-                        }
+                        SessionContext.ForgetCharacter(character.CharacterId);
 
                         ShowLocal();
                     }
@@ -77,7 +112,7 @@ namespace Jogo25D.UI
 
                 if (row != null)
                 {
-                    Game.Ui.CharacterSelectUI.ListContainer.Node.AddChild(row);
+                    ListContainer.AddChild(row);
                 }
             }
         }
@@ -86,7 +121,7 @@ namespace Jogo25D.UI
         {
             ClearList();
 
-            foreach (var entry in Game.Managers.SessionManager.Node.ServerCharacterSummaries)
+            foreach (var entry in SessionContext.ServerCharacterSummaries)
             {
                 var dict = entry.AsGodotDictionary();
                 var characterId = dict["CharacterId"].AsString();
@@ -95,36 +130,62 @@ namespace Jogo25D.UI
                     name,
                     () =>
                     {
-                        Game.Managers.SessionManager.Node.SelectServerCharacterRequest(characterId);
-                        Game.Managers.RouterManager.Node.Close(this);
+                        RpcId(1, nameof(SelectServerCharacterServerReceive), characterId);
+
+                        RouterContext.Close(this);
                     },
                     () =>
                     {
-                        Game.Managers.SessionManager.Node.DeleteCharacter(characterId);
+                        RpcId(1, nameof(DeleteServerCharacterServerReceive), characterId);
                     }
                 );
 
                 if (row != null)
                 {
-                    Game.Ui.CharacterSelectUI.ListContainer.Node.AddChild(row);
+                    ListContainer.AddChild(row);
                 }
             }
         }
 
         private void SelectLocal(CharacterSaveData character)
         {
+            UseCharacter(character);
+
+            RouterContext.Close(this);
+        }
+
+        public void UseCharacter(CharacterSaveData character)
+        {
             if (character == null)
             {
                 return;
             }
 
-            Game.Managers.SessionManager.Node.SelectCharacter(character);
-            Game.Managers.RouterManager.Node.Close(this);
+            if (!NetworkContext.IsConnected())
+            {
+                SessionContext.EnterWorldWith(character);
+
+                return;
+            }
+
+            SessionContext.PendingCharacter = character;
+
+            RpcId(1, nameof(SubmitLocalCharacterServerReceive), LocalProfileId(), GodotDictionaryParser.ToDictionary(character));
+        }
+
+        public void RequestServerList()
+        {
+            RpcId(1, nameof(RequestServerCharacterListServerReceive), LocalProfileId());
+        }
+
+        private static string LocalProfileId()
+        {
+            return SaveStorage.GetOrCreateLocalProfile()?.ProfileId ?? "";
         }
 
         private void ClearList()
         {
-            foreach (var child in Game.Ui.CharacterSelectUI.ListContainer.Node.GetChildren())
+            foreach (var child in ListContainer.GetChildren())
             {
                 if (child.Name == "CharacterRowTemplate")
                 {
@@ -139,11 +200,11 @@ namespace Jogo25D.UI
 
         private Control CreateCharacterRow(string title, System.Action onSelect, System.Action onDelete)
         {
-            var template = Game.Ui.CharacterSelectUI.CharacterRowTemplate.Node;
+            var template = CharacterRowTemplate;
 
             if (template == null)
             {
-                GD.PushError("CharacterSelectUI: CharacterRowTemplate não encontrado em Game.Ui.CharacterSelectUI.ListContainer.Node.");
+                GD.PushError("CharacterSelectUI: CharacterRowTemplate não encontrado em ListContainer.");
 
                 return null;
             }
@@ -166,22 +227,70 @@ namespace Jogo25D.UI
 
         public void OnCreateCharacterPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.CreateCharacterUI.Node);
+            RouterContext.Open(Ui.Get<CreateCharacterUI>());
         }
 
         public void OnBackPressed()
         {
-            if (Game.Managers.SessionManager.Node.SelectionContext == CharacterSelectContext.OwnWorld)
+            if (SelectionContext() == CharacterSelectContext.OwnWorld)
             {
-                Game.Managers.SessionManager.Node.PendingWorld = null;
+                SessionContext.SetPendingWorld(null);
 
-                Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+                RouterContext.Open(Ui.Get<WorldSelectUI>());
 
                 return;
             }
 
-            Game.Managers.NetworkManager.Node.Disconnect();
-            Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
+            NetworkContext.Disconnect();
+            RouterContext.Open(Ui.Get<MultiplayerUI>());
+        }
+
+        #endregion
+
+        #region Core - Rpc - Personagens do servidor
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SubmitLocalCharacterServerReceive(string profileId, Godot.Collections.Dictionary characterDict)
+        {
+            SessionContext.ApplyLocalCharacterSubmit(Multiplayer.GetRemoteSenderId(), profileId, characterDict);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void RequestServerCharacterListServerReceive(string profileId)
+        {
+            var senderId = Multiplayer.GetRemoteSenderId();
+
+            if (!SessionContext.AcceptServerProfile(senderId, profileId))
+            {
+                return;
+            }
+
+            RpcId(senderId, nameof(ServerCharacterListReceive), SessionContext.ServerCharacterSummariesFor(senderId));
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ServerCharacterListReceive(Godot.Collections.Array summaries)
+        {
+            SessionContext.ApplyServerCharacterList(summaries);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SelectServerCharacterServerReceive(string characterId)
+        {
+            SessionContext.ApplyServerCharacterSelect(Multiplayer.GetRemoteSenderId(), characterId);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void DeleteServerCharacterServerReceive(string characterId)
+        {
+            var senderId = Multiplayer.GetRemoteSenderId();
+
+            if (!SessionContext.DeleteServerCharacter(senderId, characterId))
+            {
+                return;
+            }
+
+            RpcId(senderId, nameof(ServerCharacterListReceive), SessionContext.ServerCharacterSummariesFor(senderId));
         }
 
         #endregion

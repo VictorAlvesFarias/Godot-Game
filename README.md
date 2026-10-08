@@ -59,8 +59,6 @@ root/
 │   │               └── <OverlayName>.cs
 │   ├── Scenes/
 │   │   ├── Main.tscn
-│   │   ├── Managers/
-│   │   │   └── Managers.tscn
 │   │   ├── Ui/
 │   │   │   ├── Ui.tscn
 │   │   │   └── <UIName>/
@@ -86,13 +84,13 @@ User interface features. Each screen/UI component lives in its own folder inside
 **Sublayers:**
 
 - **Abstractions:** Abstract classes and base interfaces. Defines the immutable contract/blueprint that concrete implementations must follow (lifecycle methods, required properties).
-- **Managers:** Global UI services that are not a screen themselves (`RouterManager`, `WindowManager`).
+- **Context:** Global UI state that does not live in the tree (`RouterContext` — the screen history).
 - **Objects:** DTOs, data models used as arguments or to facilitate data transport.
 - **View:** Visual script that extends `CanvasLayer`. This is the script attached directly to the corresponding `.tscn` scene in `Scenes/Ui/`.
 
 ### Features/World/
 
-Game world features (gameplay). Each game domain lives in its own folder inside `World/`. There is no top-level `Managers/` feature: a manager belongs to the domain it serves, in that domain's `Managers/` folder (`Core/Managers/WorldManager.cs`, `Save/Managers/SaveManager.cs`, `Chunks/Managers/TileStreamingManager.cs`). `Core` holds the central manager of the World feature; the other domains sit as siblings of `Core`.
+Game world features (gameplay). Each game domain lives in its own folder inside `World/`. There is no top-level `Managers/` feature and there are no manager nodes: state that does not exist in the scene tree lives in a static context in that domain's `Context/` folder (`Save/Context/SaveContext.cs`, `Session/Context/SessionContext.cs`, `Network/Context/NetworkContext.cs`). Everything else is a plain static class named after what it does, in that domain's `Singletons/` folder (`Characters/Singletons/Players.cs`, `Entities/Singletons/EntitySpawner.cs`). See `Game/Docs/Arquitetura-Managers-Contexto.md` for the rule. `Core` holds the central pieces of the World feature; the other domains sit as siblings of `Core`.
 
 **Sublayers:**
 
@@ -100,13 +98,23 @@ Game world features (gameplay). Each game domain lives in its own folder inside 
 - **Database:** Static registries (in-memory databases). Classes with `Dictionary<string, Definition>` that catalog all available definitions and provide factory methods to create instances.
 - **Definitions:** Concrete implementations of abstractions. Each class inherits from an abstraction and implements the actual, specific behavior for that type.
 - **Entities:** Main game objects. Scripts attached to the root Node of an entity (character, camera, etc.) — the "owner" of the entity in the scene tree.
-- **Managers:** Global service for that domain. The manager script sits directly inside `Managers/`.
+- **Context:** Static class holding the domain's state that does not exist in the scene tree (`SaveContext`, `SessionContext`, `NetworkContext`). No tick, no loop, no reference to UI.
 - **Resources:** Godot `Resource` subclasses owned by that domain (save data models, definition data, etc.).
 - **Singletons:** Single shared instances that back the domain at runtime (`TerrainLayer`, `WorldRandom`).
 - **Structures:** Structs, simple and immutable data passed between systems (damage info, inputs, etc.).
 - **Systems:** Behavior scripts attached to nodes. Logic that runs as a child component of an entity or scene, processing behavior every frame or event.
 - **Types:** Enums. Categorize variants within the feature's domain.
 - **View:** Debug/visual overlays owned by the domain.
+
+### Code conventions
+
+- Namespaces start at `Jogo25D` (`Jogo25D.Light`, `Jogo25D.Utils.Coordinates`). A `Core/` subfolder does not add a namespace segment.
+- Identifiers are in English. Text shown to the player and log/error messages stay in Portuguese.
+- No comments in code. The reasoning behind a design lives in `Game/Docs/`.
+- Four spaces, block-scoped namespaces, braces on their own line and on every `if`/`for`/`foreach`/`while` body, one statement per line, methods with block bodies.
+- `using` order: `Godot`, then `Jogo25D.*`, then `System.*`, each group alphabetical.
+- Regions use the project vocabulary (`Dinamic properties`, `Node references`, `Godot implementation`, `Core - <topic>`, `Utils`, `Types`), with a blank line after `#region` and before `#endregion`.
+- A blank line separates a closed block from the next statement and comes before a `return` that follows other statements.
 
 ---
 
@@ -416,26 +424,26 @@ The first 8 slots are the hotbar, rendered in their own row; the rest go to the 
 
 ### Tile streaming
 
-`TileStreamingManager` — a node in `Scenes/Managers/Managers.tscn`, so it exists for the whole run of the application. It decides which chunks to paint and erase as players walk, and replicates that decision to the peers. **It only touches tilemap cells — it never instantiates anything.**
+`Dimension` — one node per dimension, inside `Scenes/World/World.tscn`. It decides which chunks to paint and erase as players walk, and replicates that decision to the peers. **It only touches tilemap cells — it never instantiates anything.** `WorldStreaming`, the root of that scene, keeps the tick: every `EVALUATE_INTERVAL_SECONDS` it calls `Evaluate()` on each dimension.
 
-It is always in the tree and `_Process` is always called, but the first lines decide whether the tick does anything:
+`Evaluate()` decides for itself whether the tick does anything:
 
 **The gate:**
 ```csharp
-if (!Enabled || !IsServerAuthoritative() || Game.Managers.WorldManager.Node == null)
+if (_evaluating || !IsServerAuthoritative())
 {
     return;
 }
 ```
 
-`Enabled` is set by `WorldManager.SetChunkStreamingEnabled` — `true` for a procedural world, `false` for a hand-drawn one, where the terrain is already in the level scene and nothing should be generated or erased. `IsServerAuthoritative()` is true for solo and for the host, never for a client. **So on a client the loop is a no-op: the client decides nothing.**
+`Enabled` is set by `WorldStreaming.SetStreamingEnabled` — `true` for a procedural world, `false` for a hand-drawn one, where the terrain is already in the level scene and nothing should be generated or erased. `IsServerAuthoritative()` is true for solo and for the host, never for a client. **So on a client the loop is a no-op: the client decides nothing.**
 
-**The tick.** Every `EVALUATE_INTERVAL_SECONDS` (0.75s) the manager evaluates each dimension independently and asynchronously. A per-dimension flag (`_isEvaluatingOverworld` / `_isEvaluatingUpsidedown`) stops a second evaluation from starting while the previous one is still painting.
+**The tick.** Every `EVALUATE_INTERVAL_SECONDS` `WorldStreaming` calls `Evaluate()` on each dimension independently and asynchronously. Each `Dimension` keeps its own `_evaluating` flag, which stops a second evaluation from starting while the previous one is still painting.
 
 **The decision, per dimension:**
 
 ```
-players   = WorldManager.GetPlayersInDimension(dimensionId)
+players   = Players.InDimension(dimensionId)
 needed    = union of the (2·LOAD_RADIUS_CHUNKS+1)² square around each player   (7×7 = 49 chunks)
 missing   = needed - loaded, nearest player first, capped at MAX_CHUNK_LOADS_PER_TICK (6)
 to unload = every loaded chunk farther than UNLOAD_RADIUS_CHUNKS from every player
@@ -478,7 +486,7 @@ The client runs the same generator with the same `WorldSeed`, sent once by `SetW
 
 ### Entity streaming
 
-`WorldStreaming` — the script attached to the **root of `World.tscn`**, not to `Managers.tscn`. It handles what exists *inside* the world: which entities are materialized, which leave the tree, and what goes into the file. Same shape as the tile streaming — a node that stays alive with an `Enabled` flag, a tick every `EVALUATE_INTERVAL_SECONDS`, and the same server-only guard — but a completely independent decision. **It does not subscribe to `ChunkLoaded`:** the two systems measure distance to the same players, not to each other.
+`WorldStreaming` — the script attached to the **root of `World.tscn`**. It handles what exists *inside* the world: which entities are materialized, which leave the tree, and what goes into the file. Same shape as the tile streaming — a node that stays alive with an `Enabled` flag, a tick every `EVALUATE_INTERVAL_SECONDS`, and the same server-only guard — but a completely independent decision. **It does not subscribe to `ChunkLoaded`:** the two systems measure distance to the same players, not to each other.
 
 **There is no registry: the tree is the index.** A recursive walk from the World root finds everything, and the criterion to participate is having a field marked with `[GodotDictionaryField]` and not being in the `players` group.
 
@@ -574,10 +582,10 @@ The `{0}` is the external identity — for the player, its `CharacterId`. The NP
 
 **Saving**
 ```
-SaveManager.SaveAll()                      autosave timer, or leaving the world
+SaveContext.SaveAll()                      autosave timer, or leaving the world
   ├─ Saving?.Invoke()                      whoever holds state outside the Resource updates it
   ├─ SaveWorld(world)                      only host/solo writes the world
-  │    └─ WorldManager.SalvarDocumento
+  │    └─ WorldDocument.Save
   │         ├─ WorldDocument.Escrever(Streaming, dimensions, Streaming.Descarregados)
   │         └─ SaveStorage.SaveWorldDocument
   └─ the local character is written by everyone; the host also writes the peers'
@@ -587,7 +595,7 @@ SaveManager.SaveAll()                      autosave timer, or leaving the world
 
 **Loading**
 ```
-WorldManager.CarregarDocumento(save)
+WorldDocument.Load(save)
   └─ for each dimension in the document:
        ├─ SaveSerializer.Ler(dimension, state)   the setter passes the mutations to the layers
        └─ for each node:
@@ -598,6 +606,8 @@ WorldManager.CarregarDocumento(save)
 ```
 
 **What `[Save]` accepts:** primitives, `Vector2`, `Dictionary`, `Array` and any `Resource` — the last one through `GodotDictionaryParser`, so an `ItemData` goes in whole, in a single field. Any other type raises `NotSupportedException` at the moment of writing, never in silence.
+
+**`ISaveState` is for what a property cannot hold.** `[Save]` reflects over properties, so a value that needs a scan to read, or that has an effect beyond storing on write, would force a property with a hand-written getter — work hidden behind what reads like a field. Such a node implements `ISaveState` instead, and `SaveSerializer` calls `WriteState`/`ReadState` after the `[Save]` properties. `Dimension` is the only one today: exporting its mutations walks every loaded chunk, and importing them replays the light and wall edits.
 
 **`position` is implicit.** `Position` belongs to `Node2D` and cannot take an attribute, so instead of every class declaring a shim, `WorldDocument` writes and reads it for every entity — it is the one thing they all have and none of them can declare.
 
@@ -610,7 +620,7 @@ WorldManager.CarregarDocumento(save)
 | `SaveSerializer` | `$type → class` map by reflection; reads and writes `state` |
 | `WorldDocument` | the shape of `world.json`: keys, writing, reading, `Construir` |
 | `SaveStorage` | pure IO: `LoadWorldDocument` / `SaveWorldDocument` |
-| `SaveManager` | registry of what is in play, autosave timer, and the save policy |
+| `SaveContext` | registry of what is in play, autosave timer, and the save policy |
 
 ---
 

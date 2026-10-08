@@ -1,17 +1,28 @@
 using Godot;
 using Jogo25D.Core;
+using Jogo25D.Network;
+using Jogo25D.Session;
 
 namespace Jogo25D.UI
 {
     public partial class HostModalUI : ScreenUI
     {
+        #region Node children references
+
+        public LineEdit PortInput { get; private set; }
+        public Button ConfirmButton { get; private set; }
+        public Button CancelButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override bool IsOverlay => true;
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         public override void _Input(InputEvent @event)
@@ -30,24 +41,31 @@ namespace Jogo25D.UI
 
         public void Abrir()
         {
-            var campo = Game.Ui.HostModalUI.PortInput.Node;
+            var field = PortInput;
 
-            campo.Text = "";
+            field.Text = "";
 
-            Game.Managers.RouterManager.Node.Open(this);
+            RouterContext.Open(this);
 
-            campo.GrabFocus();
+            field.GrabFocus();
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            PortInput = GetNode<LineEdit>("Background/CenterContainer/Panel/MarginContainer/Root/PortInput");
+            ConfirmButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/Buttons/ConfirmButton");
+            CancelButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/Buttons/CancelButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.HostModalUI.ConfirmButton.Node.Pressed += OnConfirmPressed;
-            Game.Ui.HostModalUI.CancelButton.Node.Pressed += OnCancelPressed;
-            Game.Ui.HostModalUI.PortInput.Node.TextSubmitted += OnPortSubmitted;
+            ConfirmButton.Pressed += OnConfirmPressed;
+            CancelButton.Pressed += OnCancelPressed;
+            PortInput.TextSubmitted += OnPortSubmitted;
         }
 
         #endregion
@@ -56,8 +74,7 @@ namespace Jogo25D.UI
 
         private void OnConfirmPressed()
         {
-            // O NetworkManager ja resolve porta vazia ou invalida para a padrao.
-            Game.Managers.NetworkManager.Node?.CreateServer(Game.Ui.HostModalUI.PortInput.Node.Text.Trim());
+            SessionContext.HostWorld(PortInput.Text.Trim());
 
             Fechar();
         }
@@ -74,7 +91,7 @@ namespace Jogo25D.UI
 
         private void Fechar()
         {
-            Game.Managers.RouterManager.Node.Close(this);
+            RouterContext.Close(this);
         }
 
         #endregion

@@ -1,11 +1,13 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 using Jogo25D.Effects;
+using Jogo25D.Entities;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Properties.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
@@ -15,6 +17,7 @@ using Jogo25D.Items;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
+using Jogo25D.UI;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
@@ -22,68 +25,51 @@ using System.Linq;
 
 namespace Jogo25D.Characters
 {
-	[Jogo25D.Save.SaveScene("player", "res://Scenes/World/Characters/Player.tscn", Ref = "characters/{0}.json")]
-	public partial class Player : CharacterBody2D
-	{
+    [Jogo25D.Save.SaveScene("player", "res://Scenes/World/Characters/Player.tscn", Ref = "characters/{0}.json")]
+    public partial class Player : CharacterBody2D
+    {
         #region Events
 
         [Signal]
-		public delegate void InventoryChangedEventHandler();
+        public delegate void InventoryChangedEventHandler();
 
-		[Signal]
-		public delegate void ItemEquippedEventHandler(long instanceId);
+        [Signal]
+        public delegate void ItemEquippedEventHandler(long instanceId);
 
-		[Signal]
-		public delegate void EffectsChangedEventHandler();
+        [Signal]
+        public delegate void EffectsChangedEventHandler();
 
-		[Signal]
-		public delegate void AbilitiesChangedEventHandler();
-
-		#endregion
-
-		#region Dinamic properties
-
-		public long PeerId { get; set; } = 1;
-
-		public string CharacterId { get; set; } = "";
-		public float Gravity { get; set; }
-		public ulong LastDimensionTradeMsec { get; set; }
-        public bool Loaded { get; set;  }
-		public string DisplayName { get; set; } = "";
-		public float KnockbackTimer { get; set; }  = 0f;
-        public float KnockbackDuration { get; set; } = 0.2f;
-        public float DamagePopupDuration { get; set; } = 0.8f;
-		public float DamagePopupRiseDistance { get; set; } = 26f;
-		public int StepUpBlocks { get; set; } = 2;
-		public float StepUpSpeedFactor { get; set; } = 1.5f;
-		public float StepUpRemaining { get; set; } = 0f;
-        public Godot.Collections.Array<BasePropertyData> ActiveProperties { get; set; } = CreateBaseProperties();
-
-        private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
-        {
-            return new Godot.Collections.Array<BasePropertyData>
-            {
-                new MovementPropertyData { Speed = 300f, JumpVelocity = -750f },
-                new HealthPropertyData(),
-            };
-        }
-        public Godot.Collections.Array<EffectDefinitionData> ActiveEffects { get; set; } = new();
-        public Godot.Collections.Array<ActionDefinitionData> ActiveAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
-		public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
-		public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
+        [Signal]
+        public delegate void AbilitiesChangedEventHandler();
 
         #endregion
 
-        #region Estado persistido
+        #region Dinamic properties
 
-        // O estado do personagem mora no proprio no. Marcado = vai pro save e trafega por RPC.
-        // Nao ha classe espelho: o Player E o dado.
-        //
-        // O WorldStreaming pula este no (grupo "players"): player e conteudo de SESSAO - quem
-        // o cria e destroi e o join, nao o mundo.
-        //
-        // Nao confundir com os Active*: aqueles sao DERIVADOS, recalculados pelo ApplySkillTree
-        // a partir daqui. Estes sao o que o personagem tem; aqueles sao o efeito disso agora.
+        public long PeerId { get; set; } = 1;
+
+        public string CharacterId { get; set; } = "";
+        public float Gravity { get; set; }
+        public ulong LastDimensionTradeMsec { get; set; }
+        public bool Loaded { get; set;  }
+        public string DisplayName { get; set; } = "";
+        public float KnockbackTimer { get; set; }  = 0f;
+        public float KnockbackDuration { get; set; } = 0.2f;
+        public float DamagePopupDuration { get; set; } = 0.8f;
+        public float DamagePopupRiseDistance { get; set; } = 26f;
+        public int StepUpBlocks { get; set; } = 2;
+        public float StepUpSpeedFactor { get; set; } = 1.5f;
+        public float StepUpRemaining { get; set; } = 0f;
+        public Godot.Collections.Array<BasePropertyData> ActiveProperties { get; set; } = CreateBaseProperties();
+
+        public Godot.Collections.Array<EffectDefinitionData> ActiveEffects { get; set; } = new();
+        public Godot.Collections.Array<ActionDefinitionData> ActiveAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
+        public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
+        public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
+
+        #endregion
+
+        #region StateOf persistido
 
         [GodotDictionaryField]
         public int CurrentHealth { get; set; } = 50;
@@ -119,121 +105,120 @@ namespace Jogo25D.Characters
 
         #region Node references
 
-
-		#endregion
+        #endregion
 
         #region Node children references
 
-		public PlayerInput Input { get; set; }
-		public Node2D Visuals { get; set; }
-		public AnimatedSprite2D Sprite { get; set; }
-		public CollisionShape2D Shape { get; set; }
-		public Node2D Labels { get; set; }
-		public Label NameLabel { get; set; }
-		public Label HealthLabel { get; set; }
+        public PlayerInput Input { get; set; }
+        public Node2D Visuals { get; set; }
+        public AnimatedSprite2D Sprite { get; set; }
+        public CollisionShape2D Shape { get; set; }
+        public Node2D Labels { get; set; }
+        public Label NameLabel { get; set; }
+        public Label HealthLabel { get; set; }
 
-		#endregion
+        #endregion
 
-		#region Core - Facing
+        #region Core - Facing
 
-		public bool FacingLeft ()
-		{
-			return Visuals != null && Visuals.Scale.X < 0f;
-		}
-
-		public void SetFacing(bool faceLeft)
-		{
-			if (Visuals != null)
-			{
-				Visuals.Scale = new Vector2(faceLeft ? -1f : 1f, 1f);
-			}
-
-			if (Shape != null)
-			{
-				var position = Shape.Position;
-
-				Shape.Position = position;
-			}
-		}
-
-		#endregion
-
-		#region Godot implementation
-
-		public override void _Ready()
-		{
-			AddToGroup("players");
-
-			GD.Print("[Player._Ready] Initializating ItemFactory");
-
-			ItemFactory.Initialize();
-
-			GD.Print("[Player._Ready] Trying get Nodes");
-
-			Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
-			Visuals = GetNodeOrNull<Node2D>("Visuals");
-			Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
-			Shape = GetNodeOrNull<CollisionShape2D>("Shape");
-			Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
-			Labels = GetNodeOrNull<Node2D>("Labels");
-			NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
-			HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
-
-			Sprite.Play("idle");
-			InventorySystem.EnsureSize(Inventory);
-
-			foreach (var item in Inventory.Items)
-			{
-				if (item != null)
-				{
-					EnsureItemDefinition(item);
-				}
-			}
-
-			foreach (var action in UnlockedAbilities)
-			{
-				if (action != null)
-				{
-					EnsureActionDefinition(action.Id, action);
-				}
-			}
-
-			if (EquippedItemId > 0 && InventorySystem.FindItem(Inventory, EquippedItemId) != null)
-			{
-				GD.Print("[Player._Ready] Running equip item");
-
-				EquipItemRequest(EquippedItemId);
-			}
-		}
-
-		public override void _PhysicsProcess(double delta)
-		{
-			var dt = (float)delta;
-
-			UpdateEffects(dt);
-            UpdateKnockback(dt);
-			UpdateAbilities(dt);
-			UpdateItems(dt);
-
-			if (IsOwner())
-			{
-				HandleHotbarScroll();
-				HandleDropItem();
-			}
-
-			TestPositionRequest(Position);
-			HandleMovement(dt);
-			HandleUseItem(dt);
-			HandleReload(dt);
-			UpdateAnimation();
-			UpdatePvpCollisionExceptions();
-			UpdateIndicators(dt);
+        public bool FacingLeft ()
+        {
+            return Visuals != null && Visuals.Scale.X < 0f;
         }
 
-		public override void _Process(double delta)
-		{
-			UpdateNameplate();
-		}
+        public void SetFacing(bool faceLeft)
+        {
+            if (Visuals != null)
+            {
+                Visuals.Scale = new Vector2(faceLeft ? -1f : 1f, 1f);
+            }
+
+            if (Shape != null)
+            {
+                var position = Shape.Position;
+
+                Shape.Position = position;
+            }
+        }
+
+        #endregion
+
+        #region Godot implementation
+
+        public override void _Ready()
+        {
+            AddToGroup("players");
+
+            GD.Print("[Player._Ready] Initializating ItemFactory");
+
+            ItemFactory.Initialize();
+
+            GD.Print("[Player._Ready] Trying get Nodes");
+
+            Gravity = ProjectSettings.GetSetting("physics/2d/default_gravity").AsSingle();
+            Visuals = GetNodeOrNull<Node2D>("Visuals");
+            Sprite = GetNodeOrNull<AnimatedSprite2D>("Visuals/Sprite");
+            Shape = GetNodeOrNull<CollisionShape2D>("Shape");
+            Input = GetNodeOrNull<PlayerInput>("Systems/PlayerInput");
+            Labels = GetNodeOrNull<Node2D>("Labels");
+            NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
+            HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
+
+            Sprite.Play("idle");
+            InventorySystem.EnsureSize(Inventory);
+
+            foreach (var item in Inventory.Items)
+            {
+                if (item != null)
+                {
+                    EnsureItemDefinition(item);
+                }
+            }
+
+            foreach (var action in UnlockedAbilities)
+            {
+                if (action != null)
+                {
+                    EnsureActionDefinition(action.Id, action);
+                }
+            }
+
+            if (EquippedItemId > 0 && InventorySystem.FindItem(Inventory, EquippedItemId) != null)
+            {
+                GD.Print("[Player._Ready] Running equip item");
+
+                EquipItemRequest(EquippedItemId);
+            }
+        }
+
+        public override void _PhysicsProcess(double delta)
+        {
+            var dt = (float)delta;
+
+            UpdateEffects(dt);
+            UpdateKnockback(dt);
+            UpdateAbilities(dt);
+            UpdateItems(dt);
+
+            if (IsOwner())
+            {
+                HandleHotbarScroll();
+                HandleDropItem();
+            }
+
+            TestPositionRequest(Position);
+            HandleMovement(dt);
+            HandleUseItem(dt);
+            HandleReload(dt);
+            UpdateAnimation();
+            UpdatePvpCollisionExceptions();
+            UpdateIndicators(dt);
+        }
+
+        public override void _Process(double delta)
+        {
+            UpdateNameplate();
+        }
 
         #endregion
 
@@ -284,7 +269,7 @@ namespace Jogo25D.Characters
         }
 
         protected void UpdateItems(float dt)
-		{
+        {
             foreach (var item in Inventory.Items)
             {
                 if (item == null)
@@ -298,7 +283,7 @@ namespace Jogo25D.Characters
 
         protected void UpdateAbilities(float dt)
         {
-			var abilities = Resolver.Resolve(UnlockedAbilities, ActiveAbilities);
+            var abilities = Resolver.Resolve(UnlockedAbilities, ActiveAbilities);
 
             foreach (var action in abilities)
             {
@@ -314,8 +299,8 @@ namespace Jogo25D.Characters
             }
         }
 
-		protected void UpdateEffects(float dt)
-		{
+        protected void UpdateEffects(float dt)
+        {
             for (int i = CurrentEffects.Count - 1; i >= 0; i--)
             {
                 var effect = CurrentEffects[i];
@@ -371,8 +356,8 @@ namespace Jogo25D.Characters
             }
         }
 
-		protected void UpdateIndicators(float dt)
-		{
+        protected void UpdateIndicators(float dt)
+        {
             var equipped = EquippedInstance();
 
             if (equipped != null && ItemDefinitions.TryGetValue(equipped.InstanceId, out var def))
@@ -430,6 +415,7 @@ namespace Jogo25D.Characters
                         Sprite.Play("falling");
                     }
                 }
+
                 return;
             }
 
@@ -459,6 +445,15 @@ namespace Jogo25D.Characters
 
         #region Utils
 
+        private static Godot.Collections.Array<BasePropertyData> CreateBaseProperties()
+        {
+            return new Godot.Collections.Array<BasePropertyData>
+            {
+                new MovementPropertyData { Speed = 300f, JumpVelocity = -750f },
+                new HealthPropertyData(),
+            };
+        }
+
         public bool IsOwner()
         {
             return PeerId == Multiplayer.GetUniqueId();
@@ -479,36 +474,36 @@ namespace Jogo25D.Characters
         #region Core - Damage system
 
         public virtual void ReceiveDamage(DamageInfo damage)
-		{
-			var resistanceFactor = 0f;
+        {
+            var resistanceFactor = 0f;
 
-			if (IsAuthoritative())
-			{
-				var equippedInstance = EquippedInstance();
-				var equippedResistances = equippedInstance?.Properties.OfType<DamageResistencePropertyData>().ToList() ?? new List<DamageResistencePropertyData>();
-				var equippedResistanceMultipliers = equippedInstance?.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList() ?? new List<DamageResistenceMultiplierPropertyData>();
-				var resolvedResistances = Resolver.Resolve(Properties.OfType<DamageResistencePropertyData>().ToList(), ActiveProperties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
-				var resolvedResistanceMultipliers = Resolver.Resolve(Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), ActiveProperties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
+            if (IsAuthoritative())
+            {
+                var equippedInstance = EquippedInstance();
+                var equippedResistances = equippedInstance?.Properties.OfType<DamageResistencePropertyData>().ToList() ?? new List<DamageResistencePropertyData>();
+                var equippedResistanceMultipliers = equippedInstance?.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList() ?? new List<DamageResistenceMultiplierPropertyData>();
+                var resolvedResistances = Resolver.Resolve(Properties.OfType<DamageResistencePropertyData>().ToList(), ActiveProperties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
+                var resolvedResistanceMultipliers = Resolver.Resolve(Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), ActiveProperties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
 
-				resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
+                resistanceFactor = resolvedResistances.FirstOrDefault(r => r.DamageType == damage.Type)?.ResistanceFactor ?? 0f;
 
-				var resistanceMultiplier = resolvedResistanceMultipliers.FirstOrDefault(m => m.DamageType == damage.Type)?.Multiplier ?? 1f;
-				var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
-				var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor) * resistanceMultiplier);
+                var resistanceMultiplier = resolvedResistanceMultipliers.FirstOrDefault(m => m.DamageType == damage.Type)?.Multiplier ?? 1f;
+                var critMultiplier = 1f + (GD.Randf() <= damage.CritChance ? damage.CritDamage : 0f);
+                var finalDamage = (int)(damage.Amount * critMultiplier * (1f - resistanceFactor) * resistanceMultiplier);
 
-				if (CurrentHealth > 0 || finalDamage >= 0)
-				{
-					SetHealthRequest(Mathf.Max(0, CurrentHealth - finalDamage));
-				}
-			}
-		}
+                if (CurrentHealth > 0 || finalDamage >= 0)
+                {
+                    SetHealthRequest(Mathf.Max(0, CurrentHealth - finalDamage));
+                }
+            }
+        }
 
-		public int GetMaxHealth()
-		{
-			var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
+        public int GetMaxHealth()
+        {
+            var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
 
-			return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
-		}
+            return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
+        }
 
         #endregion
 
@@ -529,252 +524,252 @@ namespace Jogo25D.Characters
         #region Core - Damage popup
 
         public void ShowDamagePopup(int amount)
-		{
-			if (amount <= 0 || Labels == null)
-			{
-				return;
-			}
+        {
+            if (amount <= 0 || Labels == null)
+            {
+                return;
+            }
 
-			var template = Labels.GetNodeOrNull<Label>("FloatingTextTemplate");
+            var template = Labels.GetNodeOrNull<Label>("FloatingTextTemplate");
 
-			if (template == null)
-			{
-				GD.PushError("[Player.ShowDamagePopup] Template 'FloatingTextTemplate' não encontrado em Player.tscn");
+            if (template == null)
+            {
+                GD.PushError("[Player.ShowDamagePopup] Template 'FloatingTextTemplate' não encontrado em Player.tscn");
 
-				return;
-			}
+                return;
+            }
 
-			template.Visible = false;
+            template.Visible = false;
 
-			var label = (Label)template.Duplicate();
+            var label = (Label)template.Duplicate();
 
-			label.Visible = true;
-			label.Text = $"-{amount}";
+            label.Visible = true;
+            label.Text = $"-{amount}";
 
-			var offset = new Vector2(-30f + (float)GD.RandRange(-8, 8), -70f);
+            var offset = new Vector2(-30f + (float)GD.RandRange(-8, 8), -70f);
 
-			label.Position = offset;
+            label.Position = offset;
 
-			Labels.AddChild(label);
+            Labels.AddChild(label);
 
-			var tween = CreateTween();
+            var tween = CreateTween();
 
-			tween.TweenProperty(label, "position", offset + Vector2.Up * DamagePopupRiseDistance, DamagePopupDuration);
-			tween.Parallel().TweenProperty(label, "modulate:a", 0f, DamagePopupDuration);
-			tween.TweenCallback(Callable.From(label.QueueFree));
-		}
+            tween.TweenProperty(label, "position", offset + Vector2.Up * DamagePopupRiseDistance, DamagePopupDuration);
+            tween.Parallel().TweenProperty(label, "modulate:a", 0f, DamagePopupDuration);
+            tween.TweenCallback(Callable.From(label.QueueFree));
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Items system handlers
+        #region Core - Items system handlers
 
-		public void HandleUseItem(float delta)
-		{
-			var data = InventorySystem.FindItem(Inventory, EquippedItemId);
-			var def = data == null ? null : ItemDefinitions.GetValueOrDefault(data.InstanceId);
+        public void HandleUseItem(float delta)
+        {
+            var data = InventorySystem.FindItem(Inventory, EquippedItemId);
+            var def = data == null ? null : ItemDefinitions.GetValueOrDefault(data.InstanceId);
 
-			if (data == null || def == null)
-			{
-				if (def is ToolDefinition idleTool)
-				{
-					idleTool.ResetMining();
-				}
+            if (data == null || def == null)
+            {
+                if (def is ToolDefinition idleTool)
+                {
+                    idleTool.ResetMining();
+                }
 
-				return;
-			}
+                return;
+            }
 
-			if (!Input.Attack)
-			{
-				if (def is ToolDefinition tool)
-				{
-					tool.ResetMining();
-				}
+            if (!Input.Attack)
+            {
+                if (def is ToolDefinition tool)
+                {
+                    tool.ResetMining();
+                }
 
-				return;
-			}
+                return;
+            }
 
-			def.Use(this, data);
-		}
+            def.Use(this, data);
+        }
 
-		public void HandleReload(float delta)
-		{
-			var data = InventorySystem.FindItem(Inventory, EquippedItemId);
+        public void HandleReload(float delta)
+        {
+            var data = InventorySystem.FindItem(Inventory, EquippedItemId);
 
-			if (data == null)
-			{
-				return;
-			}
+            if (data == null)
+            {
+                return;
+            }
 
-			var def = ItemDefinitions.GetValueOrDefault(data.InstanceId);
-			var chargesProp = Resolver.Resolve(def.Properties.OfType<ChargesPropertyData>().ToList(), data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
+            var def = ItemDefinitions.GetValueOrDefault(data.InstanceId);
+            var chargesProp = Resolver.Resolve(def.Properties.OfType<ChargesPropertyData>().ToList(), data.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
-			if (chargesProp == null || chargesProp.InfiniteCharges)
-			{
-				return;
-			}
+            if (chargesProp == null || chargesProp.InfiniteCharges)
+            {
+                return;
+            }
 
-			if (!def.IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges && ReloadPending)
-			{
-				ReloadPending = false;
+            if (!def.IsReloading(data) && data.CurrentCharges < chargesProp.MaxCharges && ReloadPending)
+            {
+                ReloadPending = false;
 
-				if (IsOwner())
-				{
-					var needed = chargesProp.MaxCharges - data.CurrentCharges;
+                if (IsOwner())
+                {
+                    var needed = chargesProp.MaxCharges - data.CurrentCharges;
 
-					FinishReloadRequest(data.InstanceId, chargesProp.ChargeItemId, needed);
-				}
-			}
+                    FinishReloadRequest(data.InstanceId, chargesProp.ChargeItemId, needed);
+                }
+            }
 
-			if (Input.Reload && def.CanReload(data))
-			{
-				def.TriggerReloadTimer(data);
+            if (Input.Reload && def.CanReload(data))
+            {
+                def.TriggerReloadTimer(data);
 
-				ReloadPending = true;
-			}
-		}
+                ReloadPending = true;
+            }
+        }
 
-		public void HandleHotbarScroll()
-		{
-			if (!IsOwner() || Inventory == null)
-			{
-				return;
-			}
-
-			var dir = Input.ScrollDirection;
+        public void HandleHotbarScroll()
+        {
+            if (!IsOwner() || Inventory == null)
+            {
+                return;
+            }
+
+            var dir = Input.ScrollDirection;
 
-			if (dir == 0)
-			{
-				return;
-			}
-
-			var hotbarSize = 8;
-			var currentSlot = InventorySystem.FindSlotIndex(Inventory, EquippedItemId);
+            if (dir == 0)
+            {
+                return;
+            }
+
+            var hotbarSize = 8;
+            var currentSlot = InventorySystem.FindSlotIndex(Inventory, EquippedItemId);
 
-			if (currentSlot < 0 || currentSlot >= hotbarSize)
-			{
-				currentSlot = 0;
-			}
-
-			for (int i = 1; i <= hotbarSize; i++)
-			{
-				var next = ((currentSlot + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
-				var slot = InventorySystem.GetSlot(Inventory, next);
+            if (currentSlot < 0 || currentSlot >= hotbarSize)
+            {
+                currentSlot = 0;
+            }
+
+            for (int i = 1; i <= hotbarSize; i++)
+            {
+                var next = ((currentSlot + dir * i) % hotbarSize + hotbarSize) % hotbarSize;
+                var slot = InventorySystem.GetSlot(Inventory, next);
 
-				if (slot != null)
-				{
-					EquipItemRequest(slot.InstanceId);
+                if (slot != null)
+                {
+                    EquipItemRequest(slot.InstanceId);
 
-					return;
-				}
-			}
-		}
+                    return;
+                }
+            }
+        }
 
-		public void HandleDropItem()
-		{
-			if (!Input.DropItem || EquippedItemId <= 0)
-			{
-				return;
-			}
+        public void HandleDropItem()
+        {
+            if (!Input.DropItem || EquippedItemId <= 0)
+            {
+                return;
+            }
 
-			DropItemRequest(EquippedItemId, 1);
-		}
+            DropItemRequest(EquippedItemId, 1);
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Blocks system
+        #region Core - Blocks system
 
-		public string GetActiveDimensionId()
-		{
-			return Game.Managers.DimensionManager.Node.ResolveDimensionIdOf(this);
-		}
+        public string GetActiveDimensionId()
+        {
+            return Dimension.IdOf(this);
+        }
 
-		public TileMapLayer GetActiveTileLayer()
-		{
-			return Game.Managers.DimensionManager.Node?.ResolveLayer(GetActiveDimensionId());
-		}
+        public TileMapLayer GetActiveTileLayer()
+        {
+            return Dimension.Get(GetActiveDimensionId())?.Layer;
+        }
 
-		public TileMapLayer GetActiveBaseLayer()
-		{
-			return Game.Managers.DimensionManager.Node?.ResolveBaseLayer(GetActiveDimensionId());
-		}
+        public TileMapLayer GetActiveBaseLayer()
+        {
+            return Dimension.Get(GetActiveDimensionId())?.BaseLayer;
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Items system
+        #region Core - Items system
 
-		public int RemoveAmmoByChargeType(string chargeType, int quantity)
-		{
-			if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
-			{
-				return 0;
-			}
+        public int RemoveAmmoByChargeType(string chargeType, int quantity)
+        {
+            if (string.IsNullOrEmpty(chargeType) || quantity <= 0)
+            {
+                return 0;
+            }
 
-			int removed = 0;
+            int removed = 0;
 
-			for (int i = 0; i < Inventory.Size && removed < quantity; i++)
-			{
-				var slot = Inventory.Items[i];
+            for (int i = 0; i < Inventory.Size && removed < quantity; i++)
+            {
+                var slot = Inventory.Items[i];
 
-				if (slot == null || slot.InstanceId == EquippedItemId)
-				{
-					continue;
-				}
+                if (slot == null || slot.InstanceId == EquippedItemId)
+                {
+                    continue;
+                }
 
-				var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
-				var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
+                var slotDef = ItemDefinitions.GetValueOrDefault(slot.InstanceId);
+                var chargesProp = Resolver.Resolve(slotDef?.Properties.OfType<ChargesPropertyData>().ToList() ?? new List<ChargesPropertyData>(), slot.Properties.OfType<ChargesPropertyData>().ToList()).FirstOrDefault();
 
-				if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
-				{
-					continue;
-				}
+                if (chargesProp == null || chargesProp.ChargeItemId != chargeType)
+                {
+                    continue;
+                }
 
-				int toRemove = Mathf.Min(quantity - removed, slot.Quantity);
+                int toRemove = Mathf.Min(quantity - removed, slot.Quantity);
 
-				slot.Quantity -= toRemove;
+                slot.Quantity -= toRemove;
 
-				removed += toRemove;
+                removed += toRemove;
 
-				if (slot.Quantity <= 0)
-				{
-					Inventory.Items[i] = null;
-				}
-			}
+                if (slot.Quantity <= 0)
+                {
+                    Inventory.Items[i] = null;
+                }
+            }
 
-			if (removed > 0)
-			{
-				EmitSignal(SignalName.InventoryChanged);
-			}
+            if (removed > 0)
+            {
+                EmitSignal(SignalName.InventoryChanged);
+            }
 
-			return removed;
-		}
+            return removed;
+        }
 
-		public void EquipItem(long instanceId)
-		{
-			var item = InventorySystem.FindItem(Inventory, instanceId);
+        public void EquipItem(long instanceId)
+        {
+            var item = InventorySystem.FindItem(Inventory, instanceId);
 
-			if (item == null)
-			{
-				return;
-			}
+            if (item == null)
+            {
+                return;
+            }
 
-			var previousItem = EquippedInstance();
+            var previousItem = EquippedInstance();
 
-			if (previousItem != null && previousItem.InstanceId != instanceId)
-			{
-				var previousDef = ItemDefinitions.GetValueOrDefault(previousItem.InstanceId);
+            if (previousItem != null && previousItem.InstanceId != instanceId)
+            {
+                var previousDef = ItemDefinitions.GetValueOrDefault(previousItem.InstanceId);
 
-				previousDef?.OnUnequip(this, previousItem);
-				previousDef?.HideIndicator(this);
-			}
+                previousDef?.OnUnequip(this, previousItem);
+                previousDef?.HideIndicator(this);
+            }
 
-			EquippedItemId = instanceId;
+            EquippedItemId = instanceId;
 
-			ItemDefinitions.GetValueOrDefault(item.InstanceId)?.OnEquip(this, item);
+            ItemDefinitions.GetValueOrDefault(item.InstanceId)?.OnEquip(this, item);
 
-			EmitSignal(SignalName.ItemEquipped, instanceId);
-		}
+            EmitSignal(SignalName.ItemEquipped, instanceId);
+        }
 
-		public void GiveItem(ItemData item)
+        public void GiveItem(ItemData item)
         {
             if (Inventory == null)
             {
@@ -789,365 +784,350 @@ namespace Jogo25D.Characters
             }
         }
 
-		public ItemData GetSlot(int index)
-		{
-			return InventorySystem.GetSlot(Inventory, index);
-		}
+        public ItemData GetSlot(int index)
+        {
+            return InventorySystem.GetSlot(Inventory, index);
+        }
 
-		public ItemData EquippedInstance()
-		{
-			return InventorySystem.FindItem(Inventory, EquippedItemId);
-		}
+        public ItemData EquippedInstance()
+        {
+            return InventorySystem.FindItem(Inventory, EquippedItemId);
+        }
 
-		private void EnsureItemDefinition(ItemData item)
-		{
-			if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
-			{
-				return;
-			}
+        private void EnsureItemDefinition(ItemData item)
+        {
+            if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
+            {
+                return;
+            }
 
-			if (InventorySystem.FindItem(Inventory, item.InstanceId) == null)
-			{
-				return;
-			}
+            if (InventorySystem.FindItem(Inventory, item.InstanceId) == null)
+            {
+                return;
+            }
 
-			ItemDefinitions[item.InstanceId] = ItemFactory.Create(item.Id);
-		}
+            ItemDefinitions[item.InstanceId] = ItemFactory.Create(item.Id);
+        }
 
         private void RemoveItemDefinitionIfGone(long instanceId)
-		{
-			if (InventorySystem.FindItem(Inventory, instanceId) != null)
-			{
-				return;
-			}
+        {
+            if (InventorySystem.FindItem(Inventory, instanceId) != null)
+            {
+                return;
+            }
 
-			if (ItemDefinitions.TryGetValue(instanceId, out var def))
-			{
-				def.DestroyIndicator();
-				ItemDefinitions.Remove(instanceId);
-			}
-		}
+            if (ItemDefinitions.TryGetValue(instanceId, out var def))
+            {
+                def.DestroyIndicator();
+                ItemDefinitions.Remove(instanceId);
+            }
+        }
 
-		#endregion
+        #endregion
 
         #region Core - Effects system
 
         public void GiveEffect(string effectId)
-		{
-			if (string.IsNullOrEmpty(effectId) || CurrentEffects == null)
-			{
-				return;
-			}
+        {
+            if (string.IsNullOrEmpty(effectId) || CurrentEffects == null)
+            {
+                return;
+            }
 
-			CurrentEffects.Add(EffectDB.CreateInstance(effectId));
+            CurrentEffects.Add(EffectDB.CreateInstance(effectId));
 
-			EmitSignal(SignalName.EffectsChanged);
-		}
+            EmitSignal(SignalName.EffectsChanged);
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Abilities system
+        #region Core - Abilities system
 
-		public void GiveAbility(string actionId)
-		{
-			if (string.IsNullOrEmpty(actionId) || UnlockedAbilities == null)
-			{
-				return;
-			}
+        public void GiveAbility(string actionId)
+        {
+            if (string.IsNullOrEmpty(actionId) || UnlockedAbilities == null)
+            {
+                return;
+            }
 
-			var data = ActionFactory.CreateInstance(actionId);
+            var data = ActionFactory.CreateInstance(actionId);
 
-			UnlockedAbilities.Add(data);
+            UnlockedAbilities.Add(data);
 
-			EnsureActionDefinition(actionId, data);
+            EnsureActionDefinition(actionId, data);
 
-			EmitSignal(SignalName.AbilitiesChanged);
-		}
+            EmitSignal(SignalName.AbilitiesChanged);
+        }
 
         public void EnsureActionDefinition(string actionId, ActionDefinitionData data)
-		{
-			if (string.IsNullOrEmpty(actionId) || ActionDefinitions.ContainsKey(actionId))
-			{
-				return;
-			}
+        {
+            if (string.IsNullOrEmpty(actionId) || ActionDefinitions.ContainsKey(actionId))
+            {
+                return;
+            }
 
-			var def = ActionFactory.Create(actionId);
+            var def = ActionFactory.Create(actionId);
 
-			if (def == null)
-			{
-				return;
-			}
+            if (def == null)
+            {
+                return;
+            }
 
-			ActionDefinitions[actionId] = def;
+            ActionDefinitions[actionId] = def;
 
-			def.OnCreate(this, data);
-		}
+            def.OnCreate(this, data);
+        }
 
         public void RemoveActionDefinition(string actionId)
-		{
-			if (string.IsNullOrEmpty(actionId) || !ActionDefinitions.TryGetValue(actionId, out var def))
-			{
-				return;
-			}
+        {
+            if (string.IsNullOrEmpty(actionId) || !ActionDefinitions.TryGetValue(actionId, out var def))
+            {
+                return;
+            }
 
-			def.DestroyIndicator();
+            def.DestroyIndicator();
 
-			ActionDefinitions.Remove(actionId);
-		}
+            ActionDefinitions.Remove(actionId);
+        }
 
         public bool IsAbilityStillGranted(string actionId)
-		{
-			return (UnlockedAbilities?.Any(e => e != null && e.Id == actionId) ?? false)
-				|| ActiveAbilities.Any(e => e != null && e.Id == actionId);
-		}
+        {
+            return (UnlockedAbilities?.Any(e => e != null && e.Id == actionId) ?? false)
+                || ActiveAbilities.Any(e => e != null && e.Id == actionId);
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Skill tree system
+        #region Core - Skill tree system
 
-		public void ApplySkillTree()
-		{
+        public void ApplySkillTree()
+        {
+            ActiveProperties.Clear();
 
-			ActiveProperties.Clear();
+            foreach (var baseProperty in CreateBaseProperties())
+            {
+                ActiveProperties.Add(baseProperty);
+            }
 
-			foreach (var baseProperty in CreateBaseProperties())
-			{
-				ActiveProperties.Add(baseProperty);
-			}
+            var grantedAbilityIds = new HashSet<string>();
+            var grantedEffectIds = new HashSet<string>();
 
-			var grantedAbilityIds = new HashSet<string>();
-			var grantedEffectIds = new HashSet<string>();
+            foreach (var progress in SkillTree)
+            {
+                if (progress == null || progress.CurrentLevel <= 0)
+                {
+                    continue;
+                }
 
-			foreach (var progress in SkillTree)
-			{
-				if (progress == null || progress.CurrentLevel <= 0)
-				{
-					continue;
-				}
+                var node = SkillTreeDB.Get(progress.NodeId);
 
-				var node = SkillTreeDB.Get(progress.NodeId);
+                if (node == null)
+                {
+                    continue;
+                }
 
-				if (node == null)
-				{
-					continue;
-				}
+                for (int level = 0; level < progress.CurrentLevel; level++)
+                {
+                    foreach (var property in node.Properties)
+                    {
+                        ActiveProperties.Add(property);
+                    }
+                }
 
-				for (int level = 0; level < progress.CurrentLevel; level++)
-				{
-					foreach (var property in node.Properties)
-					{
-						ActiveProperties.Add(property);
-					}
-				}
+                foreach (var abilityId in node.UnlockedAbilities)
+                {
+                    grantedAbilityIds.Add(abilityId);
 
-				foreach (var abilityId in node.UnlockedAbilities)
-				{
-					grantedAbilityIds.Add(abilityId);
+                    if (!ActiveAbilities.Any(e => e.Id == abilityId))
+                    {
+                        var abilityData = ActionFactory.CreateInstance(abilityId);
 
-					if (!ActiveAbilities.Any(e => e.Id == abilityId))
-					{
-						var abilityData = ActionFactory.CreateInstance(abilityId);
+                        ActiveAbilities.Add(abilityData);
 
-						ActiveAbilities.Add(abilityData);
+                        EnsureActionDefinition(abilityId, abilityData);
+                    }
+                }
 
-						EnsureActionDefinition(abilityId, abilityData);
-					}
-				}
+                foreach (var effectId in node.Effects)
+                {
+                    grantedEffectIds.Add(effectId);
 
-				foreach (var effectId in node.Effects)
-				{
-					grantedEffectIds.Add(effectId);
+                    if (!ActiveEffects.Any(e=> e.Id == effectId))
+                    {
+                        ActiveEffects.Add(EffectDB.CreateInstance(effectId));
+                    }
+                }
+            }
 
-					if (!ActiveEffects.Any(e=> e.Id == effectId))
-					{
-						ActiveEffects.Add(EffectDB.CreateInstance(effectId));
-					}
-				}
-			}
+            for (int i = ActiveAbilities.Count - 1; i >= 0; i--)
+            {
+                if (ActiveAbilities[i] == null || !grantedAbilityIds.Contains(ActiveAbilities[i].Id))
+                {
+                    var removedId = ActiveAbilities[i]?.Id;
 
-			for (int i = ActiveAbilities.Count - 1; i >= 0; i--)
-			{
-				if (ActiveAbilities[i] == null || !grantedAbilityIds.Contains(ActiveAbilities[i].Id))
-				{
-					var removedId = ActiveAbilities[i]?.Id;
+                    ActiveAbilities.RemoveAt(i);
 
-					ActiveAbilities.RemoveAt(i);
+                    if (!string.IsNullOrEmpty(removedId) && !IsAbilityStillGranted(removedId))
+                    {
+                        RemoveActionDefinition(removedId);
+                    }
+                }
+            }
 
-					if (!string.IsNullOrEmpty(removedId) && !IsAbilityStillGranted(removedId))
-					{
-						RemoveActionDefinition(removedId);
-					}
-				}
-			}
+            for (int i = ActiveEffects.Count - 1; i >= 0; i--)
+            {
+                if (ActiveEffects[i] == null || !grantedEffectIds.Contains(ActiveEffects[i].Id))
+                {
+                    ActiveEffects.RemoveAt(i);
+                }
+            }
+        }
 
-			for (int i = ActiveEffects.Count - 1; i >= 0; i--)
-			{
-				if (ActiveEffects[i] == null || !grantedEffectIds.Contains(ActiveEffects[i].Id))
-				{
-					ActiveEffects.RemoveAt(i);
-				}
-			}
-		}
+        public bool LevelUpSkillNode(string nodeId)
+        {
+            if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(SkillTree, nodeId))
+            {
+                return false;
+            }
 
-		public bool LevelUpSkillNode(string nodeId)
-		{
-			if (string.IsNullOrEmpty(nodeId) || !SkillTreeDB.CanLevelUp(SkillTree, nodeId))
-			{
-				return false;
-			}
-
-			var progress = SkillTree.FirstOrDefault(e => e.NodeId == nodeId);
+            var progress = SkillTree.FirstOrDefault(e => e.NodeId == nodeId);
 
             if (progress == null)
-			{
-				progress = new SkillTreeNodeData { NodeId = nodeId };
+            {
+                progress = new SkillTreeNodeData { NodeId = nodeId };
 
-				SkillTree.Add(progress);
-			}
+                SkillTree.Add(progress);
+            }
 
-			progress.CurrentLevel++;
+            progress.CurrentLevel++;
 
-			ApplySkillTree();
+            ApplySkillTree();
 
-			return true;
-		}
+            return true;
+        }
 
-		public void ResetSkillTree()
-		{
-			SkillTree.Clear();
+        public void ResetSkillTree()
+        {
+            SkillTree.Clear();
 
-			ApplySkillTree();
-		}
+            ApplySkillTree();
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Movement handlers
+        #region Core - Movement handlers
 
-		public void HandleMovement(float delta)
-		{
-			var equippedProperties = EquippedInstance()?.Properties.OfType<MovementPropertyData>().ToList() ?? new List<MovementPropertyData>();
-			var movementProperties = Resolver.Resolve(
-				Properties.OfType<MovementPropertyData>().ToList(),
-				ActiveProperties.OfType<MovementPropertyData>().ToList(),
-				equippedProperties
-			);
+        public void HandleMovement(float delta)
+        {
+            var equippedProperties = EquippedInstance()?.Properties.OfType<MovementPropertyData>().ToList() ?? new List<MovementPropertyData>();
+            var movementProperties = Resolver.Resolve(
+                Properties.OfType<MovementPropertyData>().ToList(),
+                ActiveProperties.OfType<MovementPropertyData>().ToList(),
+                equippedProperties
+            );
 
-			if (!CanUpdateMovement)
-			{
-				MoveAndSlide();
+            if (!CanUpdateMovement)
+            {
+                MoveAndSlide();
 
-				return;
-			}
+                return;
+            }
 
-			var v = Velocity;
+            var v = Velocity;
 
-			// Subir degrau tira o corpo do chao por alguns frames. Enquanto isso ele conta como
-			// apoiado: sem isso a gravidade comeria a subida e o pulo ficaria bloqueado no meio dela.
-			var subindoDegrau = StepUpRemaining > 0f;
+            var steppingUp = StepUpRemaining > 0f;
 
-			if (!IsOnFloor() && !subindoDegrau)
-			{
-				v.Y += Gravity * delta;
-			}
+            if (!IsOnFloor() && !steppingUp)
+            {
+                v.Y += Gravity * delta;
+            }
 
-			if (Input.Jump && (IsOnFloor() || subindoDegrau))
-			{
-				// O pulo cancela a subida: quem pulou quer sair dali, nao terminar o degrau.
-				StepUpRemaining = 0f;
+            if (Input.Jump && (IsOnFloor() || steppingUp))
+            {
+                StepUpRemaining = 0f;
 
-				v.Y = movementProperties.JumpVelocity;
+                v.Y = movementProperties.JumpVelocity;
 
-				GD.Print("[HandleMovement] Pulando");
-			}
+                GD.Print("[HandleMovement] Pulando");
+            }
 
-			if (Input.MoveX != 0)
-			{
-				v.X = Input.MoveX * movementProperties.Speed;
-			}
-			else
-			{
-				v.X = Mathf.MoveToward(v.X, 0, movementProperties.Speed);
-			}
+            if (Input.MoveX != 0)
+            {
+                v.X = Input.MoveX * movementProperties.Speed;
+            }
+            else
+            {
+                v.X = Mathf.MoveToward(v.X, 0, movementProperties.Speed);
+            }
 
-			UpdateStepUp(delta, movementProperties.Speed * StepUpSpeedFactor, ref v);
+            UpdateStepUp(delta, movementProperties.Speed * StepUpSpeedFactor, ref v);
 
-			Velocity = v;
+            Velocity = v;
 
-			MoveAndSlide();
+            MoveAndSlide();
 
-			TryStepUp(delta);
-		}
+            TryStepUp(delta);
+        }
 
-		// Gasta a subida agendada ao longo de alguns frames, numa velocidade derivada da que o
-		// player anda - entao buff de movimento acelera a subida junto. Sem isso o corpo teleporta
-		// o degrau inteiro num frame so, e o movimento fica seco.
-		private void UpdateStepUp(float delta, float speed, ref Vector2 velocity)
-		{
-			if (StepUpRemaining <= 0f)
-			{
-				return;
-			}
+        private void UpdateStepUp(float delta, float speed, ref Vector2 velocity)
+        {
+            if (StepUpRemaining <= 0f)
+            {
+                return;
+            }
 
-			var rise = Mathf.Min(StepUpRemaining, speed * delta);
+            var rise = Mathf.Min(StepUpRemaining, speed * delta);
 
-			// Se algo entrou no caminho no meio da subida, desiste em vez de atravessar.
-			if (TestMove(GlobalTransform, Vector2.Up * rise))
-			{
-				StepUpRemaining = 0f;
+            if (TestMove(GlobalTransform, Vector2.Up * rise))
+            {
+                StepUpRemaining = 0f;
 
-				return;
-			}
+                return;
+            }
 
-			GlobalPosition += Vector2.Up * rise;
+            GlobalPosition += Vector2.Up * rise;
 
-			StepUpRemaining -= rise;
+            StepUpRemaining -= rise;
 
-			// A gravidade nao briga com a subida enquanto ela acontece.
-			velocity.Y = 0f;
-		}
+            velocity.Y = 0f;
+        }
 
-		// Sobe degrau de ate StepUpBlocks blocos sem precisar pular. So age quando o corpo
-		// esbarrou em algo andando no chao: procura a menor altura em que o caminho a frente
-		// esta livre e levanta o corpo ate la.
-		private void TryStepUp(float delta)
-		{
-			if (StepUpRemaining > 0f || StepUpBlocks <= 0 || Input == null || Input.MoveX == 0f || !IsOnFloor() || !IsOnWall())
-			{
-				return;
-			}
+        private void TryStepUp(float delta)
+        {
+            if (StepUpRemaining > 0f || StepUpBlocks <= 0 || Input == null || Input.MoveX == 0f || !IsOnFloor() || !IsOnWall())
+            {
+                return;
+            }
 
-			var tileSize = Game.Managers.DimensionManager.Node?.TileSize ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-			var maxHeight = tileSize * StepUpBlocks;
-			var reach = Mathf.Max(Mathf.Abs(Velocity.X) * delta, PlayerConstants.STEP_UP_MIN_REACH);
-			var forward = new Vector2(Mathf.Sign(Input.MoveX) * reach, 0f);
+            var tileSize = Dimension.TileSize;
+            var maxHeight = tileSize * StepUpBlocks;
+            var reach = Mathf.Max(Mathf.Abs(Velocity.X) * delta, PlayerConstants.STEP_UP_MIN_REACH);
+            var forward = new Vector2(Mathf.Sign(Input.MoveX) * reach, 0f);
 
-			for (var height = PlayerConstants.STEP_UP_PROBE; height <= maxHeight; height += PlayerConstants.STEP_UP_PROBE)
-			{
-				// Teto: se o corpo nao cabe nesta altura, nenhuma altura maior cabe.
-				if (TestMove(GlobalTransform, Vector2.Up * height))
-				{
-					return;
-				}
+            for (var height = PlayerConstants.STEP_UP_PROBE; height <= maxHeight; height += PlayerConstants.STEP_UP_PROBE)
+            {
+                if (TestMove(GlobalTransform, Vector2.Up * height))
+                {
+                    return;
+                }
 
-				var raised = GlobalTransform;
+                var raised = GlobalTransform;
 
-				raised.Origin += Vector2.Up * height;
+                raised.Origin += Vector2.Up * height;
 
-				if (!TestMove(raised, forward))
-				{
-					StepUpRemaining = height;
+                if (!TestMove(raised, forward))
+                {
+                    StepUpRemaining = height;
 
-					return;
-				}
-			}
-		}
+                    return;
+                }
+            }
+        }
 
-		#endregion
+        #endregion
 
         #region Core - Rpc - Uso de item no mundo
 
-        // Um RPC pra qualquer item que age numa posicao. O Player so confere que o item existe
-        // no inventario; o que fazer com ele e da definicao.
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void UseItemAtReceive(long instanceId, Vector2 position)
         {
@@ -1286,7 +1266,7 @@ namespace Jogo25D.Characters
             ApplySkillTree();
         }
 
-		private void SyncSkillTreeToRequest()
+        private void SyncSkillTreeToRequest()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || !Multiplayer.IsServer() || PeerId == 1)
             {
@@ -1308,504 +1288,491 @@ namespace Jogo25D.Characters
         #region Core - Rpc - Stats
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void EquipItemReceive(long instanceId)
-		{
-			this.EquipItem(instanceId);
-		}
-
-		public void EquipItemRequest(long instanceId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				EquipItemReceive(instanceId);
-
-				return;
-			}
-
-			Rpc(nameof(EquipItemReceive), instanceId);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SetPvpEnabledReceive(bool enabled)
-		{
-			PvpEnabled = enabled;
-		}
-
-		public void SetPvpEnabledRequest(bool enabled)
-		{
-			if (!IsOwner())
-			{
-				return;
-			}
-
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				SetPvpEnabledReceive(enabled);
-
-				return;
-			}
-
-			Rpc(nameof(SetPvpEnabledReceive), enabled);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SetHealthReceive(int health)
-		{
-			GD.Print($"[Player.SetHealthReceive] - Tentando definir o valor da saude para o peer {PeerId} no {(Multiplayer.IsServer() ? "server" : "cliente")}");
-
-			var previousHealth = CurrentHealth;
-
-			CurrentHealth = health;
-
-			if (health < previousHealth)
-			{
-				ShowDamagePopup(previousHealth - health);
-
-				if (health > 0 && Sprite.Animation != "dead")
-				{
-					Sprite.Play("taking_damage");
-				}
-			}
-
-			if (health <= 0 && previousHealth > 0)
-			{
-				Sprite.Play("dead");
-				Input?.AddBlocker("dead");
-			}
-
-			if (health > 0 && previousHealth <= 0)
-			{
-				Sprite.Play("idle");
-				Input?.RemoveBlocker("dead");
-			}
-		}
-
-		public void SetHealthRequest(int health)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				SetHealthReceive(health);
-
-				return;
-			}
-
-			Rpc(nameof(SetHealthReceive), health);
-		}
-
-		#endregion
-
-		#region Core - Rpc - Iventory and items
-
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void AddItemReceive(Godot.Collections.Dictionary data)
-		{
-			var item = GodotDictionaryParser.ToResource<ItemData>(data);
-
-			if (InventorySystem.AddItem(Inventory, item))
-			{
-				EnsureItemDefinition(item);
-
-				EmitSignal(SignalName.InventoryChanged);
-			}
-		}
-
-		public void AddItemRequest(ItemData item)
-		{
-			var data = GodotDictionaryParser.ToDictionary(item);
+        public void EquipItemReceive(long instanceId)
+        {
+            this.EquipItem(instanceId);
+        }
+
+        public void EquipItemRequest(long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                EquipItemReceive(instanceId);
+
+                return;
+            }
+
+            Rpc(nameof(EquipItemReceive), instanceId);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SetPvpEnabledReceive(bool enabled)
+        {
+            PvpEnabled = enabled;
+        }
+
+        public void SetPvpEnabledRequest(bool enabled)
+        {
+            if (!IsOwner())
+            {
+                return;
+            }
+
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                SetPvpEnabledReceive(enabled);
+
+                return;
+            }
+
+            Rpc(nameof(SetPvpEnabledReceive), enabled);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SetHealthReceive(int health)
+        {
+            GD.Print($"[Player.SetHealthReceive] - Tentando definir o valor da saude para o peer {PeerId} no {(Multiplayer.IsServer() ? "server" : "cliente")}");
+
+            var previousHealth = CurrentHealth;
+
+            CurrentHealth = health;
+
+            if (health < previousHealth)
+            {
+                ShowDamagePopup(previousHealth - health);
+
+                if (health > 0 && Sprite.Animation != "dead")
+                {
+                    Sprite.Play("taking_damage");
+                }
+            }
+
+            if (health <= 0 && previousHealth > 0)
+            {
+                Sprite.Play("dead");
+                Input?.AddBlocker("dead");
+            }
+
+            if (health > 0 && previousHealth <= 0)
+            {
+                Sprite.Play("idle");
+                Input?.RemoveBlocker("dead");
+            }
+        }
+
+        public void SetHealthRequest(int health)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                SetHealthReceive(health);
+
+                return;
+            }
+
+            Rpc(nameof(SetHealthReceive), health);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Iventory and items
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void AddItemReceive(Godot.Collections.Dictionary data)
+        {
+            var item = GodotDictionaryParser.ToResource<ItemData>(data);
+
+            if (InventorySystem.AddItem(Inventory, item))
+            {
+                EnsureItemDefinition(item);
+
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
+
+        public void AddItemRequest(ItemData item)
+        {
+            var data = GodotDictionaryParser.ToDictionary(item);
 
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				AddItemReceive(data);
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                AddItemReceive(data);
 
-				return;
-			}
+                return;
+            }
 
-			Rpc(nameof(AddItemReceive), data);
-		}
+            Rpc(nameof(AddItemReceive), data);
+        }
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-		public void MoveItemReceive(long instanceId, int toIndex)
-		{
-			if (InventorySystem.MoveItem(Inventory, instanceId, toIndex))
-			{
-				EmitSignal(SignalName.InventoryChanged);
-			}
-		}
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void MoveItemReceive(long instanceId, int toIndex)
+        {
+            if (InventorySystem.MoveItem(Inventory, instanceId, toIndex))
+            {
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
 
-		public void MoveItemRequest(long instanceId, int toIndex)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				MoveItemReceive(instanceId, toIndex);
+        public void MoveItemRequest(long instanceId, int toIndex)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                MoveItemReceive(instanceId, toIndex);
 
-				return;
-			}
+                return;
+            }
 
-			Rpc(nameof(MoveItemReceive), instanceId, toIndex);
-		}
+            Rpc(nameof(MoveItemReceive), instanceId, toIndex);
+        }
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
-		public void RemoveItemReceive(long instanceId, int quantity)
-		{
-			if (InventorySystem.RemoveItem(Inventory, instanceId, quantity))
-			{
-				RemoveItemDefinitionIfGone(instanceId);
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true)]
+        public void RemoveItemReceive(long instanceId, int quantity)
+        {
+            if (InventorySystem.RemoveItem(Inventory, instanceId, quantity))
+            {
+                RemoveItemDefinitionIfGone(instanceId);
 
-				EmitSignal(SignalName.InventoryChanged);
-			}
-		}
+                EmitSignal(SignalName.InventoryChanged);
+            }
+        }
 
-		public void RemoveItemRequest(long instanceId, int quantity)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				RemoveItemReceive(instanceId, quantity);
+        public void RemoveItemRequest(long instanceId, int quantity)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                RemoveItemReceive(instanceId, quantity);
 
-				return;
-			}
+                return;
+            }
 
-			Rpc(nameof(RemoveItemReceive), instanceId, quantity);
-		}
+            Rpc(nameof(RemoveItemReceive), instanceId, quantity);
+        }
 
-		#endregion
+        #endregion
 
-		#region Core - Rpc - Item drop and pickup
+        #region Core - Rpc - Item drop and pickup
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void DropItemReceive(long instanceId, int quantity)
-		{
-			if (!IsAuthoritative())
-			{
-				return;
-			}
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void DropItemReceive(long instanceId, int quantity)
+        {
+            if (!IsAuthoritative())
+            {
+                return;
+            }
 
-			var item = InventorySystem.FindItem(Inventory, instanceId);
+            var item = InventorySystem.FindItem(Inventory, instanceId);
 
-			if (item == null || quantity <= 0)
-			{
-				return;
-			}
+            if (item == null || quantity <= 0)
+            {
+                return;
+            }
 
-			var dropQuantity = Mathf.Min(quantity, item.Quantity);
-			var dropData = (ItemData)item.Duplicate(true);
+            var dropQuantity = Mathf.Min(quantity, item.Quantity);
+            var dropData = (ItemData)item.Duplicate(true);
 
-			dropData.InstanceId = InstanceIdGenerator.NextInstanceId();
-			dropData.Quantity = dropQuantity;
+            dropData.InstanceId = InstanceIdGenerator.NextInstanceId();
+            dropData.Quantity = dropQuantity;
 
-			RemoveItemRequest(instanceId, dropQuantity);
+            RemoveItemRequest(instanceId, dropQuantity);
 
-			var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
+            var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
-			Game.Managers.DimensionManager.Node.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
-		}
+            EntitySpawner.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
+        }
 
-		public void DropItemRequest(long instanceId, int quantity)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				DropItemReceive(instanceId, quantity);
+        public void DropItemRequest(long instanceId, int quantity)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                DropItemReceive(instanceId, quantity);
 
-				return;
-			}
+                return;
+            }
 
-			RpcId(1, nameof(DropItemReceive), instanceId, quantity);
-		}
+            RpcId(1, nameof(DropItemReceive), instanceId, quantity);
+        }
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void PickupItemReceive(long worldItemId)
-		{
-			if (!IsAuthoritative())
-			{
-				return;
-			}
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void PickupItemReceive(long worldItemId)
+        {
+            if (!IsAuthoritative())
+            {
+                return;
+            }
 
-			var worldItem = Game.Managers.DimensionManager.Node.FindByInstanceId(worldItemId) as WorldItem;
+            var worldItem = EntitySpawner.FindByInstanceId(worldItemId) as WorldItem;
 
-			if (worldItem == null)
-			{
-				return;
-			}
+            if (worldItem == null)
+            {
+                return;
+            }
 
-			if (InventorySystem.AddItem(Inventory, worldItem.Item))
-			{
-				EnsureItemDefinition(worldItem.Item);
+            if (InventorySystem.AddItem(Inventory, worldItem.Item))
+            {
+                EnsureItemDefinition(worldItem.Item);
 
-				EmitSignal(SignalName.InventoryChanged);
-			}
+                EmitSignal(SignalName.InventoryChanged);
+            }
 
-			Game.Managers.DimensionManager.Node.RemoveWorldItemRequest(worldItemId);
-		}
+            EntitySpawner.DespawnRequest(worldItemId);
+        }
 
-		public void PickupItemRequest(long worldItemId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				PickupItemReceive(worldItemId);
+        public void PickupItemRequest(long worldItemId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                PickupItemReceive(worldItemId);
 
-				return;
-			}
+                return;
+            }
 
-			RpcId(1, nameof(PickupItemReceive), worldItemId);
-		}
+            RpcId(1, nameof(PickupItemReceive), worldItemId);
+        }
 
-		#endregion
-
-		#region Core - Rpc - Item charges
+        #endregion
+
+        #region Core - Rpc - Item charges
 
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void ConsumeChargeReceive(long instanceId)
-		{
-			var data = InventorySystem.FindItem(Inventory, instanceId);
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void ConsumeChargeReceive(long instanceId)
+        {
+            var data = InventorySystem.FindItem(Inventory, instanceId);
 
-			if (data == null)
-			{
-				return;
-			}
-
-			ItemDefinitions.GetValueOrDefault(data.InstanceId)?.ConsumeCharge(data);
-		}
-
-		public void ConsumeChargeRequest(long instanceId)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				ConsumeChargeReceive(instanceId);
-
-				return;
-			}
-
-			RpcId(1, nameof(ConsumeChargeReceive), instanceId);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void FinishReloadReceive(long instanceId, string chargeType, int needed)
-		{
-			var data = InventorySystem.FindItem(Inventory, instanceId);
-
-			if (data == null)
-			{
-				return;
-			}
-
-			var taken = RemoveAmmoByChargeType(chargeType, needed);
-
-			ItemDefinitions.GetValueOrDefault(data.InstanceId)?.FinishReload(taken, data);
-		}
-
-		public void FinishReloadRequest(long instanceId, string chargeType, int needed)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
-			{
-				FinishReloadReceive(instanceId, chargeType, needed);
-
-				return;
-			}
-
-			RpcId(1, nameof(FinishReloadReceive), instanceId, chargeType, needed);
-		}
-
-		#endregion
-
-		#region Core - Rpc - Validate and sync position
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-		public void TestPositionReceive(Vector2 pos)
-		{
-			var maxTolerance = 250.0f;
-			var distance = GlobalPosition.DistanceTo(pos);
-			var sendToOwner = false;
-
-			if (distance > maxTolerance && !IsServer())
-			{
-				GD.Print($"[Sync] Diferença muito grande detectada ({distance:F2}). Sincronizando cliente.");
-
-				sendToOwner = true;
-			}
-			else if (!IsServer())
-			{
-				GlobalPosition = pos;
-			}
-
-			SyncPositionRequest(GlobalPosition, sendToOwner);
-		}
-
-		public void TestPositionRequest(Vector2 pos)
-		{
-			if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
-			{
-				return;
-			}
-
-			if (Multiplayer.MultiplayerPeer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected)
-			{
-				return;
-			}
-
-			if (Multiplayer.IsServer())
-			{
-				return;
-			}
-
-			if (!IsOwner() && !IsServer())
-			{
-				return;
-			}
-
-			RpcId(1, nameof(TestPositionReceive), pos);
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void SyncPositionReceive(Vector2 pos, bool sendToOwner)
-		{
-			if (Multiplayer.IsServer())
-			{
-				return;
-			}
-
-			if (!sendToOwner && !IsServer())
-			{
-				return;
-			}
-
-			GlobalPosition = pos;
-		}
-
-		public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
-		{
-			Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
-		}
-
-		#endregion
-		#region Core - Rpc - Teleporte e dimensao
-
-		// O alvo do RPC e o proprio player: nao precisa procurar ninguem no grupo.
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void TeleportReceive(Vector2 position)
-		{
-			var dimensions = Game.Managers.DimensionManager.Node;
-			var upsidedownParent = dimensions.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID);
-
-			if (GetParent<Node2D>() != upsidedownParent && upsidedownParent != null)
-			{
-				Reparent(upsidedownParent, true);
-
-				if (EquippedItemId > 0)
-				{
-					EquipItemRequest(EquippedItemId);
-				}
-			}
-
-			GlobalPosition = position;
-			Velocity = Vector2.Zero;
-			CurrentHealth = GetMaxHealth();
-			Sprite?.Play("idle");
-			Input?.RemoveBlocker("dead");
-
-			if (IsOwner())
-			{
-				dimensions.ShowOnly(ChunkStreamingConstants.UPSIDEDOWN_ID);
-			}
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void TeleportServerReceive(Vector2 position)
-		{
-			if (!Multiplayer.IsServer())
-			{
-				return;
-			}
-
-			Rpc(nameof(TeleportReceive), position);
-		}
-
-		public async void TeleportClientRequest(Vector2 position)
-		{
-			var loadingUi = Game.Ui.LoadingUI.Node;
-
-			loadingUi?.Open();
-
-			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
-
-			if (tileStreamingManager != null)
-			{
-				await tileStreamingManager.PreloadSpawnAreaAsync(ChunkStreamingConstants.UPSIDEDOWN_ID, Game.Managers.DimensionManager.Node.ResolveParent(ChunkStreamingConstants.UPSIDEDOWN_ID), position);
-			}
-
-			RpcId(1, nameof(TeleportServerReceive), position);
-
-			loadingUi?.Close();
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void TradeDimensionReceive()
-		{
-			var dimensions = Game.Managers.DimensionManager.Node;
-			var currentDimensionId = dimensions.ResolveDimensionIdOf(this);
-			var nextDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
-				? ChunkStreamingConstants.UPSIDEDOWN_ID
-				: ChunkStreamingConstants.OVERWORLD_ID;
-
-			var nextParent = dimensions.ResolveParent(nextDimensionId);
-
-			if (nextParent == null)
-			{
-				return;
-			}
-
-			Reparent(nextParent, true);
-
-			LastDimensionTradeMsec = Time.GetTicksMsec();
-
-			if (EquippedItemId > 0)
-			{
-				EquipItemRequest(EquippedItemId);
-			}
-
-			if (IsOwner())
-			{
-				dimensions.ShowOnly(nextDimensionId);
-			}
-		}
-
-		[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-		public void TradeDimensionServerReceive()
-		{
-			if (!Multiplayer.IsServer())
-			{
-				return;
-			}
-
-			Rpc(nameof(TradeDimensionReceive));
-		}
-
-		public async void TradeDimensionClientRequest()
-		{
-			var dimensions = Game.Managers.DimensionManager.Node;
-			var currentDimensionId = dimensions.ResolveDimensionIdOf(this);
-			var targetDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
-				? ChunkStreamingConstants.UPSIDEDOWN_ID
-				: ChunkStreamingConstants.OVERWORLD_ID;
-
-			var loadingUi = Game.Ui.LoadingUI.Node;
-
-			loadingUi?.Open();
-
-			var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
-
-			if (tileStreamingManager != null)
-			{
-				await tileStreamingManager.PreloadSpawnAreaAsync(targetDimensionId, dimensions.ResolveParent(targetDimensionId), Position);
-			}
-
-			RpcId(1, nameof(TradeDimensionServerReceive));
-
-			loadingUi?.Close();
-		}
-
-		#endregion
-
-		#region Core - Busca
-
-		#endregion
-	}
+            if (data == null)
+            {
+                return;
+            }
+
+            ItemDefinitions.GetValueOrDefault(data.InstanceId)?.ConsumeCharge(data);
+        }
+
+        public void ConsumeChargeRequest(long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                ConsumeChargeReceive(instanceId);
+
+                return;
+            }
+
+            RpcId(1, nameof(ConsumeChargeReceive), instanceId);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void FinishReloadReceive(long instanceId, string chargeType, int needed)
+        {
+            var data = InventorySystem.FindItem(Inventory, instanceId);
+
+            if (data == null)
+            {
+                return;
+            }
+
+            var taken = RemoveAmmoByChargeType(chargeType, needed);
+
+            ItemDefinitions.GetValueOrDefault(data.InstanceId)?.FinishReload(taken, data);
+        }
+
+        public void FinishReloadRequest(long instanceId, string chargeType, int needed)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                FinishReloadReceive(instanceId, chargeType, needed);
+
+                return;
+            }
+
+            RpcId(1, nameof(FinishReloadReceive), instanceId, chargeType, needed);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Validate and sync position
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+        public void TestPositionReceive(Vector2 pos)
+        {
+            var maxTolerance = 250.0f;
+            var distance = GlobalPosition.DistanceTo(pos);
+            var sendToOwner = false;
+
+            if (distance > maxTolerance && !IsServer())
+            {
+                GD.Print($"[Sync] Diferença muito grande detectada ({distance:F2}). Sincronizando cliente.");
+
+                sendToOwner = true;
+            }
+            else if (!IsServer())
+            {
+                GlobalPosition = pos;
+            }
+
+            SyncPositionRequest(GlobalPosition, sendToOwner);
+        }
+
+        public void TestPositionRequest(Vector2 pos)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                return;
+            }
+
+            if (Multiplayer.MultiplayerPeer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected)
+            {
+                return;
+            }
+
+            if (Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            if (!IsOwner() && !IsServer())
+            {
+                return;
+            }
+
+            RpcId(1, nameof(TestPositionReceive), pos);
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SyncPositionReceive(Vector2 pos, bool sendToOwner)
+        {
+            if (Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            if (!sendToOwner && !IsServer())
+            {
+                return;
+            }
+
+            GlobalPosition = pos;
+        }
+
+        public void SyncPositionRequest(Vector2 pos, bool sendToOwner)
+        {
+            Rpc(nameof(SyncPositionReceive), pos, sendToOwner);
+        }
+
+        #endregion
+
+        #region Core - Rpc - Teleporte e dimension
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void TeleportReceive(Vector2 position)
+        {
+            var upsidedownParent = Dimension.Get(ChunkStreamingConstants.UPSIDEDOWN_ID);
+
+            if (GetParent<Node2D>() != upsidedownParent && upsidedownParent != null)
+            {
+                Reparent(upsidedownParent, true);
+
+                if (EquippedItemId > 0)
+                {
+                    EquipItemRequest(EquippedItemId);
+                }
+            }
+
+            GlobalPosition = position;
+            Velocity = Vector2.Zero;
+            CurrentHealth = GetMaxHealth();
+            Sprite?.Play("idle");
+            Input?.RemoveBlocker("dead");
+
+            if (IsOwner())
+            {
+                Dimension.ShowOnly(ChunkStreamingConstants.UPSIDEDOWN_ID);
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void TeleportServerReceive(Vector2 position)
+        {
+            if (!Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            Rpc(nameof(TeleportReceive), position);
+        }
+
+        public async void TeleportClientRequest(Vector2 position)
+        {
+            var loadingUi = Ui.Get<LoadingUI>();
+
+            loadingUi?.Open();
+
+                await Dimension.Get(ChunkStreamingConstants.UPSIDEDOWN_ID).PreloadSpawnAreaAsync(position);
+
+                        RpcId(1, nameof(TeleportServerReceive), position);
+
+            loadingUi?.Close();
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void TradeDimensionReceive()
+        {
+            var currentDimensionId = Dimension.IdOf(this);
+            var nextDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
+                ? ChunkStreamingConstants.UPSIDEDOWN_ID
+                : ChunkStreamingConstants.OVERWORLD_ID;
+
+            var nextParent = Dimension.Get(nextDimensionId);
+
+            if (nextParent == null)
+            {
+                return;
+            }
+
+            Reparent(nextParent, true);
+
+            LastDimensionTradeMsec = Time.GetTicksMsec();
+
+            if (EquippedItemId > 0)
+            {
+                EquipItemRequest(EquippedItemId);
+            }
+
+            if (IsOwner())
+            {
+                Dimension.ShowOnly(nextDimensionId);
+            }
+        }
+
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void TradeDimensionServerReceive()
+        {
+            if (!Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            Rpc(nameof(TradeDimensionReceive));
+        }
+
+        public async void TradeDimensionClientRequest()
+        {
+            var currentDimensionId = Dimension.IdOf(this);
+            var targetDimensionId = currentDimensionId == ChunkStreamingConstants.OVERWORLD_ID
+                ? ChunkStreamingConstants.UPSIDEDOWN_ID
+                : ChunkStreamingConstants.OVERWORLD_ID;
+
+            var loadingUi = Ui.Get<LoadingUI>();
+
+            loadingUi?.Open();
+
+                await Dimension.Get(targetDimensionId).PreloadSpawnAreaAsync(Position);
+
+                        RpcId(1, nameof(TradeDimensionServerReceive));
+
+            loadingUi?.Close();
+        }
+
+        #endregion
+
+        #region Core - Busca
+
+        #endregion
+    }
 }

@@ -1,11 +1,11 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Entities;
+using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Save;
 using Jogo25D.Utils.GodotDictionaryParser;
-using Jogo25D.Features.World.Items.Resources;
 
 namespace Jogo25D.Items
 {
@@ -14,7 +14,6 @@ namespace Jogo25D.Items
     public partial class WorldItem : CharacterBody2D
     {
         #region Properties
-
 
         [Save, GodotDictionaryField]
         public ItemData Item { get; set; }
@@ -126,7 +125,7 @@ namespace Jogo25D.Items
                 return;
             }
 
-            player.PickupItemRequest(DimensionManager.InstanceIdOf(this));
+            player.PickupItemRequest(EntityRecord.InstanceIdOf(this));
         }
 
         #endregion

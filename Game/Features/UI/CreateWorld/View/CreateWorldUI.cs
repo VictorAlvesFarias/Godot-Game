@@ -1,18 +1,33 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
-using Jogo25D.Features.Managers.Save.Types;
+using Jogo25D.Save.Types;
+using Jogo25D.Session;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class CreateWorldUI : ScreenUI
     {
+        #region Node children references
+
+        public LineEdit NameInput { get; private set; }
+        public SpinBox AutosaveInput { get; private set; }
+        public CheckBox ProceduralCheck { get; private set; }
+        public OptionButton ModeOption { get; private set; }
+        public Label KeyLabel { get; private set; }
+        public LineEdit KeyInput { get; private set; }
+        public Button BackButton { get; private set; }
+        public Button CreateButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
@@ -21,29 +36,41 @@ namespace Jogo25D.UI
 
         public override void OnOpened()
         {
-            Game.Ui.CreateWorldUI.NameInput.Node.Text = "";
-            Game.Ui.CreateWorldUI.AutosaveInput.Node.Value = 5;
-            Game.Ui.CreateWorldUI.KeyInput.Node.Text = "";
-            Game.Ui.CreateWorldUI.ProceduralCheck.Node.ButtonPressed = true;
-            Game.Ui.CreateWorldUI.KeyLabel.Node.Visible = false;
-            Game.Ui.CreateWorldUI.KeyInput.Node.Visible = false;
+            NameInput.Text = "";
+            AutosaveInput.Value = 5;
+            KeyInput.Text = "";
+            ProceduralCheck.ButtonPressed = true;
+            KeyLabel.Visible = false;
+            KeyInput.Visible = false;
 
-            Game.Ui.CreateWorldUI.ModeOption.Node.Select(0);
+            ModeOption.Select(0);
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            NameInput = GetNode<LineEdit>("MarginContainer/Root/NameInput");
+            AutosaveInput = GetNode<SpinBox>("MarginContainer/Root/AutosaveInput");
+            ProceduralCheck = GetNode<CheckBox>("MarginContainer/Root/ProceduralCheck");
+            ModeOption = GetNode<OptionButton>("MarginContainer/Root/ModeOption");
+            KeyLabel = GetNode<Label>("MarginContainer/Root/KeyLabel");
+            KeyInput = GetNode<LineEdit>("MarginContainer/Root/KeyInput");
+            BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
+            CreateButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.CreateWorldUI.ModeOption.Node.Clear();
-            Game.Ui.CreateWorldUI.ModeOption.Node.AddItem("Personagem Local", (int)WorldCharacterMode.LocalCharacters);
-            Game.Ui.CreateWorldUI.ModeOption.Node.AddItem("Personagem de Servidor", (int)WorldCharacterMode.ServerCharacters);
+            ModeOption.Clear();
+            ModeOption.AddItem("Personagem Local", (int)WorldCharacterMode.LocalCharacters);
+            ModeOption.AddItem("Personagem de Servidor", (int)WorldCharacterMode.ServerCharacters);
 
-            Game.Ui.CreateWorldUI.ModeOption.Node.ItemSelected += OnModeSelected;
-            Game.Ui.CreateWorldUI.BackButton.Node.Pressed += OnBackPressed;
-            Game.Ui.CreateWorldUI.CreateButton.Node.Pressed += OnCreatePressed;
+            ModeOption.ItemSelected += OnModeSelected;
+            BackButton.Pressed += OnBackPressed;
+            CreateButton.Pressed += OnCreatePressed;
         }
 
         #endregion
@@ -52,33 +79,33 @@ namespace Jogo25D.UI
 
         private void OnModeSelected(long index)
         {
-            var isServerMode = (WorldCharacterMode)Game.Ui.CreateWorldUI.ModeOption.Node.GetItemId((int)index) == WorldCharacterMode.ServerCharacters;
+            var isServerMode = (WorldCharacterMode)ModeOption.GetItemId((int)index) == WorldCharacterMode.ServerCharacters;
 
-            Game.Ui.CreateWorldUI.KeyLabel.Node.Visible = isServerMode;
-            Game.Ui.CreateWorldUI.KeyInput.Node.Visible = isServerMode;
+            KeyLabel.Visible = isServerMode;
+            KeyInput.Visible = isServerMode;
         }
 
         private void OnCreatePressed()
         {
-            var name = string.IsNullOrWhiteSpace(Game.Ui.CreateWorldUI.NameInput.Node.Text) ? "Mundo sem nome" : Game.Ui.CreateWorldUI.NameInput.Node.Text.Trim();
-            var mode = (WorldCharacterMode)Game.Ui.CreateWorldUI.ModeOption.Node.GetSelectedId();
-            var key = mode == WorldCharacterMode.ServerCharacters ? Game.Ui.CreateWorldUI.KeyInput.Node.Text.Trim() : "";
-            var isProcedural = Game.Ui.CreateWorldUI.ProceduralCheck.Node.ButtonPressed;
-            var world = Game.Managers.SaveManager.Node?.CreateWorld(name, (long)GD.Randi(), mode, key, (int)Game.Ui.CreateWorldUI.AutosaveInput.Node.Value, isProcedural);
+            var name = string.IsNullOrWhiteSpace(NameInput.Text) ? "Mundo sem nome" : NameInput.Text.Trim();
+            var mode = (WorldCharacterMode)ModeOption.GetSelectedId();
+            var key = mode == WorldCharacterMode.ServerCharacters ? KeyInput.Text.Trim() : "";
+            var isProcedural = ProceduralCheck.ButtonPressed;
+            var world = SaveStorage.CreateWorld(name, (long)GD.Randi(), mode, key, (int)AutosaveInput.Value, isProcedural);
 
             if (world == null)
             {
                 return;
             }
 
-            Game.Managers.SessionManager.Node.PendingWorld = world;
+            SessionContext.SetPendingWorld(world);
 
-            Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
+            RouterContext.Open(Ui.Get<CharacterSelectUI>());
         }
 
         private void OnBackPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+            RouterContext.Open(Ui.Get<WorldSelectUI>());
         }
 
         #endregion

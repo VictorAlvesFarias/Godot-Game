@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -19,7 +19,6 @@ namespace Jogo25D.Portals
         #endregion
 
         #region Node references
-
 
         #endregion
 

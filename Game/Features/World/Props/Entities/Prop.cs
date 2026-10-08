@@ -1,9 +1,9 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Core;
 using Jogo25D.Entities;
 using Jogo25D.Save;
+using Jogo25D.Save.Resources;
 using Jogo25D.Utils.GodotDictionaryParser;
-using Jogo25D.Features.Managers.Save.Resources;
 
 namespace Jogo25D.Props
 {
@@ -19,7 +19,6 @@ namespace Jogo25D.Props
 
         #region Core - Quebra
 
-        // Ponto de entrada de quem quebra: pede pro servidor, ou resolve direto se for autoritativo.
         public void BreakClientRequest()
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
@@ -60,12 +59,10 @@ namespace Jogo25D.Props
             QueueFree();
         }
 
-        // Gancho pra subclasse: dropar item, tocar efeito, o que for dela.
         protected virtual void OnBeforeBreak()
         {
         }
 
         #endregion
-
    }
 }

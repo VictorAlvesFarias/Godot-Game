@@ -1,13 +1,23 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class FullscreenMapUI : ScreenUI
     {
+        #region Node children references
+
+        public MinimapUI MapView { get; private set; }
+        public Panel ZoomHint { get; private set; }
+        public Panel PanHint { get; private set; }
+        public Label PositionLabel { get; private set; }
+
+        #endregion
+
         #region Dinamic properties
 
         public Player LocalPlayer { get; set; }
@@ -15,13 +25,19 @@ namespace Jogo25D.UI
 
         public bool IsPanning { get; set; }
 
+        public override bool IsOverlay => true;
+
+        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
+        private static readonly Color COR_BORDA = new Color(0.35f, 0.25f, 0.09f);
+
         #endregion
 
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         public override void _Process(double delta)
@@ -106,14 +122,20 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            MapView = GetNode<MinimapUI>("Background/MapPanel/MapView");
+            ZoomHint = GetNode<Panel>("Background/MapPanel/HintsColumn/ZoomHint");
+            PanHint = GetNode<Panel>("Background/MapPanel/HintsColumn/PanHint");
+            PositionLabel = GetNode<Label>("Background/MapPanel/PositionWrap/PositionLabel");
+        }
+
         private void Initialize()
         {
-            Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = 4000f;
+            MapView.ViewRadius = 4000f;
 
-            // O zoom e a roda do mouse e o arrasto e o botao do meio, entao no canto de cada
-            // circulo vai o desenho do mouse com a roda em destaque, no lugar de uma tecla.
-            ConfigureHint(Game.Ui.FullscreenMapUI.ZoomHint.Node, CreateZoomIcon(), CreateMouseIcon(pressed: false));
-            ConfigureHint(Game.Ui.FullscreenMapUI.PanHint.Node, CreatePanIcon(), CreateMouseIcon(pressed: true));
+            ConfigureHint(ZoomHint, CreateZoomIcon(), CreateMouseIcon(pressed: false));
+            ConfigureHint(PanHint, CreatePanIcon(), CreateMouseIcon(pressed: true));
         }
 
         private static void ConfigureHint(Panel panel, Texture2D icon, Texture2D corner)
@@ -133,7 +155,7 @@ namespace Jogo25D.UI
 
         public void UpdatePositionLabel()
         {
-            var label = Game.Ui.FullscreenMapUI.PositionLabel.Node;
+            var label = PositionLabel;
 
             if (label == null)
             {
@@ -152,33 +174,27 @@ namespace Jogo25D.UI
                 return;
             }
 
-            var tileSize = Game.Managers.DimensionManager.Node?.TileSize ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-            var posicao = LocalPlayer.GlobalPosition / tileSize;
+            var tileSize = Dimension.TileSize;
+            var position = LocalPlayer.GlobalPosition / tileSize;
 
-            label.Text = $"X {Mathf.FloorToInt(posicao.X)}   Y {Mathf.FloorToInt(posicao.Y)}";
+            label.Text = $"X {Mathf.FloorToInt(position.X)}   Y {Mathf.FloorToInt(position.Y)}";
         }
 
         #endregion
 
         #region Core - Icons
 
-        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
-        private static readonly Color COR_BORDA = new Color(0.35f, 0.25f, 0.09f);
-
         private static Texture2D CreateZoomIcon()
         {
             var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
 
-            // lente: circulo cheio esvaziado por dentro
             FillCircle(image, new Vector2I(9, 9), 8, COR_ICONE);
             FillCircle(image, new Vector2I(9, 9), 5, new Color(0, 0, 0, 0));
 
-            // cabo
             image.FillRect(new Rect2I(14, 14, 3, 3), COR_ICONE);
             image.FillRect(new Rect2I(16, 16, 3, 3), COR_ICONE);
             image.FillRect(new Rect2I(18, 18, 3, 3), COR_ICONE);
 
-            // sinal de mais dentro da lente
             image.FillRect(new Rect2I(8, 6, 2, 6), COR_ICONE);
             image.FillRect(new Rect2I(6, 8, 6, 2), COR_ICONE);
 
@@ -192,7 +208,6 @@ namespace Jogo25D.UI
             image.FillRect(new Rect2I(10, 3, 2, 16), COR_ICONE);
             image.FillRect(new Rect2I(3, 10, 16, 2), COR_ICONE);
 
-            // pontas das quatro setas
             for (int i = 0; i < 4; i++)
             {
                 image.FillRect(new Rect2I(8 + i, 1 + i, 6 - i * 2, 1), COR_ICONE);
@@ -208,27 +223,22 @@ namespace Jogo25D.UI
         {
             var image = Image.CreateEmpty(26, 24, false, Image.Format.Rgba8);
 
-            // Contorno em dourado e miolo vazado: sobre o circulo escuro o marrom da borda
-            // vira um bloco e o desenho some.
             image.FillRect(new Rect2I(5, 1, 13, 22), COR_ICONE);
             image.FillRect(new Rect2I(7, 3, 9, 18), new Color(0, 0, 0, 0));
 
-            foreach (var canto in new[] { new Vector2I(5, 1), new Vector2I(17, 1), new Vector2I(5, 22), new Vector2I(17, 22) })
+            foreach (var corner in new[] { new Vector2I(5, 1), new Vector2I(17, 1), new Vector2I(5, 22), new Vector2I(17, 22) })
             {
-                image.SetPixel(canto.X, canto.Y, new Color(0, 0, 0, 0));
+                image.SetPixel(corner.X, corner.Y, new Color(0, 0, 0, 0));
             }
 
-            // roda no topo, separada do contorno para nao se fundir com ele
             image.FillRect(new Rect2I(10, 5, 3, pressed ? 4 : 5), COR_ICONE);
 
             if (pressed)
             {
-                // apertar: a roda afunda e leva um tracinho batendo em cima dela
                 image.FillRect(new Rect2I(9, 2, 5, 1), COR_ICONE);
             }
             else
             {
-                // girar: setas para cima e para baixo ao lado do corpo
                 for (int i = 0; i < 3; i++)
                 {
                     image.FillRect(new Rect2I(22 - i, 3 + i, 1 + i * 2, 1), COR_ICONE);
@@ -267,21 +277,17 @@ namespace Jogo25D.UI
 
         #region ScreenUI implementation
 
-        public override bool IsOverlay => true;
-
         #endregion
 
         #region Core - Player lookup
 
         public void FindLocalPlayer()
         {
-            var worldManager = Game.Managers.WorldManager.Node;
-
-            LocalPlayer = worldManager?.GetLocalPlayer();
+            LocalPlayer = Players.GetLocal();
 
             if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
             {
-                Game.Ui.FullscreenMapUI.MapView.Node.SetLocalPlayer(LocalPlayer);
+                MapView.SetLocalPlayer(LocalPlayer);
             }
         }
 
@@ -293,23 +299,25 @@ namespace Jogo25D.UI
         {
             if (Visible)
             {
-                Game.Managers.RouterManager.Node.Close(this);
+                RouterContext.Close(this);
             }
             else
             {
-                Game.Managers.RouterManager.Node.Open(this);
+                RouterContext.Open(this);
             }
 
             if (Visible)
             {
-                Game.Ui.FullscreenMapUI.MapView.Node.PanOffset = Vector2.Zero;
+                MapView.PanOffset = Vector2.Zero;
 
                 PlayerInput?.AddBlocker("map");
 
-                if (Game.Ui.HudUI.Minimap.Node != null)
+                var minimap = Ui.Get<HudUI>()?.Minimap;
+
+                if (minimap != null)
                 {
-                    Game.Ui.HudUI.Minimap.Node.SetProcess(false);
-                    Game.Ui.HudUI.Minimap.Node.Visible = false;
+                    minimap.SetProcess(false);
+                    minimap.Visible = false;
                 }
             }
             else
@@ -318,10 +326,12 @@ namespace Jogo25D.UI
 
                 PlayerInput?.RemoveBlocker("map");
 
-                if (Game.Ui.HudUI.Minimap.Node != null)
+                var minimap = Ui.Get<HudUI>()?.Minimap;
+
+                if (minimap != null)
                 {
-                    Game.Ui.HudUI.Minimap.Node.SetProcess(true);
-                    Game.Ui.HudUI.Minimap.Node.Visible = true;
+                    minimap.SetProcess(true);
+                    minimap.Visible = true;
                 }
             }
         }
@@ -332,17 +342,17 @@ namespace Jogo25D.UI
 
         public void Zoom(float delta)
         {
-            Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius = Mathf.Clamp(Game.Ui.FullscreenMapUI.MapView.Node.ViewRadius + delta, 400f, 12000f);
+            MapView.ViewRadius = Mathf.Clamp(MapView.ViewRadius + delta, 400f, 12000f);
         }
 
         public void PanDrag(Vector2 screenDelta)
         {
-            if (Game.Ui.FullscreenMapUI.MapView.Node.LastScale <= 0f)
+            if (MapView.LastScale <= 0f)
             {
                 return;
             }
 
-            Game.Ui.FullscreenMapUI.MapView.Node.PanOffset -= screenDelta / Game.Ui.FullscreenMapUI.MapView.Node.LastScale;
+            MapView.PanOffset -= screenDelta / MapView.LastScale;
         }
 
         #endregion

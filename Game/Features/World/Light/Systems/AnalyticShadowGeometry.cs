@@ -33,6 +33,9 @@ namespace Jogo25D.Light
         private List<float> _packed;
         private byte[] _bytes;
 
+        private int BinColumns => (_size.X + BinSize - 1) / BinSize;
+        private int BinRows => (_size.Y + BinSize - 1) / BinSize;
+
         #endregion
 
         #region Core - Preparacao
@@ -221,9 +224,6 @@ namespace Jogo25D.Light
         #endregion
 
         #region Utils
-
-        private int BinColumns => (_size.X + BinSize - 1) / BinSize;
-        private int BinRows => (_size.Y + BinSize - 1) / BinSize;
 
         private static bool Expired(long start, double milliseconds)
         {

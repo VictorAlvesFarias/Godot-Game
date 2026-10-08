@@ -28,7 +28,6 @@ namespace Jogo25D.UI
             }
         }
 
-        // Pixels que cada linha perde de cada lado. 1 da a diagonal de 45 graus do resto da interface.
         [Export] public int Step { get; set; } = 1;
         [Export] public int BorderWidth { get; set; } = 2;
 
@@ -40,10 +39,6 @@ namespace Jogo25D.UI
         {
             DrawTriangle(0f, 0f, Size.X, Size.Y, BorderColor);
 
-            // A borda some por dentro recuando duas colunas de base e uma de profundidade por pixel
-            // de espessura, que e o que mantem a espessura constante numa diagonal de 45 graus.
-            // O recuo na profundidade vale para os dois lados: sem ele o bico do triangulo interno
-            // nasce no mesmo pixel do externo e a ponta fica sem contorno.
             var b = BorderWidth;
 
             if (IsHorizontal)
@@ -63,7 +58,6 @@ namespace Jogo25D.UI
                 return;
             }
 
-            // A base e o lado oposto ao bico; a profundidade e quantas linhas cabem ate ele fechar.
             var baseSize = IsHorizontal ? height : width;
             var rows = (int)(baseSize / (Step * 2));
 
@@ -72,7 +66,6 @@ namespace Jogo25D.UI
                 var start = i * Step;
                 var length = baseSize - i * Step * 2;
 
-                // Onde a linha cai na profundidade: crescendo a partir da base, ou a partir do fim.
                 var apexFirst = _direction == TriangleDirection.Down || _direction == TriangleDirection.Right;
                 var depth = apexFirst ? i : rows - 1 - i;
 

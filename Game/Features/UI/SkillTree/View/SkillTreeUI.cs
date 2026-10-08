@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
@@ -10,6 +10,16 @@ namespace Jogo25D.UI
 {
     public partial class SkillTreeUI : ScreenUI
     {
+        #region Node children references
+
+        public Label PointsLabel { get; private set; }
+        public LineEdit SearchInput { get; private set; }
+        public Button ResetButton { get; private set; }
+        public GridContainer GridContainer { get; private set; }
+        public Panel MaxedStyleHolder { get; private set; }
+
+        #endregion
+
         #region Dinamic properties
 
         public Player LocalPlayer { get; set; }
@@ -27,16 +37,17 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
+            ResolveChildren();
             ProcessMode = ProcessModeEnum.Always;
 
-            Game.WhenReady(Initialize);
+            Initialize();
         }
 
         public override void _Input(InputEvent @event)
         {
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
             {
-                LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+                LocalPlayer = Players.GetLocal();
             }
 
             if (PlayerInput != null && PlayerInput.IsBlockedByOther("skill_tree"))
@@ -70,23 +81,32 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            PointsLabel = GetNode<Label>("Background/MainPanel/MarginContainer/Root/PointsLabel");
+            SearchInput = GetNode<LineEdit>("Background/MainPanel/MarginContainer/Root/Toolbar/SearchInput");
+            ResetButton = GetNode<Button>("Background/MainPanel/MarginContainer/Root/Toolbar/ResetButton");
+            GridContainer = GetNode<GridContainer>("Background/MainPanel/MarginContainer/Root/Scroll/GridContainer");
+            MaxedStyleHolder = GetNode<Panel>("Background/MaxedStyleHolder");
+        }
+
         private void Initialize()
         {
-            Game.Ui.SkillTreeUI.SearchInput.Node.TextChanged += OnSearchTextChanged;
-            Game.Ui.SkillTreeUI.ResetButton.Node.Pressed += OnResetPressed;
+            SearchInput.TextChanged += OnSearchTextChanged;
+            ResetButton.Pressed += OnResetPressed;
 
             BuildGrid();
 
-            LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            LocalPlayer = Players.GetLocal();
         }
 
         private void BuildGrid()
         {
-            var template = (Button)Game.Ui.SkillTreeUI.GridContainer.Node.GetChild(0);
+            var template = (Button)GridContainer.GetChild(0);
 
             LockedStyle = template.GetThemeStylebox("disabled") as StyleBoxFlat;
 
-            var maxedStyleHolder = Game.Ui.SkillTreeUI.MaxedStyleHolder.Node;
+            var maxedStyleHolder = MaxedStyleHolder;
 
             if (maxedStyleHolder == null)
             {
@@ -122,9 +142,9 @@ namespace Jogo25D.UI
 
             var nodeId = node.Id;
 
-            button.Pressed += delegate { OnNodePressed(nodeId); };
+            button.Pressed += () => OnNodePressed(nodeId);
 
-            Game.Ui.SkillTreeUI.GridContainer.Node.AddChild(button);
+            GridContainer.AddChild(button);
 
             NodeButtons[node.Id] = button;
             NodeLevelLabels[node.Id] = levelLabel;
@@ -158,11 +178,11 @@ namespace Jogo25D.UI
         {
             if (Visible)
             {
-                Game.Managers.RouterManager.Node.Close(this);
+                RouterContext.Close(this);
             }
             else
             {
-                Game.Managers.RouterManager.Node.Open(this);
+                RouterContext.Open(this);
             }
 
             if (Visible)
@@ -222,12 +242,12 @@ namespace Jogo25D.UI
         {
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
             {
-                LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+                LocalPlayer = Players.GetLocal();
             }
 
             var progress = LocalPlayer?.SkillTree;
 
-            Game.Ui.SkillTreeUI.PointsLabel.Node.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
+            PointsLabel.Text = progress == null ? "Pontos disponiveis: ilimitado (temporario)" : $"Pontos disponiveis: ilimitado (temporario) | Investido na arvore principal: {SkillTreeDB.GetTreeLevel(progress, "main")}";
 
             foreach (var nodeId in SkillTreeDB.GetAllIds())
             {

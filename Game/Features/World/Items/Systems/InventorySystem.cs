@@ -1,11 +1,9 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
 
 namespace Jogo25D.Systems
 {
-    // Sistema sem estado: todo metodo recebe o InventoryData em que vai mexer. Era instanciado
-    // como campo no Player, o que nao fazia sentido e ainda ocupava o nome "Inventory".
     public static class InventorySystem
     {
         #region Core - Actions

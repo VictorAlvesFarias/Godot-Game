@@ -9,12 +9,12 @@ composição. Não há Light2D da engine no cálculo ativo.
 | Componente | Responsabilidade |
 | --- | --- |
 | `LogicalLightWorld` | Ocupação primária em colunas comprimidas, edições e presença de walls, independentemente dos chunks visíveis. |
-| `LightMapManager` | Mundos lógicos por dimensão, ligação com as cenas e invalidação. |
+| `Dimension` | Mundo lógico da própria dimensão (`EnsureWorld`), streaming de tile e os RPCs de chunk e de luz. |
 | `AnalyticShadowGeometry` | Retângulos de material e índice espacial da sombra. |
 | `SkyAccessField` | Entrada de céu pelo fundo, transporte no ar e absorção no terreno. |
 | `WindowBeamCache` | Texturas de transmissão solar e de fontes externas por aberturas. |
 | `LightSource2D` / `SceneLightSources` | Registro de emissores de cena e revisões isoladas por nível. |
-| `LightingManager` | Fontes e overlays dos chunks carregados em runtime. |
+| `LightMap2D` | Fontes e overlays dos chunks carregados em runtime, um nó por dimensão. |
 | `LightingEditorPreview` | Reconstrução da prévia após mudanças; descarte de resultados assíncronos obsoletos. |
 | `LightPropagationDispatcher` | Caminho GPU de emissão local e fallback CPU. |
 | `TerrainLightMask` | Cobertura dos pixels reais dos tiles, separada da resolução do mapa de luz. |
@@ -77,7 +77,7 @@ construtores, ciclo de vida Godot e operações. `.editorconfig` registra a form
 Os cálculos permanecem nos sistemas e shaders; os nós coordenam seu ciclo de vida.
 
 As pastas seguem a convenção do projeto: nós em `Entities/`, coordenação em
-`Managers/`, cálculo em `Systems/`, dados e apresentação em `Resources/`. Shaders
+`Context/`, cálculo em `Systems/`, dados e apresentação em `Resources/`. Shaders
 ficam em `Assets/Shaders/`, inclusive `terrain_light_overlay.gdshader` e
 `light_propagation.glsl`. As paredes de fundo ficam em `Blocks/Entities/`.
 

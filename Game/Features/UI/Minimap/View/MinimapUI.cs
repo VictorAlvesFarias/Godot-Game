@@ -1,8 +1,9 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 
 namespace Jogo25D.UI
 {
@@ -24,6 +25,8 @@ namespace Jogo25D.UI
         public Vector2 PanOffset { get; set; } = Vector2.Zero;
 
         public float LastScale { get; private set; }
+
+        private float _redrawTimer;
 
         #endregion
 
@@ -75,8 +78,6 @@ namespace Jogo25D.UI
             ScanTree(GetTree().Root, viewCenterWorldPos, center, scale);
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
-
-        private float _redrawTimer;
 
         public override void _Process(double delta)
         {
@@ -133,12 +134,9 @@ namespace Jogo25D.UI
             Texture2D texture = null;
             var origin = Vector2I.Zero;
 
-            if (Game.Managers.TileStreamingManager.Node != null)
-            {
-                texture = Game.Managers.TileStreamingManager.Node.GetDiscoveredTexture(layer, out origin);
-            }
+            texture = Dimension.Get(Dimension.IdOf(layer))?.GetDiscoveredTexture(out origin);
 
-            if (texture != null)
+                        if (texture != null)
             {
                 DrawDiscoveredTexture(layer, texture, origin, playerPos, center, scale);
 
@@ -193,6 +191,7 @@ namespace Jogo25D.UI
         public Vector2 WorldToMap(Vector2 worldPos, Vector2 playerPos, Vector2 center, float scale)
         {
             Vector2 relative = worldPos - playerPos;
+
             return center + relative * scale;
         }
 

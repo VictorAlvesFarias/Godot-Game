@@ -1,8 +1,12 @@
 using Godot;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
+using Jogo25D.Entities;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Items;
+using Jogo25D.Light;
 using Jogo25D.Utils.Coordinates;
 using System.Collections.Generic;
 
@@ -128,12 +132,12 @@ namespace Jogo25D.Blocks
             }
 
             var previousSource = GetCellSourceId(cell);
-            var dimension = Game.Managers.DimensionManager.Node.ResolveDimensionIdOf(this);
+            var dimension = Dimension.IdOf(this);
             var type = remove ? "wall_break" : "wall_place";
 
             ApplyEdit(cell, blockId, remove);
 
-            Game.Managers.TileStreamingManager.Node.RecordMutation(dimension, cell, type, blockId);
+            (GetParent() as Dimension)?.RecordMutation(cell, type, blockId);
 
             if (remove)
             {
@@ -171,10 +175,11 @@ namespace Jogo25D.Blocks
 
             if (!Engine.IsEditorHint())
             {
-                var dimension = Game.Managers.DimensionManager.Node.ResolveDimensionIdOf(this);
+                var dimension = Dimension.IdOf(this);
 
-                Game.Managers.LightMapManager.Node?.GetWorld(dimension).SetBackground(cell.X, cell.Y, !remove);
-                Game.Managers.LightingManager.Node?.OnCellChanged(dimension, cell);
+                (GetParent() as Dimension)?.EnsureWorld().SetBackground(cell.X, cell.Y, !remove);
+
+                GetParent()?.GetNodeOrNull<LightMap2D>("LightMap")?.OnCellChanged(cell);
             }
 
             if (remove)
@@ -209,7 +214,7 @@ namespace Jogo25D.Blocks
                 return;
             }
 
-            Game.Managers.DimensionManager.Node.SpawnWorldItemRequest(
+            EntitySpawner.SpawnWorldItemRequest(
                 ItemFactory.CreateInstance(drop),
                 ToGlobal(MapToLocal(cell)),
                 dimension);

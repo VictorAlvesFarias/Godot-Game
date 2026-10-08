@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
@@ -7,6 +7,7 @@ using Jogo25D.Effects;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Items;
 using Jogo25D.Properties;
+using Jogo25D.Session;
 using Jogo25D.Systems;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,26 @@ namespace Jogo25D.UI
 {
     public partial class HudUI : ScreenUI
     {
+        #region Node children references
+
+        public MinimapUI Minimap { get; private set; }
+        public Label FpsLabel { get; private set; }
+        public ProgressBar LegacyHealthBar { get; private set; }
+        public PanelContainer HealthBar { get; private set; }
+        public PhysicalSizeTextureRect HealthBarBack { get; private set; }
+        public RatioFillRect HealthBarFill { get; private set; }
+        public HBoxContainer AbilitiesContainer { get; private set; }
+        public Panel AbilityTemplate { get; private set; }
+        public HBoxContainer EffectsContainer { get; private set; }
+        public Panel EffectTemplate { get; private set; }
+        public VBoxContainer HotkeysContainer { get; private set; }
+        public Panel HotkeySlot0 { get; private set; }
+        public HBoxContainer HotbarContainer { get; private set; }
+        public Panel Slot0 { get; private set; }
+        public Panel Slot0Selected { get; private set; }
+
+        #endregion
+
         #region Dinamic properties
 
         public string PlayerGroupName { get; set; } = "players";
@@ -53,19 +74,24 @@ namespace Jogo25D.UI
         public StyleBoxFlat HotbarNormalStyle { get; set; }
         public StyleBoxFlat HotbarSelectedStyle { get; set; }
 
+        public override bool IsOverlay => false;
+
+        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
+        private static readonly StringName VARIACAO_REDONDO = "SlotRound";
+        private static readonly StringName VARIACAO_REDONDO_HOVER = "SlotRoundHover";
+
         #endregion
 
         #region Godot implementation
 
-        // F3 mostra e esconde o contador. Nasce escondido: numero de debug nao e HUD de jogo.
-        public override void _Input(InputEvent evento)
+        public override void _Input(InputEvent inputEvent)
         {
-            if (evento is not InputEventKey tecla || !tecla.Pressed || tecla.Echo || tecla.Keycode != Key.F3)
+            if (inputEvent is not InputEventKey tecla || !tecla.Pressed || tecla.Echo || tecla.Keycode != Key.F3)
             {
                 return;
             }
 
-            var fps = Game.Ui.HudUI.FpsLabel.Node;
+            var fps = FpsLabel;
 
             if (fps != null)
             {
@@ -75,26 +101,30 @@ namespace Jogo25D.UI
             GetViewport().SetInputAsHandled();
         }
 
-
-        // Nao e overlay: e a tela principal do jogo. Precisa virar o Current do router e
-        // esconder o menu anterior (CreateCharacter/WorldSelect/...) - senao ele fica visivel
-        // por baixo pra sempre. Pause/Inventory/Console etc continuam overlay de verdade,
-        // empilhando POR CIMA do Hud sem tirar ele do Current.
-        public override bool IsOverlay => false;
-
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
+
+            SessionContext.WorldEntered += OnWorldEntered;
+        }
+
+        private void OnWorldEntered()
+        {
+            RouterContext.Open(this);
         }
 
         public override void _ExitTree()
         {
+            SessionContext.WorldEntered -= OnWorldEntered;
+
             if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
             {
                 LocalPlayer.ItemEquipped -= OnItemEquipped;
                 LocalPlayer.InventoryChanged -= UpdateHotbar;
             }
         }
+
         public override void _Process(double delta)
         {
             UpdateFpsDisplay(delta);
@@ -114,11 +144,30 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            Minimap = GetNode<MinimapUI>("MarginContainer/TopRightColumn/MinimapPanel/Minimap");
+            FpsLabel = GetNode<Label>("MarginContainer/VBoxContainer/FpsLabel");
+            LegacyHealthBar = GetNode<ProgressBar>("MarginContainer/VBoxContainer/HealthBlock/HealthFrame/HealthRow/LegacyHealthBar");
+            HealthBar = GetNode<PanelContainer>("MarginContainer/VBoxContainer/HealthBar");
+            HealthBarBack = GetNode<PhysicalSizeTextureRect>("MarginContainer/VBoxContainer/HealthBar/BarBack");
+            HealthBarFill = GetNode<RatioFillRect>("MarginContainer/VBoxContainer/HealthBar/BarFill");
+            AbilitiesContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/AbilitiesContainer");
+            AbilityTemplate = GetNode<Panel>("MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate");
+            EffectsContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/EffectsContainer");
+            EffectTemplate = GetNode<Panel>("MarginContainer/VBoxContainer/EffectsContainer/EffectTemplate");
+            HotkeysContainer = GetNode<VBoxContainer>("MarginContainer/TopRightColumn/HotkeysContainer");
+            HotkeySlot0 = GetNode<Panel>("MarginContainer/TopRightColumn/HotkeysContainer/HotkeySlot0");
+            HotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
+            Slot0 = GetNode<Panel>("MarginContainer/HotbarContainer/Slot0");
+            Slot0Selected = GetNode<Panel>("MarginContainer/HotbarContainer/Slot0Selected");
+        }
+
         private void Initialize()
         {
-            Game.Ui.HudUI.AbilityTemplate.Node.Visible = false;
+            AbilityTemplate.Visible = false;
 
-            var hotkeySlot0 = Game.Ui.HudUI.HotkeySlot0.Node;
+            var hotkeySlot0 = HotkeySlot0;
 
             ConfigureHotkeyHint(hotkeySlot0, "I", CreateInventoryIcon());
             ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "M", CreateMapIcon());
@@ -130,11 +179,11 @@ namespace Jogo25D.UI
 
             MiningHint.Visible = false;
 
-            Game.Ui.HudUI.EffectTemplate.Node.Visible = false;
+            EffectTemplate.Visible = false;
 
-            var hotbarContainer = Game.Ui.HudUI.HotbarContainer.Node;
-            var slot0 = Game.Ui.HudUI.Slot0.Node;
-            var slot0Selected = Game.Ui.HudUI.Slot0Selected.Node;
+            var hotbarContainer = HotbarContainer;
+            var slot0 = Slot0;
+            var slot0Selected = Slot0Selected;
 
             HotbarNormalStyle = slot0.GetThemeStylebox("panel") as StyleBoxFlat;
             HotbarSelectedStyle = slot0Selected.GetThemeStylebox("panel") as StyleBoxFlat;
@@ -163,10 +212,10 @@ namespace Jogo25D.UI
 
                 if (HotbarSelectedMarkers[i] != null)
                 {
-                    // Na cena o triangulo fica visivel para poder ser editado; em jogo quem manda e o slot selecionado.
                     HotbarSelectedMarkers[i].Visible = false;
                 }
             }
+
             CallDeferred(nameof(FindLocalPlayer));
         }
 
@@ -196,21 +245,21 @@ namespace Jogo25D.UI
                             RpcId(1, nameof(PingPong));
                         }
 
-                        Game.Ui.HudUI.FpsLabel.Node.Text = $"{fpsText} | Ping: {CurrentPing}ms";
+                        FpsLabel.Text = $"{fpsText} | Ping: {CurrentPing}ms";
                     }
                     else
                     {
-                        Game.Ui.HudUI.FpsLabel.Node.Text = $"{fpsText} | Ping: 0ms";
+                        FpsLabel.Text = $"{fpsText} | Ping: 0ms";
                     }
                 }
                 catch
                 {
-                    Game.Ui.HudUI.FpsLabel.Node.Text = fpsText;
+                    FpsLabel.Text = fpsText;
                 }
             }
             else
             {
-                Game.Ui.HudUI.FpsLabel.Node.Text = fpsText;
+                FpsLabel.Text = fpsText;
             }
         }
 
@@ -253,31 +302,30 @@ namespace Jogo25D.UI
 
         private void UpdateLegacyHealthBar(int maxHealth, int currentHealth)
         {
-            var barra = Game.Ui.HudUI.LegacyHealthBar.Node;
+            var bar = LegacyHealthBar;
 
-            barra.MaxValue = maxHealth;
-            barra.Value = currentHealth;
+            bar.MaxValue = maxHealth;
+            bar.Value = currentHealth;
 
-            var largura = UiConstants.HEALTH_BAR_BASE_WIDTH + maxHealth * UiConstants.HEALTH_BAR_PX_PER_HEALTH;
+            var width = UiConstants.HEALTH_BAR_BASE_WIDTH + maxHealth * UiConstants.HEALTH_BAR_PX_PER_HEALTH;
 
-            // So a largura e calculada. A altura vem da cena, senao nao ha como ajusta-la la.
-            barra.CustomMinimumSize = new Vector2(largura, barra.CustomMinimumSize.Y);
+            bar.CustomMinimumSize = new Vector2(width, bar.CustomMinimumSize.Y);
         }
 
         private void LayoutHealthBar(int maxHealth, int currentHealth)
         {
             if (!HealthBarBaselineCaptured)
             {
-                HealthBarBackBaselineSize = Game.Ui.HudUI.HealthBarBack.Node.PhysicalSize;
+                HealthBarBackBaselineSize = HealthBarBack.PhysicalSize;
                 HealthBarBaselineCaptured = true;
             }
 
             var pxPerHealth = HealthBarBackBaselineSize.X / 50f;
             var growthPx = Mathf.Max(0f, maxHealth - 50f) * pxPerHealth;
 
-            Game.Ui.HudUI.HealthBarBack.Node.PhysicalSize = HealthBarBackBaselineSize + new Vector2(growthPx, 0f);
+            HealthBarBack.PhysicalSize = HealthBarBackBaselineSize + new Vector2(growthPx, 0f);
 
-            Game.Ui.HudUI.HealthBarFill.Node.Ratio = maxHealth > 0 ? Mathf.Clamp((float)currentHealth / maxHealth, 0f, 1f) : 0f;
+            HealthBarFill.Ratio = maxHealth > 0 ? Mathf.Clamp((float)currentHealth / maxHealth, 0f, 1f) : 0f;
         }
 
         public void FindLocalPlayer()
@@ -288,18 +336,16 @@ namespace Jogo25D.UI
                 LocalPlayer.InventoryChanged -= UpdateHotbar;
             }
 
-            var worldManager = Game.Managers.WorldManager.Node;
-
-            LocalPlayer = worldManager?.GetLocalPlayer();
+            LocalPlayer = Players.GetLocal();
 
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
             {
                 return;
             }
 
-            if (Game.Ui.HudUI.Minimap.Node != null && IsInstanceValid(Game.Ui.HudUI.Minimap.Node))
+            if (Minimap != null && IsInstanceValid(Minimap))
             {
-                Game.Ui.HudUI.Minimap.Node.SetLocalPlayer(LocalPlayer);
+                Minimap.SetLocalPlayer(LocalPlayer);
             }
 
             LocalPlayer.ItemEquipped += OnItemEquipped;
@@ -324,13 +370,12 @@ namespace Jogo25D.UI
                 return 0;
             }
 
-            // Mesma contagem que Resolver.Resolve produz, sem alocar uma lista por frame.
             return (LocalPlayer.UnlockedAbilities?.Count ?? 0) + (LocalPlayer.ActiveAbilities?.Count ?? 0);
         }
 
         public void BuildAbilitySlots()
         {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || Game.Ui.HudUI.AbilitiesContainer.Node == null || AbilityTemplateMissing)
+            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || AbilitiesContainer == null || AbilityTemplateMissing)
             {
                 return;
             }
@@ -346,9 +391,9 @@ namespace Jogo25D.UI
                 AbilityTimerLabels.Clear();
                 AbilityChargesLabels.Clear();
 
-                for (int i = Game.Ui.HudUI.AbilitiesContainer.Node.GetChildCount() - 1; i >= 0; i--)
+                for (int i = AbilitiesContainer.GetChildCount() - 1; i >= 0; i--)
                 {
-                    if (Game.Ui.HudUI.AbilitiesContainer.Node.GetChild(i) is Control c)
+                    if (AbilitiesContainer.GetChild(i) is Control c)
                     {
                         c.Visible = false;
                     }
@@ -364,16 +409,16 @@ namespace Jogo25D.UI
             AbilityTimerLabels.Clear();
             AbilityChargesLabels.Clear();
 
-            for (int i = Game.Ui.HudUI.AbilitiesContainer.Node.GetChildCount() - 1; i >= 0; i--)
+            for (int i = AbilitiesContainer.GetChildCount() - 1; i >= 0; i--)
             {
-                var old = Game.Ui.HudUI.AbilitiesContainer.Node.GetChild(i);
+                var old = AbilitiesContainer.GetChild(i);
 
                 if (old.Name == "AbilityTemplate")
                 {
                     continue;
                 }
 
-                Game.Ui.HudUI.AbilitiesContainer.Node.RemoveChild(old);
+                AbilitiesContainer.RemoveChild(old);
 
                 old.QueueFree();
             }
@@ -388,7 +433,7 @@ namespace Jogo25D.UI
                     break;
                 }
 
-                Game.Ui.HudUI.AbilitiesContainer.Node.AddChild(slotViews.Panel);
+                AbilitiesContainer.AddChild(slotViews.Panel);
 
                 var fillBar = slotViews.FillBar;
 
@@ -408,7 +453,7 @@ namespace Jogo25D.UI
 
         public AbilitySlotViews CreateAbilitySlot()
         {
-            var template = Game.Ui.HudUI.AbilityTemplate.Node;
+            var template = AbilityTemplate;
 
             if (template == null)
             {
@@ -487,10 +532,10 @@ namespace Jogo25D.UI
 
                 if (chargesLabel != null)
                 {
-                    var usaCargas = def?.MaxCharges > 0;
+                    var usesCharges = def?.MaxCharges > 0;
 
-                    chargesLabel.Text = usaCargas ? Mathf.Min(action.CurrentCharges, UiConstants.MAX_CHARGES_SHOWN).ToString() : "";
-                    chargesLabel.Visible = usaCargas;
+                    chargesLabel.Text = usesCharges ? Mathf.Min(action.CurrentCharges, UiConstants.MAX_CHARGES_SHOWN).ToString() : "";
+                    chargesLabel.Visible = usesCharges;
                 }
 
                 if (action.InCooldown)
@@ -543,7 +588,7 @@ namespace Jogo25D.UI
 
         public EffectSlotViews CreateEffectSlot()
         {
-            var template = Game.Ui.HudUI.EffectTemplate.Node;
+            var template = EffectTemplate;
 
             if (template == null)
             {
@@ -559,14 +604,14 @@ namespace Jogo25D.UI
             var iconRect = panel.GetNode<TextureRect>("IconRect");
             var timerLabel = panel.GetNode<Label>("TimerLabel");
 
-            Game.Ui.HudUI.EffectsContainer.Node.AddChild(panel);
+            EffectsContainer.AddChild(panel);
 
             return new EffectSlotViews(panel, iconRect, timerLabel);
         }
 
         public void UpdateEffectIcons()
         {
-            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || Game.Ui.HudUI.EffectsContainer.Node == null || EffectTemplateMissing)
+            if (LocalPlayer == null || !IsInstanceValid(LocalPlayer) || EffectsContainer == null || EffectTemplateMissing)
             {
                 return;
             }
@@ -622,24 +667,17 @@ namespace Jogo25D.UI
 
         #region Core - Hotkeys
 
-        // Mesma cor do card de titulo: os icones do HUD pertencem a mesma familia visual.
-        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
-
-
-                private static readonly StringName VARIACAO_REDONDO = "SlotRound";
-        private static readonly StringName VARIACAO_REDONDO_HOVER = "SlotRoundHover";
-
-public Panel DuplicateHotkeySlot(Panel template)
+        public Panel DuplicateHotkeySlot(Panel template)
         {
             var panel = (Panel)template.Duplicate();
 
-            Game.Ui.HudUI.HotkeysContainer.Node.AddChild(panel);
+            HotkeysContainer.AddChild(panel);
 
-            foreach (var filho in panel.GetChildren())
+            foreach (var child in panel.GetChildren())
             {
-                if (filho is Control controle)
+                if (child is Control control)
                 {
-                    controle.MouseFilter = Control.MouseFilterEnum.Ignore;
+                    control.MouseFilter = Control.MouseFilterEnum.Ignore;
                 }
             }
 

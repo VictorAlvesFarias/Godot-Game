@@ -1,11 +1,11 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
-using Jogo25D.Features.Managers.Save.Resources;
-using Jogo25D.Features.Managers.Save.Types;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Items;
 using Jogo25D.Save;
+using Jogo25D.Save.Resources;
+using Jogo25D.Save.Types;
 using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
@@ -13,11 +13,6 @@ using System.Linq;
 
 namespace Jogo25D.Systems
 {
-    // Armazenamento: le e escreve JSON, monta e apaga pasta. Nao conhece
-    // no, rede nem sessao - por isso e system, nao manager.
-    //
-    // Nao deve ser chamado pela UI. Quem decide se o dado vem do disco ou de um RPC e o
-    // SaveManager; aqui e so o lado do disco.
     public static class SaveStorage
     {
         #region Dinamic properties
@@ -231,8 +226,8 @@ namespace Jogo25D.Systems
                     continue;
                 }
 
-                var documento = LoadWorldDocument(folderName);
-                var meta = documento == null ? null : WorldDocument.MetaDe<WorldSaveData>(documento);
+                var document = LoadWorldDocument(folderName);
+                var meta = document == null ? null : WorldDocument.MetaOf<WorldSaveData>(document);
 
                 if (meta != null)
                 {
@@ -268,54 +263,54 @@ namespace Jogo25D.Systems
             SaveWorldDocument(world.WorldId, new Godot.Collections.Dictionary
             {
                 { WorldDocument.TYPE, "world" },
-                { WorldDocument.STATE, WorldDocument.EstadoDe(world) },
+                { WorldDocument.STATE, WorldDocument.StateOfMeta(world) },
                 { WorldDocument.DIMENSIONS, new Godot.Collections.Array() },
             });
         }
 
         public static Godot.Collections.Dictionary LoadWorldDocument(string worldId)
         {
-            var caminho = $"{SavesConstants.WORLDS_DIR}/{worldId}/world.json";
+            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/world.json";
 
-            if (!FileAccess.FileExists(caminho))
+            if (!FileAccess.FileExists(path))
             {
                 return null;
             }
 
-            var arquivo = FileAccess.Open(caminho, FileAccess.ModeFlags.Read);
+            var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
 
-            if (arquivo == null)
+            if (file == null)
             {
                 return null;
             }
 
-            var texto = arquivo.GetAsText();
+            var text = file.GetAsText();
 
-            arquivo.Close();
+            file.Close();
 
-            var lido = Json.ParseString(texto);
+            var loaded = Json.ParseString(text);
 
-            return lido.VariantType == Variant.Type.Dictionary ? lido.AsGodotDictionary() : null;
+            return loaded.VariantType == Variant.Type.Dictionary ? loaded.AsGodotDictionary() : null;
         }
 
-        public static void SaveWorldDocument(string worldId, Godot.Collections.Dictionary documento)
+        public static void SaveWorldDocument(string worldId, Godot.Collections.Dictionary document)
         {
-            var pasta = $"{SavesConstants.WORLDS_DIR}/{worldId}";
+            var folder = $"{SavesConstants.WORLDS_DIR}/{worldId}";
 
-            EnsureDir(pasta);
+            EnsureDir(folder);
 
-            var arquivo = FileAccess.Open($"{pasta}/world.json", FileAccess.ModeFlags.Write);
+            var file = FileAccess.Open($"{folder}/world.json", FileAccess.ModeFlags.Write);
 
-            if (arquivo == null)
+            if (file == null)
             {
                 GD.PushError($"[SaveStorage] nao consegui escrever o mundo {worldId}");
 
                 return;
             }
 
-            arquivo.StoreString(Json.Stringify(documento, "\t"));
+            file.StoreString(Json.Stringify(document, "\t"));
 
-            arquivo.Close();
+            file.Close();
         }
 
         public static void DeleteWorld(string worldId)
@@ -328,11 +323,6 @@ namespace Jogo25D.Systems
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         }
 
-        // Estado inicial de um personagem novo. Instancia um Player so pra tirar o retrato dos
-        // valores padrao e libera em seguida - assim o schema vive num lugar so (a classe), em
-        // vez de ser repetido a mao aqui.
-        //
-        // Node nao e RefCounted: o Free() e obrigatorio, por isso o try/finally.
         private static Godot.Collections.Dictionary BuildStarterState()
         {
             var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
@@ -394,8 +384,6 @@ namespace Jogo25D.Systems
 
         #region Core - Json
 
-        // O save e JSON puro: mesmo formato que ja trafega por RPC, via GodotDictionaryParser.
-        // O tipo concreto vem no campo "$type" do proprio arquivo, entao nao existe factory.
         private static void WriteJson(Resource resource, string path)
         {
             var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
@@ -428,11 +416,11 @@ namespace Jogo25D.Systems
                 return null;
             }
 
-            var texto = file.GetAsText();
+            var text = file.GetAsText();
 
             file.Close();
 
-            var parsed = Json.ParseString(texto);
+            var parsed = Json.ParseString(text);
 
             if (parsed.VariantType != Variant.Type.Dictionary)
             {

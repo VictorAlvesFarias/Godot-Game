@@ -1,8 +1,9 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
-using Jogo25D.Features.Managers.Save.Resources;
-using Jogo25D.Features.Managers.Save.Types;
+using Jogo25D.Save.Resources;
+using Jogo25D.Save.Types;
+using Jogo25D.Session;
 using Jogo25D.Systems;
 using System.Collections.Generic;
 
@@ -10,11 +11,23 @@ namespace Jogo25D.UI
 {
     public partial class WorldSelectUI : ScreenUI
     {
+        #region Node children references
+
+        public LineEdit SearchInput { get; private set; }
+        public VBoxContainer ListContainer { get; private set; }
+        public Button CreateWorldButton { get; private set; }
+        public Button MultiplayerButton { get; private set; }
+        public Button BackButton { get; private set; }
+        public PanelContainer WorldRowWithDeleteTemplate { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
@@ -30,20 +43,30 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            SearchInput = GetNode<LineEdit>("MarginContainer/Root/SearchInput");
+            ListContainer = GetNode<VBoxContainer>("MarginContainer/Root/ListScroll/ListContainer");
+            CreateWorldButton = GetNode<Button>("MarginContainer/Root/ButtonRow/CreateWorldButton");
+            MultiplayerButton = GetNode<Button>("MarginContainer/Root/ButtonRow/MultiplayerButton");
+            BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
+            WorldRowWithDeleteTemplate = GetNode<PanelContainer>("MarginContainer/Root/ListScroll/ListContainer/WorldRowWithDeleteTemplate");
+        }
+
         private void Initialize()
         {
-            Game.Ui.WorldSelectUI.CreateWorldButton.Node.Pressed += OnCreateWorldPressed;
-            Game.Ui.WorldSelectUI.MultiplayerButton.Node.Pressed += OnMultiplayerPressed;
-            Game.Ui.WorldSelectUI.BackButton.Node.Pressed += OnBackPressed;
+            CreateWorldButton.Pressed += OnCreateWorldPressed;
+            MultiplayerButton.Pressed += OnMultiplayerPressed;
+            BackButton.Pressed += OnBackPressed;
         }
 
         private Control CreateWorldRow(string title, string subtitle, System.Action onSelect, System.Action onDelete)
         {
-            var template = Game.Ui.WorldSelectUI.WorldRowWithDeleteTemplate.Node;
+            var template = WorldRowWithDeleteTemplate;
 
             if (template == null)
             {
-                GD.PushError("WorldSelectUI: WorldRowWithDeleteTemplate não encontrado em Game.Ui.WorldSelectUI.ListContainer.Node.");
+                GD.PushError("WorldSelectUI: WorldRowWithDeleteTemplate não encontrado em ListContainer.");
 
                 return null;
             }
@@ -64,7 +87,7 @@ namespace Jogo25D.UI
 
         private void PopulateWorldRows()
         {
-            foreach (var child in Game.Ui.WorldSelectUI.ListContainer.Node.GetChildren())
+            foreach (var child in ListContainer.GetChildren())
             {
                 if (child.Name == "WorldRowWithDeleteTemplate")
                 {
@@ -76,7 +99,7 @@ namespace Jogo25D.UI
                 child.QueueFree();
             }
 
-            var worlds = Game.Managers.SaveManager.Node?.ListWorlds() ?? new List<WorldSaveData>();
+            var worlds = SaveStorage.ListWorlds() ?? new List<WorldSaveData>();
 
             foreach (var world in worlds)
             {
@@ -95,7 +118,7 @@ namespace Jogo25D.UI
                     },
                     () =>
                     {
-                        Game.Managers.SaveManager.Node?.DeleteWorld(world.WorldId);
+                        SaveStorage.DeleteWorld(world.WorldId);
 
                         PopulateWorldRows();
                     }
@@ -103,7 +126,7 @@ namespace Jogo25D.UI
 
                 if (row != null)
                 {
-                    Game.Ui.WorldSelectUI.ListContainer.Node.AddChild(row);
+                    ListContainer.AddChild(row);
                 }
             }
         }
@@ -114,24 +137,24 @@ namespace Jogo25D.UI
 
         public void OnWorldRowPressed(WorldSaveData world)
         {
-            Game.Managers.SessionManager.Node.PendingWorld = world;
+            SessionContext.SetPendingWorld(world);
 
-            Game.Managers.RouterManager.Node.Open(Game.Ui.CharacterSelectUI.Node);
+            RouterContext.Open(Ui.Get<CharacterSelectUI>());
         }
 
         public void OnCreateWorldPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.CreateWorldUI.Node);
+            RouterContext.Open(Ui.Get<CreateWorldUI>());
         }
 
         public void OnMultiplayerPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
+            RouterContext.Open(Ui.Get<MultiplayerUI>());
         }
 
         public void OnBackPressed()
         {
-            Game.Managers.RouterManager.Node.Back();
+            RouterContext.Back();
         }
 
         #endregion

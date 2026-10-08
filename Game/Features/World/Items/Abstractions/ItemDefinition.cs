@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
 using Jogo25D.Features.World.Items.Resources;
@@ -38,8 +38,6 @@ namespace Jogo25D.Items
 
         public abstract void Use(Player player, ItemData data);
 
-        // Uso do item numa posicao do mundo, ja no lado autoritativo. Quem coloca algo no mapa
-        // implementa aqui: valida, posiciona e consome. O Player nao sabe o que o item faz.
         public virtual void UseAt(Player player, ItemData data, Vector2 position)
         {
         }
@@ -158,6 +156,7 @@ namespace Jogo25D.Items
             {
                 data.CooldownRemainingTimer -= delta;
             }
+
             if (data.ReloadTimer > 0)
             {
                 data.ReloadTimer -= delta;

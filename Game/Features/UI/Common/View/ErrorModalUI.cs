@@ -1,17 +1,26 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Core;
 
 namespace Jogo25D.UI
 {
     public partial class ErrorModalUI : ScreenUI
     {
+        #region Node children references
+
+        public Panel Background { get; private set; }
+        public Label MessageLabel { get; private set; }
+        public Button OkButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override bool IsOverlay => true;
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
@@ -20,18 +29,25 @@ namespace Jogo25D.UI
 
         public void ShowError(string message)
         {
-            Game.Ui.ErrorModalUI.MessageLabel.Node.Text = message;
+            MessageLabel.Text = message;
 
-            Game.Managers.RouterManager.Node.Open(this);
+            RouterContext.Open(this);
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            Background = GetNode<Panel>("Background");
+            MessageLabel = GetNode<Label>("Background/CenterContainer/Panel/MarginContainer/Root/MessageScroll/MessageLabel");
+            OkButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/OkButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.ErrorModalUI.OkButton.Node.Pressed += OnOkPressed;
+            OkButton.Pressed += OnOkPressed;
         }
 
         #endregion
@@ -40,7 +56,7 @@ namespace Jogo25D.UI
 
         private void OnOkPressed()
         {
-            Game.Managers.RouterManager.Node.Close(this);
+            RouterContext.Close(this);
         }
 
         #endregion

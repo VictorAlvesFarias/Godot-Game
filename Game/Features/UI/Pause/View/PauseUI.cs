@@ -1,69 +1,89 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Network;
+using Jogo25D.Session;
 using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class PauseUI : ScreenUI
     {
+        #region Node children references
+
+        public Button ResumeButton { get; private set; }
+        public Button ExitButton { get; private set; }
+        public Button HostButton { get; private set; }
+        public Button PvpButton { get; private set; }
+        public Button MenuButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override bool IsOverlay => true;
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            ResumeButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ResumeButton");
+            ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
+            HostButton = GetNode<Button>("MarginContainer/Root/MenuColumn/HostButton");
+            PvpButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PvpButton");
+            MenuButton = GetNode<Button>("MarginContainer/Root/MenuColumn/MenuButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.PauseUI.ResumeButton.Node.Pressed += OnResumePressed;
-            Game.Ui.PauseUI.ExitButton.Node.Pressed += OnExitPressed;
-            Game.Ui.PauseUI.HostButton.Node.Pressed += OnHostPressed;
-            Game.Ui.PauseUI.PvpButton.Node.Pressed += OnPvpPressed;
-            Game.Ui.PauseUI.MenuButton.Node.Pressed += OnMenuPressed;
+            ResumeButton.Pressed += OnResumePressed;
+            ExitButton.Pressed += OnExitPressed;
+            HostButton.Pressed += OnHostPressed;
+            PvpButton.Pressed += OnPvpPressed;
+            MenuButton.Pressed += OnMenuPressed;
 
-            foreach (var botao in new[]
+            foreach (var button in new[]
             {
-                Game.Ui.PauseUI.ResumeButton.Node,
-                Game.Ui.PauseUI.HostButton.Node,
-                Game.Ui.PauseUI.PvpButton.Node,
-                Game.Ui.PauseUI.MenuButton.Node,
-                Game.Ui.PauseUI.ExitButton.Node
+                ResumeButton,
+                HostButton,
+                PvpButton,
+                MenuButton,
+                ExitButton
             })
             {
-                LigarMarcador(botao);
+                BindHoverMarker(button);
             }
         }
 
-        // O triangulo vem da cena, dentro do proprio botao. Aqui so nasce escondido e passa a
-        // seguir o mouse, como o marcador do slot selecionado na hotbar.
-        private void LigarMarcador(Button botao)
+        private void BindHoverMarker(Button button)
         {
-            var marcador = botao?.GetNodeOrNull<Control>("HoverMarker");
+            var marker = button?.GetNodeOrNull<Control>("HoverMarker");
 
-            if (marcador == null)
+            if (marker == null)
             {
                 return;
             }
 
-            marcador.Visible = false;
+            marker.Visible = false;
 
-            botao.MouseEntered += delegate { marcador.Visible = true; };
-            botao.MouseExited += delegate { marcador.Visible = false; };
+            button.MouseEntered += () => marker.Visible = true;
+            button.MouseExited += () => marker.Visible = false;
         }
 
         public override void _Input(InputEvent @event)
         {
             if (@event.IsActionPressed("pause") && !@event.IsEcho())
             {
-                var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
+                var input = Players.GetLocal()?.Input;
 
                 if (!Visible && (input?.IsBlockedByOther("pause") ?? false))
                 {
@@ -91,11 +111,11 @@ namespace Jogo25D.UI
         {
             if (Visible)
             {
-                Game.Managers.RouterManager.Node.Close(this);
+                RouterContext.Close(this);
             }
             else
             {
-                Game.Managers.RouterManager.Node.Open(this);
+                RouterContext.Open(this);
             }
 
             if (!IsMultiplayerActive())
@@ -103,7 +123,7 @@ namespace Jogo25D.UI
                 GetTree().Paused = Visible;
             }
 
-            var input = Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input;
+            var input = Players.GetLocal()?.Input;
 
             if (Visible)
             {
@@ -127,19 +147,19 @@ namespace Jogo25D.UI
 
         public void OnResumePressed()
         {
-            Game.Managers.RouterManager.Node.Close(this);
+            RouterContext.Close(this);
             GetTree().Paused = false;
 
-            Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
+            Players.GetLocal()?.Input?.RemoveBlocker("pause");
         }
 
         public void OnMenuPressed()
         {
-            Game.Managers.RouterManager.Node.Close(this);
+            RouterContext.Close(this);
             GetTree().Paused = false;
 
-            Game.Managers.WorldManager.Node?.GetLocalPlayer()?.Input?.RemoveBlocker("pause");
-            Game.Managers.SessionManager.Node.LeaveWorld();
+            Players.GetLocal()?.Input?.RemoveBlocker("pause");
+            SessionContext.LeaveWorld();
         }
 
         #endregion
@@ -148,18 +168,13 @@ namespace Jogo25D.UI
 
         public void OnHostPressed()
         {
-            if (Game.Managers.WorldManager.Node == null)
+            if (NetworkContext.IsConnected())
             {
-                return;
-            }
-
-            if (Game.Managers.NetworkManager.Node.IsConnected())
-            {
-                Game.Managers.NetworkManager.Node.Disconnect();
+                NetworkContext.Disconnect();
             }
             else
             {
-                Game.Ui.HostModalUI.Node.Abrir();
+                Ui.Get<HostModalUI>().Abrir();
 
                 return;
             }
@@ -169,18 +184,13 @@ namespace Jogo25D.UI
 
         public void UpdateNetworkStatus()
         {
-            if (Game.Managers.WorldManager.Node == null)
-            {
-                return;
-            }
-
-            bool connected = Game.Managers.NetworkManager.Node.IsConnected();
+            bool connected = NetworkContext.IsConnected();
             bool isServer = Multiplayer.IsServer();
 
-            Game.Ui.PauseUI.HostButton.Node.Visible = !connected || isServer;
+            HostButton.Visible = !connected || isServer;
 
-            Game.Ui.PauseUI.HostButton.Node.Text = connected && isServer
-                ? $"Hosting {Game.Managers.NetworkManager.Node.CurrentPort}"
+            HostButton.Text = connected && isServer
+                ? $"Hosting {NetworkContext.CurrentPort}"
                 : "Host";
         }
 
@@ -190,7 +200,7 @@ namespace Jogo25D.UI
 
         public void OnPvpPressed()
         {
-            var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            var localPlayer = Players.GetLocal();
 
             if (localPlayer == null)
             {
@@ -204,9 +214,9 @@ namespace Jogo25D.UI
 
         public void UpdatePvpStatus()
         {
-            var localPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            var localPlayer = Players.GetLocal();
 
-            Game.Ui.PauseUI.PvpButton.Node.Text = localPlayer != null && localPlayer.PvpEnabled ? "PvP" : "PvE";
+            PvpButton.Text = localPlayer != null && localPlayer.PvpEnabled ? "PvP" : "PvE";
         }
 
         #endregion

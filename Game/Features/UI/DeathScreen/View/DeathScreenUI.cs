@@ -1,11 +1,19 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Core;
+using Jogo25D.Systems;
 
 namespace Jogo25D.UI
 {
     public partial class DeathScreenUI : ScreenUI
     {
+        #region Node children references
+
+        public Panel Background { get; private set; }
+        public Button ReviveButton { get; private set; }
+
+        #endregion
+
         #region Dinamic properties
 
         public Player LocalPlayer { get; set; }
@@ -18,16 +26,17 @@ namespace Jogo25D.UI
 
         public override void _Ready()
         {
+            ResolveChildren();
             ProcessMode = ProcessModeEnum.Always;
 
-            Game.WhenReady(Initialize);
+            Initialize();
         }
 
         public override void _Process(double delta)
         {
             if (LocalPlayer == null || !IsInstanceValid(LocalPlayer))
             {
-                LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+                LocalPlayer = Players.GetLocal();
 
                 return;
             }
@@ -39,11 +48,11 @@ namespace Jogo25D.UI
 
             if (isDead)
             {
-                Game.Managers.RouterManager.Node.Open(this);
+                RouterContext.Open(this);
             }
             else
             {
-                Game.Managers.RouterManager.Node.Close(this);
+                RouterContext.Close(this);
             }
         }
 
@@ -51,11 +60,17 @@ namespace Jogo25D.UI
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            Background = GetNode<Panel>("Background");
+            ReviveButton = GetNode<Button>("Background/CenterContainer/Panel/MarginContainer/Root/ReviveButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.DeathScreenUI.ReviveButton.Node.Pressed += OnRevivePressed;
+            ReviveButton.Pressed += OnRevivePressed;
 
-            LocalPlayer = Game.Managers.WorldManager.Node?.GetLocalPlayer();
+            LocalPlayer = Players.GetLocal();
         }
 
         #endregion
@@ -64,7 +79,7 @@ namespace Jogo25D.UI
 
         public void OnRevivePressed()
         {
-            Game.Managers.WorldManager.Node.GetLocalPlayer()?.TeleportClientRequest(Vector2.Zero);
+            Players.GetLocal()?.TeleportClientRequest(Vector2.Zero);
         }
 
         #endregion

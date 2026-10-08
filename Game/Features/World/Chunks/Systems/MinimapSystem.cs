@@ -1,15 +1,10 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using System.Collections.Generic;
 
 namespace Jogo25D.Systems
 {
-    // Mapa de descoberta: marca as celulas que ja foram pintadas alguma vez, por dimensao.
-    // Vivia dentro do streaming de tile, que nao tem nada com minimapa.
-    //
-    // Nao e node e nao conhece rede: e system. Quem chama e o TileStreamingManager, ao terminar
-    // de carregar um chunk; quem le e a UI, sempre passando pelo manager.
     public class MinimapSystem
     {
         #region Dinamic properties
@@ -20,7 +15,6 @@ namespace Jogo25D.Systems
 
         #region Core - Registro
 
-        // Varre o chunk recem-pintado e marca no mapa o que tem tile.
         public void RecordChunk(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
         {
             if (layer == null)

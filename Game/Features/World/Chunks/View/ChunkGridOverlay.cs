@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 
 namespace Jogo25D.Chunks
 {
@@ -16,7 +17,6 @@ namespace Jogo25D.Chunks
         {
             Visible = Enabled;
             ZIndex = 100;
-
         }
 
         public override void _UnhandledInput(InputEvent @event)
@@ -47,12 +47,9 @@ namespace Jogo25D.Chunks
         {
             var center = GlobalPosition;
 
-            if (Game.Managers.TileStreamingManager.Node != null)
-            {
-                _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * Game.Managers.TileStreamingManager.Node.TileSize;
-            }
+            _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * Dimension.TileSize;
 
-            var ChunkPixels = _chunkPixels;
+                        var ChunkPixels = _chunkPixels;
 
             var startChunkX = Mathf.FloorToInt((center.X - 4000f) / ChunkPixels);
             var endChunkX = Mathf.CeilToInt((center.X + 4000f) / ChunkPixels);

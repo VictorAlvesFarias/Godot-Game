@@ -42,6 +42,8 @@ namespace Jogo25D.Light
 
         public static readonly int Iterations = Mathf.CeilToInt(1f / LightingConstants.AIR_LIGHT_LOSS);
 
+        private Rid Result => Iterations % 2 == 0 ? _ping : _pong;
+
         private readonly RenderingDevice _device;
         private readonly bool _ownsDevice;
 
@@ -160,7 +162,7 @@ namespace Jogo25D.Light
                 {
                     var slot = (y * size.X + x) * SeedStride;
 
-                    grid[x, y] = new Color(ReadFloat(data, slot), ReadFloat(data, slot + 4), ReadFloat(data, slot + 8));
+                    grid[x, y] = new Color(BitConverter.ToSingle(data, slot), BitConverter.ToSingle(data, slot + 4), BitConverter.ToSingle(data, slot + 8));
                 }
             }
 
@@ -181,8 +183,6 @@ namespace Jogo25D.Light
         #endregion
 
         #region Core - Alocacao
-
-        private Rid Result => Iterations % 2 == 0 ? _ping : _pong;
 
         private void Allocate(Vector2I size)
         {
@@ -294,11 +294,6 @@ namespace Jogo25D.Light
         private static void WriteFloat(byte[] target, int offset, float value)
         {
             BitConverter.TryWriteBytes(target.AsSpan(offset, 4), value);
-        }
-
-        private static float ReadFloat(byte[] source, int offset)
-        {
-            return BitConverter.ToSingle(source, offset);
         }
 
         #endregion

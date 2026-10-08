@@ -1,10 +1,14 @@
 using Godot;
 using Jogo25D.Blocks;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
+using Jogo25D.Entities;
 using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Instances;
 using Jogo25D.Items;
+using Jogo25D.Light;
 using Jogo25D.Systems;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +19,16 @@ namespace Jogo25D.Biomes
     [Tool]
     public partial class TerrainLayer : TileMapLayer
     {
+        #region Events
+
         public event System.Action<Vector2I> CellChanged;
+
+        #endregion
+
+        #region Dinamic properties
+
+        private const string ConnectionsHint = "24/17:" + nameof(TerrainConnectionRule);
+        private const string RelationsHint = "24/17:" + nameof(TileDirectionRelation);
 
         private static readonly Vector2I[] NeighborOffsets = new Vector2I[]
         {
@@ -24,11 +37,36 @@ namespace Jogo25D.Biomes
             new Vector2I(-1, 1), new Vector2I(0, 1), new Vector2I(1, 1),
         };
 
-        #region Regras de conexao
+        private static readonly int[] CornerIndices = new[] { 0, 2, 5, 7 };
 
-        private const string ConnectionsHint = "24/17:" + nameof(TerrainConnectionRule);
+        private static readonly TileSet.CellNeighbor[] SignatureBits = new[]
+        {
+            TileSet.CellNeighbor.TopLeftCorner, TileSet.CellNeighbor.TopSide, TileSet.CellNeighbor.TopRightCorner,
+            TileSet.CellNeighbor.LeftSide, TileSet.CellNeighbor.RightSide,
+            TileSet.CellNeighbor.BottomLeftCorner, TileSet.CellNeighbor.BottomSide, TileSet.CellNeighbor.BottomRightCorner,
+        };
+
+        private static readonly (TileSet.CellNeighbor Bit, Vector2I GridPos)[] PeeringBitGrid = new[]
+        {
+            (TileSet.CellNeighbor.TopLeftCorner, new Vector2I(0, 0)),
+            (TileSet.CellNeighbor.TopSide, new Vector2I(1, 0)),
+            (TileSet.CellNeighbor.TopRightCorner, new Vector2I(2, 0)),
+            (TileSet.CellNeighbor.LeftSide, new Vector2I(0, 1)),
+            (TileSet.CellNeighbor.RightSide, new Vector2I(2, 1)),
+            (TileSet.CellNeighbor.BottomLeftCorner, new Vector2I(0, 2)),
+            (TileSet.CellNeighbor.BottomSide, new Vector2I(1, 2)),
+            (TileSet.CellNeighbor.BottomRightCorner, new Vector2I(2, 2)),
+        };
 
         private Godot.Collections.Array<Resource> _connections = new();
+        private Godot.Collections.Array<Resource> _relations = new();
+        private ConnectionsMode _mode = ConnectionsMode.Blocklist;
+        private bool _useGodotNativeAutotile;
+        private bool _useConnections;
+        private bool _showTerrainSetDebug;
+        private HashSet<(int TerrainSet, Vector2I AtlasCoord, TileSet.CellNeighbor Direction)> _relationSet;
+        private Dictionary<int, Dictionary<int, TerrainTileMatch>> _tilesByTerrainSetAndSignature;
+        private bool _isRecalculating;
 
         [Export(PropertyHint.TypeString, ConnectionsHint)]
         public Godot.Collections.Array<Resource> Connections
@@ -41,8 +79,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        private bool _useGodotNativeAutotile;
-
         [Export]
         public bool UseGodotNativeAutotile
         {
@@ -53,8 +89,6 @@ namespace Jogo25D.Biomes
                 NotifyConfigChanged();
             }
         }
-
-        private bool _useConnections;
 
         [Export]
         public bool UseConnections
@@ -67,8 +101,6 @@ namespace Jogo25D.Biomes
             }
         }
 
-        private ConnectionsMode _mode = ConnectionsMode.Blocklist;
-
         [Export]
         public ConnectionsMode Mode
         {
@@ -80,23 +112,83 @@ namespace Jogo25D.Biomes
             }
         }
 
-        private const string RelationsHint = "24/17:" + nameof(TileDirectionRelation);
-
-        private Godot.Collections.Array<Resource> _relations = new();
-
         [Export(PropertyHint.TypeString, RelationsHint)]
         public Godot.Collections.Array<Resource> Relations
         {
             get => _relations;
             set
             {
-                _relations= value;
+                _relations = value;
                 BuildRelationSet();
                 NotifyConfigChanged();
             }
         }
 
-        private HashSet<(int TerrainSet, Vector2I AtlasCoord, TileSet.CellNeighbor Direction)> _relationSet;
+        [Export]
+        public bool ShowTerrainSetDebug
+        {
+            get => _showTerrainSetDebug;
+            set
+            {
+                _showTerrainSetDebug = value;
+                RedrawDebugOverlay();
+            }
+        }
+
+        #endregion
+
+        #region Node references
+
+        private TerrainDebugOverlay _debugOverlay;
+        private TerrainLayer _baseLayer;
+
+        public string DimensionId { get; private set; }
+
+        private void ResolveChildren()
+        {
+            var parentName = GetParent()?.Name.ToString() ?? "";
+
+            DimensionId = parentName.Equals(ChunkStreamingConstants.OVERWORLD_ID, System.StringComparison.OrdinalIgnoreCase)
+                ? ChunkStreamingConstants.OVERWORLD_ID
+                : ChunkStreamingConstants.UPSIDEDOWN_ID;
+
+            _baseLayer = GetParent()?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
+        }
+
+        #endregion
+
+        #region Godot implementation
+
+        public override void _Ready()
+        {
+            ResolveChildren();
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            var tileSize = TileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
+
+            RenderingQuadrantSize = Mathf.Max(1, Mathf.RoundToInt(TerrainLayerConstants.REFERENCE_QUADRANT_SIZE * ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
+
+            BuildTerrainMap();
+            BuildRelationSet();
+            RedrawDebugOverlay();
+        }
+
+        public override void _UpdateCells(Godot.Collections.Array<Vector2I> coords, bool forcedCleanup)
+        {
+            if (!Engine.IsEditorHint() || forcedCleanup || _isRecalculating)
+            {
+                return;
+            }
+
+            TriggerRecalculate();
+        }
+
+        #endregion
+
+        #region Regras de connection
 
         private void NotifyConfigChanged()
         {
@@ -189,37 +281,6 @@ namespace Jogo25D.Biomes
 
         #region Mapeamento terrain_set -> tabela de tiles por assinatura de bits
 
-        private static readonly TileSet.CellNeighbor[] SignatureBits = new[]
-        {
-            TileSet.CellNeighbor.TopLeftCorner, TileSet.CellNeighbor.TopSide, TileSet.CellNeighbor.TopRightCorner,
-            TileSet.CellNeighbor.LeftSide, TileSet.CellNeighbor.RightSide,
-            TileSet.CellNeighbor.BottomLeftCorner, TileSet.CellNeighbor.BottomSide, TileSet.CellNeighbor.BottomRightCorner,
-        };
-
-        private Dictionary<int, Dictionary<int, TerrainTileMatch>> _tilesByTerrainSetAndSignature;
-        private bool _isRecalculating;
-
-        public override void _Ready()
-        {
-            var tileSize = TileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-
-            RenderingQuadrantSize = Mathf.Max(1, Mathf.RoundToInt(TerrainLayerConstants.REFERENCE_QUADRANT_SIZE * ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
-
-            BuildTerrainMap();
-            BuildRelationSet();
-            RedrawDebugOverlay();
-        }
-
-        public override void _UpdateCells(Godot.Collections.Array<Vector2I> coords, bool forcedCleanup)
-        {
-            if (!Engine.IsEditorHint() || forcedCleanup || _isRecalculating)
-            {
-                return;
-            }
-
-            TriggerRecalculate();
-        }
-
         private void TriggerRecalculate()
         {
             if (_isRecalculating)
@@ -311,32 +372,6 @@ namespace Jogo25D.Biomes
         #endregion
 
         #region Debug - desenho do mapeamento de terreno
-
-        [Export]
-        public bool ShowTerrainSetDebug
-        {
-            get => _showTerrainSetDebug;
-            set
-            {
-                _showTerrainSetDebug = value;
-                RedrawDebugOverlay();
-            }
-        }
-
-        private bool _showTerrainSetDebug;
-        private TerrainDebugOverlay _debugOverlay;
-
-        private static readonly (TileSet.CellNeighbor Bit, Vector2I GridPos)[] PeeringBitGrid = new[]
-        {
-            (TileSet.CellNeighbor.TopLeftCorner, new Vector2I(0, 0)),
-            (TileSet.CellNeighbor.TopSide, new Vector2I(1, 0)),
-            (TileSet.CellNeighbor.TopRightCorner, new Vector2I(2, 0)),
-            (TileSet.CellNeighbor.LeftSide, new Vector2I(0, 1)),
-            (TileSet.CellNeighbor.RightSide, new Vector2I(2, 1)),
-            (TileSet.CellNeighbor.BottomLeftCorner, new Vector2I(0, 2)),
-            (TileSet.CellNeighbor.BottomSide, new Vector2I(1, 2)),
-            (TileSet.CellNeighbor.BottomRightCorner, new Vector2I(2, 2)),
-        };
 
         public void RedrawDebugOverlay()
         {
@@ -479,8 +514,6 @@ namespace Jogo25D.Biomes
 
             RedrawDebugOverlay();
         }
-
-        private static readonly int[] CornerIndices = new[] { 0, 2, 5, 7 };
 
         private bool TryMatchTile(Vector2I cell, int terrainSet, HashSet<Vector2I> cellSet, out TerrainTileMatch match)
         {
@@ -687,15 +720,30 @@ namespace Jogo25D.Biomes
             switch (bit)
             {
                 case TileSet.CellNeighbor.TopLeftCorner:
-                    flankA = TileSet.CellNeighbor.TopSide; flankB = TileSet.CellNeighbor.LeftSide; return true;
+                    flankA = TileSet.CellNeighbor.TopSide;
+                    flankB = TileSet.CellNeighbor.LeftSide;
+
+                    return true;
                 case TileSet.CellNeighbor.TopRightCorner:
-                    flankA = TileSet.CellNeighbor.TopSide; flankB = TileSet.CellNeighbor.RightSide; return true;
+                    flankA = TileSet.CellNeighbor.TopSide;
+                    flankB = TileSet.CellNeighbor.RightSide;
+
+                    return true;
                 case TileSet.CellNeighbor.BottomLeftCorner:
-                    flankA = TileSet.CellNeighbor.BottomSide; flankB = TileSet.CellNeighbor.LeftSide; return true;
+                    flankA = TileSet.CellNeighbor.BottomSide;
+                    flankB = TileSet.CellNeighbor.LeftSide;
+
+                    return true;
                 case TileSet.CellNeighbor.BottomRightCorner:
-                    flankA = TileSet.CellNeighbor.BottomSide; flankB = TileSet.CellNeighbor.RightSide; return true;
+                    flankA = TileSet.CellNeighbor.BottomSide;
+                    flankB = TileSet.CellNeighbor.RightSide;
+
+                    return true;
                 default:
-                    flankA = default; flankB = default; return false;
+                    flankA = default;
+                    flankB = default;
+
+                    return false;
             }
         }
 
@@ -916,44 +964,6 @@ namespace Jogo25D.Biomes
 
         #region Edicao de bloco
 
-        private string _dimensionId;
-
-        public string DimensionId
-        {
-            get
-            {
-                if (!string.IsNullOrEmpty(_dimensionId))
-                {
-                    return _dimensionId;
-                }
-
-                var parentName = GetParent()?.Name.ToString() ?? "";
-
-                _dimensionId = parentName.Equals(ChunkStreamingConstants.OVERWORLD_ID, System.StringComparison.OrdinalIgnoreCase)
-                    ? ChunkStreamingConstants.OVERWORLD_ID
-                    : ChunkStreamingConstants.UPSIDEDOWN_ID;
-
-                return _dimensionId;
-            }
-        }
-
-        private TerrainLayer _baseLayer;
-
-        private TerrainLayer BaseLayer
-        {
-            get
-            {
-                if (_baseLayer != null && IsInstanceValid(_baseLayer))
-                {
-                    return _baseLayer;
-                }
-
-                _baseLayer = GetParent()?.GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
-
-                return _baseLayer;
-            }
-        }
-
         public void BreakBlockClientRequest(Vector2I cell)
         {
             if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
@@ -979,11 +989,9 @@ namespace Jogo25D.Biomes
 
         private void ProcessBreakBlock(Vector2I cell)
         {
-            var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
-
             if (GetCellSourceId(cell) == -1)
             {
-                var baseLayer = BaseLayer;
+                var baseLayer = _baseLayer;
 
                 if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
                 {
@@ -992,7 +1000,7 @@ namespace Jogo25D.Biomes
 
                 baseLayer.EraseBlockAndReconnect(cell);
 
-                tileStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+                (GetParent() as Dimension)?.RecordMutation(cell, "break", "");
 
                 Rpc(nameof(BreakBlockBroadcast), cell);
 
@@ -1001,13 +1009,13 @@ namespace Jogo25D.Biomes
 
             EraseBlockAndReconnect(cell);
 
-            tileStreamingManager?.RecordMutation(DimensionId, cell, "break", "");
+            (GetParent() as Dimension)?.RecordMutation(cell, "break", "");
 
             var dropPosition = ToGlobal(MapToLocal(cell));
 
             if (BlockDB.TryGet("grass", out var grassBlock))
             {
-                Game.Managers.DimensionManager.Node?.SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, DimensionId);
+                EntitySpawner.SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, DimensionId);
             }
 
             Rpc(nameof(BreakBlockBroadcast), cell);
@@ -1016,10 +1024,10 @@ namespace Jogo25D.Biomes
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void BreakBlockBroadcast(Vector2I cell)
         {
-            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
+            (GetParent() as Dimension)?.ApplyLightMutation(cell, "break");
             if (GetCellSourceId(cell) == -1)
             {
-                var baseLayer = BaseLayer;
+                var baseLayer = _baseLayer;
 
                 if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
                 {
@@ -1036,7 +1044,7 @@ namespace Jogo25D.Biomes
 
         public bool PlaceBlockAuthoritative(Vector2I cell, string blockId)
         {
-            var baseLayer = BaseLayer;
+            var baseLayer = _baseLayer;
 
             if (!BlockDB.TryGet(blockId, out var block))
             {
@@ -1053,7 +1061,7 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
-            Game.Managers.TileStreamingManager.Node?.RecordMutation(DimensionId, cell, "place", blockId);
+            (GetParent() as Dimension)?.RecordMutation(cell, "place", blockId);
 
             Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
 
@@ -1079,7 +1087,7 @@ namespace Jogo25D.Biomes
             {
                 if (GetCellSourceId(cell) == -1)
                 {
-                    BaseLayer?.BreakDecorationOnly(cell);
+                    _baseLayer?.BreakDecorationOnly(cell);
 
                     return;
                 }
@@ -1118,7 +1126,7 @@ namespace Jogo25D.Biomes
 
             PaintBlockAndReconnect(cell, block);
 
-            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "place", block.Id);
+            (GetParent() as Dimension)?.ApplyLightMutation(cell, "place", block.Id);
 
             CellChanged?.Invoke(cell);
 
@@ -1127,7 +1135,7 @@ namespace Jogo25D.Biomes
 
         public void EraseBlockAndReconnect(Vector2I cell)
         {
-            Game.Managers.LightMapManager.Node?.SetCell(DimensionId, cell, "break");
+            (GetParent() as Dimension)?.ApplyLightMutation(cell, "break");
 
             if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
             {
@@ -1182,7 +1190,7 @@ namespace Jogo25D.Biomes
                 ReconnectExistingCells(expandedNeighbors);
             }
 
-            var baseLayer = BaseLayer;
+            var baseLayer = _baseLayer;
 
             baseLayer?.EraseCellWithTerrainConnect(cell);
             baseLayer?.RedrawDebugOverlay();
@@ -1229,7 +1237,7 @@ namespace Jogo25D.Biomes
                 ReconnectExistingCells(expandedForeignCells);
             }
 
-            var baseLayer = BaseLayer;
+            var baseLayer = _baseLayer;
 
             if (baseLayer != null)
             {
@@ -1380,9 +1388,7 @@ namespace Jogo25D.Biomes
 
         private BiomeDefinition ResolveBiomeForCell(Vector2I cell)
         {
-            var tileStreamingManager = Game.Managers.TileStreamingManager.Node;
-
-            return tileStreamingManager?.ResolveBiome(DimensionId, cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
+            return (GetParent() as Dimension)?.ResolveBiome(cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
         }
 
         #endregion

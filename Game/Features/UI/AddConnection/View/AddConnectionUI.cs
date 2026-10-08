@@ -7,11 +7,23 @@ namespace Jogo25D.UI
 {
     public partial class AddConnectionUI : ScreenUI
     {
+        #region Node children references
+
+        public LineEdit DescriptionInput { get; private set; }
+        public LineEdit IpInput { get; private set; }
+        public LineEdit PortInput { get; private set; }
+        public Label StatusLabel { get; private set; }
+        public Button SaveButton { get; private set; }
+        public Button BackButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
         }
 
         #endregion
@@ -20,20 +32,30 @@ namespace Jogo25D.UI
 
         public override void OnOpened()
         {
-            Game.Ui.AddConnectionUI.DescriptionInput.Node.Text = "";
-            Game.Ui.AddConnectionUI.IpInput.Node.Text = "";
-            Game.Ui.AddConnectionUI.PortInput.Node.Text = "";
-            Game.Ui.AddConnectionUI.StatusLabel.Node.Text = "";
+            DescriptionInput.Text = "";
+            IpInput.Text = "";
+            PortInput.Text = "";
+            StatusLabel.Text = "";
         }
 
         #endregion
 
         #region Core - Setup
 
+        private void ResolveChildren()
+        {
+            DescriptionInput = GetNode<LineEdit>("MarginContainer/Root/DescriptionInput");
+            IpInput = GetNode<LineEdit>("MarginContainer/Root/IpInput");
+            PortInput = GetNode<LineEdit>("MarginContainer/Root/PortInput");
+            StatusLabel = GetNode<Label>("MarginContainer/Root/StatusLabel");
+            SaveButton = GetNode<Button>("MarginContainer/Root/ButtonRow/SaveButton");
+            BackButton = GetNode<Button>("MarginContainer/Root/ButtonRow/BackButton");
+        }
+
         private void Initialize()
         {
-            Game.Ui.AddConnectionUI.SaveButton.Node.Pressed += OnSavePressed;
-            Game.Ui.AddConnectionUI.BackButton.Node.Pressed += OnBackPressed;
+            SaveButton.Pressed += OnSavePressed;
+            BackButton.Pressed += OnBackPressed;
         }
 
         #endregion
@@ -42,23 +64,22 @@ namespace Jogo25D.UI
 
         public void OnSavePressed()
         {
-            var ip = Game.Ui.AddConnectionUI.IpInput.Node.Text.Trim();
-            var portText = Game.Ui.AddConnectionUI.PortInput.Node.Text.Trim();
-            var description = Game.Ui.AddConnectionUI.DescriptionInput.Node.Text.Trim();
+            var ip = IpInput.Text.Trim();
+            var portText = PortInput.Text.Trim();
+            var description = DescriptionInput.Text.Trim();
 
             if (string.IsNullOrEmpty(ip))
             {
-                Game.Ui.AddConnectionUI.StatusLabel.Node.Text = "Informe o IP do servidor.";
+                StatusLabel.Text = "Informe o IP do servidor.";
 
                 return;
             }
 
-            // Porta em branco cai na padrao, como o NetworkManager ja faz; digitada, precisa ser valida.
             var port = NetworkingConstants.DEFAULT_PORT;
 
             if (!string.IsNullOrEmpty(portText) && (!int.TryParse(portText, out port) || port < 1 || port > 65535))
             {
-                Game.Ui.AddConnectionUI.StatusLabel.Node.Text = "Porta invalida. Use um numero entre 1 e 65535.";
+                StatusLabel.Text = "Porta invalida. Use um numero entre 1 e 65535.";
 
                 return;
             }
@@ -70,8 +91,8 @@ namespace Jogo25D.UI
 
         public void OnBackPressed()
         {
-            Game.Managers.RouterManager.Node.Close(this);
-            Game.Managers.RouterManager.Node.Open(Game.Ui.MultiplayerUI.Node);
+            RouterContext.Close(this);
+            RouterContext.Open(Ui.Get<MultiplayerUI>());
         }
 
         #endregion

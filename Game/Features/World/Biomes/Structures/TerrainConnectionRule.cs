@@ -2,7 +2,6 @@ using Godot;
 
 namespace Jogo25D.Biomes
 {
-
     [GlobalClass]
     public partial class TerrainConnectionRule : Resource
     {

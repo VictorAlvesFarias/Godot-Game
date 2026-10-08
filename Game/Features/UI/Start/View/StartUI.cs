@@ -1,46 +1,63 @@
-﻿using Godot;
+using Godot;
 using Jogo25D.Core;
+using Jogo25D.Session;
 
 namespace Jogo25D.UI
 {
     public partial class StartUI : ScreenUI
     {
+        #region Node children references
+
+        public Button PlayButton { get; private set; }
+        public Button ExitButton { get; private set; }
+
+        #endregion
+
         #region Godot implementation
 
         public override void _Ready()
         {
-            Game.WhenReady(Initialize);
+            ResolveChildren();
+            Initialize();
+
+            SessionContext.Bind();
+
+            RouterContext.Open(this);
         }
 
         #endregion
 
         #region Core - Setup
 
-        private void Initialize()
+        private void ResolveChildren()
         {
-            Game.Managers.SessionManager.Node.SessionEnded += OnSessionEnded;
-            Game.Ui.StartUI.PlayButton.Node.Pressed += OnPlayPressed;
-            Game.Ui.StartUI.ExitButton.Node.Pressed += OnExitPressed;
-
-            LigarMarcador(Game.Ui.StartUI.PlayButton.Node);
-            LigarMarcador(Game.Ui.StartUI.ExitButton.Node);
+            PlayButton = GetNode<Button>("MarginContainer/Root/MenuColumn/PlayButton");
+            ExitButton = GetNode<Button>("MarginContainer/Root/MenuColumn/ExitButton");
         }
 
-        // O triangulo vem da cena, dentro do proprio botao. Aqui so nasce escondido e passa a
-        // seguir o mouse, igual ao menu de pause.
-        private void LigarMarcador(Button botao)
+        private void Initialize()
         {
-            var marcador = botao?.GetNodeOrNull<Control>("HoverMarker");
+            SessionContext.SessionEnded += OnSessionEnded;
+            PlayButton.Pressed += OnPlayPressed;
+            ExitButton.Pressed += OnExitPressed;
 
-            if (marcador == null)
+            BindHoverMarker(PlayButton);
+            BindHoverMarker(ExitButton);
+        }
+
+        private void BindHoverMarker(Button button)
+        {
+            var marker = button?.GetNodeOrNull<Control>("HoverMarker");
+
+            if (marker == null)
             {
                 return;
             }
 
-            marcador.Visible = false;
+            marker.Visible = false;
 
-            botao.MouseEntered += delegate { marcador.Visible = true; };
-            botao.MouseExited += delegate { marcador.Visible = false; };
+            button.MouseEntered += () => marker.Visible = true;
+            button.MouseExited += () => marker.Visible = false;
         }
 
         #endregion
@@ -51,7 +68,9 @@ namespace Jogo25D.UI
         {
             GetTree().Paused = false;
 
-            Game.Managers.RouterManager.Node.Replace(this);
+            RouterContext.Close(Ui.Get<HudUI>());
+            RouterContext.Reset();
+            RouterContext.Replace(this);
         }
 
         #endregion
@@ -60,7 +79,7 @@ namespace Jogo25D.UI
 
         public void OnPlayPressed()
         {
-            Game.Managers.RouterManager.Node.Open(Game.Ui.WorldSelectUI.Node);
+            RouterContext.Open(Ui.Get<WorldSelectUI>());
         }
 
         public void OnExitPressed()

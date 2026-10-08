@@ -1,12 +1,12 @@
 using Godot;
 using Jogo25D.Characters;
 using Jogo25D.Effects;
+using Jogo25D.Extensions;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Properties;
 using Jogo25D.Systems;
-using Jogo25D.Utils.Extensions;
 using System.Linq;
 
 namespace Jogo25D.Items

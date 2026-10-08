@@ -3,6 +3,7 @@ using Jogo25D.Biomes;
 using Jogo25D.Blocks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
 using Jogo25D.Light;
 using Jogo25D.Structures;
 using Jogo25D.Utils.Coordinates;
@@ -29,7 +30,7 @@ namespace Jogo25D.Chunks
 
             var tileSet = target.TileSet;
             var worldScale = GetWorldScale(tileSet);
-            var world = Game.Managers.LightMapManager.Node?.GetWorld(dimensionId)
+            var world = (target.GetParent() as Dimension)?.EnsureWorld()
                 ?? new LogicalLightWorld(worldSeed, dimensionId, worldScale);
             var groupsByTerrain = new Dictionary<int, List<Vector2I>>();
 

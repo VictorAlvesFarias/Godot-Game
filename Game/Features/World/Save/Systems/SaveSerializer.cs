@@ -1,129 +1,133 @@
-﻿using Godot;
+using Godot;
+using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Jogo25D.Utils.GodotDictionaryParser;
 
 namespace Jogo25D.Save
 {
     public static class SaveSerializer
     {
-        #region Core - Identidade de tipo
+        #region Core - Identidade de type
 
-        private static Dictionary<string, SaveSceneAttribute> _porTipo;
-        private static Dictionary<Type, SaveSceneAttribute> _porClasse;
+        private static Dictionary<string, SaveSceneAttribute> _byType;
+        private static Dictionary<Type, SaveSceneAttribute> _byClass;
 
-        private static void GarantirMapa()
+        private static void EnsureMap()
         {
-            if (_porTipo != null)
+            if (_byType != null)
             {
                 return;
             }
 
-            _porTipo = new Dictionary<string, SaveSceneAttribute>();
-            _porClasse = new Dictionary<Type, SaveSceneAttribute>();
+            _byType = new Dictionary<string, SaveSceneAttribute>();
+            _byClass = new Dictionary<Type, SaveSceneAttribute>();
 
-            foreach (var tipo in typeof(SaveSerializer).Assembly.GetTypes())
+            foreach (var type in typeof(SaveSerializer).Assembly.GetTypes())
             {
-                var atributo = tipo.GetCustomAttribute<SaveSceneAttribute>(inherit: false);
+                var attribute = type.GetCustomAttribute<SaveSceneAttribute>(inherit: false);
 
-                if (atributo == null)
+                if (attribute == null)
                 {
                     continue;
                 }
 
-                if (_porTipo.TryGetValue(atributo.Type, out var conflito))
+                if (_byType.TryGetValue(attribute.Type, out var conflict))
                 {
-                    GD.PushError($"[SaveSerializer] tipo duplicado \"{atributo.Type}\": {conflito.Scene} e {tipo}");
+                    GD.PushError($"[SaveSerializer] tipo duplicado \"{attribute.Type}\": {conflict.Scene} e {type}");
 
                     continue;
                 }
 
-                _porTipo[atributo.Type] = atributo;
-                _porClasse[tipo] = atributo;
+                _byType[attribute.Type] = attribute;
+                _byClass[type] = attribute;
             }
         }
 
-        public static SaveSceneAttribute Descrever(Node node)
+        public static SaveSceneAttribute Describe(Node node)
         {
-            GarantirMapa();
+            EnsureMap();
 
-            return node != null && _porClasse.TryGetValue(node.GetType(), out var atributo) ? atributo : null;
+            return node != null && _byClass.TryGetValue(node.GetType(), out var attribute) ? attribute : null;
         }
 
-        public static bool EhPersistivel(Node node)
+        public static bool IsPersistable(Node node)
         {
-            return Descrever(node) != null;
+            return Describe(node) != null;
         }
 
-        public static string CenaDe(string tipo)
+        public static string SceneOf(string type)
         {
-            GarantirMapa();
+            EnsureMap();
 
-            return _porTipo.TryGetValue(tipo, out var atributo) ? atributo.Scene : null;
+            return _byType.TryGetValue(type, out var attribute) ? attribute.Scene : null;
         }
 
         #endregion
 
-        #region Core - Estado
+        #region Core - StateOf
 
-        public static Godot.Collections.Dictionary Escrever(Node node)
+        public static Godot.Collections.Dictionary Write(Node node)
         {
-            var estado = new Godot.Collections.Dictionary();
+            var state = new Godot.Collections.Dictionary();
 
-            foreach (var propriedade in Declaradas(node.GetType()))
+            foreach (var property in DeclaredProperties(node.GetType()))
             {
-                var atributo = propriedade.GetCustomAttribute<SaveAttribute>();
-                var chave = string.IsNullOrEmpty(atributo.Name) ? CamelCase(propriedade.Name) : atributo.Name;
+                var attribute = property.GetCustomAttribute<SaveAttribute>();
+                var key = string.IsNullOrEmpty(attribute.Name) ? CamelCase(property.Name) : attribute.Name;
 
-                estado[chave] = ParaVariant(propriedade.GetValue(node));
+                state[key] = ToVariant(property.GetValue(node));
             }
 
-            return estado;
+            (node as ISaveState)?.WriteState(state);
+
+            return state;
         }
 
-        public static void Ler(Node node, Godot.Collections.Dictionary estado)
+        public static void Read(Node node, Godot.Collections.Dictionary state)
         {
-            if (node == null || estado == null)
+            if (node == null || state == null)
             {
                 return;
             }
 
-            foreach (var propriedade in Declaradas(node.GetType()))
+            foreach (var property in DeclaredProperties(node.GetType()))
             {
-                var atributo = propriedade.GetCustomAttribute<SaveAttribute>();
-                var chave = string.IsNullOrEmpty(atributo.Name) ? CamelCase(propriedade.Name) : atributo.Name;
+                var attribute = property.GetCustomAttribute<SaveAttribute>();
+                var key = string.IsNullOrEmpty(attribute.Name) ? CamelCase(property.Name) : attribute.Name;
 
-                if (!estado.TryGetValue(chave, out var valor))
+                if (!state.TryGetValue(key, out var value))
                 {
                     continue;
                 }
 
-                propriedade.SetValue(node, DeVariant(valor, propriedade.PropertyType));
+                property.SetValue(node, FromVariant(value, property.PropertyType));
             }
+
+            (node as ISaveState)?.ReadState(state);
         }
 
         #endregion
 
         #region Utils
 
-        private static PropertyInfo[] Declaradas(Type tipo)
+        private static PropertyInfo[] DeclaredProperties(Type type)
         {
-            return tipo
+            return type
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead && p.CanWrite && p.GetCustomAttribute<SaveAttribute>() != null)
                 .ToArray();
         }
 
-        private static string CamelCase(string nome)
+        private static string CamelCase(string name)
         {
-            return string.IsNullOrEmpty(nome) ? nome : char.ToLowerInvariant(nome[0]) + nome[1..];
+            return string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
         }
 
-        private static Variant ParaVariant(object valor)
+        private static Variant ToVariant(object value)
         {
-            return valor switch
+            return value switch
             {
                 null => new Variant(),
                 string s => s,
@@ -137,34 +141,65 @@ namespace Jogo25D.Save
                 Godot.Collections.Array array => array,
                 Resource resource => GodotDictionaryParser.ToDictionary(resource),
                 Variant v => v,
-                _ => throw new NotSupportedException($"[SaveSerializer] tipo nao suportado: {valor.GetType()}. Use primitivo, Dictionary ou Array."),
+                _ => throw new NotSupportedException($"[SaveSerializer] tipo nao suportado: {value.GetType()}. Use primitivo, Dictionary ou Array."),
             };
         }
 
-        private static object DeVariant(Variant valor, Type tipo)
+        private static object FromVariant(Variant value, Type type)
         {
-            if (tipo == typeof(string)) return valor.AsString();
-            if (tipo == typeof(bool)) return valor.AsBool();
-            if (tipo == typeof(int)) return valor.AsInt32();
-            if (tipo == typeof(long)) return valor.AsInt64();
-            if (tipo == typeof(float)) return valor.AsSingle();
-            if (tipo == typeof(double)) return valor.AsDouble();
-            if (tipo == typeof(Godot.Collections.Dictionary)) return valor.AsGodotDictionary();
-            if (tipo == typeof(Godot.Collections.Array)) return valor.AsGodotArray();
-
-            if (tipo == typeof(Vector2))
+            if (type == typeof(string))
             {
-                var par = valor.AsGodotDictionary();
-
-                return new Vector2(par["x"].AsSingle(), par["y"].AsSingle());
+                return value.AsString();
             }
 
-            if (typeof(Resource).IsAssignableFrom(tipo))
+            if (type == typeof(bool))
             {
-                return GodotDictionaryParser.ToResource(valor.AsGodotDictionary(), tipo);
+                return value.AsBool();
             }
 
-            throw new NotSupportedException($"[SaveSerializer] tipo nao suportado: {tipo}. Use primitivo, Dictionary ou Array.");
+            if (type == typeof(int))
+            {
+                return value.AsInt32();
+            }
+
+            if (type == typeof(long))
+            {
+                return value.AsInt64();
+            }
+
+            if (type == typeof(float))
+            {
+                return value.AsSingle();
+            }
+
+            if (type == typeof(double))
+            {
+                return value.AsDouble();
+            }
+
+            if (type == typeof(Godot.Collections.Dictionary))
+            {
+                return value.AsGodotDictionary();
+            }
+
+            if (type == typeof(Godot.Collections.Array))
+            {
+                return value.AsGodotArray();
+            }
+
+            if (type == typeof(Vector2))
+            {
+                var pair = value.AsGodotDictionary();
+
+                return new Vector2(pair["x"].AsSingle(), pair["y"].AsSingle());
+            }
+
+            if (typeof(Resource).IsAssignableFrom(type))
+            {
+                return GodotDictionaryParser.ToResource(value.AsGodotDictionary(), type);
+            }
+
+            throw new NotSupportedException($"[SaveSerializer] tipo nao suportado: {type}. Use primitivo, Dictionary ou Array.");
         }
 
         #endregion

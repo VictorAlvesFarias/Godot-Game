@@ -112,9 +112,9 @@ namespace Jogo25D.Light
 
         private void Notify(Vector2I cell)
         {
-            if (!Engine.IsEditorHint() && _level is Dimension dimension)
+            if (!Engine.IsEditorHint())
             {
-                Game.Managers.LightingManager.Node?.OnCellChanged(dimension.DimensionId, cell);
+                _level?.GetNodeOrNull<LightMap2D>("LightMap")?.OnCellChanged(cell);
             }
         }
 

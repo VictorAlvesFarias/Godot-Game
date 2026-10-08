@@ -1,8 +1,13 @@
 using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Blocks;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
+using Jogo25D.Dimensions;
+using Jogo25D.Entities;
 using Jogo25D.Utils.Coordinates;
+using System;
 using System.Collections.Generic;
 
 namespace Jogo25D.Light
@@ -52,8 +57,26 @@ namespace Jogo25D.Light
         public float PreviewRefreshIntervalSeconds { get; set; } = 0.5f;
 
         public LightingEditorPreview EditorPreview { get; private set; }
-        public string DimensionId { get; set; }
+
+        public string DimensionId => (GetParent() as Dimension)?.DimensionId;
+
+        private TerrainLayer ComposeLayer => GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
+        private TerrainLayer BaseLayer => GetNodeOrNull<TerrainLayer>(BaseLayerPath);
+        private TileMapLayer WallLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
         public LogicalLightWorld World { get; private set; }
+
+        private static readonly LightPropagationDispatcher Propagation = new();
+
+        private static Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> _lightEmittingBlocks;
+
+        private readonly HashSet<Vector2I> _loadedChunks = new();
+        private readonly HashSet<Vector2I> _dirtyChunks = new();
+        private readonly HashSet<Vector2I> _inFlightChunks = new();
+        private readonly Dictionary<Vector2I, LightChunkOverlay> _chunkOverlays = new();
+
+        private Node2D _overlayRoot;
+        private Rect2I _authoredRect;
+        private bool _chunksAttached;
         public long SolarUpdates { get; private set; }
 
         public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision;
@@ -106,6 +129,13 @@ namespace Jogo25D.Light
 
         public override void _Process(double delta)
         {
+            if (!Engine.IsEditorHint() && DimensionId != null)
+            {
+                AttachChunks();
+                EnsureAuthoredChunks();
+                RebuildChunks(LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME);
+            }
+
             UpdateEditorPreview();
 
             var terrainOverlay = GetParent().GetNodeOrNull<Node2D>("LightOverlay");
@@ -169,6 +199,7 @@ namespace Jogo25D.Light
 
         public override void _ExitTree()
         {
+            DetachChunks();
             RestoreBackground();
             ReleaseWallMaterials();
             DisableWindowBeam();
@@ -191,43 +222,15 @@ namespace Jogo25D.Light
             _invalid = true;
         }
 
-        public void DetachWorld()
-        {
-            RestoreBackground();
-            ReleaseWallMaterials();
-            DisableWindowBeam();
-
-            DimensionId = null;
-            World = null;
-            _published = false;
-            _building = false;
-            _invalid = true;
-
-            if (IsInstanceValid(_overlay))
-            {
-                _overlay.Visible = false;
-            }
-        }
-
         private bool UpdateWorld(double delta)
         {
-            if (Engine.IsEditorHint())
+            var world = Engine.IsEditorHint() ? null : (GetParent() as Dimension)?.World;
+
+            if (world == null)
             {
                 UpdatePreviewWorld(delta);
 
                 return true;
-            }
-
-            if (DimensionId == null)
-            {
-                return false;
-            }
-
-            var world = Game.Managers.LightMapManager.Node?.GetWorld(DimensionId);
-
-            if (world == null)
-            {
-                return false;
             }
 
             if (world != World)
@@ -756,6 +759,306 @@ namespace Jogo25D.Light
                     material.SetShaderParameter("window_beam_ready", false);
                 }
             }
+        }
+
+        #endregion
+
+        #region Core - Chunks de luz
+
+        public void OnCellChanged(Vector2I cell)
+        {
+            MarkDirtyWithNeighbors(CoordinateUtilities.CellToChunk(cell));
+        }
+
+        private void AttachChunks()
+        {
+            if (_chunksAttached)
+            {
+                return;
+            }
+
+            _chunksAttached = true;
+            _lightEmittingBlocks ??= LightSourceScanner.BuildLightEmittingBlockIndex();
+
+            foreach (var layer in _layers)
+            {
+                if (layer is TerrainLayer terrain)
+                {
+                    terrain.CellChanged += OnCellChanged;
+                }
+            }
+
+            if (GetParent() is Dimension dimension)
+            {
+                dimension.ChunkLoaded += OnChunkLoaded;
+                dimension.ChunkUnloaded += OnChunkUnloaded;
+            }
+        }
+
+        private void DetachChunks()
+        {
+            if (!_chunksAttached)
+            {
+                return;
+            }
+
+            _chunksAttached = false;
+
+            foreach (var layer in _layers)
+            {
+                if (layer is TerrainLayer terrain && IsInstanceValid(terrain))
+                {
+                    terrain.CellChanged -= OnCellChanged;
+                }
+            }
+
+            if (GetParent() is Dimension dimension)
+            {
+                dimension.ChunkLoaded -= OnChunkLoaded;
+                dimension.ChunkUnloaded -= OnChunkUnloaded;
+            }
+
+            foreach (var overlay in _chunkOverlays.Values)
+            {
+                overlay.Dispose();
+            }
+
+            _chunkOverlays.Clear();
+            _loadedChunks.Clear();
+            _dirtyChunks.Clear();
+            _inFlightChunks.Clear();
+        }
+
+        private void OnChunkLoaded(Vector2I chunkCoord)
+        {
+            _loadedChunks.Add(chunkCoord);
+
+            MarkDirtyWithNeighbors(chunkCoord);
+        }
+
+        private void OnChunkUnloaded(Vector2I chunkCoord)
+        {
+            _loadedChunks.Remove(chunkCoord);
+            _dirtyChunks.Remove(chunkCoord);
+
+            if (_chunkOverlays.TryGetValue(chunkCoord, out var overlay))
+            {
+                overlay.Dispose();
+                _chunkOverlays.Remove(chunkCoord);
+            }
+        }
+
+        private void MarkDirtyWithNeighbors(Vector2I chunkCoord)
+        {
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    _dirtyChunks.Add(chunkCoord + new Vector2I(dx, dy));
+                }
+            }
+        }
+
+        private void EnsureAuthoredChunks()
+        {
+            if ((GetParent() as Dimension)?.TileStreaming == true)
+            {
+                return;
+            }
+
+            var used = AuthoredRect();
+
+            if (used.Size.X <= 0 || used.Size.Y <= 0 || _authoredRect == used)
+            {
+                return;
+            }
+
+            _authoredRect = used;
+
+            var first = CoordinateUtilities.CellToChunk(used.Position);
+            var last = CoordinateUtilities.CellToChunk(used.End - Vector2I.One);
+
+            for (var cx = first.X; cx <= last.X; cx++)
+            {
+                for (var cy = first.Y; cy <= last.Y; cy++)
+                {
+                    var chunkCoord = new Vector2I(cx, cy);
+
+                    _loadedChunks.Add(chunkCoord);
+
+                    MarkDirtyWithNeighbors(chunkCoord);
+                }
+            }
+        }
+
+        private Rect2I AuthoredRect()
+        {
+            var used = ComposeLayer.GetUsedRect();
+            var baseLayer = BaseLayer;
+
+            if (baseLayer != null)
+            {
+                var baseUsed = baseLayer.GetUsedRect();
+
+                used = baseUsed.Size == Vector2I.Zero ? used : used.Merge(baseUsed);
+            }
+
+            var walls = WallLayer;
+
+            if (walls != null && walls.GetUsedRect().Size != Vector2I.Zero)
+            {
+                used = used.Size == Vector2I.Zero ? walls.GetUsedRect() : used.Merge(walls.GetUsedRect());
+            }
+
+            return used;
+        }
+
+        private void RebuildChunks(int maxChunks)
+        {
+            if (_dirtyChunks.Count == 0 || ComposeLayer == null)
+            {
+                return;
+            }
+
+            var overlayRoot = OverlayRoot();
+
+            if (overlayRoot == null)
+            {
+                return;
+            }
+
+            var processed = 0;
+            var toProcess = new List<Vector2I>();
+
+            foreach (var chunkCoord in _dirtyChunks)
+            {
+                if (!_loadedChunks.Contains(chunkCoord))
+                {
+                    toProcess.Add(chunkCoord);
+
+                    continue;
+                }
+
+                if (_inFlightChunks.Contains(chunkCoord) || processed >= maxChunks)
+                {
+                    continue;
+                }
+
+                toProcess.Add(chunkCoord);
+
+                processed++;
+            }
+
+            foreach (var chunkCoord in toProcess)
+            {
+                _dirtyChunks.Remove(chunkCoord);
+
+                if (_loadedChunks.Contains(chunkCoord))
+                {
+                    RebuildChunk(overlayRoot, chunkCoord);
+                }
+            }
+        }
+
+        private async void RebuildChunk(Node2D overlayRoot, Vector2I chunkCoord)
+        {
+            var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
+            var padding = LightingConstants.CHUNK_PADDING;
+            var chunkOrigin = CoordinateUtilities.ChunkToCell(chunkCoord);
+            var region = new Rect2I(
+                chunkOrigin - new Vector2I(padding, padding),
+                new Vector2I(chunkSize + (padding * 2), chunkSize + (padding * 2)));
+            var layer = ComposeLayer;
+            var baseLayer = BaseLayer;
+            var walls = WallLayer;
+
+            bool IsSolid(Vector2I cell)
+            {
+                return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);
+            }
+
+            var sources = LightSourceScanner.CollectSources(
+                layer,
+                baseLayer,
+                region,
+                _lightEmittingBlocks,
+                IsSolid,
+                includeSkylight: false,
+                hasBackground: cell => walls != null && walls.GetCellSourceId(cell) != -1);
+
+            _inFlightChunks.Add(chunkCoord);
+
+            try
+            {
+                var output = await Propagation.ComputeTextureAsync(region, IsSolid, sources);
+
+                if (!IsInstanceValid(this) || !_loadedChunks.Contains(chunkCoord) || !IsInstanceValid(overlayRoot))
+                {
+                    output.Dispose();
+
+                    return;
+                }
+
+                PublishChunk(overlayRoot, chunkCoord, chunkOrigin, region, output);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception error)
+            {
+                GD.PushError(error.ToString());
+            }
+            finally
+            {
+                _inFlightChunks.Remove(chunkCoord);
+            }
+        }
+
+        private void PublishChunk(Node2D overlayRoot, Vector2I chunkCoord, Vector2I chunkOrigin, Rect2I region, LightTextureOutput output)
+        {
+            var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
+            var tileSize = ComposeLayer.TileSet.TileSize.X;
+
+            if (!_chunkOverlays.TryGetValue(chunkCoord, out var overlay))
+            {
+                overlay = new LightChunkOverlay(overlayRoot, chunkCoord, tileSize);
+                _chunkOverlays[chunkCoord] = overlay;
+            }
+
+            var bounds = new Rect2I(chunkOrigin * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize);
+
+            using var mask = TerrainLightMask.Build(bounds, overlayRoot, BaseLayer, ComposeLayer, WallLayer);
+
+            overlay.UpdateOutput(output, mask, LightingConstants.CHUNK_PADDING, region.Size.X);
+        }
+
+        private Node2D OverlayRoot()
+        {
+            if (IsInstanceValid(_overlayRoot))
+            {
+                return _overlayRoot;
+            }
+
+            var parent = GetParent();
+
+            if (parent == null)
+            {
+                return null;
+            }
+
+            _overlayRoot = parent.GetNodeOrNull<Node2D>("LightOverlay");
+
+            if (_overlayRoot == null)
+            {
+                _overlayRoot = new Node2D
+                {
+                    Name = "LightOverlay"
+                };
+
+                parent.AddChild(_overlayRoot);
+            }
+
+            return _overlayRoot;
         }
 
         #endregion

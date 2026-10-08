@@ -1,4 +1,9 @@
-﻿using Godot;
+using Godot;
+using Jogo25D.Constants;
+using Jogo25D.Dimensions;
+using Jogo25D.Entities;
+using Jogo25D.Save.Resources;
+using Jogo25D.Systems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,108 +25,192 @@ namespace Jogo25D.Save
 
         #endregion
 
-        #region Core - Escrita
+        #region Core - Arvore e disco
 
-        public static Godot.Collections.Dictionary Escrever(Node2D world, IEnumerable<Node2D> dimensoes, Func<Node2D, IEnumerable<Node2D>> descarregados = null)
+        public static void Load(WorldSaveData save)
         {
-            var documento = NovoNo(world, comId: false);
+            var document = SaveStorage.LoadWorldDocument(save.WorldId);
 
-            var lista = new Godot.Collections.Array();
-
-            foreach (var dimensao in dimensoes)
+            if (document == null)
             {
-                var entrada = NovoNo(dimensao, comId: false);
-
-                entrada[NODES] = EscreverFilhos(dimensao.GetNodeOrNull<Node2D>(ENTITIES), descarregados?.Invoke(dimensao));
-
-                lista.Add(entrada);
+                return;
             }
 
-            documento[DIMENSIONS] = lista;
+            var streaming = WorldStreaming.Current;
 
-            return documento;
-        }
-
-        private static Godot.Collections.Array EscreverFilhos(Node dimensao, IEnumerable<Node2D> descarregados)
-        {
-            var lista = new Godot.Collections.Array();
-            var vistos = new HashSet<ulong>();
-            var candidatos = dimensao?.GetChildren().OfType<Node2D>() ?? Enumerable.Empty<Node2D>();
-
-            if (descarregados != null)
+            foreach (var raw in DimensionsOf(document))
             {
-                candidatos = candidatos.Concat(descarregados);
-            }
+                var entry = raw.AsGodotDictionary();
+                var dimensionId = TextOf(entry, TYPE);
+                var dimension = Dimension.Get(dimensionId);
 
-            foreach (var filho in candidatos)
-            {
-                if (!SaveSerializer.EhPersistivel(filho) || !vistos.Add(filho.GetInstanceId()))
+                if (dimension == null)
                 {
                     continue;
                 }
 
-                var entrada = NovoNo(filho);
+                SaveSerializer.Read(dimension, StateOf(entry));
 
-                if (entrada != null)
+                foreach (var rawNode in NodesOf(entry))
                 {
-                    lista.Add(entrada);
+                    var entryNode = rawNode.AsGodotDictionary();
+
+                    if (IsReference(entryNode))
+                    {
+                        continue;
+                    }
+
+                    var node = Build(entryNode);
+
+                    if (node == null)
+                    {
+                        continue;
+                    }
+
+                    if (streaming != null && streaming.Enabled)
+                    {
+                        streaming.Adopt(node, dimensionId);
+                    }
+                    else
+                    {
+                        dimension.Entities?.AddChild(node);
+                    }
+                }
+            }
+        }
+
+        public static void Save(WorldSaveData save)
+        {
+            var streaming = WorldStreaming.Current;
+
+            if (save == null || streaming == null)
+            {
+                return;
+            }
+
+            var dimensions = new List<Node2D>();
+
+            foreach (var dimensionId in new[] { ChunkStreamingConstants.OVERWORLD_ID, ChunkStreamingConstants.UPSIDEDOWN_ID })
+            {
+                var dimension = Dimension.Get(dimensionId);
+
+                if (dimension != null)
+                {
+                    dimensions.Add(dimension);
                 }
             }
 
-            return lista;
+            var document = Write(streaming, dimensions, d => streaming.Unloaded(d is Dimension dim ? dim.DimensionId : d.Name));
+
+            document[STATE] = StateOfMeta(save);
+
+            SaveStorage.SaveWorldDocument(save.WorldId, document);
         }
 
-        private static Godot.Collections.Dictionary NovoNo(Node2D node, bool comId = true)
+        #endregion
+
+        #region Core - Escrita
+
+        public static Godot.Collections.Dictionary Write(Node2D world, IEnumerable<Node2D> dimensions, Func<Node2D, IEnumerable<Node2D>> unloaded = null)
         {
-            var descricao = SaveSerializer.Descrever(node);
-            var entrada = new Godot.Collections.Dictionary
-            {
-                { TYPE, descricao.Type },
-            };
+            var document = NewNode(world, withId: false);
 
-            var identidade = string.IsNullOrEmpty(descricao.Ref) ? node.Name.ToString() : IdentidadeExterna(node);
+            var list = new Godot.Collections.Array();
 
-            if (comId && !string.IsNullOrEmpty(identidade))
+            foreach (var dimension in dimensions)
             {
-                entrada[ID] = identidade;
+                var entry = NewNode(dimension, withId: false);
+
+                entry[NODES] = WriteChildren(dimension.GetNodeOrNull<Node2D>(ENTITIES), unloaded?.Invoke(dimension));
+
+                list.Add(entry);
             }
 
-            if (!string.IsNullOrEmpty(descricao.Ref))
+            document[DIMENSIONS] = list;
+
+            return document;
+        }
+
+        private static Godot.Collections.Array WriteChildren(Node dimension, IEnumerable<Node2D> unloaded)
+        {
+            var list = new Godot.Collections.Array();
+            var seen = new HashSet<ulong>();
+            var candidates = dimension?.GetChildren().OfType<Node2D>() ?? Enumerable.Empty<Node2D>();
+
+            if (unloaded != null)
             {
-                if (string.IsNullOrEmpty(identidade))
+                candidates = candidates.Concat(unloaded);
+            }
+
+            foreach (var child in candidates)
+            {
+                if (!SaveSerializer.IsPersistable(child) || !seen.Add(child.GetInstanceId()))
+                {
+                    continue;
+                }
+
+                var entry = NewNode(child);
+
+                if (entry != null)
+                {
+                    list.Add(entry);
+                }
+            }
+
+            return list;
+        }
+
+        private static Godot.Collections.Dictionary NewNode(Node2D node, bool withId = true)
+        {
+            var description = SaveSerializer.Describe(node);
+            var entry = new Godot.Collections.Dictionary
+            {
+                { TYPE, description.Type },
+            };
+
+            var identity = string.IsNullOrEmpty(description.Ref) ? node.Name.ToString() : ExternalIdentity(node);
+
+            if (withId && !string.IsNullOrEmpty(identity))
+            {
+                entry[ID] = identity;
+            }
+
+            if (!string.IsNullOrEmpty(description.Ref))
+            {
+                if (string.IsNullOrEmpty(identity))
                 {
                     return null;
                 }
 
-                entrada[REF] = string.Format(descricao.Ref, entrada.TryGetValue(ID, out var id) ? id.AsString() : "");
+                entry[REF] = string.Format(description.Ref, entry.TryGetValue(ID, out var id) ? id.AsString() : "");
 
-                return entrada;
+                return entry;
             }
 
-            var estado = SaveSerializer.Escrever(node);
+            var state = SaveSerializer.Write(node);
 
-            if (comId)
+            if (withId)
             {
-                estado[POSITION] = new Godot.Collections.Dictionary { { "x", node.Position.X }, { "y", node.Position.Y } };
+                state[POSITION] = new Godot.Collections.Dictionary { { "x", node.Position.X }, { "y", node.Position.Y } };
             }
 
-            entrada[STATE] = estado;
+            entry[STATE] = state;
 
-            return entrada;
+            return entry;
         }
 
-        private static string IdentidadeExterna(Node2D node)
+        private static string ExternalIdentity(Node2D node)
         {
             return node is Jogo25D.Characters.Player player ? player.CharacterId : node.Name.ToString();
         }
 
-        public static Godot.Collections.Dictionary NovaReferencia(string tipo, string id, string caminho)
+        public static Godot.Collections.Dictionary NewReference(string type, string id, string path)
         {
             return new Godot.Collections.Dictionary
             {
-                { TYPE, tipo },
+                { TYPE, type },
                 { ID, id },
-                { REF, caminho },
+                { REF, path },
             };
         }
 
@@ -129,99 +218,99 @@ namespace Jogo25D.Save
 
         #region Core - Leitura
 
-        public static Godot.Collections.Array Dimensoes(Godot.Collections.Dictionary documento)
+        public static Godot.Collections.Array DimensionsOf(Godot.Collections.Dictionary document)
         {
-            return documento != null && documento.TryGetValue(DIMENSIONS, out var lista)
-                ? lista.AsGodotArray()
+            return document != null && document.TryGetValue(DIMENSIONS, out var list)
+                ? list.AsGodotArray()
                 : new Godot.Collections.Array();
         }
 
-        public static Godot.Collections.Array Nos(Godot.Collections.Dictionary dimensao)
+        public static Godot.Collections.Array NodesOf(Godot.Collections.Dictionary dimension)
         {
-            return dimensao != null && dimensao.TryGetValue(NODES, out var lista)
-                ? lista.AsGodotArray()
+            return dimension != null && dimension.TryGetValue(NODES, out var list)
+                ? list.AsGodotArray()
                 : new Godot.Collections.Array();
         }
 
-        public static Godot.Collections.Dictionary Estado(Godot.Collections.Dictionary entrada)
+        public static Godot.Collections.Dictionary StateOf(Godot.Collections.Dictionary entry)
         {
-            return entrada != null && entrada.TryGetValue(STATE, out var estado)
-                ? estado.AsGodotDictionary()
+            return entry != null && entry.TryGetValue(STATE, out var state)
+                ? state.AsGodotDictionary()
                 : new Godot.Collections.Dictionary();
         }
 
-        public static string Texto(Godot.Collections.Dictionary entrada, string chave)
+        public static string TextOf(Godot.Collections.Dictionary entry, string key)
         {
-            return entrada != null && entrada.TryGetValue(chave, out var valor) ? valor.AsString() : "";
+            return entry != null && entry.TryGetValue(key, out var value) ? value.AsString() : "";
         }
 
-        public static Godot.Collections.Dictionary EstadoDe(Resource meta)
+        public static Godot.Collections.Dictionary StateOfMeta(Resource meta)
         {
-            var estado = new Godot.Collections.Dictionary();
+            var state = new Godot.Collections.Dictionary();
 
-            foreach (var (chave, valor) in Jogo25D.Utils.GodotDictionaryParser.GodotDictionaryParser.ToDictionary(meta))
+            foreach (var (key, value) in Jogo25D.Utils.GodotDictionaryParser.GodotDictionaryParser.ToDictionary(meta))
             {
-                var nome = chave.AsString();
+                var name = key.AsString();
 
-                if (nome == TYPE)
+                if (name == TYPE)
                 {
                     continue;
                 }
 
-                estado[char.ToLowerInvariant(nome[0]) + nome[1..]] = valor;
+                state[char.ToLowerInvariant(name[0]) + name[1..]] = value;
             }
 
-            return estado;
+            return state;
         }
 
-        public static T MetaDe<T>(Godot.Collections.Dictionary documento) where T : Resource
+        public static T MetaOf<T>(Godot.Collections.Dictionary document) where T : Resource
         {
-            var estado = new Godot.Collections.Dictionary();
+            var state = new Godot.Collections.Dictionary();
 
-            foreach (var (chave, valor) in Estado(documento))
+            foreach (var (key, value) in StateOf(document))
             {
-                var nome = chave.AsString();
+                var name = key.AsString();
 
-                estado[char.ToUpperInvariant(nome[0]) + nome[1..]] = valor;
+                state[char.ToUpperInvariant(name[0]) + name[1..]] = value;
             }
 
-            return Jogo25D.Utils.GodotDictionaryParser.GodotDictionaryParser.ToResource<T>(estado);
+            return Jogo25D.Utils.GodotDictionaryParser.GodotDictionaryParser.ToResource<T>(state);
         }
 
-        public static bool EhReferencia(Godot.Collections.Dictionary entrada)
+        public static bool IsReference(Godot.Collections.Dictionary entry)
         {
-            return entrada != null && entrada.ContainsKey(REF);
+            return entry != null && entry.ContainsKey(REF);
         }
 
-        public static Node2D Construir(Godot.Collections.Dictionary entrada)
+        public static Node2D Build(Godot.Collections.Dictionary entry)
         {
-            var caminho = SaveSerializer.CenaDe(Texto(entrada, TYPE));
+            var path = SaveSerializer.SceneOf(TextOf(entry, TYPE));
 
-            if (string.IsNullOrEmpty(caminho) || GD.Load<PackedScene>(caminho) is not PackedScene cena)
+            if (string.IsNullOrEmpty(path) || GD.Load<PackedScene>(path) is not PackedScene scene)
             {
-                GD.PushError($"[WorldDocument] cena nao encontrada para \"{Texto(entrada, TYPE)}\"");
+                GD.PushError($"[WorldDocument] cena nao encontrada para \"{TextOf(entry, TYPE)}\"");
 
                 return null;
             }
 
-            var node = cena.Instantiate<Node2D>();
-            var id = Texto(entrada, ID);
+            var node = scene.Instantiate<Node2D>();
+            var id = TextOf(entry, ID);
 
             if (!string.IsNullOrEmpty(id))
             {
                 node.Name = id;
             }
 
-            var estado = Estado(entrada);
+            var state = StateOf(entry);
 
-            if (estado.TryGetValue(POSITION, out var posicao))
+            if (state.TryGetValue(POSITION, out var position))
             {
-                var par = posicao.AsGodotDictionary();
+                var pair = position.AsGodotDictionary();
 
-                node.Position = new Vector2(par["x"].AsSingle(), par["y"].AsSingle());
+                node.Position = new Vector2(pair["x"].AsSingle(), pair["y"].AsSingle());
             }
 
-            SaveSerializer.Ler(node, estado);
+            SaveSerializer.Read(node, state);
 
             return node;
         }
