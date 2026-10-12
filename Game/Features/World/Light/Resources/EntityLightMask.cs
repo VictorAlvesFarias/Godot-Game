@@ -2,15 +2,18 @@ using Godot;
 
 namespace Jogo25D.Light
 {
-    // Cobertura das entidades em espaco de mundo (1 texel por pixel). O overlay de luz
-    // so conhece os tiles pela TerrainLightMask; sem esta mascara, personagem, itens e
-    // projeteis na frente do ar nunca recebiam a luz nem a escuridao do mundo.
+    // Cobertura das entidades no mesmo espaco da tela do viewport da dimensao, lida no overlay
+    // por SCREEN_UV como a cor da cena. O overlay so conhece os tiles pela TerrainLightMask;
+    // sem esta mascara, personagem, itens e projeteis na frente do ar nunca recebiam a luz nem
+    // a escuridao do mundo. Em espaco de mundo a mascara arredondava a posicao das entidades
+    // e a diferenca virava uma borda iluminando o fundo em volta delas.
     public sealed class EntityLightMask
     {
         #region Constructors
 
         public EntityLightMask(Node parent)
         {
+            _source = parent.GetViewport();
             _viewport = new SubViewport
             {
                 Name = "EntityLightMask",
@@ -18,7 +21,10 @@ namespace Jogo25D.Light
                 TransparentBg = true,
                 CanvasCullMask = LayerBit,
                 RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
-                World2D = parent.GetViewport().World2D,
+                World2D = _source.World2D,
+                Snap2DTransformsToPixel = _source.Snap2DTransformsToPixel,
+                Snap2DVerticesToPixel = _source.Snap2DVerticesToPixel,
+                CanvasItemDefaultTextureFilter = _source.CanvasItemDefaultTextureFilter,
             };
 
             parent.AddChild(_viewport);
@@ -31,11 +37,7 @@ namespace Jogo25D.Light
         // Camada de visibilidade 20: so as entidades (e seus ancestrais) sao desenhadas aqui.
         public const uint LayerBit = 1u << 19;
 
-        private const int Margin = 32;
-
-        public Vector2 Origin { get; private set; }
-        public Vector2 Size { get; private set; }
-
+        private readonly Viewport _source;
         private readonly SubViewport _viewport;
 
         private Node2D _level;
@@ -45,37 +47,60 @@ namespace Jogo25D.Light
 
         #region Core - Atualizacao
 
-        public void Update(Node2D level, Node2D entities)
+        public void Track(Node2D level, Node2D entities)
         {
-            if (entities != _entities || level != _level)
+            if (entities == _entities && level == _level)
             {
-                _level = level;
-                _entities = entities;
-
-                if (_level != null)
-                {
-                    _level.VisibilityLayer |= LayerBit;
-                }
-
-                TagTree(_entities);
+                return;
             }
 
-            var viewport = _viewport.GetParent<Node>().GetViewport();
-            var visible = viewport.GetCanvasTransform().AffineInverse() * viewport.GetVisibleRect();
-            var origin = (visible.Position - new Vector2(Margin, Margin)).Floor();
-            var size = new Vector2I(
-                Mathf.CeilToInt(visible.Size.X) + Margin * 2,
-                Mathf.CeilToInt(visible.Size.Y) + Margin * 2);
+            _level = level;
+            _entities = entities;
+
+            Retag();
+        }
+
+        public void Retag()
+        {
+            if (GodotObject.IsInstanceValid(_level))
+            {
+                _level.VisibilityLayer |= LayerBit;
+            }
+
+            SetTree(_entities, true);
+        }
+
+        public void Untag()
+        {
+            if (GodotObject.IsInstanceValid(_level))
+            {
+                _level.VisibilityLayer &= ~LayerBit;
+            }
+
+            SetTree(_entities, false);
+        }
+
+        // Chamado logo antes do desenho (FramePreDraw), com camera e entidades ja na posicao final
+        // do frame: tamanho e transformacao iguais aos do viewport da dimensao, pixel a pixel.
+        public void Sync()
+        {
+            if (!GodotObject.IsInstanceValid(_source) || !GodotObject.IsInstanceValid(_viewport))
+            {
+                return;
+            }
+
+            // Alvo de render real: na janela raiz com stretch canvas_items a textura informa o
+            // tamanho antes do stretch, e o stretch vem em GetFinalTransform.
+            var size = _source is Window window ? window.Size : ((SubViewport)_source).Size;
 
             if (_viewport.Size != size)
             {
                 _viewport.Size = size;
             }
 
-            _viewport.CanvasTransform = new Transform2D(0, -origin);
-
-            Origin = origin;
-            Size = size;
+            // GetFinalTransform ja inclui o GlobalCanvasTransform (zoom/pan do editor) e o stretch.
+            _viewport.GlobalCanvasTransform = _source.GetFinalTransform();
+            _viewport.CanvasTransform = _source.CanvasTransform;
         }
 
         public void Bind(ShaderMaterial material, bool enabled)
@@ -86,8 +111,6 @@ namespace Jogo25D.Light
             }
 
             material.SetShaderParameter("entity_mask", _viewport.GetTexture());
-            material.SetShaderParameter("entity_mask_origin", Origin);
-            material.SetShaderParameter("entity_mask_size", Size);
             material.SetShaderParameter("entity_mask_ready", enabled);
         }
 
@@ -99,32 +122,34 @@ namespace Jogo25D.Light
         {
             if (_entities != null && GodotObject.IsInstanceValid(_entities) && _entities.IsAncestorOf(node))
             {
-                TagNode(node);
+                SetNode(node, true);
             }
         }
 
-        private static void TagTree(Node root)
+        private static void SetTree(Node root, bool tagged)
         {
             if (root == null || !GodotObject.IsInstanceValid(root))
             {
                 return;
             }
 
-            TagNode(root);
+            SetNode(root, tagged);
 
             foreach (var child in root.GetChildren())
             {
-                TagTree(child);
+                SetTree(child, tagged);
             }
         }
 
         // Controls (nome, vida, texto flutuante) ficam fora: sao interface, nao recebem luz.
-        private static void TagNode(Node node)
+        private static void SetNode(Node node, bool tagged)
         {
-            if (node is CanvasItem item and not Control)
+            if (node is not CanvasItem item || node is Control)
             {
-                item.VisibilityLayer |= LayerBit;
+                return;
             }
+
+            item.VisibilityLayer = tagged ? item.VisibilityLayer | LayerBit : item.VisibilityLayer & ~LayerBit;
         }
 
         #endregion
@@ -133,6 +158,8 @@ namespace Jogo25D.Light
 
         public void Dispose()
         {
+            Untag();
+
             if (GodotObject.IsInstanceValid(_viewport))
             {
                 _viewport.QueueFree();

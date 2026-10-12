@@ -199,6 +199,19 @@ namespace Jogo25D.Light
             _overlay.Visible = _published && _debug;
         }
 
+        // No editor a marca de camada das entidades nao pode ir para o .tscn.
+        public override void _Notification(int what)
+        {
+            if (what == NotificationEditorPreSave)
+            {
+                _entityMask?.Untag();
+            }
+            else if (what == NotificationEditorPostSave)
+            {
+                _entityMask?.Retag();
+            }
+        }
+
         public override void _ExitTree()
         {
             DetachChunks();
@@ -772,9 +785,10 @@ namespace Jogo25D.Light
 
         #region Core - Entidades
 
+        // Tambem no editor: o script Dimension nao roda la, entao a cena e lida pelos nomes dos nos.
         private void UpdateEntityMask()
         {
-            if (Engine.IsEditorHint() || GetParent() is not Dimension dimension)
+            if (GetParent() is not Node2D level)
             {
                 return;
             }
@@ -784,11 +798,13 @@ namespace Jogo25D.Light
                 _entityMask = new EntityLightMask(this);
 
                 GetTree().Connect(SceneTree.SignalName.NodeAdded, new Callable(this, MethodName.OnNodeAdded));
+                RenderingServer.Singleton.Connect(RenderingServer.SignalName.FramePreDraw, new Callable(this, MethodName.SyncEntityMask));
             }
 
-            _entityMask.Update(dimension, dimension.Entities);
+            _entityMask.Track(level, (level as Dimension)?.Entities ?? level.GetNodeOrNull<Node2D>("Entities"));
+            _entityMask.Bind(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material as ShaderMaterial, !_debug);
 
-            var runtimeOverlay = GetParent().GetNodeOrNull<Node2D>("LightOverlay");
+            var runtimeOverlay = level.GetNodeOrNull<Node2D>("LightOverlay");
 
             if (runtimeOverlay == null)
             {
@@ -809,6 +825,11 @@ namespace Jogo25D.Light
             _entityMask?.Tag(node);
         }
 
+        private void SyncEntityMask()
+        {
+            _entityMask?.Sync();
+        }
+
         private void ReleaseEntityMask()
         {
             if (_entityMask == null)
@@ -822,6 +843,13 @@ namespace Jogo25D.Light
             if (tree != null && tree.IsConnected(SceneTree.SignalName.NodeAdded, callable))
             {
                 tree.Disconnect(SceneTree.SignalName.NodeAdded, callable);
+            }
+
+            var sync = new Callable(this, MethodName.SyncEntityMask);
+
+            if (RenderingServer.Singleton.IsConnected(RenderingServer.SignalName.FramePreDraw, sync))
+            {
+                RenderingServer.Singleton.Disconnect(RenderingServer.SignalName.FramePreDraw, sync);
             }
 
             _entityMask.Dispose();
