@@ -15,32 +15,53 @@ namespace Jogo25D.Light
 
         #region Core - Construcao
 
-        public static Image Build(Rect2I bounds, Node2D overlayRoot, params TileMapLayer[] layers)
+        // R: cobertura de todos os tiles. G: pixels de wall visiveis (sem sólido por cima),
+        // que sao os receptores da sombra projetada.
+        public static Image Build(Rect2I bounds, Node2D overlayRoot, TileMapLayer walls, params TileMapLayer[] solids)
         {
-            return BuildCore(bounds, overlayRoot, true, layers);
+            return BuildCore(bounds, overlayRoot, true, walls, solids);
         }
 
-        internal static Image BuildReference(Rect2I bounds, Node2D overlayRoot, params TileMapLayer[] layers)
+        internal static Image BuildReference(Rect2I bounds, Node2D overlayRoot, TileMapLayer walls, params TileMapLayer[] solids)
         {
-            return BuildCore(bounds, overlayRoot, false, layers);
+            return BuildCore(bounds, overlayRoot, false, walls, solids);
         }
 
-        private static Image BuildCore(Rect2I bounds, Node2D overlayRoot, bool fastCopy, params TileMapLayer[] layers)
+        private static Image BuildCore(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer walls, TileMapLayer[] solids)
         {
-            var pixels = new byte[bounds.Size.X * bounds.Size.Y];
+            var count = bounds.Size.X * bounds.Size.Y;
+            var solid = new byte[count];
+            var wall = new byte[count];
             var textures = new Dictionary<Texture2D, (byte[] Data, int Width)>();
 
-            foreach (var layer in layers)
+            foreach (var layer in solids)
             {
-                if (layer == null || !layer.Enabled || !layer.IsVisibleInTree() || layer.TileSet == null)
-                {
-                    continue;
-                }
-
-                BlitLayer(bounds, overlayRoot, fastCopy, layer, pixels, textures);
+                BlitVisibleLayer(bounds, overlayRoot, fastCopy, layer, solid, textures);
             }
 
-            return Image.CreateFromData(bounds.Size.X, bounds.Size.Y, false, Image.Format.R8, pixels);
+            BlitVisibleLayer(bounds, overlayRoot, fastCopy, walls, wall, textures);
+
+            var pixels = new byte[count * 2];
+
+            for (var i = 0; i < count; i++)
+            {
+                var exposed = (byte)((wall[i] * (255 - solid[i]) + 127) / 255);
+
+                pixels[i * 2] = (byte)(solid[i] + exposed);
+                pixels[i * 2 + 1] = exposed;
+            }
+
+            return Image.CreateFromData(bounds.Size.X, bounds.Size.Y, false, Image.Format.Rg8, pixels);
+        }
+
+        private static void BlitVisibleLayer(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
+        {
+            if (layer == null || !layer.Enabled || !layer.IsVisibleInTree() || layer.TileSet == null)
+            {
+                return;
+            }
+
+            BlitLayer(bounds, overlayRoot, fastCopy, layer, pixels, textures);
         }
 
         private static void BlitLayer(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
@@ -187,9 +208,17 @@ namespace Jogo25D.Light
 
         #region Core - Material
 
+        // Sem sinal `changed` nos caches estaticos: delegates C# ligados a recursos
+        // quebram no reload do assembly no editor. Quem observa as edicoes limpa aqui.
+        public static void ForgetCaches()
+        {
+            PixelCache.Clear();
+            ReachCaches.Clear();
+        }
+
         public static void UpdateMaterial(ShaderMaterial material, ref ImageTexture texture, Image image)
         {
-            if (texture == null || texture.GetSize() != image.GetSize())
+            if (texture == null || texture.GetSize() != image.GetSize() || texture.GetFormat() != image.GetFormat())
             {
                 texture = ImageTexture.CreateFromImage(image);
 
@@ -220,14 +249,7 @@ namespace Jogo25D.Light
 
         private static TexturePixels Pixels(Texture2D texture)
         {
-            var cached = PixelCache.GetValue(texture, key =>
-            {
-                var entry = new TexturePixels();
-
-                key.Changed += () => entry.Data = null;
-
-                return entry;
-            });
+            var cached = PixelCache.GetOrCreateValue(texture);
 
             if (cached.Data == null)
             {
@@ -249,14 +271,7 @@ namespace Jogo25D.Light
 
         private static float GetTextureReach(TileSet tileSet)
         {
-            var cached = ReachCaches.GetValue(tileSet, key =>
-            {
-                var entry = new ReachCache();
-
-                key.Changed += () => entry.Valid = false;
-
-                return entry;
-            });
+            var cached = ReachCaches.GetOrCreateValue(tileSet);
 
             if (cached.Valid)
             {

@@ -204,11 +204,13 @@ namespace Jogo25D.Light
             ReleaseWallMaterials();
             DisableWindowBeam();
 
+            var callable = new Callable(this, MethodName.PreviewChanged);
+
             foreach (var layer in _previewWatched)
             {
-                if (IsInstanceValid(layer))
+                if (IsInstanceValid(layer) && layer.IsConnected(TileMapLayer.SignalName.Changed, callable))
                 {
-                    layer.Changed -= PreviewChanged;
+                    layer.Disconnect(TileMapLayer.SignalName.Changed, callable);
                 }
             }
         }
@@ -430,9 +432,11 @@ namespace Jogo25D.Light
         {
             foreach (var layer in layers)
             {
-                if (_previewWatched.Add(layer))
+                var callable = new Callable(this, MethodName.PreviewChanged);
+
+                if (_previewWatched.Add(layer) && !layer.IsConnected(TileMapLayer.SignalName.Changed, callable))
                 {
-                    layer.Changed += PreviewChanged;
+                    layer.Connect(TileMapLayer.SignalName.Changed, callable);
                 }
             }
         }
@@ -1027,7 +1031,7 @@ namespace Jogo25D.Light
 
             var bounds = new Rect2I(chunkOrigin * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize);
 
-            using var mask = TerrainLightMask.Build(bounds, overlayRoot, BaseLayer, ComposeLayer, WallLayer);
+            using var mask = TerrainLightMask.Build(bounds, overlayRoot, WallLayer, BaseLayer, ComposeLayer);
 
             overlay.UpdateOutput(output, mask, LightingConstants.CHUNK_PADDING, region.Size.X);
         }

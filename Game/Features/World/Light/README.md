@@ -137,7 +137,8 @@ sempre um `LightTextureOutput`.
 Ordem exata do que o shader faz por pixel:
 
 1. `terrain_mask` diz se aquele pixel é tile de verdade (segue o alpha do sprite,
-   construído por `TerrainLightMask`) — fora da máscara nada é alterado;
+   construído por `TerrainLightMask`) — fora da máscara nada é alterado; o canal G
+   marca os pixels de wall sem sólido por cima;
 2. luz de céu colorida por `SunColor`;
 3. em pixels de wall sem sólido primário, a sombra projetada abre espaço conforme
    `ShadowStrength`, e `AmbientLightInfluence` preenche essa sombra com a luz

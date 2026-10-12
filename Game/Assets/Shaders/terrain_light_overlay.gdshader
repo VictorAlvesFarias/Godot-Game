@@ -19,25 +19,32 @@ uniform float ambient_min = 0.04;
 
 void fragment()
 {
-    float occupied = texture(terrain_mask, UV).r;
+    vec2 coverage = texture(terrain_mask, UV).rg;
+    float occupied = coverage.r;
+    float receiver = occupied > 0.0 ? clamp(coverage.g / occupied, 0.0, 1.0) : 0.0;
     vec3 emission = texture(TEXTURE, light_uv_rect.xy + UV * light_uv_rect.zw).rgb;
     vec3 light = window_sun_color.rgb * environment_sky(beam_world_position);
-    float beam = include_skylight ? window_light(beam_world_position) : 0.0;
-    if (window_wall_receiver(beam_world_position))
+    vec3 local = vec3(0.0);
+    vec2 offset = beam_world_position - beam_origin;
+    vec2 p = vec2(dot(offset, beam_axis_x), dot(offset, beam_axis_y));
+    vec2 footprint = fwidth(p);
+    if (receiver > 0.0 && window_field_contains(beam_world_position))
     {
-        vec2 offset = beam_world_position - beam_origin;
-        vec2 p = vec2(dot(offset, beam_axis_x), dot(offset, beam_axis_y));
-        float shadow = geometry_ready ? projected_shadow(p, fwidth(p)) : 0.0;
+        vec2 owner_uv = window_receiver_uv(beam_world_position);
+        float beam = include_skylight ? window_light(owner_uv) : 0.0;
+        float shadow = geometry_ready ? projected_shadow(p, footprint) : 0.0;
 
         vec3 available = clamp(light, vec3(0.0), vec3(1.0));
         float opacity = clamp(shadow_strength * shadow, 0.0, 1.0);
         vec3 fill = available * clamp(ambient_light_influence, 0.0, 1.0);
-        light = available * (vec3(1.0) - opacity * (vec3(1.0) - fill));
+        vec3 shaded = available * (vec3(1.0) - opacity * (vec3(1.0) - fill));
 
-        light = max(light, window_sun_color.rgb * beam);
+        shaded = max(shaded, window_sun_color.rgb * beam);
+        light = mix(light, shaded, receiver);
+        local = receiver * local_window_light(owner_uv);
     }
 
-    light = max(light + max(emission, local_window_light(beam_world_position)), vec3(ambient_min));
+    light = max(light + max(emission, local), vec3(ambient_min));
 
     vec4 surface = texture(scene_color, SCREEN_UV);
     COLOR = vec4(surface.rgb * mix(vec3(1.0), light, occupied), surface.a);

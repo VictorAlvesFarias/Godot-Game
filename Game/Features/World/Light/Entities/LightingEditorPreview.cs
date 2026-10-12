@@ -111,6 +111,7 @@ namespace Jogo25D.Light
 
             _timer = 0;
 
+            RecoverAfterReload();
             ResolveReferences();
 
             if (_layer == null || !IsInstanceValid(_layer))
@@ -145,19 +146,21 @@ namespace Jogo25D.Light
 
         public override void _ExitTree()
         {
+            var callable = new Callable(this, MethodName.MarkDirty);
+
             foreach (var layer in _watched)
             {
-                if (IsInstanceValid(layer))
+                if (IsInstanceValid(layer) && layer.IsConnected(TileMapLayer.SignalName.Changed, callable))
                 {
-                    layer.Changed -= MarkDirty;
+                    layer.Disconnect(TileMapLayer.SignalName.Changed, callable);
                 }
             }
 
             foreach (var set in _watchedSets)
             {
-                if (IsInstanceValid(set))
+                if (IsInstanceValid(set) && set.IsConnected(Resource.SignalName.Changed, callable))
                 {
-                    set.Changed -= MarkDirty;
+                    set.Disconnect(Resource.SignalName.Changed, callable);
                 }
             }
 
@@ -179,10 +182,30 @@ namespace Jogo25D.Light
 
         #region Core - Invalidacao
 
+        // O reload do assembly no editor restaura os campos simples (_building, _maskTexture,
+        // versoes), mas nao os objetos C#. _propagation nasce no _EnterTree, entao null aqui
+        // significa reload: o build em voo morreu e a textura publicada foi junto.
+        private void RecoverAfterReload()
+        {
+            if (_propagation != null)
+            {
+                return;
+            }
+
+            _lifecycle++;
+            _propagation = new LightPropagationDispatcher();
+            _building = false;
+            _dirty = true;
+            _maskTexture = null;
+            _publishedMaskVersion = -1;
+        }
+
         private void MarkDirty()
         {
             _dirty = true;
             _maskVersion++;
+
+            TerrainLightMask.ForgetCaches();
         }
 
         private void Watch(TileMapLayer layer)
@@ -192,14 +215,16 @@ namespace Jogo25D.Light
                 return;
             }
 
-            if (_watched.Add(layer))
+            var callable = new Callable(this, MethodName.MarkDirty);
+
+            if (_watched.Add(layer) && !layer.IsConnected(TileMapLayer.SignalName.Changed, callable))
             {
-                layer.Changed += MarkDirty;
+                layer.Connect(TileMapLayer.SignalName.Changed, callable);
             }
 
-            if (layer.TileSet != null && _watchedSets.Add(layer.TileSet))
+            if (layer.TileSet != null && _watchedSets.Add(layer.TileSet) && !layer.TileSet.IsConnected(Resource.SignalName.Changed, callable))
             {
-                layer.TileSet.Changed += MarkDirty;
+                layer.TileSet.Connect(Resource.SignalName.Changed, callable);
             }
         }
 
@@ -398,7 +423,7 @@ namespace Jogo25D.Light
 
             if (_maskTexture == null || _publishedMaskVersion != _maskVersion || _maskBounds != bounds || _maskVisualState != maskState)
             {
-                using var mask = TerrainLightMask.Build(bounds, this, _baseLayer, _layer, _walls);
+                using var mask = TerrainLightMask.Build(bounds, this, _walls, _baseLayer, _layer);
 
                 TerrainLightMask.UpdateMaterial(material, ref _maskTexture, mask);
 

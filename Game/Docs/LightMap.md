@@ -28,7 +28,10 @@ fecham o acesso pelo fundo, mas não se tornam obstáculos sólidos no plano XY.
 
 1. **Projeção:** a união analítica dos intervalos bloqueados do disco solar
    produz oclusão por pixel. Não há exclusão de corpo próprio, escadas ou receptor.
-   A composição aplica essa sombra somente às células com wall e sem sólido primário.
+   A composição aplica essa sombra somente aos pixels de wall sem tile sólido por cima
+   (canal G da `TerrainLightMask`), não à célula inteira: os tiles 24×24 transbordam
+   a célula de 16×16. Os feixes (solar e local) só existem nas células de wall; o pixel
+   de wall que transborda para o ar lê o feixe da célula de wall vizinha que o desenhou.
 2. **Céu:** uma célula sem sólido e sem wall recebe luz. Ela se propaga pelo ar
    com perda de `1/24` por tile, respeitando sólidos e cantos diagonais fechados.
    Depois, o ar iluminado transmite luz para sólidos, que não retransmitem ao ar
@@ -48,7 +51,7 @@ fecham o acesso pelo fundo, mas não se tornam obstáculos sólidos no plano XY.
 
 O overlay usa `hint_screen_texture` e `blend_disabled`: ganhos maiores que 1
 podem iluminar superfícies já claras. A máscara segue o alpha dos tiles de Base,
-Compose e BackgroundWalls. O céu recebe a modulação de `SunColor` pelo nó
+Compose e BackgroundWalls (canal R) e marca os pixels de wall expostos (canal G). O céu recebe a modulação de `SunColor` pelo nó
 Background, com restauração da cor anterior ao desativar a iluminação.
 
 ## Configuração

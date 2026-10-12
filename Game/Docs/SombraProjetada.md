@@ -11,9 +11,9 @@ A abertura é `radians(8) * (1 - penumbra)²`. No limite paralelo, a cobertura d
 borda usa o footprint do pixel. As duas curvas alteram a intensidade da transição.
 
 Esse cálculo não classifica receptores nem exclui auto-sombra. A máscara de
-recepção pertence ao `TerrainLightOverlay`: somente células com wall e sem sólido
-primário recebem a projeção na composição final. O material de wall é unshaded
-e não reaplica a sombra; a máscara de pixels é construída separadamente.
+recepção pertence ao `TerrainLightOverlay`: somente pixels de wall sem sólido por cima
+(canal G da `TerrainLightMask`) recebem a projeção na composição final. O material de wall é unshaded
+e não reaplica a sombra.
 
 `DebugShadow` usa `projected_shadow_debug.gdshader`, desenhando a projeção bruta
 em escala de cinza: branco livre, preto ocluído e cinza penumbra. Ignora a força
