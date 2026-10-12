@@ -20,6 +20,7 @@ namespace Jogo25D.Light
                 Position = new Vector2(chunkCoord.X * chunkSize * tileSize, chunkCoord.Y * chunkSize * tileSize),
                 Scale = new Vector2(tileSize, tileSize),
                 TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+                ZIndex = LightingConstants.TERRAIN_OVERLAY_Z_INDEX,
                 Material = new ShaderMaterial
                 {
                     Shader = GD.Load<Shader>("res://Assets/Shaders/terrain_light_overlay.gdshader")

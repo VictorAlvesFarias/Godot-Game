@@ -17,6 +17,12 @@ uniform sampler2D terrain_mask : filter_nearest, repeat_disable;
 uniform vec4 light_uv_rect = vec4(0.0, 0.0, 1.0, 1.0);
 uniform float ambient_min = 0.04;
 
+// Entidades desenhadas antes deste overlay (EntityLightMask): recebem a luz do ar onde estao.
+uniform sampler2D entity_mask : hint_default_black, filter_nearest, repeat_disable;
+uniform bool entity_mask_ready = false;
+uniform vec2 entity_mask_origin;
+uniform vec2 entity_mask_size = vec2(1.0);
+
 void fragment()
 {
     vec2 coverage = texture(terrain_mask, UV).rg;
@@ -24,6 +30,7 @@ void fragment()
     float receiver = occupied > 0.0 ? clamp(coverage.g / occupied, 0.0, 1.0) : 0.0;
     vec3 emission = texture(TEXTURE, light_uv_rect.xy + UV * light_uv_rect.zw).rgb;
     vec3 light = window_sun_color.rgb * environment_sky(beam_world_position);
+    vec3 open_light = max(light + emission, vec3(ambient_min));
     vec3 local = vec3(0.0);
     vec2 offset = beam_world_position - beam_origin;
     vec2 p = vec2(dot(offset, beam_axis_x), dot(offset, beam_axis_y));
@@ -46,6 +53,15 @@ void fragment()
 
     light = max(light + max(emission, local), vec3(ambient_min));
 
+    float entity = 0.0;
+    if (entity_mask_ready)
+    {
+        vec2 entity_uv = (beam_world_position - entity_mask_origin) / entity_mask_size;
+        if (all(greaterThanEqual(entity_uv, vec2(0.0))) && all(lessThan(entity_uv, vec2(1.0))))
+            entity = texture(entity_mask, entity_uv).a;
+    }
+
     vec4 surface = texture(scene_color, SCREEN_UV);
-    COLOR = vec4(surface.rgb * mix(vec3(1.0), light, occupied), surface.a);
+    vec3 gain = mix(mix(vec3(1.0), light, occupied), open_light, entity);
+    COLOR = vec4(surface.rgb * gain, surface.a);
 }

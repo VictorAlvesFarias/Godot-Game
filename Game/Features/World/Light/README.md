@@ -146,7 +146,8 @@ Ordem exata do que o shader faz por pixel:
 4. o feixe solar entra por **máximo**, depois dessa etapa;
 5. soma-se `max(emissão propagada, feixe local)`;
 6. `AMBIENT_MIN` (0.04) é um piso visual aplicado por último — não é fonte de luz;
-7. o resultado multiplica `scene_color`.
+7. pixels de entidade (`EntityLightMask`) recebem a luz do ar na posição: céu + emissão;
+8. o resultado multiplica `scene_color`.
 
 O shader usa `hint_screen_texture` e `blend_disabled`: ele reescreve o pixel, então
 ganhos acima de 1 realmente clareiam superfícies já claras.

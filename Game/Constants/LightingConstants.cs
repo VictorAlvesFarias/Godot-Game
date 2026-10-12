@@ -10,5 +10,8 @@ namespace Jogo25D.Constants
         public const int MAX_CHUNK_REBUILDS_PER_FRAME = 2;
         public const float LIGHT_RADIUS_REFERENCE = 15f;
         public const ulong EDITOR_TILE_POLL_INTERVAL_MSEC = 200;
+
+        // Acima dos Visuals dos personagens (z 1), abaixo dos indicadores de mira/colocacao (z 5+).
+        public const int TERRAIN_OVERLAY_Z_INDEX = 2;
     }
 }

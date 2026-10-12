@@ -54,6 +54,12 @@ podem iluminar superfícies já claras. A máscara segue o alpha dos tiles de Ba
 Compose e BackgroundWalls (canal R) e marca os pixels de wall expostos (canal G). O céu recebe a modulação de `SunColor` pelo nó
 Background, com restauração da cor anterior ao desativar a iluminação.
 
+Entidades (filhas de `Entities`, exceto Controls) entram numa máscara própria,
+`EntityLightMask`: um SubViewport que compartilha o World2D da dimensão e desenha
+só a camada de visibilidade 20. Nesses pixels o overlay aplica a luz do ar (céu +
+emissão). O overlay fica em z 2, acima dos `Visuals` dos personagens (z 1) e abaixo
+dos indicadores de mira e colocação (z 5+).
+
 ## Configuração
 
 | Propriedade | Efeito |

@@ -83,6 +83,7 @@ namespace Jogo25D.Light
 
         private readonly AnalyticShadowGeometry _geometry = new();
         private readonly WindowBeamCache _windowBeam = new();
+        private EntityLightMask _entityMask;
         private readonly LightMapData _defaults = new();
         private readonly HashSet<ShaderMaterial> _boundMaterials = new();
         private readonly List<TileMapLayer> _layers = new();
@@ -193,6 +194,7 @@ namespace Jogo25D.Light
                 Setting(nameof(LightMapData.TerrainLightDepthTiles), _defaults.TerrainLightDepthTiles));
 
             UpdateOverlayMaterials(grid, sunColor);
+            UpdateEntityMask();
 
             _overlay.Visible = _published && _debug;
         }
@@ -200,6 +202,7 @@ namespace Jogo25D.Light
         public override void _ExitTree()
         {
             DetachChunks();
+            ReleaseEntityMask();
             RestoreBackground();
             ReleaseWallMaterials();
             DisableWindowBeam();
@@ -763,6 +766,66 @@ namespace Jogo25D.Light
                     material.SetShaderParameter("window_beam_ready", false);
                 }
             }
+        }
+
+        #endregion
+
+        #region Core - Entidades
+
+        private void UpdateEntityMask()
+        {
+            if (Engine.IsEditorHint() || GetParent() is not Dimension dimension)
+            {
+                return;
+            }
+
+            if (_entityMask == null)
+            {
+                _entityMask = new EntityLightMask(this);
+
+                GetTree().Connect(SceneTree.SignalName.NodeAdded, new Callable(this, MethodName.OnNodeAdded));
+            }
+
+            _entityMask.Update(dimension, dimension.Entities);
+
+            var runtimeOverlay = GetParent().GetNodeOrNull<Node2D>("LightOverlay");
+
+            if (runtimeOverlay == null)
+            {
+                return;
+            }
+
+            foreach (var child in runtimeOverlay.GetChildren())
+            {
+                if (child is Sprite2D sprite)
+                {
+                    _entityMask.Bind(sprite.Material as ShaderMaterial, !_debug);
+                }
+            }
+        }
+
+        private void OnNodeAdded(Node node)
+        {
+            _entityMask?.Tag(node);
+        }
+
+        private void ReleaseEntityMask()
+        {
+            if (_entityMask == null)
+            {
+                return;
+            }
+
+            var callable = new Callable(this, MethodName.OnNodeAdded);
+            var tree = GetTree();
+
+            if (tree != null && tree.IsConnected(SceneTree.SignalName.NodeAdded, callable))
+            {
+                tree.Disconnect(SceneTree.SignalName.NodeAdded, callable);
+            }
+
+            _entityMask.Dispose();
+            _entityMask = null;
         }
 
         #endregion
