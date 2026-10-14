@@ -6,9 +6,10 @@ using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Entities;
-using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Light;
 using Jogo25D.Save;
+using Jogo25D.Save.Structures;
+using Jogo25D.Save.Types;
 using Jogo25D.Systems;
 using Jogo25D.Utils.Coordinates;
 using Jogo25D.Utils.GodotDictionaryParser;
@@ -19,7 +20,7 @@ using System.Threading.Tasks;
 
 namespace Jogo25D.Dimensions
 {
-    public partial class Dimension : Node2D, ISaveState
+    public partial class Dimension : Node2D
     {
         #region Events
 
@@ -30,21 +31,23 @@ namespace Jogo25D.Dimensions
 
         #region Dinamic properties
 
-        private const int TerrainBatchLimit = 3072;
-        private const int BackgroundBatchLimit = 2048;
-
         public virtual string DimensionId => ChunkStreamingConstants.UPSIDEDOWN_ID;
 
         private readonly HashSet<Vector2I> _loaded = new();
-        private readonly Dictionary<Vector2I, ChunkStateData> _state = new();
+
+        // Chunks ja pintados (com colisao): as entidades so voltam do banco para eles.
+        private readonly HashSet<Vector2I> _painted = new();
         private readonly Dictionary<Vector2I, HashSet<long>> _loadedPeers = new();
+
+        // Peers que tem so as edicoes do chunk (sem tiles): a margem da luz em volta dos chunks deles.
+        private readonly Dictionary<Vector2I, HashSet<long>> _edgePeers = new();
         private readonly ChunkGeneratorSystem _generator = new();
         private readonly MinimapSystem _minimap = new();
 
-        private LogicalLightWorld _world;
+        private TerrainCache _terrain;
         private bool _evaluating;
 
-        public LogicalLightWorld World => _world;
+        public TerrainCache Terrain => _terrain;
 
         private static readonly Dictionary<string, Dimension> Registry = new();
 
@@ -251,61 +254,55 @@ namespace Jogo25D.Dimensions
 
         #endregion
 
-        #region Core - Mundo logico
+        #region Core - Cache de terreno
 
-        public LogicalLightWorld EnsureWorld()
+        public TerrainCache EnsureTerrain()
         {
             var seed = Seed;
             var referenceSize = ChunkStreamingConstants.REFERENCE_TILE_SIZE;
             var scale = Mathf.Max(1, Mathf.RoundToInt((float)referenceSize / TileSize));
             var procedural = Procedural;
 
-            if (_world != null && _world.Seed == seed && _world.WorldScale == scale)
+            if (_terrain != null && _terrain.Seed == seed && _terrain.WorldScale == scale)
             {
-                return _world;
+                return _terrain;
             }
 
-            _world = new LogicalLightWorld(seed, DimensionId, scale, procedural);
+            _terrain = new TerrainCache(seed, DimensionId, scale, procedural);
 
             if (_walls != null)
             {
                 foreach (var cell in _walls.LogicalCells)
                 {
-                    _world.SetBackground(cell.X, cell.Y, true);
+                    _terrain.SetBackground(cell.X, cell.Y, true);
                 }
             }
 
-            return _world;
+            return _terrain;
         }
 
-        public void ReplaceWorld(bool procedural)
+        public void LoadAuthoredTerrain()
         {
-            var current = EnsureWorld();
+            _terrain = null;
 
-            _world = new LogicalLightWorld(current.Seed, DimensionId, current.WorldScale, procedural);
+            var terrain = EnsureTerrain();
+
+            LoadAuthoredLayer(terrain, Layer);
+            LoadAuthoredLayer(terrain, BaseLayer);
         }
 
-        public void LoadAuthoredWorld()
+        public void DropTerrain()
         {
-            _world = null;
-
-            var world = EnsureWorld();
-
-            LoadAuthoredLayer(world, Layer);
-            LoadAuthoredLayer(world, BaseLayer);
+            _terrain = null;
         }
 
-        public void DropWorld()
+        // Edicao numa celula (blockId nulo = removido): vai para o cache, que marca o chunk como sujo para o save.
+        public void ApplyEdit(Vector2I cell, TerrainLayerType layer, string blockId)
         {
-            _world = null;
+            EnsureTerrain().ApplyEdit(cell.X, cell.Y, layer, blockId);
         }
 
-        public void ApplyLightMutation(Vector2I cell, string type, string blockId = "")
-        {
-            EnsureWorld().ApplyMutation(cell.X, cell.Y, type, blockId);
-        }
-
-        private static void LoadAuthoredLayer(LogicalLightWorld world, TileMapLayer layer)
+        private static void LoadAuthoredLayer(TerrainCache terrain, TileMapLayer layer)
         {
             if (layer == null)
             {
@@ -314,7 +311,7 @@ namespace Jogo25D.Dimensions
 
             foreach (var cell in layer.GetUsedCells())
             {
-                world.SetTerrain(cell.X, cell.Y, LogicalLightWorld.TileTerrain(layer, cell));
+                terrain.SetTerrain(cell.X, cell.Y, TerrainCache.TileTerrain(layer, cell));
             }
         }
 
@@ -417,6 +414,73 @@ namespace Jogo25D.Dimensions
             {
                 await UnloadChunkAsync(chunkCoord);
             }
+
+            var ownPeerId = OwnPeerId();
+
+            foreach (var player in playersHere)
+            {
+                if (player.PeerId != ownPeerId)
+                {
+                    SendEdgeChunks(player.PeerId);
+                }
+            }
+
+            ReleaseFarChunkData(playerChunks);
+        }
+
+        // Envia ao peer as edicoes (sem tiles) dos chunks da margem em volta dos chunks que ele tem, e esquece os que
+        // sairam dela. O cliente aplica a mesma regra ao descarregar (ReleaseFarClientData).
+        private void SendEdgeChunks(long peerId)
+        {
+            if (!Procedural || !IsPeerConnected(peerId))
+            {
+                return;
+            }
+
+            var tiles = _loadedPeers.Where(pair => pair.Value.Contains(peerId)).Select(pair => pair.Key).ToHashSet();
+            var edge = new HashSet<Vector2I>();
+            var margin = ChunkStreamingConstants.DATA_MARGIN_CHUNKS;
+
+            foreach (var chunk in tiles)
+            {
+                for (var dx = -margin; dx <= margin; dx++)
+                {
+                    for (var dy = -margin; dy <= margin; dy++)
+                    {
+                        var neighbor = chunk + new Vector2I(dx, dy);
+
+                        if (!tiles.Contains(neighbor))
+                        {
+                            edge.Add(neighbor);
+                        }
+                    }
+                }
+            }
+
+            foreach (var (chunk, peers) in _edgePeers)
+            {
+                if (!edge.Contains(chunk))
+                {
+                    peers.Remove(peerId);
+                }
+            }
+
+            foreach (var chunk in edge)
+            {
+                if (!_edgePeers.TryGetValue(chunk, out var peers))
+                {
+                    _edgePeers[chunk] = peers = new HashSet<long>();
+                }
+
+                if (!peers.Add(peerId))
+                {
+                    continue;
+                }
+
+                EnsureChunkData(chunk);
+
+                RpcId(peerId, nameof(ReceiveChunkEdits), chunk, ChunkEditsPayload(chunk));
+            }
         }
 
         private void SendPendingChunksToPeers(HashSet<Vector2I> needed, Dictionary<Vector2I, HashSet<long>> neededByPeer)
@@ -436,7 +500,7 @@ namespace Jogo25D.Dimensions
                     _loadedPeers[chunkCoord] = have;
                 }
 
-                Godot.Collections.Dictionary stateDict = null;
+                Godot.Collections.Array payload = null;
 
                 foreach (var peerId in wanted)
                 {
@@ -445,10 +509,9 @@ namespace Jogo25D.Dimensions
                         continue;
                     }
 
-                    stateDict ??= GodotDictionaryParser.ToDictionary(
-                        _state.TryGetValue(chunkCoord, out var chunkState) ? chunkState : new ChunkStateData());
+                    payload ??= ChunkEditsPayload(chunkCoord);
 
-                    LoadChunkRequest(peerId, chunkCoord, stateDict);
+                    LoadChunkRequest(peerId, chunkCoord, payload);
 
                     have.Add(peerId);
                 }
@@ -476,6 +539,83 @@ namespace Jogo25D.Dimensions
 
         #endregion
 
+        #region Core - Residencia de dados
+
+        // Edicoes do chunk e da margem da luz em volta dele, lidas do banco antes da pintura (servidor ou jogo solo).
+        private void EnsureChunkDataAround(Vector2I chunkCoord)
+        {
+            if (!Procedural || !WorldStore.IsOpen || !IsServerAuthoritative())
+            {
+                return;
+            }
+
+            var margin = ChunkStreamingConstants.DATA_MARGIN_CHUNKS;
+
+            for (var dx = -margin; dx <= margin; dx++)
+            {
+                for (var dy = -margin; dy <= margin; dy++)
+                {
+                    EnsureChunkData(chunkCoord + new Vector2I(dx, dy));
+                }
+            }
+        }
+
+        public void EnsureChunkData(Vector2I chunk)
+        {
+            if (!Procedural || !WorldStore.IsOpen)
+            {
+                return;
+            }
+
+            var terrain = EnsureTerrain();
+
+            if (terrain.IsChunkLoaded(chunk))
+            {
+                return;
+            }
+
+            // Edicao feita antes do chunk vir do banco (rara: fora da area carregada) fica por cima do que estava salvo.
+            var pending = terrain.HasChunkEdits(chunk) ? terrain.CellEditsOf(chunk) : null;
+
+            terrain.LoadChunkEdits(chunk, WorldStore.ReadEdits(DimensionId, chunk));
+
+            if (pending == null)
+            {
+                return;
+            }
+
+            foreach (var edit in pending)
+            {
+                terrain.ApplyEdit(edit.X, edit.Y, edit.Layer, edit.BlockId);
+            }
+        }
+
+        // Solta da memoria (gravando antes, se mudou) as edicoes dos chunks alem da area e da margem de todos os jogadores.
+        private void ReleaseFarChunkData(List<Vector2I> playerChunks)
+        {
+            if (!Procedural || !WorldStore.IsOpen || _terrain == null)
+            {
+                return;
+            }
+
+            var radius = ChunkStreamingConstants.UNLOAD_RADIUS_CHUNKS + ChunkStreamingConstants.DATA_MARGIN_CHUNKS;
+            var far = _terrain.LoadedChunks
+                .Where(chunk => playerChunks.All(playerChunk => CoordinateUtilities.ChunkDistance(chunk, playerChunk) > radius))
+                .ToList();
+
+            foreach (var chunk in far)
+            {
+                if (_terrain.IsDirty(chunk))
+                {
+                    WorldStore.SaveChunkEdits(DimensionId, _terrain, chunk);
+                }
+
+                _terrain.UnloadChunkEdits(chunk);
+            }
+        }
+
+        #endregion
+
         #region Core - Carga e descarga
 
         private async Task LoadChunkAsync(Vector2I chunkCoord, HashSet<long> requestingPeers)
@@ -484,28 +624,28 @@ namespace Jogo25D.Dimensions
 
             _loaded.Add(chunkCoord);
 
+            EnsureChunkDataAround(chunkCoord);
+
+            // O cache ja tem as edicoes do chunk: a pintura sai com elas, sem repetir mutacoes por cima.
             await _generator.PaintTilesAsync(layer, BaseLayer, Seed, DimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
-            if (!_state.TryGetValue(chunkCoord, out var chunkState))
+            if (_loaded.Contains(chunkCoord))
             {
-                chunkState = new ChunkStateData();
-                _state[chunkCoord] = chunkState;
+                _painted.Add(chunkCoord);
             }
-
-            ApplyMutations(layer, chunkState);
 
             _minimap.RecordChunk(DimensionId, layer, chunkCoord);
 
             _loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
 
-            var stateDict = GodotDictionaryParser.ToDictionary(chunkState);
+            var payload = ChunkEditsPayload(chunkCoord);
             var ownPeerId = OwnPeerId();
 
             foreach (var peerId in requestingPeers)
             {
                 if (peerId != ownPeerId)
                 {
-                    LoadChunkRequest(peerId, chunkCoord, stateDict);
+                    LoadChunkRequest(peerId, chunkCoord, payload);
                 }
             }
 
@@ -518,6 +658,8 @@ namespace Jogo25D.Dimensions
             {
                 return;
             }
+
+            _painted.Remove(chunkCoord);
 
             await _generator.EraseTilesAsync(Layer, BaseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
@@ -539,115 +681,56 @@ namespace Jogo25D.Dimensions
             ChunkUnloaded?.Invoke(chunkCoord);
         }
 
-        private static void ApplyMutations(TerrainLayer layer, ChunkStateData chunkState)
-        {
-            foreach (var mutation in chunkState.Mutations)
-            {
-                if (mutation.Type is "wall_place" or "wall_break")
-                {
-                    layer.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls")?.ApplyMutation(mutation);
-                }
-                else
-                {
-                    layer.ApplyChunkMutation(mutation);
-                }
-            }
-        }
-
         #endregion
 
         #region Core - Mutacoes
 
-        public void RecordMutation(Vector2I cell, string type, string extraData)
+        // Edicoes do chunk como vao pela rede: [x, y, camada, blockId ("" = removido)] por celula.
+        private Godot.Collections.Array ChunkEditsPayload(Vector2I chunkCoord)
         {
-            ApplyLightMutation(cell, type, extraData);
+            var payload = new Godot.Collections.Array();
 
-            var chunkCoord = CoordinateUtilities.CellToChunk(cell);
-
-            if (!_state.TryGetValue(chunkCoord, out var chunkState))
+            foreach (var edit in EnsureTerrain().CellEditsOf(chunkCoord))
             {
-                chunkState = new ChunkStateData();
-                _state[chunkCoord] = chunkState;
+                payload.Add(new Godot.Collections.Array { edit.X, edit.Y, (int)edit.Layer, edit.BlockId ?? "" });
             }
 
-            chunkState.Mutations.Add(new ChunkMutationData
-            {
-                Type = type,
-                Position = new Vector2(cell.X, cell.Y),
-                ExtraData = extraData ?? "",
-            });
+            return payload;
         }
 
-        public void WriteState(Godot.Collections.Dictionary state)
+        private static List<CellEdit> ParseChunkEdits(Godot.Collections.Array payload)
         {
-            state["mutations"] = ExportMutations();
-        }
+            var edits = new List<CellEdit>();
 
-        public void ReadState(Godot.Collections.Dictionary state)
-        {
-            if (state.TryGetValue("mutations", out var value))
+            foreach (var raw in payload)
             {
-                ImportMutations(value.AsGodotArray());
+                var entry = raw.AsGodotArray();
+                var blockId = entry[3].AsString();
+
+                edits.Add(new CellEdit(entry[0].AsInt32(), entry[1].AsInt32(), (TerrainLayerType)entry[2].AsInt32(), blockId == "" ? null : blockId));
             }
+
+            return edits;
         }
 
-        private Godot.Collections.Array ExportMutations()
+        // Mundo autoral: as camadas vem da cena, entao as edicoes salvas sao aplicadas direto nos tilemaps.
+        public void ApplyEditsToAuthoredLayers(IEnumerable<CellEdit> edits)
         {
-            var list = new Godot.Collections.Array();
-
-            foreach (var (_, chunkState) in _state)
+            foreach (var edit in edits)
             {
-                foreach (var mutation in chunkState.Mutations)
+                var cell = new Vector2I(edit.X, edit.Y);
+
+                if (edit.Layer == TerrainLayerType.Wall)
                 {
-                    list.Add(new Godot.Collections.Dictionary
-                    {
-                        { "type", mutation.Type },
-                        { "x", (int)mutation.Position.X },
-                        { "y", (int)mutation.Position.Y },
-                        { "blockId", mutation.ExtraData },
-                    });
+                    _walls?.ApplyStoredEdit(cell, edit.BlockId);
                 }
-            }
-
-            return list;
-        }
-
-        private void ImportMutations(Godot.Collections.Array list)
-        {
-            _state.Clear();
-
-            if (list == null)
-            {
-                return;
-            }
-
-            foreach (var raw in list)
-            {
-                var mutation = raw.AsGodotDictionary();
-                var cell = new Vector2I(mutation["x"].AsInt32(), mutation["y"].AsInt32());
-                var chunk = CoordinateUtilities.CellToChunk(cell);
-
-                ApplyLightMutation(cell, mutation["type"].AsString(),
-                    mutation.TryGetValue("blockId", out var opticalBlock) ? opticalBlock.AsString() : "");
-
-                if (!_state.TryGetValue(chunk, out var chunkState))
+                else if (edit.BlockId == null)
                 {
-                    chunkState = new ChunkStateData();
-                    _state[chunk] = chunkState;
+                    Layer?.EraseBlockAndReconnect(cell);
                 }
-
-                var restoredMutation = new ChunkMutationData
+                else if (BlockDB.TryGet(edit.BlockId, out var block))
                 {
-                    Type = mutation["type"].AsString(),
-                    Position = new Vector2(cell.X, cell.Y),
-                    ExtraData = mutation.TryGetValue("blockId", out var b) ? b.AsString() : "",
-                };
-
-                chunkState.Mutations.Add(restoredMutation);
-
-                if (restoredMutation.Type is "wall_place" or "wall_break")
-                {
-                    _walls?.ApplyMutation(restoredMutation);
+                    Layer?.PlaceBlock(cell, block);
                 }
             }
         }
@@ -655,6 +738,11 @@ namespace Jogo25D.Dimensions
         #endregion
 
         #region Core - Consulta
+
+        public bool IsChunkPainted(Vector2I chunk)
+        {
+            return _painted.Contains(chunk);
+        }
 
         public BiomeDefinition ResolveBiome(int worldX, int worldY)
         {
@@ -672,7 +760,18 @@ namespace Jogo25D.Dimensions
 
         public void CatchUpTo(long targetPeerId, Vector2I aroundChunk)
         {
-            SendLightWorld(targetPeerId);
+            // Mundo autoral: finito e todo residente; o cliente recebe todas as edicoes e aplica na cena dele.
+            if (!Procedural)
+            {
+                var terrain = EnsureTerrain();
+
+                foreach (var chunk in terrain.EditedChunks.ToList())
+                {
+                    RpcId(targetPeerId, nameof(ReceiveChunkEdits), chunk, ChunkEditsPayload(chunk));
+                }
+
+                return;
+            }
 
             foreach (var chunkCoord in _loaded)
             {
@@ -681,9 +780,7 @@ namespace Jogo25D.Dimensions
                     continue;
                 }
 
-                var chunkState = _state.TryGetValue(chunkCoord, out var s) ? s : new ChunkStateData();
-
-                LoadChunkRequest(targetPeerId, chunkCoord, GodotDictionaryParser.ToDictionary(chunkState));
+                LoadChunkRequest(targetPeerId, chunkCoord, ChunkEditsPayload(chunkCoord));
 
                 if (!_loadedPeers.TryGetValue(chunkCoord, out var peers))
                 {
@@ -693,6 +790,8 @@ namespace Jogo25D.Dimensions
 
                 peers.Add(targetPeerId);
             }
+
+            SendEdgeChunks(targetPeerId);
         }
 
         public void RemovePeer(long peerId)
@@ -701,73 +800,27 @@ namespace Jogo25D.Dimensions
             {
                 peers.Remove(peerId);
             }
+
+            foreach (var peers in _edgePeers.Values)
+            {
+                peers.Remove(peerId);
+            }
         }
 
         public void ResetState()
         {
             _loaded.Clear();
-            _state.Clear();
+            _painted.Clear();
             _loadedPeers.Clear();
+            _edgePeers.Clear();
             _minimap.Reset();
         }
 
-        private void SendLightWorld(long peerId)
-        {
-            var world = EnsureWorld();
-            var batch = new List<int>(TerrainBatchLimit);
-            var reset = true;
-
-            foreach (var edit in world.Edits())
-            {
-                batch.Add(edit.X);
-                batch.Add(edit.Y);
-                batch.Add(edit.Terrain);
-
-                if (batch.Count < TerrainBatchLimit)
-                {
-                    continue;
-                }
-
-                RpcId(peerId, nameof(ReceiveLightWorld), world.Procedural, reset, batch.ToArray());
-
-                reset = false;
-
-                batch.Clear();
-            }
-
-            if (reset || batch.Count > 0)
-            {
-                RpcId(peerId, nameof(ReceiveLightWorld), world.Procedural, reset, batch.ToArray());
-            }
-
-            batch.Clear();
-
-            foreach (var cell in world.BackgroundCells)
-            {
-                batch.Add(cell.X);
-                batch.Add(cell.Y);
-
-                if (batch.Count < BackgroundBatchLimit)
-                {
-                    continue;
-                }
-
-                RpcId(peerId, nameof(ReceiveBackgroundLight), batch.ToArray());
-
-                batch.Clear();
-            }
-
-            if (batch.Count > 0)
-            {
-                RpcId(peerId, nameof(ReceiveBackgroundLight), batch.ToArray());
-            }
-        }
-
-        private void LoadChunkRequest(long peerId, Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
+        private void LoadChunkRequest(long peerId, Vector2I chunkCoord, Godot.Collections.Array payload)
         {
             if (IsPeerConnected(peerId))
             {
-                RpcId(peerId, nameof(LoadChunkReceive), chunkCoord, stateDict);
+                RpcId(peerId, nameof(LoadChunkReceive), chunkCoord, payload);
             }
         }
 
@@ -819,7 +872,7 @@ namespace Jogo25D.Dimensions
         #region Core - Rpc - Chunks
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public async void LoadChunkReceive(Vector2I chunkCoord, Godot.Collections.Dictionary stateDict)
+        public async void LoadChunkReceive(Vector2I chunkCoord, Godot.Collections.Array payload)
         {
             if (_loaded.Contains(chunkCoord))
             {
@@ -830,23 +883,11 @@ namespace Jogo25D.Dimensions
 
             _loaded.Add(chunkCoord);
 
-            var chunkState = GodotDictionaryParser.ToResource<ChunkStateData>(stateDict);
-
-            foreach (var mutation in chunkState.Mutations)
-            {
-                ApplyLightMutation(
-                    new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y),
-                    mutation.Type,
-                    mutation.ExtraData);
-            }
+            EnsureTerrain().LoadChunkEdits(chunkCoord, ParseChunkEdits(payload));
 
             await _generator.PaintTilesAsync(layer, BaseLayer, Seed, DimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
-            ApplyMutations(layer, chunkState);
-
             _minimap.RecordChunk(DimensionId, layer, chunkCoord);
-
-            _state[chunkCoord] = chunkState;
 
             ChunkLoaded?.Invoke(chunkCoord);
         }
@@ -861,37 +902,49 @@ namespace Jogo25D.Dimensions
 
             await _generator.EraseTilesAsync(Layer, BaseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
+            ReleaseFarClientData();
+
             ChunkUnloaded?.Invoke(chunkCoord);
         }
 
         #endregion
 
-        #region Core - Rpc - Luz
+        #region Core - Rpc - Terreno
 
+        // Edicoes de um chunk sem tiles: a margem da luz no procedural, ou as edicoes do mundo autoral (aplicadas
+        // nos tilemaps da cena do cliente).
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void ReceiveLightWorld(bool procedural, bool reset, int[] edits)
+        public void ReceiveChunkEdits(Vector2I chunkCoord, Godot.Collections.Array payload)
         {
-            if (reset)
-            {
-                ReplaceWorld(procedural);
-            }
+            var edits = ParseChunkEdits(payload);
 
-            var world = EnsureWorld();
+            EnsureTerrain().LoadChunkEdits(chunkCoord, edits);
 
-            for (int i = 0; i + 2 < edits.Length; i += 3)
+            if (!Procedural)
             {
-                world.SetTerrain(edits[i], edits[i + 1], edits[i + 2]);
+                ApplyEditsToAuthoredLayers(edits);
             }
         }
 
-        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public void ReceiveBackgroundLight(int[] cells)
+        // Cliente: solta as edicoes dos chunks que nao estao a ate a margem de nenhum chunk carregado (mesma regra
+        // do SendEdgeChunks no servidor).
+        private void ReleaseFarClientData()
         {
-            var world = EnsureWorld();
-
-            for (int i = 0; i + 1 < cells.Length; i += 2)
+            if (!Procedural || _terrain == null)
             {
-                world.SetBackground(cells[i], cells[i + 1], true);
+                return;
+            }
+
+            var margin = ChunkStreamingConstants.DATA_MARGIN_CHUNKS;
+            var far = _terrain.EditedChunks
+                .Concat(_terrain.LoadedChunks)
+                .Distinct()
+                .Where(chunk => !_loaded.Any(loaded => CoordinateUtilities.ChunkDistance(chunk, loaded) <= margin))
+                .ToList();
+
+            foreach (var chunk in far)
+            {
+                _terrain.UnloadChunkEdits(chunk);
             }
         }
 

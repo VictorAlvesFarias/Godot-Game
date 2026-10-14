@@ -16,6 +16,9 @@ namespace Jogo25D.Items
         public float BreakTimeSeconds { get; init; } = 1.2f;
         public float SwingRange { get; init; } = 50f;
 
+        // 0 = so o bloco mirado; N = quebra o circulo de raio N em volta dele (dx^2 + dy^2 <= N^2).
+        public int BreakRadius { get; init; }
+
         public bool IsMining { get; set; }
         public Vector2I MiningCell { get; set; }
         public float MiningElapsed { get; set; }
@@ -125,7 +128,28 @@ namespace Jogo25D.Items
             }
             else
             {
-                (layer as TerrainLayer)?.BreakBlockClientRequest(targetCell);
+                BreakArea(layer, baseLayer, targetCell);
+            }
+        }
+
+        private void BreakArea(TileMapLayer layer, TileMapLayer baseLayer, Vector2I center)
+        {
+            if (layer is not TerrainLayer terrain)
+            {
+                return;
+            }
+
+            for (var dy = -BreakRadius; dy <= BreakRadius; dy++)
+            {
+                for (var dx = -BreakRadius; dx <= BreakRadius; dx++)
+                {
+                    var cell = center + new Vector2I(dx, dy);
+
+                    if (IsInBreakArea(dx, dy, BreakRadius) && IsSolid(layer, baseLayer, cell))
+                    {
+                        terrain.BreakBlockClientRequest(cell);
+                    }
+                }
             }
         }
 
@@ -286,26 +310,54 @@ namespace Jogo25D.Items
                 Indicator.QueueFree();
             }
 
+            var (points, quads) = BuildAreaTiles(layer, BreakRadius);
+
             Indicator = new Polygon2D
             {
                 ZIndex = 10,
-                Polygon = BuildTileQuad(layer),
+                Polygon = points,
+                Polygons = quads,
             };
 
             layer.AddChild(Indicator);
         }
 
-        private static Vector2[] BuildTileQuad(TileMapLayer layer)
+        // Um quadrado por tile da area de quebra: o indicador mostra exatamente os blocos que caem.
+        private static (Vector2[] Points, Godot.Collections.Array Quads) BuildAreaTiles(TileMapLayer layer, int radius)
         {
-            var half = (Vector2)layer.TileSet.TileSize / 2f;
+            var size = (Vector2)layer.TileSet.TileSize;
+            var half = size / 2f;
+            var points = new System.Collections.Generic.List<Vector2>();
+            var quads = new Godot.Collections.Array();
 
-            return new[]
+            for (var dy = -radius; dy <= radius; dy++)
             {
-                new Vector2(-half.X, -half.Y),
-                new Vector2(half.X, -half.Y),
-                new Vector2(half.X, half.Y),
-                new Vector2(-half.X, half.Y),
-            };
+                for (var dx = -radius; dx <= radius; dx++)
+                {
+                    if (!IsInBreakArea(dx, dy, radius))
+                    {
+                        continue;
+                    }
+
+                    var center = new Vector2(dx * size.X, dy * size.Y);
+                    var first = points.Count;
+
+                    points.Add(center + new Vector2(-half.X, -half.Y));
+                    points.Add(center + new Vector2(half.X, -half.Y));
+                    points.Add(center + new Vector2(half.X, half.Y));
+                    points.Add(center + new Vector2(-half.X, half.Y));
+
+                    quads.Add(new[] { first, first + 1, first + 2, first + 3 });
+                }
+            }
+
+            return (points.ToArray(), quads);
+        }
+
+        // Circulo em pixel arte: entra a celula com dx^2 + dy^2 <= r^2 (raio 1 = cruz, 2 = losango, maiores com o biquinho nos eixos).
+        private static bool IsInBreakArea(int dx, int dy, int radius)
+        {
+            return dx * dx + dy * dy <= radius * radius;
         }
 
         #endregion

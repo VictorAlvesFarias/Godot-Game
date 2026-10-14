@@ -25,7 +25,6 @@ using System.Linq;
 
 namespace Jogo25D.Characters
 {
-    [Jogo25D.Save.SaveScene("player", "res://Scenes/World/Characters/Player.tscn", Ref = "characters/{0}.json")]
     public partial class Player : CharacterBody2D
     {
         #region Events

@@ -62,7 +62,12 @@ namespace Jogo25D.Utils.GodotDictionaryParser
 
         public static bool HasSerializableFields(GodotObject source)
         {
-            return source != null && GetFields(source.GetType()).Length > 0;
+            return source != null && HasSerializableFields(source.GetType());
+        }
+
+        public static bool HasSerializableFields(Type type)
+        {
+            return type != null && GetFields(type).Length > 0;
         }
 
         public static T ToResource<T>(Dictionary dict) where T : Resource

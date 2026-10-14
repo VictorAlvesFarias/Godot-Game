@@ -458,23 +458,6 @@ namespace Jogo25D.UI
 
         #endregion
 
-        #region Core - Player lookup
-
-        public Player GetLocalPlayer()
-        {
-            foreach (Node n in GetTree().GetNodesInGroup("players"))
-            {
-                if (n is Player p)
-                {
-                    return p;
-                }
-            }
-
-            return null;
-        }
-
-        #endregion
-
         #region Core - Commands
 
         public void RegisterCommands()

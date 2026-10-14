@@ -5,10 +5,10 @@ using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Entities;
-using Jogo25D.Features.World.Chunks.Resources;
 using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Light;
+using Jogo25D.Save.Types;
 using Jogo25D.Systems;
 using System.Collections.Generic;
 using System.Linq;
@@ -1000,16 +1000,12 @@ namespace Jogo25D.Biomes
 
                 baseLayer.EraseBlockAndReconnect(cell);
 
-                (GetParent() as Dimension)?.RecordMutation(cell, "break", "");
-
                 Rpc(nameof(BreakBlockBroadcast), cell);
 
                 return;
             }
 
             EraseBlockAndReconnect(cell);
-
-            (GetParent() as Dimension)?.RecordMutation(cell, "break", "");
 
             var dropPosition = ToGlobal(MapToLocal(cell));
 
@@ -1024,7 +1020,6 @@ namespace Jogo25D.Biomes
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void BreakBlockBroadcast(Vector2I cell)
         {
-            (GetParent() as Dimension)?.ApplyLightMutation(cell, "break");
             if (GetCellSourceId(cell) == -1)
             {
                 var baseLayer = _baseLayer;
@@ -1061,8 +1056,6 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
-            (GetParent() as Dimension)?.RecordMutation(cell, "place", blockId);
-
             Rpc(nameof(PlaceBlockBroadcast), cell, blockId);
 
             return true;
@@ -1079,44 +1072,6 @@ namespace Jogo25D.Biomes
             PlaceBlock(cell, block);
         }
 
-        public void ApplyChunkMutation(ChunkMutationData mutation)
-        {
-            var cell = new Vector2I((int)mutation.Position.X, (int)mutation.Position.Y);
-
-            if (mutation.Type == "break")
-            {
-                if (GetCellSourceId(cell) == -1)
-                {
-                    _baseLayer?.BreakDecorationOnly(cell);
-
-                    return;
-                }
-
-                EraseBlockAndReconnect(cell);
-
-                return;
-            }
-
-            if (mutation.Type == "place" && BlockDB.TryGet(mutation.ExtraData, out var block))
-            {
-                PlaceBlock(cell, block);
-            }
-        }
-
-        public void BreakDecorationOnly(Vector2I cell)
-        {
-            if (GetCellSourceId(cell) == -1)
-            {
-                return;
-            }
-
-            EraseCellWithTerrainConnect(cell);
-            ReconnectDecorationsNear(cell);
-            RedrawDebugOverlay();
-
-            CellChanged?.Invoke(cell);
-        }
-
         public bool PlaceBlock(Vector2I cell, BlockDefinition block)
         {
             if (block.IsBackground)
@@ -1126,7 +1081,7 @@ namespace Jogo25D.Biomes
 
             PaintBlockAndReconnect(cell, block);
 
-            (GetParent() as Dimension)?.ApplyLightMutation(cell, "place", block.Id);
+            (GetParent() as Dimension)?.ApplyEdit(cell, TerrainLayerType.Terrain, block.Id);
 
             CellChanged?.Invoke(cell);
 
@@ -1135,7 +1090,7 @@ namespace Jogo25D.Biomes
 
         public void EraseBlockAndReconnect(Vector2I cell)
         {
-            (GetParent() as Dimension)?.ApplyLightMutation(cell, "break");
+            (GetParent() as Dimension)?.ApplyEdit(cell, TerrainLayerType.Terrain, null);
 
             if (TileSet == null || TileSet.GetTerrainSetsCount() <= 0)
             {
@@ -1212,24 +1167,26 @@ namespace Jogo25D.Biomes
                 return;
             }
 
+            // O terreno e o do proprio bloco, o mesmo que o TerrainCache guarda e a pintura do chunk usa.
+            var terrainSet = block.TerrainSet ?? block.SourceId;
+            var biomeDef = BiomeDB.GetByTerrainSet(terrainSet);
             var neighbors = GetSolidNeighborCells(cell);
-            var biomeDef = ResolveBiomeForCell(cell);
             var sameBiomeCells = new List<Vector2I> { cell };
 
             foreach (var neighbor in neighbors)
             {
                 var tileData = GetCellTileData(neighbor);
 
-                if (tileData != null && tileData.TerrainSet == biomeDef.TerrainSet)
+                if (tileData != null && tileData.TerrainSet == terrainSet)
                 {
                     sameBiomeCells.Add(neighbor);
                 }
             }
 
-            Connect(sameBiomeCells, biomeDef.TerrainSet);
-            ReconnectForeignBorder(sameBiomeCells, biomeDef.TerrainSet);
+            Connect(sameBiomeCells, terrainSet);
+            ReconnectForeignBorder(sameBiomeCells, terrainSet);
 
-            var foreignCells = GetForeignNeighborCells(sameBiomeCells, biomeDef.TerrainSet);
+            var foreignCells = GetForeignNeighborCells(sameBiomeCells, terrainSet);
             var expandedForeignCells = GetExpandedNeighborCells(foreignCells);
 
             if (expandedForeignCells.Count > 0)
@@ -1241,7 +1198,11 @@ namespace Jogo25D.Biomes
 
             if (baseLayer != null)
             {
-                baseLayer.ConnectDependent(this, sameBiomeCells, biomeDef.BorderCapTerrainSet);
+                // Blocos sem bioma (madeira, folha) nao tem bordercap, como na pintura do chunk.
+                if (biomeDef != null)
+                {
+                    baseLayer.ConnectDependent(this, sameBiomeCells, biomeDef.BorderCapTerrainSet);
+                }
 
                 RepaintDependentLayerForCells(baseLayer, expandedForeignCells, def => def.BorderCapTerrainSet);
             }
@@ -1384,11 +1345,6 @@ namespace Jogo25D.Biomes
             }
 
             return result;
-        }
-
-        private BiomeDefinition ResolveBiomeForCell(Vector2I cell)
-        {
-            return (GetParent() as Dimension)?.ResolveBiome(cell.X, cell.Y) ?? BiomeDB.Get(BiomeDB.LimeGroundId);
         }
 
         #endregion

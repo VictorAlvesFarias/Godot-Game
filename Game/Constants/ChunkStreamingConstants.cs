@@ -6,6 +6,8 @@
         public const int REFERENCE_TILE_SIZE = 32;
         public const int LOAD_RADIUS_CHUNKS = 3;
         public const int UNLOAD_RADIUS_CHUNKS = 6;
+        // Chunks de edicoes mantidos alem da area carregada: a folga da luz (24 celulas) cabe em um.
+        public const int DATA_MARGIN_CHUNKS = 1;
         public const int MAX_CHUNK_LOADS_PER_TICK = 6;
         public const float EVALUATE_INTERVAL_SECONDS = 0.25f;
 

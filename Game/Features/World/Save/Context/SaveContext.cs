@@ -136,7 +136,7 @@ namespace Jogo25D.Systems
 
             save.LastPlayedUtc = SaveStorage.NowUtc();
 
-            WorldDocument.Save(save);
+            WorldStore.Save(save);
         }
 
         public static void SaveLocalCharacter(CharacterSaveData character)

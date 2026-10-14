@@ -214,20 +214,13 @@ namespace Jogo25D.Systems
 
             for (var folderName = dir.GetNext(); folderName != ""; folderName = dir.GetNext())
             {
-                if (!dir.CurrentIsDir() || folderName == "." || folderName == "..")
+                // So o formato atual: pasta sem banco nao e um mundo.
+                if (!dir.CurrentIsDir() || folderName == "." || folderName == ".." || !WorldRepository.Exists(folderName))
                 {
                     continue;
                 }
 
-                var metaPath = $"{SavesConstants.WORLDS_DIR}/{folderName}/world.json";
-
-                if (!FileAccess.FileExists(metaPath))
-                {
-                    continue;
-                }
-
-                var document = LoadWorldDocument(folderName);
-                var meta = document == null ? null : WorldDocument.MetaOf<WorldSaveData>(document);
+                var meta = ReadWorldMeta(folderName);
 
                 if (meta != null)
                 {
@@ -236,6 +229,13 @@ namespace Jogo25D.Systems
             }
 
             return result.OrderByDescending(w => w.LastPlayedUtc).ToList();
+        }
+
+        private static WorldSaveData ReadWorldMeta(string worldId)
+        {
+            using var repository = WorldRepository.Open(worldId);
+
+            return repository.ReadMeta();
         }
 
         public static WorldSaveData CreateWorld(string name, long seed, WorldCharacterMode mode, string multiplayerKey, int autosaveIntervalMinutes, bool isProcedural = true)
@@ -260,57 +260,9 @@ namespace Jogo25D.Systems
 
         public static void SaveWorldMeta(WorldSaveData world)
         {
-            SaveWorldDocument(world.WorldId, new Godot.Collections.Dictionary
-            {
-                { WorldDocument.TYPE, "world" },
-                { WorldDocument.STATE, WorldDocument.StateOfMeta(world) },
-                { WorldDocument.DIMENSIONS, new Godot.Collections.Array() },
-            });
-        }
+            using var repository = WorldRepository.Open(world.WorldId);
 
-        public static Godot.Collections.Dictionary LoadWorldDocument(string worldId)
-        {
-            var path = $"{SavesConstants.WORLDS_DIR}/{worldId}/world.json";
-
-            if (!FileAccess.FileExists(path))
-            {
-                return null;
-            }
-
-            var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
-
-            if (file == null)
-            {
-                return null;
-            }
-
-            var text = file.GetAsText();
-
-            file.Close();
-
-            var loaded = Json.ParseString(text);
-
-            return loaded.VariantType == Variant.Type.Dictionary ? loaded.AsGodotDictionary() : null;
-        }
-
-        public static void SaveWorldDocument(string worldId, Godot.Collections.Dictionary document)
-        {
-            var folder = $"{SavesConstants.WORLDS_DIR}/{worldId}";
-
-            EnsureDir(folder);
-
-            var file = FileAccess.Open($"{folder}/world.json", FileAccess.ModeFlags.Write);
-
-            if (file == null)
-            {
-                GD.PushError($"[SaveStorage] nao consegui escrever o mundo {worldId}");
-
-                return;
-            }
-
-            file.StoreString(Json.Stringify(document, "\t"));
-
-            file.Close();
+            repository.WriteMeta(world);
         }
 
         public static void DeleteWorld(string worldId)

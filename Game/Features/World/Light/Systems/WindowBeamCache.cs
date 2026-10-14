@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Dimensions;
 using System;
 using System.Collections.Generic;
 
@@ -14,7 +15,7 @@ namespace Jogo25D.Light
 
         public long Revision { get; private set; }
 
-        private LogicalLightWorld _world;
+        private TerrainCache _world;
         private ImageTexture _sourceData;
         private ImageTexture _cells;
         private Vector2I _origin;
@@ -41,7 +42,7 @@ namespace Jogo25D.Light
 
         #region Core - Invalidacao
 
-        public void Update(Node parent, LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra, float shadowCurve = 1, float ambientCurve = 1, float terrainDepth = 3)
+        public void Update(Node parent, TerrainCache world, Vector2I origin, Vector2I size, float angle, float penumbra, float shadowCurve = 1, float ambientCurve = 1, float terrainDepth = 3)
         {
             EnsureViewports(parent);
 
@@ -170,7 +171,7 @@ namespace Jogo25D.Light
 
         #region Core - Campos
 
-        private void UpdateSkyCells(LogicalLightWorld world, Vector2I origin, Vector2I size, float terrainDepth)
+        private void UpdateSkyCells(TerrainCache world, Vector2I origin, Vector2I size, float terrainDepth)
         {
             var bytes = SkyAccessField.Build(world, origin, size, terrainDepth);
 
@@ -199,7 +200,7 @@ namespace Jogo25D.Light
             _material.SetShaderParameter("ambient_curve", ambientCurve);
         }
 
-        private void UpdateLocalBeam(Node level, LogicalLightWorld world, Vector2I origin, Vector2I size)
+        private void UpdateLocalBeam(Node level, TerrainCache world, Vector2I origin, Vector2I size)
         {
             var sources = new List<LightSource>();
 

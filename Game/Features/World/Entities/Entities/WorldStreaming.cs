@@ -4,6 +4,7 @@ using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Instances;
+using Jogo25D.Save;
 using Jogo25D.Save.Resources;
 using Jogo25D.Systems;
 using Jogo25D.Utils.Coordinates;
@@ -14,7 +15,6 @@ using System.Reflection;
 
 namespace Jogo25D.Entities
 {
-    [Jogo25D.Save.SaveScene("world", "res://Scenes/World/World.tscn")]
     public partial class WorldStreaming : Node2D
     {
         #region Dinamic properties
@@ -25,11 +25,13 @@ namespace Jogo25D.Entities
 
         #region World control
 
-        private readonly Dictionary<long, Node2D> _unloaded = new();
+        // Entidades sendo liberadas pelo streaming (gravadas no banco): a remocao delas nao e destruicao.
+        private readonly HashSet<long> _releasing = new();
+
+        // Chunks por dimensao cujas entidades do banco ja foram trazidas (perto de algum jogador).
+        private readonly Dictionary<string, HashSet<Vector2I>> _entityChunks = new();
 
         private readonly Dictionary<long, HashSet<long>> _peers = new();
-
-        private readonly Dictionary<long, string> _dimensionOf = new();
 
         private float _evaluateTimer;
         private float _tileEvaluateTimer;
@@ -63,7 +65,7 @@ namespace Jogo25D.Entities
 
             foreach (var dimension in Dimensions())
             {
-                dimension.DropWorld();
+                dimension.DropTerrain();
             }
         }
 
@@ -75,7 +77,7 @@ namespace Jogo25D.Entities
 
             foreach (var dimension in Dimensions())
             {
-                dimension.DropWorld();
+                dimension.DropTerrain();
             }
         }
 
@@ -87,7 +89,7 @@ namespace Jogo25D.Entities
 
             foreach (var dimension in Dimensions())
             {
-                dimension.LoadAuthoredWorld();
+                dimension.LoadAuthoredTerrain();
             }
         }
 
@@ -117,6 +119,7 @@ namespace Jogo25D.Entities
         public void CatchUpTiles(long targetPeerId, Vector2 aroundPosition)
         {
             RpcId(targetPeerId, nameof(SetWorldSeedReceive), WorldSeed);
+            RpcId(targetPeerId, nameof(SetWorldModeReceive), AuthoredWorlds);
 
             var aroundChunk = CoordinateUtilities.WorldToChunk(aroundPosition, Dimension.TileSize);
 
@@ -190,6 +193,21 @@ namespace Jogo25D.Entities
             SetWorldSeed(seed);
         }
 
+        // O cliente monta o proprio cache do terreno (autoral a partir da cena dele, procedural pela seed); as
+        // edicoes chegam depois, por chunk.
+        [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void SetWorldModeReceive(bool authored)
+        {
+            if (authored)
+            {
+                UseAuthoredWorlds();
+            }
+            else
+            {
+                UseProceduralWorlds();
+            }
+        }
+
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void ClearLayersReceive()
         {
@@ -218,16 +236,6 @@ namespace Jogo25D.Entities
                 Current = null;
             }
 
-            foreach (var node in _unloaded.Values)
-            {
-                if (IsInstanceValid(node))
-                {
-                    node.QueueFree();
-                }
-            }
-
-            _unloaded.Clear();
-
             if (GetTree() != null)
             {
                 GetTree().NodeAdded -= OnNodeAdded;
@@ -255,13 +263,10 @@ namespace Jogo25D.Entities
 
             foreach (var node in Streamed().ToList())
             {
-                Evaluate(node, insideTree: true);
+                Evaluate(node);
             }
 
-            foreach (var node in _unloaded.Values.ToList())
-            {
-                Evaluate(node, insideTree: false);
-            }
+            LoadNearbyEntities();
         }
 
         #endregion
@@ -272,7 +277,7 @@ namespace Jogo25D.Entities
         {
             if (node is Node2D node2D && IsStreamed(node2D))
             {
-                _unloaded.Remove(EnsureIdentity(node2D));
+                EnsureIdentity(node2D);
             }
         }
 
@@ -285,31 +290,28 @@ namespace Jogo25D.Entities
 
             var instanceId = EntityRecord.InstanceIdOf(node2D);
 
-            DimensionOf(node2D);
-
-            if (node.IsQueuedForDeletion())
+            if (_releasing.Contains(instanceId))
             {
-                _unloaded.Remove(instanceId);
-                _peers.Remove(instanceId);
-                _dimensionOf.Remove(instanceId);
-
                 return;
             }
 
-            _unloaded[instanceId] = node2D;
             _peers.Remove(instanceId);
+
+            // Destruida no jogo (item coletado, por exemplo): sai do banco no proximo save.
+            if (node.IsQueuedForDeletion())
+            {
+                WorldStore.ForgetEntity(node2D.Name);
+            }
         }
 
         #endregion
 
         #region Core - Politica
 
-        private void Evaluate(Node2D node, bool insideTree)
+        private void Evaluate(Node2D node)
         {
             if (!IsInstanceValid(node))
             {
-                _unloaded.Remove(EntityRecord.InstanceIdOf(node));
-
                 return;
             }
 
@@ -328,15 +330,9 @@ namespace Jogo25D.Entities
                 return;
             }
 
-            var near = NearestPlayerDistance(node) <= ChunkStreamingConstants.ENTITY_RADIUS_CHUNKS;
-
-            if (near && !insideTree)
+            if (NearestPlayerDistance(node) > ChunkStreamingConstants.ENTITY_RADIUS_CHUNKS)
             {
-                Load(node, instanceId);
-            }
-            else if (!near && insideTree)
-            {
-                Unload(node, instanceId);
+                Release(node, instanceId);
             }
         }
 
@@ -373,25 +369,105 @@ namespace Jogo25D.Entities
             }
         }
 
-        private void Load(Node2D node, long instanceId)
+        // Longe de todos os jogadores: grava a entidade no banco e libera o no. Sem banco aberto ela fica na arvore.
+        private void Release(Node2D node, long instanceId)
         {
-            var parent = Dimension.Get(DimensionOf(node))?.Entities;
-
-            if (parent == null)
+            if (!WorldStore.SaveEntity(DimensionOf(node), node))
             {
                 return;
             }
 
-            parent.AddChild(node);
+            _releasing.Add(instanceId);
 
-            EntitySpawner.SpawnRequest(BuildRecord(node));
-        }
-
-        private void Unload(Node2D node, long instanceId)
-        {
             node.GetParent()?.RemoveChild(node);
 
             EntitySpawner.DespawnRequest(instanceId);
+
+            _releasing.Remove(instanceId);
+            _peers.Remove(instanceId);
+
+            node.QueueFree();
+        }
+
+        // Traz do banco as entidades dos chunks que entraram no raio de algum jogador.
+        private void LoadNearbyEntities()
+        {
+            if (!WorldStore.IsOpen)
+            {
+                return;
+            }
+
+            var radius = ChunkStreamingConstants.ENTITY_RADIUS_CHUNKS;
+            HashSet<string> alive = null;
+
+            foreach (var dimension in Dimensions())
+            {
+                var dimensionId = dimension.DimensionId;
+                var needed = new HashSet<Vector2I>();
+
+                foreach (var player in Players.InDimension(dimensionId))
+                {
+                    if (player.PeerId <= 0)
+                    {
+                        continue;
+                    }
+
+                    var center = CoordinateUtilities.WorldToChunk(player.GlobalPosition, Dimension.TileSize);
+
+                    for (var dx = -radius; dx <= radius; dx++)
+                    {
+                        for (var dy = -radius; dy <= radius; dy++)
+                        {
+                            needed.Add(center + new Vector2I(dx, dy));
+                        }
+                    }
+                }
+
+                if (!_entityChunks.TryGetValue(dimensionId, out var loaded))
+                {
+                    _entityChunks[dimensionId] = loaded = new HashSet<Vector2I>();
+                }
+
+                foreach (var chunk in needed)
+                {
+                    // So com o chao do chunk pintado: sem colisao a entidade cairia.
+                    if (!dimension.IsChunkPainted(chunk) || !loaded.Add(chunk))
+                    {
+                        continue;
+                    }
+
+                    foreach (var row in WorldStore.ReadEntities(dimensionId, chunk))
+                    {
+                        // As que nunca saem da arvore ja entraram com o mundo.
+                        if (!StreamsClass(SaveSerializer.ClassOf(row.Type)))
+                        {
+                            continue;
+                        }
+
+                        alive ??= Streamed().Select(node => node.Name.ToString()).ToHashSet();
+
+                        if (!alive.Add(row.EntityId))
+                        {
+                            continue;
+                        }
+
+                        var node = WorldStore.Build(row);
+
+                        if (node == null || dimension.Entities == null)
+                        {
+                            node?.QueueFree();
+
+                            continue;
+                        }
+
+                        dimension.Entities.AddChild(node);
+
+                        EntitySpawner.SpawnRequest(BuildRecord(node));
+                    }
+                }
+
+                loaded.IntersectWith(needed);
+            }
         }
 
         #endregion
@@ -415,43 +491,11 @@ namespace Jogo25D.Entities
 
         #region Core - Persistencia
 
-        public void Adopt(Node2D node, string dimensionId)
-        {
-            if (node == null)
-            {
-                return;
-            }
-
-            var instanceId = EnsureIdentity(node);
-
-            _unloaded[instanceId] = node;
-            _dimensionOf[instanceId] = dimensionId;
-        }
-
         public void ResetState()
         {
-            foreach (var node in _unloaded.Values)
-            {
-                if (IsInstanceValid(node))
-                {
-                    node.Free();
-                }
-            }
-
-            _unloaded.Clear();
+            _releasing.Clear();
             _peers.Clear();
-            _dimensionOf.Clear();
-        }
-
-        public IEnumerable<Node2D> Unloaded(string dimensionId)
-        {
-            foreach (var node in _unloaded.Values)
-            {
-                if (IsInstanceValid(node) && DimensionOf(node) == dimensionId)
-                {
-                    yield return node;
-                }
-            }
+            _entityChunks.Clear();
         }
 
         #endregion
@@ -465,7 +509,17 @@ namespace Jogo25D.Entities
 
         private static bool IsStreamed(Node2D node)
         {
-            return GodotDictionaryParser.HasSerializableFields(node) && !node.IsInGroup("players");
+            return StreamsClass(node.GetType());
+        }
+
+        // Classe que o streaming descarrega para o banco longe dos jogadores: precisa ser persistivel (SaveScene),
+        // para nunca ficar viva fora do mundo. As outras ficam sempre na arvore.
+        public static bool StreamsClass(System.Type type)
+        {
+            return type != null
+                && type.GetCustomAttribute<SaveSceneAttribute>(inherit: false) != null
+                && GodotDictionaryParser.HasSerializableFields(type)
+                && ModeOf(type) == UnloadMode.Global;
         }
 
         private static IEnumerable<Node2D> Descendants(Node root)
@@ -514,8 +568,11 @@ namespace Jogo25D.Entities
 
         private static UnloadMode ReadMode(Node2D node)
         {
-            var type = node.GetType();
+            return ModeOf(node.GetType());
+        }
 
+        private static UnloadMode ModeOf(System.Type type)
+        {
             if (_modeByType.TryGetValue(type, out var mode))
             {
                 return mode;
@@ -528,20 +585,10 @@ namespace Jogo25D.Entities
             return mode;
         }
 
-        private string DimensionOf(Node2D node)
+        // Entidades so existem dentro da arvore: a dimensao e a do pai.
+        private static string DimensionOf(Node2D node)
         {
-            var instanceId = EntityRecord.InstanceIdOf(node);
-
-            if (node.IsInsideTree())
-            {
-                var dimensionId = Dimension.IdOf(node);
-
-                _dimensionOf[instanceId] = dimensionId;
-
-                return dimensionId;
-            }
-
-            return _dimensionOf.TryGetValue(instanceId, out var remembered) ? remembered : ChunkStreamingConstants.UPSIDEDOWN_ID;
+            return Dimension.IdOf(node);
         }
 
         private int NearestPlayerDistance(Node2D node)

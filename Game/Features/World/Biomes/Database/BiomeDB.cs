@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Caves;
 using System.Collections.Generic;
 
 namespace Jogo25D.Biomes
@@ -20,6 +21,7 @@ namespace Jogo25D.Biomes
                 InteriorSourceId = 0,
                 InteriorAtlasCoord = new Vector2I(1, 1),
                 BorderCapTerrainSet = 2,
+                CaveIds = new List<string> { CaveDB.TunnelsId, CaveDB.HallsId },
                 StructureIds = new List<string> { "tree" },
             },
             [OliveGroundId] = new BiomeDefinition
@@ -32,6 +34,7 @@ namespace Jogo25D.Biomes
                 InteriorSourceId = 1,
                 InteriorAtlasCoord = new Vector2I(1, 1),
                 BorderCapTerrainSet = 3,
+                CaveIds = new List<string> { CaveDB.TunnelsId, CaveDB.HallsId },
             },
         };
 

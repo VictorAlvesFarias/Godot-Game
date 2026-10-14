@@ -8,8 +8,6 @@ namespace Jogo25D.Save
         public string Type { get; }
         public string Scene { get; }
 
-        public string Ref { get; init; } = "";
-
         public SaveSceneAttribute(string type, string scene)
         {
             Type = type;

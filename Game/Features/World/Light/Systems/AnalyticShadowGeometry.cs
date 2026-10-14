@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Dimensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,17 +15,20 @@ namespace Jogo25D.Light
 
         private const double MaxSpreadDegrees = 8;
         private const double MaxSlopeDegrees = 89.5;
+        private const int SummaryTerrain = int.MaxValue;
 
         public bool Complete { get; private set; }
 
         private readonly List<Rect> _rects = new();
         private readonly Dictionary<(int Top, int Bottom, int Terrain), int> _active = new();
 
-        private LogicalLightWorld _world;
+        private TerrainCache _world;
         private Vector2I _origin;
         private Vector2I _size;
         private int _column;
         private int _lastColumn;
+        private int _nearLeft;
+        private int _nearRight;
         private int _rectCursor;
         private int _binCursor;
         private double _leftSlope;
@@ -40,7 +44,7 @@ namespace Jogo25D.Light
 
         #region Core - Preparacao
 
-        public void Begin(LogicalLightWorld world, Vector2I origin, Vector2I size, float angle, float penumbra)
+        public void Begin(TerrainCache world, Vector2I origin, Vector2I size, float angle, float penumbra)
         {
             _world = world;
             _origin = origin;
@@ -69,6 +73,10 @@ namespace Jogo25D.Light
             {
                 _lastColumn = _column - 1;
             }
+
+            // Colunas cujos runs dentro da janela ainda podem sombrear algum pixel dela.
+            _nearLeft = (int)Math.Max(int.MinValue + 2, Math.Floor(origin.X - Math.Max(0, _rightSlope) * size.Y) - 2);
+            _nearRight = (int)Math.Min(int.MaxValue - 2, Math.Ceiling(origin.X + size.X - Math.Min(0, _leftSlope) * size.Y) + 2);
 
             _bins = new List<int>[BinColumns * BinRows];
 
@@ -121,34 +129,23 @@ namespace Jogo25D.Light
                     return false;
                 }
 
-                foreach (var run in _world.OpticalColumn(_column))
+                var top = _origin.Y;
+                var bottom = _origin.Y + _size.Y;
+                var near = _column >= _nearLeft && _column <= _nearRight;
+                var firstSolid = _world.FirstSolid(_column, near ? bottom : top);
+
+                // Acima da janela, tudo abaixo do primeiro solido vira um unico retangulo opaco:
+                // o sol so entra no subsolo por aberturas na propria coluna.
+                if (firstSolid < top)
                 {
-                    var bottom = (int)Math.Min((long)run.End, (long)_origin.Y + _size.Y);
+                    AddRect(firstSolid, top, SummaryTerrain);
+                }
 
-                    if (run.Start >= bottom)
+                if (near)
+                {
+                    foreach (var run in _world.OpticalColumn(_column, Math.Max(top, firstSolid), bottom))
                     {
-                        continue;
-                    }
-
-                    var key = (run.Start, bottom, run.Terrain);
-
-                    if (_active.TryGetValue(key, out var index) && _rects[index].Right == _column)
-                    {
-                        _rects[index] = _rects[index] with
-                        {
-                            Right = (double)_column + 1
-                        };
-                    }
-                    else
-                    {
-                        _active[key] = _rects.Count;
-
-                        _rects.Add(new Rect(
-                            _column,
-                            run.Start,
-                            (double)_column + 1,
-                            bottom,
-                            LogicalLightWorld.TerrainOpacity(run.Terrain) / 255f));
+                        AddRect(run.Start, run.End, run.Terrain);
                     }
                 }
 
@@ -156,6 +153,30 @@ namespace Jogo25D.Light
             }
 
             return true;
+        }
+
+        private void AddRect(int start, int bottom, int terrain)
+        {
+            var key = (start, bottom, terrain);
+
+            if (_active.TryGetValue(key, out var index) && _rects[index].Right == _column)
+            {
+                _rects[index] = _rects[index] with
+                {
+                    Right = (double)_column + 1
+                };
+            }
+            else
+            {
+                _active[key] = _rects.Count;
+
+                _rects.Add(new Rect(
+                    _column,
+                    start,
+                    (double)_column + 1,
+                    bottom,
+                    TerrainCache.TerrainOpacity(terrain) / 255f));
+            }
         }
 
         private bool BinRects(long start, double milliseconds)

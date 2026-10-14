@@ -15,7 +15,7 @@
 [ext_resource type="Script" uid="uid://c6a5vqqvx8okh" path="res://Features/World/Light/Entities/LightMap2D.cs" id="14_lightmap"]
 [ext_resource type="Resource" path="res://Assets/Data/LightMap.tres" id="15_lmdata"]
 
-[ext_resource type="Script" path="res://Features/World/Blocks/Entities/BackgroundWallLayer.cs" id="wall_script"]
+[ext_resource type="Script" path="res://Features/World/Biomes/Singletons/BackgroundWallLayer.cs" id="wall_script"]
 [ext_resource type="TileSet" path="res://Assets/Textures/Tiles/background_walls_tileset.tres" id="wall_tiles"]
 [ext_resource type="PackedScene" path="res://Scenes/World/Props/Campfire.tscn" id="90_campfire"]
 

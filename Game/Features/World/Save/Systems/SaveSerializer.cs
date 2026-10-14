@@ -13,6 +13,7 @@ namespace Jogo25D.Save
 
         private static Dictionary<string, SaveSceneAttribute> _byType;
         private static Dictionary<Type, SaveSceneAttribute> _byClass;
+        private static Dictionary<string, Type> _classByType;
 
         private static void EnsureMap()
         {
@@ -23,6 +24,7 @@ namespace Jogo25D.Save
 
             _byType = new Dictionary<string, SaveSceneAttribute>();
             _byClass = new Dictionary<Type, SaveSceneAttribute>();
+            _classByType = new Dictionary<string, Type>();
 
             foreach (var type in typeof(SaveSerializer).Assembly.GetTypes())
             {
@@ -42,6 +44,7 @@ namespace Jogo25D.Save
 
                 _byType[attribute.Type] = attribute;
                 _byClass[type] = attribute;
+                _classByType[attribute.Type] = type;
             }
         }
 
@@ -52,16 +55,28 @@ namespace Jogo25D.Save
             return node != null && _byClass.TryGetValue(node.GetType(), out var attribute) ? attribute : null;
         }
 
-        public static bool IsPersistable(Node node)
-        {
-            return Describe(node) != null;
-        }
-
         public static string SceneOf(string type)
         {
             EnsureMap();
 
             return _byType.TryGetValue(type, out var attribute) ? attribute.Scene : null;
+        }
+
+        public static IEnumerable<string> Types
+        {
+            get
+            {
+                EnsureMap();
+
+                return _byType.Keys;
+            }
+        }
+
+        public static Type ClassOf(string type)
+        {
+            EnsureMap();
+
+            return type != null && _classByType.TryGetValue(type, out var found) ? found : null;
         }
 
         #endregion
@@ -79,8 +94,6 @@ namespace Jogo25D.Save
 
                 state[key] = ToVariant(property.GetValue(node));
             }
-
-            (node as ISaveState)?.WriteState(state);
 
             return state;
         }
@@ -104,8 +117,6 @@ namespace Jogo25D.Save
 
                 property.SetValue(node, FromVariant(value, property.PropertyType));
             }
-
-            (node as ISaveState)?.ReadState(state);
         }
 
         #endregion

@@ -1,10 +1,10 @@
 using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Blocks;
+using Jogo25D.Caves;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
-using Jogo25D.Light;
 using Jogo25D.Structures;
 using Jogo25D.Utils.Coordinates;
 using System.Collections.Generic;
@@ -19,6 +19,9 @@ namespace Jogo25D.Chunks
         private const int NoiseCacheLimit = 64;
 
         private readonly Dictionary<(long Seed, string Dimension, string Tag), FastNoiseLite> _noiseCache = new();
+        private readonly Dictionary<(long Seed, string Dimension, string Biome, int WorldScale), FastNoiseLite> _heightNoiseCache = new();
+
+        private CaveGeneratorSystem _caves;
 
         #endregion
 
@@ -26,19 +29,24 @@ namespace Jogo25D.Chunks
 
         public async Task PaintTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
-            target.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls")?.RestoreChunk(chunkCoord);
+            var walls = target.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+
+            walls?.RestoreChunk(chunkCoord);
+
+            if (walls != null)
+            {
+                await walls.PaintProceduralChunkAsync(chunkCoord, cellsPerFrame);
+            }
 
             var tileSet = target.TileSet;
-            var worldScale = GetWorldScale(tileSet);
-            var world = (target.GetParent() as Dimension)?.EnsureWorld()
-                ?? new LogicalLightWorld(worldSeed, dimensionId, worldScale);
+            var cache = ((Dimension)target.GetParent()).EnsureTerrain();
             var groupsByTerrain = new Dictionary<int, List<Vector2I>>();
 
             for (int y = chunkCoord.Y * chunkSize; y < (chunkCoord.Y + 1) * chunkSize; y++)
             {
                 for (int x = chunkCoord.X * chunkSize; x < (chunkCoord.X + 1) * chunkSize; x++)
                 {
-                    var terrain = world.Terrain(x, y);
+                    var terrain = cache.Terrain(x, y);
 
                     if (terrain < 0)
                     {
@@ -256,6 +264,55 @@ namespace Jogo25D.Chunks
 
         #region Core - Terrain resolution
 
+        public CaveGeneratorSystem GetCaves(long worldSeed, string dimensionId, int worldScale)
+        {
+            if (_caves == null || _caves.WorldSeed != worldSeed || _caves.DimensionId != dimensionId || _caves.WorldScale != worldScale)
+            {
+                _caves = new CaveGeneratorSystem(worldSeed, dimensionId, worldScale);
+            }
+
+            return _caves;
+        }
+
+        public int GetGroundHeight(long worldSeed, string dimensionId, int worldX, int worldScale, int biomeSampleY = ChunkStreamingConstants.CHUNK_SIZE / 2)
+        {
+            return ResolveGroundHeight(worldSeed, dimensionId, worldX, worldScale, biomeSampleY).GroundHeight;
+        }
+
+        private (int GroundHeight, string Biome) ResolveGroundHeight(long worldSeed, string dimensionId, int worldX, int worldScale, int biomeSampleY)
+        {
+            var biome = GetBiomeIdAtPosition(worldSeed, dimensionId, worldX, biomeSampleY);
+            var definition = BiomeDB.Get(biome);
+            var key = (worldSeed, dimensionId, biome, worldScale);
+
+            if (!_heightNoiseCache.TryGetValue(key, out var heightNoise))
+            {
+                if (_heightNoiseCache.Count > NoiseCacheLimit)
+                {
+                    foreach (var cached in _heightNoiseCache.Values)
+                    {
+                        cached.Dispose();
+                    }
+
+                    _heightNoiseCache.Clear();
+                }
+
+                var noiseSeed = unchecked((long)worldSeed * 397 ^ WorldRandom.StableStringHash(dimensionId));
+
+                heightNoise = new FastNoiseLite
+                {
+                    Seed = (int)noiseSeed,
+                    Frequency = definition.NoiseFrequency / worldScale,
+                };
+
+                _heightNoiseCache[key] = heightNoise;
+            }
+
+            var groundHeight = definition.HeightOffset * worldScale + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * definition.HeightAmplitude * worldScale);
+
+            return (groundHeight, biome);
+        }
+
         public int GetSurfaceBound(int worldScale)
         {
             var bound = 1;
@@ -285,16 +342,24 @@ namespace Jogo25D.Chunks
             return -GetSurfaceBound(worldScale) - height - 1;
         }
 
-        public Dictionary<Vector2I, int> GenerateLogicalStrip(long seed, string dimensionId, int chunkX, int worldScale)
+        // wallTops: para cada (x, linha de chunk) da faixa, o y a partir do qual ha parede de fundo procedural (o chao gerado daquela linha).
+        public Dictionary<Vector2I, int> GenerateLogicalStrip(long seed, string dimensionId, int chunkX, int worldScale, out Dictionary<Vector2I, int> wallTops)
         {
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
             var bound = GetSurfaceBound(worldScale);
             var result = new Dictionary<Vector2I, int>();
             var surfaces = new List<ColumnSurface>();
 
+            wallTops = new Dictionary<Vector2I, int>();
+
             for (var cy = CoordinateUtilities.CellToChunk(-bound); cy <= CoordinateUtilities.CellToChunk(bound); cy++)
             {
                 var (groups, columns) = ResolveSolidCellsByBiome(seed, dimensionId, new Vector2I(chunkX, cy), chunkSize, worldScale);
+
+                foreach (var column in columns)
+                {
+                    wallTops[new Vector2I(column.WorldX, cy)] = column.GroundHeight;
+                }
 
                 foreach (var group in groups)
                 {
@@ -320,10 +385,41 @@ namespace Jogo25D.Chunks
             return result;
         }
 
+        // Celulas abertas por cavernas em um chunk do interior (abaixo da faixa de superficie), indexadas por localY * chunkSize + localX.
+        public bool[] ResolveInteriorOpenCells(long seed, string dimensionId, Vector2I chunkCoord, int worldScale)
+        {
+            var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
+            var caves = GetCaves(seed, dimensionId, worldScale);
+            var open = new bool[chunkSize * chunkSize];
+
+            for (var localX = 0; localX < chunkSize; localX++)
+            {
+                var worldX = chunkCoord.X * chunkSize + localX;
+                var ground = GetGroundHeight(seed, dimensionId, worldX, worldScale);
+
+                for (var localY = 0; localY < chunkSize; localY++)
+                {
+                    var worldY = chunkCoord.Y * chunkSize + localY;
+
+                    var biome = BiomeDB.Get(GetBiomeIdAtPosition(seed, dimensionId, worldX, worldY));
+
+                    open[localY * chunkSize + localX] = caves.IsOpen(worldX, worldY, worldY - ground, biome.CaveIds);
+                }
+            }
+
+            return open;
+        }
+
         private void PlaceStructures(long seed, string dimensionId, int left, int worldScale, List<ColumnSurface> surfaces, Dictionary<Vector2I, int> result)
         {
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
             var last = new Dictionary<string, int>();
+            var groundByColumn = new Dictionary<int, int>();
+
+            foreach (var column in surfaces)
+            {
+                groundByColumn[column.WorldX] = column.GroundHeight;
+            }
 
             foreach (var column in surfaces)
             {
@@ -365,7 +461,7 @@ namespace Jogo25D.Chunks
                         continue;
                     }
 
-                    if (!IsGroundClear(result, column, bounds))
+                    if (!IsGroundClear(result, column, bounds, groundByColumn))
                     {
                         continue;
                     }
@@ -383,10 +479,16 @@ namespace Jogo25D.Chunks
             }
         }
 
-        private static bool IsGroundClear(Dictionary<Vector2I, int> result, ColumnSurface column, StructureBounds bounds)
+        private static bool IsGroundClear(Dictionary<Vector2I, int> result, ColumnSurface column, StructureBounds bounds, Dictionary<int, int> groundByColumn)
         {
             for (var x = column.WorldX - bounds.Left; x <= column.WorldX + bounds.Right; x++)
             {
+                // Bocas de caverna abrem o chao gerado; a estrutura nao pode flutuar sobre elas.
+                if (groundByColumn.TryGetValue(x, out var ground) && !result.ContainsKey(new Vector2I(x, ground)))
+                {
+                    return false;
+                }
+
                 for (var y = column.GroundHeight - bounds.Top; y < column.GroundHeight; y++)
                 {
                     if (result.ContainsKey(new Vector2I(x, y)))
@@ -405,28 +507,12 @@ namespace Jogo25D.Chunks
             var baseCellY = chunkCoord.Y * chunkSize;
             var solidCellsByBiome = new Dictionary<string, List<Vector2I>>();
             var columnSurfaces = new List<ColumnSurface>();
-            var heightNoiseByBiome = new Dictionary<string, FastNoiseLite>();
+            var caves = GetCaves(worldSeed, dimensionId, worldScale);
 
             for (int localX = 0; localX < chunkSize; localX++)
             {
                 var worldX = baseCellX + localX;
-                var columnBiome = GetBiomeIdAtPosition(worldSeed, dimensionId, worldX, baseCellY + chunkSize / 2);
-                var columnBiomeDef = BiomeDB.Get(columnBiome);
-
-                if (!heightNoiseByBiome.TryGetValue(columnBiome, out var heightNoise))
-                {
-                    var noiseSeed = unchecked((long)worldSeed * 397 ^ WorldRandom.StableStringHash(dimensionId));
-
-                    heightNoise = new FastNoiseLite
-                    {
-                        Seed = (int)noiseSeed,
-                        Frequency = columnBiomeDef.NoiseFrequency / worldScale,
-                    };
-
-                    heightNoiseByBiome[columnBiome] = heightNoise;
-                }
-
-                var groundHeight = columnBiomeDef.HeightOffset * worldScale + Mathf.RoundToInt(heightNoise.GetNoise1D(worldX) * columnBiomeDef.HeightAmplitude * worldScale);
+                var (groundHeight, columnBiome) = ResolveGroundHeight(worldSeed, dimensionId, worldX, worldScale, baseCellY + chunkSize / 2);
 
                 columnSurfaces.Add(new ColumnSurface(worldX, groundHeight, columnBiome));
 
@@ -440,6 +526,11 @@ namespace Jogo25D.Chunks
                     }
 
                     var cellBiome = GetBiomeIdAtPosition(worldSeed, dimensionId, worldX, worldY);
+
+                    if (caves.IsOpen(worldX, worldY, worldY - groundHeight, BiomeDB.Get(cellBiome).CaveIds))
+                    {
+                        continue;
+                    }
 
                     if (!solidCellsByBiome.TryGetValue(cellBiome, out var cells))
                     {
@@ -487,13 +578,6 @@ namespace Jogo25D.Chunks
         #endregion
 
         #region Utils
-
-        private int GetWorldScale(TileSet tileSet)
-        {
-            var tileSize = tileSet?.TileSize.X ?? ChunkStreamingConstants.REFERENCE_TILE_SIZE;
-
-            return Mathf.Max(1, Mathf.RoundToInt(ChunkStreamingConstants.REFERENCE_TILE_SIZE / (float)tileSize));
-        }
 
         private (int sourceId, Vector2I atlasCoord) GetFallbackTile(TileSet tileSet)
         {

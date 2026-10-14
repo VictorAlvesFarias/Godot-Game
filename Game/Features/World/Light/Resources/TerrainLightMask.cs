@@ -19,16 +19,6 @@ namespace Jogo25D.Light
         // que sao os receptores da sombra projetada.
         public static Image Build(Rect2I bounds, Node2D overlayRoot, TileMapLayer walls, params TileMapLayer[] solids)
         {
-            return BuildCore(bounds, overlayRoot, true, walls, solids);
-        }
-
-        internal static Image BuildReference(Rect2I bounds, Node2D overlayRoot, TileMapLayer walls, params TileMapLayer[] solids)
-        {
-            return BuildCore(bounds, overlayRoot, false, walls, solids);
-        }
-
-        private static Image BuildCore(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer walls, TileMapLayer[] solids)
-        {
             var count = bounds.Size.X * bounds.Size.Y;
             var solid = new byte[count];
             var wall = new byte[count];
@@ -36,10 +26,10 @@ namespace Jogo25D.Light
 
             foreach (var layer in solids)
             {
-                BlitVisibleLayer(bounds, overlayRoot, fastCopy, layer, solid, textures);
+                BlitVisibleLayer(bounds, overlayRoot, layer, solid, textures);
             }
 
-            BlitVisibleLayer(bounds, overlayRoot, fastCopy, walls, wall, textures);
+            BlitVisibleLayer(bounds, overlayRoot, walls, wall, textures);
 
             var pixels = new byte[count * 2];
 
@@ -54,17 +44,17 @@ namespace Jogo25D.Light
             return Image.CreateFromData(bounds.Size.X, bounds.Size.Y, false, Image.Format.Rg8, pixels);
         }
 
-        private static void BlitVisibleLayer(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
+        private static void BlitVisibleLayer(Rect2I bounds, Node2D overlayRoot, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
         {
             if (layer == null || !layer.Enabled || !layer.IsVisibleInTree() || layer.TileSet == null)
             {
                 return;
             }
 
-            BlitLayer(bounds, overlayRoot, fastCopy, layer, pixels, textures);
+            BlitLayer(bounds, overlayRoot, layer, pixels, textures);
         }
 
-        private static void BlitLayer(Rect2I bounds, Node2D overlayRoot, bool fastCopy, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
+        private static void BlitLayer(Rect2I bounds, Node2D overlayRoot, TileMapLayer layer, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
         {
             var toOverlay = overlayRoot.GlobalTransform.AffineInverse() * layer.GlobalTransform;
             var localBounds = toOverlay.AffineInverse() * new Rect2(bounds.Position, bounds.Size);
@@ -82,12 +72,12 @@ namespace Jogo25D.Light
             {
                 for (var x = first.X; x <= last.X; x++)
                 {
-                    BlitCell(bounds, fastCopy, layer, toOverlay, new Vector2I(x, y), pixels, textures);
+                    BlitCell(bounds, layer, toOverlay, new Vector2I(x, y), pixels, textures);
                 }
             }
         }
 
-        private static void BlitCell(Rect2I bounds, bool fastCopy, TileMapLayer layer, Transform2D toOverlay, Vector2I cell, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
+        private static void BlitCell(Rect2I bounds, TileMapLayer layer, Transform2D toOverlay, Vector2I cell, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
         {
             var sourceId = layer.GetCellSourceId(cell);
 
@@ -142,7 +132,7 @@ namespace Jogo25D.Light
                 && transform.Origin.Y == Mathf.Floor(transform.Origin.Y)
                 && opacity == 1f;
 
-            if (fastCopy && aligned)
+            if (aligned)
             {
                 BlitAligned(bounds, source, transform, start, end, texture, pixels);
 

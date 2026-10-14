@@ -63,7 +63,7 @@ namespace Jogo25D.Light
         private TerrainLayer ComposeLayer => GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
         private TerrainLayer BaseLayer => GetNodeOrNull<TerrainLayer>(BaseLayerPath);
         private TileMapLayer WallLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
-        public LogicalLightWorld World { get; private set; }
+        public TerrainCache Terrain { get; private set; }
 
         private static readonly LightPropagationDispatcher Propagation = new();
 
@@ -79,7 +79,7 @@ namespace Jogo25D.Light
         private bool _chunksAttached;
         public long SolarUpdates { get; private set; }
 
-        public bool PresentationReady => _published && !_building && World != null && _revision == World.Revision;
+        public bool PresentationReady => _published && !_building && Terrain != null && _revision == Terrain.Revision;
 
         private readonly AnalyticShadowGeometry _geometry = new();
         private readonly WindowBeamCache _windowBeam = new();
@@ -165,7 +165,7 @@ namespace Jogo25D.Light
 
             var grid = _layers[0];
 
-            if (!UpdateWorld(delta))
+            if (!UpdateTerrain(delta))
             {
                 return;
             }
@@ -184,7 +184,7 @@ namespace Jogo25D.Light
 
             _windowBeam.Update(
                 this,
-                World,
+                Terrain,
                 _origin,
                 _size,
                 angle,
@@ -235,25 +235,20 @@ namespace Jogo25D.Light
 
         #region Core - Mundo
 
-        public void Invalidate()
+        private bool UpdateTerrain(double delta)
         {
-            _invalid = true;
-        }
+            var terrain = Engine.IsEditorHint() ? null : (GetParent() as Dimension)?.Terrain;
 
-        private bool UpdateWorld(double delta)
-        {
-            var world = Engine.IsEditorHint() ? null : (GetParent() as Dimension)?.World;
-
-            if (world == null)
+            if (terrain == null)
             {
-                UpdatePreviewWorld(delta);
+                UpdatePreviewTerrain(delta);
 
                 return true;
             }
 
-            if (world != World)
+            if (terrain != Terrain)
             {
-                World = world;
+                Terrain = terrain;
                 _invalid = true;
                 _published = false;
                 _building = false;
@@ -350,7 +345,7 @@ namespace Jogo25D.Light
             EditorPreview.Enabled = LightMapEnabled && PreviewInEditor;
         }
 
-        private void UpdatePreviewWorld(double delta)
+        private void UpdatePreviewTerrain(double delta)
         {
             _poll += delta;
 
@@ -368,7 +363,7 @@ namespace Jogo25D.Light
                 }
             }
 
-            if (World != null && !_invalid && !(_previewDirty && _poll >= EditorPollSeconds))
+            if (Terrain != null && !_invalid && !(_previewDirty && _poll >= EditorPollSeconds))
             {
                 return;
             }
@@ -376,7 +371,7 @@ namespace Jogo25D.Light
             _poll = 0;
             _previewDirty = false;
 
-            World ??= new LogicalLightWorld(0, "shadow-preview", 1, false);
+            Terrain ??= new TerrainCache(0, "shadow-preview", 1, false);
 
             SyncPreviewTerrain();
             SyncPreviewWalls();
@@ -390,7 +385,7 @@ namespace Jogo25D.Light
             {
                 foreach (var cell in layer.GetUsedCells())
                 {
-                    cells[cell] = LogicalLightWorld.TileTerrain(layer, cell);
+                    cells[cell] = TerrainCache.TileTerrain(layer, cell);
                 }
             }
 
@@ -398,7 +393,7 @@ namespace Jogo25D.Light
             {
                 if (!cells.ContainsKey(cell))
                 {
-                    World.SetTerrain(cell.X, cell.Y, -1);
+                    Terrain.SetTerrain(cell.X, cell.Y, -1);
                 }
             }
 
@@ -406,7 +401,7 @@ namespace Jogo25D.Light
             {
                 if (!_preview.TryGetValue(entry.Key, out var previous) || previous != entry.Value)
                 {
-                    World.SetTerrain(entry.Key.X, entry.Key.Y, entry.Value);
+                    Terrain.SetTerrain(entry.Key.X, entry.Key.Y, entry.Value);
                 }
             }
 
@@ -429,7 +424,7 @@ namespace Jogo25D.Light
             {
                 if (!walls.Contains(cell))
                 {
-                    World.SetBackground(cell.X, cell.Y, false);
+                    Terrain.SetBackground(cell.X, cell.Y, false);
                 }
             }
 
@@ -437,7 +432,7 @@ namespace Jogo25D.Light
             {
                 if (!_previewWalls.Contains(cell))
                 {
-                    World.SetBackground(cell.X, cell.Y, true);
+                    Terrain.SetBackground(cell.X, cell.Y, true);
                 }
             }
 
@@ -485,18 +480,18 @@ namespace Jogo25D.Light
                 ((width + chunkSize - 1) / chunkSize + RegionMarginChunks) * chunkSize,
                 ((height + chunkSize - 1) / chunkSize + RegionMarginChunks) * chunkSize);
 
-            if (_invalid || _revision != World.Revision || _angle != angle || _penumbra != penumbra || _origin != origin || _size != size)
+            if (_invalid || _revision != Terrain.Revision || _angle != angle || _penumbra != penumbra || _origin != origin || _size != size)
             {
                 _origin = origin;
                 _size = size;
                 _angle = angle;
                 _penumbra = penumbra;
-                _revision = World.Revision;
+                _revision = Terrain.Revision;
                 _building = true;
                 _invalid = false;
                 _published = false;
 
-                _geometry.Begin(World, origin, size, angle, penumbra);
+                _geometry.Begin(Terrain, origin, size, angle, penumbra);
             }
 
             if (!_building)

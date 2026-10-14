@@ -1,5 +1,6 @@
 using Godot;
 using Jogo25D.Constants;
+using Jogo25D.Dimensions;
 using System.Collections.Generic;
 
 namespace Jogo25D.Light
@@ -17,7 +18,7 @@ namespace Jogo25D.Light
 
         #region Core - Construcao do campo
 
-        public static byte[] Build(LogicalLightWorld world, Vector2I origin, Vector2I size, float depth)
+        public static byte[] Build(TerrainCache world, Vector2I origin, Vector2I size, float depth)
         {
             int width = size.X;
             int height = size.Y;

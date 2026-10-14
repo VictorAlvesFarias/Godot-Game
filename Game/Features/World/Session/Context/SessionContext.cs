@@ -141,7 +141,7 @@ namespace Jogo25D.Session
             streaming?.SetStreamingEnabled(false);
             streaming?.UseAuthoredWorlds();
 
-            WorldDocument.Load(save);
+            WorldStore.Load(save);
 
             Players.SpawnLocal(character);
 
@@ -164,7 +164,7 @@ namespace Jogo25D.Session
                 streaming.UseProceduralWorlds();
             }
 
-            WorldDocument.Load(save);
+            WorldStore.Load(save);
 
             streaming?.SetStreamingEnabled(true);
 
@@ -191,6 +191,7 @@ namespace Jogo25D.Session
         public static void LeaveWorld()
         {
             SaveContext.SaveAll();
+            WorldStore.Close();
             SaveContext.StopAutosave();
             SaveContext.ClearRegistry();
 

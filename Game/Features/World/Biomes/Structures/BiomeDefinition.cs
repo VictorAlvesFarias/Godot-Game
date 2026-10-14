@@ -17,6 +17,7 @@ namespace Jogo25D.Biomes
         public int BorderCapTerrainSet { get; init; }
 
         public List<string> StructureIds { get; init; } = new();
+        public List<string> CaveIds { get; init; } = new();
 
         #endregion
     }
