@@ -114,7 +114,8 @@ namespace Jogo25D.Entities
 
         #region Core - Item no chao
 
-        public static long SpawnWorldItemRequest(ItemData itemData, Vector2 position, string dimensionId)
+        // droppedBy: personagem que soltou o item (a coleta automatica dele ignora o item); vazio para drops do mundo.
+        public static long SpawnWorldItemRequest(ItemData itemData, Vector2 position, string dimensionId, string droppedBy = "")
         {
             if (itemData == null)
             {
@@ -130,6 +131,7 @@ namespace Jogo25D.Entities
                 { EntityRecord.INSTANCE, instanceId },
                 { EntityRecord.POSITION, EntityRecord.WriteVector(position) },
                 { "Item", GodotDictionaryParser.ToDictionary(itemData) },
+                { "DroppedBy", droppedBy ?? "" },
             };
 
             Spawn(record);

@@ -5,6 +5,8 @@ using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
 using Jogo25D.Portals;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Jogo25D.Items
 {
@@ -173,72 +175,136 @@ namespace Jogo25D.Items
             return null;
         }
 
-        private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)
-        {
-            var targetWorldPos = player.Input.MousePosition;
-            var toTarget = targetWorldPos - player.GlobalPosition;
-
-            if (toTarget.Length() > reach)
-            {
-                targetWorldPos = player.GlobalPosition + toTarget.Normalized() * reach;
-            }
-
-            return layer.LocalToMap(layer.ToLocal(targetWorldPos));
-        }
-
         private static bool IsSolid(TileMapLayer layer, TileMapLayer baseLayer, Vector2I cell)
         {
             return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);
         }
 
-        private static (bool FoundSolid, Vector2I SolidCell, Vector2I LastEmptyCell) RaycastTiles(TileMapLayer layer, TileMapLayer baseLayer, Vector2 origin, Vector2 aimPosition, float reach)
+        private static Vector2 CellCenter(TileMapLayer layer, Vector2I cell)
         {
-            var toAim = aimPosition - origin;
-            var distance = Mathf.Min(toAim.Length(), reach);
-            var direction = toAim.LengthSquared() > 0.001f ? toAim.Normalized() : Vector2.Right;
-
-            var tileSize = Mathf.Max(1, layer.TileSet.TileSize.X);
-            var stepSize = tileSize * 0.5f;
-            var steps = Mathf.Max(1, Mathf.CeilToInt(distance / stepSize));
-
-            var lastEmptyCell = layer.LocalToMap(layer.ToLocal(origin));
-
-            for (int i = 1; i <= steps; i++)
-            {
-                var sampleDistance = Mathf.Min(distance, i * stepSize);
-                var samplePos = origin + direction * sampleDistance;
-                var cell = layer.LocalToMap(layer.ToLocal(samplePos));
-
-                if (IsSolid(layer, baseLayer, cell))
-                {
-                    return (true, cell, lastEmptyCell);
-                }
-
-                lastEmptyCell = cell;
-            }
-
-            return (false, default, lastEmptyCell);
+            return layer.ToGlobal(layer.MapToLocal(cell));
         }
 
-        private static (bool Found, Vector2I Cell) ResolveMiningTargetCell(Player player, TileMapLayer layer, TileMapLayer baseLayer, float reach)
+        // Caixa de colisao do jogador, um pouco encolhida para nao contar o chao e as paredes em que ela so encosta.
+        private static Rect2 BodyBox(Player player)
         {
-            if (player.Input.RestrictMiningToAccessible)
+            if (player.Shape?.Shape is RectangleShape2D rectangle)
             {
-                var hit = RaycastTiles(layer, baseLayer, player.GlobalPosition, player.Input.MousePosition, reach);
+                var size = rectangle.Size - Vector2.One * 2f;
 
-                if (hit.FoundSolid)
-                {
-                    return (true, hit.SolidCell);
-                }
-
-                var aimCell = ResolveCellInRange(player, layer, reach);
-
-                return (ResolveMiningTargetPortal(player, layer, aimCell) != null, aimCell);
+                return new Rect2(player.Shape.GlobalPosition - size / 2f, size);
             }
 
-            var cell = ResolveCellInRange(player, layer, reach);
+            return new Rect2(player.GlobalPosition - Vector2.One * 7f, Vector2.One * 14f);
+        }
 
-            return (IsSolid(layer, baseLayer, cell) || ResolveMiningTargetPortal(player, layer, cell) != null, cell);
+        private static IEnumerable<Vector2I> CellsIn(TileMapLayer layer, Rect2 box)
+        {
+            var first = layer.LocalToMap(layer.ToLocal(box.Position));
+            var last = layer.LocalToMap(layer.ToLocal(box.End - Vector2.One * 0.01f));
+
+            for (var y = first.Y; y <= last.Y; y++)
+            {
+                for (var x = first.X; x <= last.X; x++)
+                {
+                    yield return new Vector2I(x, y);
+                }
+            }
+        }
+
+        // Primeiro bloco que o corpo do jogador encontra indo ate o ponto mirado (no maximo o alcance): e ele que impede o
+        // jogador de chegar la. Um vao mais estreito que o corpo nao deixa passar. Entre os blocos tocados no mesmo passo,
+        // fica o mais perto do caminho do centro do corpo.
+        private static (bool Found, Vector2I Cell) FirstSolidOnSweep(Player player, TileMapLayer layer, TileMapLayer baseLayer, Vector2 aim, float reach)
+        {
+            const float step = 2f;
+
+            var box = BodyBox(player);
+            var start = box.GetCenter();
+            var toAim = aim - start;
+            var distance = Mathf.Min(toAim.Length(), reach);
+            var direction = toAim.LengthSquared() > 0.001f ? toAim.Normalized() : Vector2.Down;
+            var touching = CellsIn(layer, box).ToHashSet();
+
+            for (var traveled = step; traveled < distance + step; traveled += step)
+            {
+                var moved = new Rect2(box.Position + direction * Mathf.Min(traveled, distance), box.Size);
+                var hits = CellsIn(layer, moved).Where(cell => !touching.Contains(cell) && IsSolid(layer, baseLayer, cell)).ToList();
+
+                if (hits.Count == 0)
+                {
+                    continue;
+                }
+
+                var cell = hits
+                    .OrderBy(c => Mathf.Abs(direction.Cross(CellCenter(layer, c) - start)))
+                    .ThenBy(c => CellCenter(layer, c).DistanceSquaredTo(start))
+                    .First();
+
+                return CellCenter(layer, cell).DistanceTo(player.GlobalPosition) <= reach ? (true, cell) : (false, default);
+            }
+
+            return (false, default);
+        }
+
+        // Alvo do indicador e da quebra. O portal sob o mouse tem prioridade. Depois, so ha alvo com o mouse na area de conexao
+        // de um bloco (a celula dele ou uma das 8 vizinhas e solida). Modo livre: o bloco sob o mouse, ou a vizinha mais proxima
+        // do mouse. Modo de aproximacao: o primeiro bloco que o corpo do jogador encontra indo ate o mouse (ou, com o mouse no ar,
+        // ate a vizinha mais proxima dele).
+        private static (bool Found, Vector2I Cell) ResolveMiningTargetCell(Player player, TileMapLayer layer, TileMapLayer baseLayer, float reach)
+        {
+            var origin = player.GlobalPosition;
+            var mouse = player.Input.MousePosition;
+            var mouseCell = layer.LocalToMap(layer.ToLocal(mouse));
+
+            bool InReach(Vector2I cell) => CellCenter(layer, cell).DistanceTo(origin) <= reach;
+
+            if (ResolveMiningTargetPortal(player, layer, mouseCell) != null && InReach(mouseCell))
+            {
+                return (true, mouseCell);
+            }
+
+            var mouseSolid = IsSolid(layer, baseLayer, mouseCell);
+            var neighbors = new List<Vector2I>();
+
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                for (var dx = -1; dx <= 1; dx++)
+                {
+                    var cell = mouseCell + new Vector2I(dx, dy);
+
+                    if ((dx != 0 || dy != 0) && IsSolid(layer, baseLayer, cell))
+                    {
+                        neighbors.Add(cell);
+                    }
+                }
+            }
+
+            if (!mouseSolid && neighbors.Count == 0)
+            {
+                return (false, default);
+            }
+
+            var nearest = neighbors.Where(InReach).OrderBy(cell => CellCenter(layer, cell).DistanceSquaredTo(mouse));
+
+            if (!player.Input.RestrictMiningToAccessible)
+            {
+                if (mouseSolid)
+                {
+                    return InReach(mouseCell) ? (true, mouseCell) : (false, default);
+                }
+
+                foreach (var cell in nearest)
+                {
+                    return (true, cell);
+                }
+
+                return (false, default);
+            }
+
+            var aim = mouseSolid ? mouse : CellCenter(layer, neighbors.OrderBy(cell => CellCenter(layer, cell).DistanceSquaredTo(mouse)).First());
+
+            return FirstSolidOnSweep(player, layer, baseLayer, aim, reach);
         }
 
         #endregion

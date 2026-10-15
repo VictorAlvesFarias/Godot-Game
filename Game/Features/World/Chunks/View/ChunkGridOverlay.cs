@@ -7,6 +7,7 @@ namespace Jogo25D.Chunks
 {
     public partial class ChunkGridOverlay : Node2D
     {
+        // Ligado pelo modo de depuracao (F3, no HUD); cada grade so acompanha o valor.
         public static bool Enabled { get; set; }
 
         private float _chunkPixels = ChunkStreamingConstants.CHUNK_SIZE * 32f;
@@ -17,17 +18,6 @@ namespace Jogo25D.Chunks
         {
             Visible = Enabled;
             ZIndex = 100;
-        }
-
-        public override void _UnhandledInput(InputEvent @event)
-        {
-            if (@event.IsActionPressed("toggle_chunk_grid") && !@event.IsEcho())
-            {
-                Enabled = !Enabled;
-                Visible = Enabled;
-
-                GetViewport().SetInputAsHandled();
-            }
         }
 
         public override void _Process(double delta)

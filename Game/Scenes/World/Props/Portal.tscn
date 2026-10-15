@@ -12,6 +12,7 @@ size = Vector2(32, 32)
 
 [node name="Portal" type="Area2D" unique_id=1620306960]
 collision_layer = 0
+collision_mask = 8
 script = ExtResource("1_portal")
 
 [node name="Sprite" type="Sprite2D" parent="." unique_id=203408426]

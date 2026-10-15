@@ -85,6 +85,10 @@ namespace Jogo25D.Characters
         [GodotDictionaryField]
         public bool PvpEnabled { get; set; } = false;
 
+        // Coleta automatica de itens no raio de coleta (itens soltos pelo proprio jogador nunca sao coletados sozinhos).
+        [GodotDictionaryField]
+        public bool AutoPickup { get; set; } = true;
+
         [GodotDictionaryField]
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
 
@@ -203,6 +207,7 @@ namespace Jogo25D.Characters
             {
                 HandleHotbarScroll();
                 HandleDropItem();
+                HandleInteractPickup();
             }
 
             TestPositionRequest(Position);
@@ -660,6 +665,33 @@ namespace Jogo25D.Characters
 
                     return;
                 }
+            }
+        }
+
+        // E coleta o item mais proximo no raio de coleta, com ou sem coleta automatica. Sobre um portal, o E e do portal.
+        public void HandleInteractPickup()
+        {
+            if (!Input.Interact || Dimension.Get(GetActiveDimensionId())?.Entities is not Node entities)
+            {
+                return;
+            }
+
+            var children = entities.GetChildren();
+
+            if (children.OfType<Portals.Portal>().Any(portal => portal.OverlappingLocalPlayer == this))
+            {
+                return;
+            }
+
+            var nearest = children
+                .OfType<WorldItem>()
+                .Where(item => !item.IsQueuedForDeletion() && item.GlobalPosition.DistanceTo(GlobalPosition) <= WorldItem.PickupRadius)
+                .OrderBy(item => item.GlobalPosition.DistanceTo(GlobalPosition))
+                .FirstOrDefault();
+
+            if (nearest != null)
+            {
+                PickupItemRequest(EntityRecord.InstanceIdOf(nearest));
             }
         }
 
@@ -1475,7 +1507,7 @@ namespace Jogo25D.Characters
 
             var dropOffset = new Vector2(FacingLeft() ? -40f : 40f, 0f);
 
-            EntitySpawner.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId());
+            EntitySpawner.SpawnWorldItemRequest(dropData, GlobalPosition + dropOffset, GetActiveDimensionId(), CharacterId);
         }
 
         public void DropItemRequest(long instanceId, int quantity)
@@ -1505,12 +1537,15 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            if (InventorySystem.AddItem(Inventory, worldItem.Item))
+            // Inventario cheio: o item continua no chao.
+            if (!InventorySystem.AddItem(Inventory, worldItem.Item))
             {
-                EnsureItemDefinition(worldItem.Item);
-
-                EmitSignal(SignalName.InventoryChanged);
+                return;
             }
+
+            EnsureItemDefinition(worldItem.Item);
+
+            EmitSignal(SignalName.InventoryChanged);
 
             EntitySpawner.DespawnRequest(worldItemId);
         }

@@ -989,32 +989,39 @@ namespace Jogo25D.Biomes
 
         private void ProcessBreakBlock(Vector2I cell)
         {
-            if (GetCellSourceId(cell) == -1)
+            var baseLayer = _baseLayer;
+            var onBase = GetCellSourceId(cell) == -1;
+
+            if (onBase && (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1))
             {
-                var baseLayer = _baseLayer;
-
-                if (baseLayer == null || baseLayer.GetCellSourceId(cell) == -1)
-                {
-                    return;
-                }
-
-                baseLayer.EraseBlockAndReconnect(cell);
-
-                Rpc(nameof(BreakBlockBroadcast), cell);
-
                 return;
             }
 
-            EraseBlockAndReconnect(cell);
+            // O drop vem do bloco que pinta o terreno da celula, lido antes de apagar.
+            var drop = DropOf(cell);
 
-            var dropPosition = ToGlobal(MapToLocal(cell));
-
-            if (BlockDB.TryGet("grass", out var grassBlock))
+            if (onBase)
             {
-                EntitySpawner.SpawnWorldItemRequest(ItemFactory.CreateInstance(grassBlock.DropItemId), dropPosition, DimensionId);
+                baseLayer.EraseBlockAndReconnect(cell);
+            }
+            else
+            {
+                EraseBlockAndReconnect(cell);
+            }
+
+            if (!string.IsNullOrEmpty(drop))
+            {
+                EntitySpawner.SpawnWorldItemRequest(ItemFactory.CreateInstance(drop), ToGlobal(MapToLocal(cell)), DimensionId);
             }
 
             Rpc(nameof(BreakBlockBroadcast), cell);
+        }
+
+        private string DropOf(Vector2I cell)
+        {
+            var terrain = (GetParent() as Dimension)?.EnsureTerrain().Terrain(cell.X, cell.Y) ?? -1;
+
+            return terrain < 0 ? null : BlockDB.FindByTerrain(terrain)?.DropItemId;
         }
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

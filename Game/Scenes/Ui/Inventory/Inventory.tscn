@@ -280,11 +280,16 @@ offset_bottom = 26.0
 theme_type_variation = &"Hint"
 text = "1"
 
+[node name="AutoPickup" type="CheckButton" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn"]
+layout_mode = 2
+button_pressed = true
+text = "Coleta automática"
+
 [node name="DropSlot" type="Panel" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn" unique_id=1513354406]
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"DropSlot"
+theme_type_variation = &"Slot"
 
 [node name="Label" type="Label" parent="Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/DropSlot" unique_id=1909235930]
 layout_mode = 1
@@ -293,8 +298,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_type_variation = &"DropLabel"
-text = "▼  DESCARTAR"
+text = "▼  SOLTAR"
 horizontal_alignment = 1
 vertical_alignment = 1
 

@@ -15,6 +15,9 @@ namespace Jogo25D.Items
         public string BlockId { get; init; }
         public float Reach { get; init; } = 120f;
 
+        // A texture.png do bloco e o tile do tileset: 1 pixel do mundo por pixel, como no mapa.
+        public override float WorldPixelScale => 1f;
+
         #endregion
 
         #region Node children references

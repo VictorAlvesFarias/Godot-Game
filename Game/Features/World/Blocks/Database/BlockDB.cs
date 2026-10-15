@@ -27,12 +27,22 @@ namespace Jogo25D.Blocks
                 SourceId = 0,
                 AtlasCoord = new Vector2I(1, 1)
             },
-            ["grass"] = new BlockDefinition
+            // Terreno natural de cada bioma: terra (a grama do topo e so a textura de composicao).
+            ["dirt"] = new BlockDefinition
             {
-                Id = "grass",
-                DropItemId = "block_grass",
+                Id = "dirt",
+                DropItemId = "block_dirt",
                 SourceId = 0,
                 AtlasCoord = new Vector2I(1, 0),
+                TerrainSet = 0,
+            },
+            ["olive_dirt"] = new BlockDefinition
+            {
+                Id = "olive_dirt",
+                DropItemId = "block_dirt",
+                SourceId = 1,
+                AtlasCoord = new Vector2I(1, 0),
+                TerrainSet = 1,
             },
             ["wood"] = new BlockDefinition
             {
@@ -64,6 +74,20 @@ namespace Jogo25D.Blocks
         public static IEnumerable<BlockDefinition> All()
         {
             return _blocks.Values;
+        }
+
+        // Bloco de terreno (nao parede) que pinta este terreno: o do bioma ou um colocado pelo jogador.
+        public static BlockDefinition FindByTerrain(int terrain)
+        {
+            foreach (var block in _blocks.Values)
+            {
+                if (!block.IsBackground && (block.TerrainSet ?? block.SourceId) == terrain)
+                {
+                    return block;
+                }
+            }
+
+            return null;
         }
 
         #endregion

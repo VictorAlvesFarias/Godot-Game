@@ -38,6 +38,7 @@ _data = {
 
 [node name="PickaxeStarting" type="Area2D" unique_id=39886597]
 collision_layer = 2
+collision_mask = 9
 script = ExtResource("1_hitbox")
 
 [node name="Origin" type="Marker2D" parent="." unique_id=313547735]

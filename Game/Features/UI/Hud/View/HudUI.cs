@@ -1,6 +1,7 @@
 using Godot;
 using Jogo25D.Actions;
 using Jogo25D.Characters;
+using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Effects;
@@ -84,18 +85,19 @@ namespace Jogo25D.UI
 
         #region Godot implementation
 
-        public override void _Input(InputEvent inputEvent)
+        // Modo de depuracao (F3): liga e desliga juntos o medidor de FPS e a grade de chunks.
+        public override void _UnhandledInput(InputEvent inputEvent)
         {
-            if (inputEvent is not InputEventKey tecla || !tecla.Pressed || tecla.Echo || tecla.Keycode != Key.F3)
+            if (!inputEvent.IsActionPressed("toggle_debug") || inputEvent.IsEcho())
             {
                 return;
             }
 
-            var fps = FpsLabel;
+            ChunkGridOverlay.Enabled = !ChunkGridOverlay.Enabled;
 
-            if (fps != null)
+            if (FpsLabel != null)
             {
-                fps.Visible = !fps.Visible;
+                FpsLabel.Visible = ChunkGridOverlay.Enabled;
             }
 
             GetViewport().SetInputAsHandled();
@@ -175,7 +177,7 @@ namespace Jogo25D.UI
 
             MiningHint = DuplicateHotkeySlot(hotkeySlot0);
 
-            ConfigureHotkeyHint(MiningHint, "V", GD.Load<Texture2D>(Textures.Items.PICKAXE_STARTING_ICON));
+            ConfigureHotkeyHint(MiningHint, "V", ItemFactory.Create("pickaxe_starting")?.Icon);
 
             MiningHint.Visible = false;
 

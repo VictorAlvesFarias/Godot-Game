@@ -17,7 +17,6 @@ namespace Jogo25D.Items
         public string Id { get; init; } = "";
         public string Name { get; init; } = "";
         public string Description { get; init; } = "";
-        public Texture2D Icon { get; set; }
         public ItemType Type { get; init; }
         public bool Stackable { get; init; } = false;
         public int MaxStackSize { get; init; } = 99;
@@ -25,6 +24,18 @@ namespace Jogo25D.Items
         public Godot.Collections.Array<BasePropertyData> Properties { get; set; } = new();
         public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
         public Godot.Collections.Array<string> Effects { get; set; } = new();
+
+        // Imagens do item, na pasta com o seu id: a arte no tamanho real de pixel (item no mundo) e o icone do inventario/hotbar.
+        public Texture2D Texture => LoadImage(ref _texture, "texture");
+        public Texture2D Icon => LoadImage(ref _icon, "icon");
+
+        // Pixels do mundo por pixel da arte: a mesma grade do jogador (character.png em pixel real, desenhada em escala 2).
+        public virtual float WorldPixelScale => 2f;
+
+        private const string TexturesDir = "res://Assets/Textures/Items";
+
+        private (bool Loaded, Texture2D Texture) _texture;
+        private (bool Loaded, Texture2D Texture) _icon;
 
         #endregion
 
@@ -105,6 +116,26 @@ namespace Jogo25D.Items
         #endregion
 
         #region Core - Item
+
+        // Carrega a imagem da pasta do item uma vez. Sem o arquivo, fica sem imagem (nada a substitui) e o log avisa.
+        private Texture2D LoadImage(ref (bool Loaded, Texture2D Texture) slot, string name)
+        {
+            if (slot.Loaded)
+            {
+                return slot.Texture;
+            }
+
+            var path = $"{TexturesDir}/{Id}/{name}.png";
+
+            slot = (true, ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null);
+
+            if (slot.Texture == null)
+            {
+                GD.PushWarning($"[ItemDefinition] imagem faltando: {path}");
+            }
+
+            return slot.Texture;
+        }
 
         public bool CanReload(ItemData data)
         {

@@ -22,6 +22,7 @@ namespace Jogo25D.UI
         public Panel ContextMenu { get; private set; }
         public VBoxContainer ContextMenuContainer { get; private set; }
         public Panel DropSlot { get; private set; }
+        public CheckButton AutoPickupToggle { get; private set; }
         public HBoxContainer HotbarRow { get; private set; }
         public GridContainer GridContainer { get; private set; }
         public AnimatedSprite2D CharacterSprite { get; private set; }
@@ -42,8 +43,6 @@ namespace Jogo25D.UI
 
         private static readonly StringName VARIACAO_SLOT = "Slot";
         private static readonly StringName VARIACAO_SLOT_HOVER = "SlotHover";
-        private static readonly StringName VARIACAO_DROP = "DropSlot";
-        private static readonly StringName VARIACAO_DROP_HOVER = "DropSlotHover";
 
         public int SlotCount => Mathf.Min(LocalPlayer?.Inventory?.Size ?? 0, MAX_SLOTS);
 
@@ -173,6 +172,36 @@ namespace Jogo25D.UI
                 ToggleInventory();
                 GetViewport().SetInputAsHandled();
             }
+            else if (@event.IsActionPressed("drop_item") && !@event.IsEcho() && Visible && !IsDragging)
+            {
+                DropHoveredItem();
+                GetViewport().SetInputAsHandled();
+            }
+        }
+
+        // Q com o inventario aberto (o input do jogador fica bloqueado): solta 1 unidade do item do slot sob o mouse.
+        public void DropHoveredItem()
+        {
+            if (LocalPlayer?.Inventory == null || !IsInstanceValid(LocalPlayer))
+            {
+                return;
+            }
+
+            var index = GetSlotAtPosition(GetViewport().GetMousePosition());
+
+            if (index < 0)
+            {
+                return;
+            }
+
+            var slot = InventorySystem.GetSlot(LocalPlayer.Inventory, index);
+
+            if (slot == null || slot.InstanceId <= 0 || slot.Quantity <= 0)
+            {
+                return;
+            }
+
+            LocalPlayer.DropItemRequest(slot.InstanceId, 1);
         }
 
         #endregion
@@ -186,6 +215,7 @@ namespace Jogo25D.UI
             ContextMenu = GetNode<Panel>("ContextMenu");
             ContextMenuContainer = GetNode<VBoxContainer>("ContextMenu/MarginContainer/VBoxContainer");
             DropSlot = GetNode<Panel>("Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/DropSlot");
+            AutoPickupToggle = GetNode<CheckButton>("Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/AutoPickup");
             HotbarRow = GetNode<HBoxContainer>("Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/HotbarRow");
             GridContainer = GetNode<GridContainer>("Root/Panel/MainPanel/MarginContainer/MainRow/InventoryColumn/GridScroll/GridContainer");
             CharacterSprite = GetNode<AnimatedSprite2D>("Root/Panel/MainPanel/MarginContainer/MainRow/StatsColumn/SpriteBox2/VBoxContainer/CenterContainer/CharacterSprite");
@@ -199,6 +229,14 @@ namespace Jogo25D.UI
 
         private void Initialize()
         {
+            AutoPickupToggle.Toggled += pressed =>
+            {
+                if (LocalPlayer != null && IsInstanceValid(LocalPlayer))
+                {
+                    LocalPlayer.AutoPickup = pressed;
+                }
+            };
+
             var dropTarget = DropSlot;
 
             if (dropTarget != null)
@@ -211,8 +249,8 @@ namespace Jogo25D.UI
                     }
                 }
 
-                dropTarget.MouseEntered += () => dropTarget.ThemeTypeVariation = VARIACAO_DROP_HOVER;
-                dropTarget.MouseExited += () => dropTarget.ThemeTypeVariation = VARIACAO_DROP;
+                dropTarget.MouseEntered += () => dropTarget.ThemeTypeVariation = VARIACAO_SLOT_HOVER;
+                dropTarget.MouseExited += () => dropTarget.ThemeTypeVariation = VARIACAO_SLOT;
             }
 
             GridContainer.Columns = 8;
@@ -571,9 +609,12 @@ namespace Jogo25D.UI
                 IconRects[index].Texture = null;
                 NameLabels[index].Visible = false;
                 QuantityLabels[index].Text = "";
+                SlotPanels[index].TooltipText = "";
 
                 return;
             }
+
+            SlotPanels[index].TooltipText = definition.Name;
 
             if (definition.Icon != null)
             {
@@ -723,6 +764,8 @@ namespace Jogo25D.UI
             if (Visible)
             {
                 PlayerInput?.AddBlocker("inventory");
+
+                AutoPickupToggle.SetPressedNoSignal(LocalPlayer.AutoPickup);
 
                 OnInventoryChanged();
                 UpdatePropertiesList();
