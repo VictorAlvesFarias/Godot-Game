@@ -62,7 +62,7 @@ namespace Jogo25D.Light
 
         private TerrainLayer ComposeLayer => GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
         private TerrainLayer BaseLayer => GetNodeOrNull<TerrainLayer>(BaseLayerPath);
-        private TileMapLayer WallLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
+        private TileMapLayer WallsLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("Walls");
         public TerrainCache Terrain { get; private set; }
 
         private static readonly LightPropagationDispatcher Propagation = new();
@@ -280,7 +280,7 @@ namespace Jogo25D.Light
 
             foreach (var child in GetParent().GetChildren())
             {
-                if (child is BackgroundWallLayer wall)
+                if (child is WallLayer wall)
                 {
                     _walls.Add(wall);
                 }
@@ -306,7 +306,7 @@ namespace Jogo25D.Light
 
         private static bool IsLightBlocker(TileMapLayer layer)
         {
-            return layer is not BackgroundWallLayer && layer.Name != "Base";
+            return layer is not WallLayer && layer.Name != "Base";
         }
 
         #endregion
@@ -993,7 +993,7 @@ namespace Jogo25D.Light
                 used = baseUsed.Size == Vector2I.Zero ? used : used.Merge(baseUsed);
             }
 
-            var walls = WallLayer;
+            var walls = WallsLayer;
 
             if (walls != null && walls.GetUsedRect().Size != Vector2I.Zero)
             {
@@ -1060,7 +1060,7 @@ namespace Jogo25D.Light
                 new Vector2I(chunkSize + (padding * 2), chunkSize + (padding * 2)));
             var layer = ComposeLayer;
             var baseLayer = BaseLayer;
-            var walls = WallLayer;
+            var walls = WallsLayer;
 
             bool IsSolid(Vector2I cell)
             {
@@ -1117,7 +1117,7 @@ namespace Jogo25D.Light
 
             var bounds = new Rect2I(chunkOrigin * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize);
 
-            using var mask = TerrainLightMask.Build(bounds, overlayRoot, WallLayer, BaseLayer, ComposeLayer);
+            using var mask = TerrainLightMask.Build(bounds, overlayRoot, WallsLayer, BaseLayer, ComposeLayer);
 
             overlay.UpdateOutput(output, mask, LightingConstants.CHUNK_PADDING, region.Size.X);
         }

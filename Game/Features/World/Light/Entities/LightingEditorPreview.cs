@@ -268,7 +268,7 @@ namespace Jogo25D.Light
         {
             var level = GetParent() is LightMap2D ? GetParent().GetParent() : GetParent();
 
-            _walls = level?.GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+            _walls = level?.GetNodeOrNull<WallLayer>("Walls");
             _layer = GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
             _baseLayer = GetNodeOrNull<TerrainLayer>(BaseLayerPath);
 

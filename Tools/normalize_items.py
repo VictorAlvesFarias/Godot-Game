@@ -47,12 +47,12 @@ TARGET_SIZE = {
 
 # Blocos: tileset, fontes desenhadas de baixo para cima (como as camadas Base e Compose) e o modulate da camada.
 WORLD_TILESET = "world_biomes_tileset.tres"
-WALLS_TILESET = "background_walls_tileset.tres"
+WALLS_TILESET = "walls_tileset.tres"
 BLOCK_TILES = {
     "block_dirt": (WORLD_TILESET, [1, 0], 1.0),   # Base: bordercap do bioma lime; Compose: lime_grass
     "item_wood": (WORLD_TILESET, [6], 1.0),
     "item_leaf": (WORLD_TILESET, [7], 1.0),
-    "wall_wood": (WALLS_TILESET, [6], 0.65),      # BackgroundWalls desenha com self_modulate 0.65
+    "wall_wood": (WALLS_TILESET, [6], 0.65),      # Walls desenha com self_modulate 0.65
     "wall_dirt": (WALLS_TILESET, [1], 0.65),      # a parede de terra gerada usa o bordercap do bioma
 }
 

@@ -17,7 +17,7 @@ namespace Jogo25D.Biomes
     // Herda o autotile do TerrainLayer para as paredes geradas. No mundo procedural tudo sai do TerrainCache
     // (geradas com autotile, as do jogador com o tile do BlockDB); no autoral as paredes ficam guardadas como estao.
     [Tool, GlobalClass]
-    public partial class BackgroundWallLayer : TerrainLayer
+    public partial class WallLayer : TerrainLayer
     {
         #region Dinamic properties
 

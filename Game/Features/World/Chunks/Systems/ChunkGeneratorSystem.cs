@@ -29,7 +29,7 @@ namespace Jogo25D.Chunks
 
         public async Task PaintTilesAsync(TerrainLayer target, TerrainLayer baseTarget, long worldSeed, string dimensionId, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
-            var walls = target.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+            var walls = target.GetParent().GetNodeOrNull<WallLayer>("Walls");
 
             walls?.RestoreChunk(chunkCoord);
 
@@ -106,7 +106,7 @@ namespace Jogo25D.Chunks
 
         public async Task EraseTilesAsync(TileMapLayer target, TileMapLayer baseTarget, Vector2I chunkCoord, int chunkSize, int cellsPerFrame = 200)
         {
-            target.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls")?.UnloadChunk(chunkCoord);
+            target.GetParent().GetNodeOrNull<WallLayer>("Walls")?.UnloadChunk(chunkCoord);
 
             var baseCellX = chunkCoord.X * chunkSize;
             var baseCellY = chunkCoord.Y * chunkSize;

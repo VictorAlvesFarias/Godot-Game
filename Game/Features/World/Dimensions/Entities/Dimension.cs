@@ -77,7 +77,7 @@ namespace Jogo25D.Dimensions
 
         private TerrainLayer _layer;
         private TerrainLayer _baseLayer;
-        private BackgroundWallLayer _walls;
+        private WallLayer _walls;
         private Node2D _entities;
         private SubViewportContainer _container;
 
@@ -85,7 +85,7 @@ namespace Jogo25D.Dimensions
 
         public TerrainLayer BaseLayer => _baseLayer;
 
-        public BackgroundWallLayer Walls => _walls;
+        public WallLayer Walls => _walls;
 
         public Node2D Entities => _entities;
 
@@ -93,7 +93,7 @@ namespace Jogo25D.Dimensions
         {
             _layer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_LAYER_NAME);
             _baseLayer = GetNodeOrNull<TerrainLayer>(ChunkStreamingConstants.PROCEDURAL_BASE_LAYER_NAME);
-            _walls = GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls");
+            _walls = GetNodeOrNull<WallLayer>("Walls");
             _entities = GetNodeOrNull<Node2D>("Entities");
             _container = GetParent()?.GetParent() as SubViewportContainer;
 
@@ -195,6 +195,9 @@ namespace Jogo25D.Dimensions
                 return;
             }
 
+            // O novo no fica na mesma posicao: entre as paredes e o terreno.
+            var index = _entities.GetIndex();
+
             RemoveChild(_entities);
 
             _entities.Name = "EntitiesDiscarded";
@@ -203,6 +206,7 @@ namespace Jogo25D.Dimensions
             _entities = new Node2D { Name = "Entities" };
 
             AddChild(_entities);
+            MoveChild(_entities, index);
         }
 
         public void ClearLayers(bool discardBackground = false)

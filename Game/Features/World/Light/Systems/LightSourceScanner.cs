@@ -64,7 +64,7 @@ namespace Jogo25D.Light
         {
             if (hasBackground == null)
             {
-                var walls = layer.GetParent()?.GetNodeOrNull<TileMapLayer>("BackgroundWalls");
+                var walls = layer.GetParent()?.GetNodeOrNull<TileMapLayer>("Walls");
 
                 hasBackground = cell => walls != null && walls.GetCellSourceId(cell) != -1;
             }

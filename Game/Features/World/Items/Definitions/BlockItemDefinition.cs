@@ -32,7 +32,7 @@ namespace Jogo25D.Items
         {
             if (Background)
             {
-                if (ResolveTarget(player) is not BackgroundWallLayer walls)
+                if (ResolveTarget(player) is not WallLayer walls)
                 {
                     return;
                 }
@@ -94,7 +94,7 @@ namespace Jogo25D.Items
         private TileMapLayer ResolveTarget(Player player)
         {
             var layer = player.GetActiveTileLayer();
-            return Background ? layer?.GetParent().GetNodeOrNull<BackgroundWallLayer>("BackgroundWalls") : layer;
+            return Background ? layer?.GetParent().GetNodeOrNull<WallLayer>("Walls") : layer;
         }
 
         private static Vector2I ResolveCellInRange(Player player, TileMapLayer layer, float reach)
