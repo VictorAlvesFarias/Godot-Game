@@ -66,84 +66,82 @@ script = ExtResource("0_dimupsidedown")
 
 [node name="Background" type="Node2D" parent="." unique_id=655906721]
 script = ExtResource("1_2t3hh")
-SwapDistance = null
-FadeRange = null
 metadata/SwapDistance = 1000.0
 
 [node name="Sky" type="Parallax2D" parent="Background" unique_id=48608607]
 scroll_scale = Vector2(0.05, 0.05)
-repeat_size = Vector2(5184, 2916)
+repeat_size = Vector2(1152, 648)
 repeat_times = 30
 
 [node name="Sprite" type="Sprite2D" parent="Background/Sky" unique_id=1042977176]
 texture_filter = 1
-position = Vector2(16, 304)
-scale = Vector2(9, 9)
+position = Vector2(4, 68)
+scale = Vector2(2, 2)
 texture = ExtResource("2_a7an3")
 
 [node name="Horizon" type="Parallax2D" parent="Background" unique_id=787210633]
 scroll_scale = Vector2(0.15, 0.15)
-repeat_size = Vector2(5184, 0)
+repeat_size = Vector2(1152, 1296)
 repeat_times = 30
 
 [node name="Layer3" type="Sprite2D" parent="Background/Horizon" unique_id=330625409]
 texture_filter = 1
-scale = Vector2(9, 9)
+scale = Vector2(2, 2)
 texture = ExtResource("3_yegaj")
 
 [node name="Layer4" type="Sprite2D" parent="Background/Horizon" unique_id=1921396780]
 texture_filter = 1
-position = Vector2(64, -25)
-scale = Vector2(9, 9)
+position = Vector2(14, 0)
+scale = Vector2(2, 2)
 texture = ExtResource("4_ufdy7")
 
 [node name="HorizonFlipped" type="Parallax2D" parent="Background" unique_id=823582842]
 scroll_scale = Vector2(0.15, 0.15)
-repeat_size = Vector2(5184, 0)
+repeat_size = Vector2(1152, 1296)
 repeat_times = 30
 
 [node name="Layer3F" type="Sprite2D" parent="Background/HorizonFlipped" unique_id=604118442]
 texture_filter = 1
-position = Vector2(0, 2916)
-scale = Vector2(9, -9)
+position = Vector2(0, 648)
+scale = Vector2(2, -2)
 texture = ExtResource("3_yegaj")
 
 [node name="Layer4F" type="Sprite2D" parent="Background/HorizonFlipped" unique_id=1891975072]
 texture_filter = 1
-position = Vector2(0, 2916)
-scale = Vector2(9, -9)
+position = Vector2(0, 648)
+scale = Vector2(2, -2)
 texture = ExtResource("4_ufdy7")
 
 [node name="HorizonAlt" type="Parallax2D" parent="Background" unique_id=991270038]
 scroll_scale = Vector2(0.15, 0.15)
-repeat_size = Vector2(5184, 0)
+repeat_size = Vector2(1152, 1296)
 repeat_times = 30
 
 [node name="Layer2" type="Sprite2D" parent="Background/HorizonAlt" unique_id=1553049902]
 texture_filter = 1
-scale = Vector2(9, 9)
+scale = Vector2(2, 2)
 texture = ExtResource("5_blm8h")
 
 [node name="Layer6" type="Sprite2D" parent="Background/HorizonAlt" unique_id=1544168714]
 texture_filter = 1
-scale = Vector2(9, 9)
+scale = Vector2(2, 2)
 texture = ExtResource("6_kqktc")
 
 [node name="HorizonAltFlipped" type="Parallax2D" parent="Background" unique_id=65240370]
 scroll_scale = Vector2(0.15, 0.15)
-repeat_size = Vector2(5184, 0)
+repeat_size = Vector2(1152, 1296)
 repeat_times = 30
 
 [node name="Layer2F" type="Sprite2D" parent="Background/HorizonAltFlipped" unique_id=660402122]
 texture_filter = 1
-position = Vector2(0, 2916)
-scale = Vector2(9, -9)
+position = Vector2(0, 648)
+scale = Vector2(2, -2)
 texture = ExtResource("5_blm8h")
 
 [node name="Layer6F" type="Sprite2D" parent="Background/HorizonAltFlipped" unique_id=1003519414]
 texture_filter = 1
-position = Vector2(0, 2916)
-scale = Vector2(9, -9)
+position = Vector2(0, 648)
+scale = Vector2(2, -2)
 texture = ExtResource("6_kqktc")
 
 [node name="BackgroundWalls" type="TileMapLayer" parent="." unique_id=1267322931 node_paths=PackedStringArray("_baseLayer")]
