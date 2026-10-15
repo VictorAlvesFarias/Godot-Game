@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Components/RecipeRow.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Items/crafting_table/icon.png" id="2_preview"]
+
+[node name="RecipeRow" type="Button"]
+custom_minimum_size = Vector2(0, 52)
+size_flags_horizontal = 3
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Content" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/Content"]
+texture = ExtResource("2_preview")
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="MarginContainer/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="NameLabel" type="Label" parent="MarginContainer/Content/Texts"]
+layout_mode = 2
+mouse_filter = 2
+text = "Mesa de criação"
+
+[node name="IngredientsLabel" type="RichTextLabel" parent="MarginContainer/Content/Texts"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "Madeira 0/4"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0

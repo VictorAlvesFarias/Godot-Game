@@ -1,0 +1,639 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/InventoryCard.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/InventorySlot.tscn" id="2_slot"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="InventoryCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(734, 940)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="TitleWrap" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap"]
+layout_mode = 2
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+theme_type_variation = &"TitleCardSmall"
+vertical_alignment = 1
+text = "INVENTÁRIO"
+horizontal_alignment = 1
+
+[node name="Box" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="Box/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HotbarRow" type="HBoxContainer" parent="Box/MarginContainer/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Slot1" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 0
+
+[node name="Slot2" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 1
+
+[node name="Slot3" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 2
+
+[node name="Slot4" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 3
+
+[node name="Slot5" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 4
+
+[node name="Slot6" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 5
+
+[node name="Slot7" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 6
+
+[node name="Slot8" parent="Box/MarginContainer/Content/HotbarRow" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 7
+
+[node name="GridScroll" type="ScrollContainer" parent="Box/MarginContainer/Content"]
+custom_minimum_size = Vector2(678, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridContainer" type="GridContainer" parent="Box/MarginContainer/Content/GridScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 8
+
+[node name="Slot9" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 8
+
+[node name="Slot10" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 9
+
+[node name="Slot11" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 10
+
+[node name="Slot12" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 11
+
+[node name="Slot13" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 12
+
+[node name="Slot14" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 13
+
+[node name="Slot15" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 14
+
+[node name="Slot16" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 15
+
+[node name="Slot17" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 16
+
+[node name="Slot18" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 17
+
+[node name="Slot19" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 18
+
+[node name="Slot20" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 19
+
+[node name="Slot21" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 20
+
+[node name="Slot22" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 21
+
+[node name="Slot23" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 22
+
+[node name="Slot24" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 23
+
+[node name="Slot25" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 24
+
+[node name="Slot26" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 25
+
+[node name="Slot27" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 26
+
+[node name="Slot28" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 27
+
+[node name="Slot29" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 28
+
+[node name="Slot30" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 29
+
+[node name="Slot31" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 30
+
+[node name="Slot32" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 31
+
+[node name="Slot33" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 32
+
+[node name="Slot34" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 33
+
+[node name="Slot35" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 34
+
+[node name="Slot36" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 35
+
+[node name="Slot37" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 36
+
+[node name="Slot38" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 37
+
+[node name="Slot39" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 38
+
+[node name="Slot40" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 39
+
+[node name="Slot41" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 40
+
+[node name="Slot42" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 41
+
+[node name="Slot43" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 42
+
+[node name="Slot44" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 43
+
+[node name="Slot45" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 44
+
+[node name="Slot46" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 45
+
+[node name="Slot47" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 46
+
+[node name="Slot48" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 47
+
+[node name="Slot49" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 48
+
+[node name="Slot50" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 49
+
+[node name="Slot51" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 50
+
+[node name="Slot52" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 51
+
+[node name="Slot53" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 52
+
+[node name="Slot54" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 53
+
+[node name="Slot55" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 54
+
+[node name="Slot56" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 55
+
+[node name="Slot57" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 56
+
+[node name="Slot58" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 57
+
+[node name="Slot59" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 58
+
+[node name="Slot60" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 59
+
+[node name="Slot61" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 60
+
+[node name="Slot62" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 61
+
+[node name="Slot63" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 62
+
+[node name="Slot64" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 63
+
+[node name="Slot65" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 64
+
+[node name="Slot66" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 65
+
+[node name="Slot67" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 66
+
+[node name="Slot68" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 67
+
+[node name="Slot69" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 68
+
+[node name="Slot70" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 69
+
+[node name="Slot71" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 70
+
+[node name="Slot72" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 71
+
+[node name="Slot73" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 72
+
+[node name="Slot74" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 73
+
+[node name="Slot75" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 74
+
+[node name="Slot76" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 75
+
+[node name="Slot77" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 76
+
+[node name="Slot78" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 77
+
+[node name="Slot79" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 78
+
+[node name="Slot80" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 79
+
+[node name="Slot81" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 80
+
+[node name="Slot82" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 81
+
+[node name="Slot83" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 82
+
+[node name="Slot84" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 83
+
+[node name="Slot85" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 84
+
+[node name="Slot86" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 85
+
+[node name="Slot87" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 86
+
+[node name="Slot88" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 87
+
+[node name="Slot89" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 88
+
+[node name="Slot90" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 89
+
+[node name="Slot91" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 90
+
+[node name="Slot92" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 91
+
+[node name="Slot93" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 92
+
+[node name="Slot94" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 93
+
+[node name="Slot95" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 94
+
+[node name="Slot96" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 95
+
+[node name="Slot97" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 96
+
+[node name="Slot98" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 97
+
+[node name="Slot99" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 98
+
+[node name="Slot100" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 99
+
+[node name="Slot101" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 100
+
+[node name="Slot102" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 101
+
+[node name="Slot103" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 102
+
+[node name="Slot104" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 103
+
+[node name="Slot105" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 104
+
+[node name="Slot106" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 105
+
+[node name="Slot107" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 106
+
+[node name="Slot108" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 107
+
+[node name="Slot109" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 108
+
+[node name="Slot110" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 109
+
+[node name="Slot111" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 110
+
+[node name="Slot112" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 111
+
+[node name="Slot113" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 112
+
+[node name="Slot114" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 113
+
+[node name="Slot115" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 114
+
+[node name="Slot116" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 115
+
+[node name="Slot117" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 116
+
+[node name="Slot118" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 117
+
+[node name="Slot119" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 118
+
+[node name="Slot120" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 119
+
+[node name="Slot121" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 120
+
+[node name="Slot122" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 121
+
+[node name="Slot123" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 122
+
+[node name="Slot124" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 123
+
+[node name="Slot125" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 124
+
+[node name="Slot126" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 125
+
+[node name="Slot127" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 126
+
+[node name="Slot128" parent="Box/MarginContainer/Content/GridScroll/GridContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+Index = 127
+
+[node name="AutoPickup" type="CheckButton" parent="Box/MarginContainer/Content"]
+layout_mode = 2
+button_pressed = true
+text = "Coleta automática"
+
+[node name="DropSlot" type="Panel" parent="Box/MarginContainer/Content"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Slot"
+
+[node name="Label" type="Label" parent="Box/MarginContainer/Content/DropSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "▼  SOLTAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DragPreview" type="Panel" parent="."]
+visible = false
+top_level = true
+z_index = 100
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 1
+mouse_filter = 2
+theme_type_variation = &"DragPreview"
+
+[node name="Icon" type="TextureRect" parent="DragPreview"]
+mouse_filter = 2
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ContextMenu" type="PanelContainer" parent="."]
+visible = false
+top_level = true
+z_index = 100
+custom_minimum_size = Vector2(140, 0)
+theme_type_variation = &"Menu"
+
+[node name="MarginContainer" type="MarginContainer" parent="ContextMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ContextMenu/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="EquipButton" type="Button" parent="ContextMenu/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(120, 30)
+layout_mode = 2
+text = "Equipar"

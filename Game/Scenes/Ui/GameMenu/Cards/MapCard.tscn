@@ -1,0 +1,185 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/MapCard.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://dwh48p6b8gesa" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/zoom.png" id="3_zoom"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/pan.png" id="4_pan"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/mouse_wheel.png" id="5_wheel"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/mouse_middle.png" id="6_middle"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="MapCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(1174, 940)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="TitleWrap" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap"]
+layout_mode = 2
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+theme_type_variation = &"TitleCardSmall"
+vertical_alignment = 1
+text = "MAPA"
+horizontal_alignment = 1
+
+[node name="Box" type="Panel" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="MapView" type="Control" parent="Box"]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("2")
+
+[node name="HintsColumn" type="VBoxContainer" parent="Box"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -76.0
+offset_top = 36.0
+offset_right = -20.0
+offset_bottom = 160.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="ZoomHint" type="Panel" parent="Box/HintsColumn"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"SlotRound"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box/HintsColumn/ZoomHint"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="CenterContainer" type="CenterContainer" parent="Box/HintsColumn/ZoomHint/MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="Box/HintsColumn/ZoomHint/MarginContainer/CenterContainer"]
+texture = ExtResource("3_zoom")
+texture_filter = 1
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CornerIcon" type="TextureRect" parent="Box/HintsColumn/ZoomHint"]
+texture = ExtResource("5_wheel")
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -18.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PanHint" type="Panel" parent="Box/HintsColumn"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"SlotRound"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box/HintsColumn/PanHint"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="CenterContainer" type="CenterContainer" parent="Box/HintsColumn/PanHint/MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="IconRect" type="TextureRect" parent="Box/HintsColumn/PanHint/MarginContainer/CenterContainer"]
+texture = ExtResource("4_pan")
+texture_filter = 1
+custom_minimum_size = Vector2(26, 26)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CornerIcon" type="TextureRect" parent="Box/HintsColumn/PanHint"]
+texture = ExtResource("6_middle")
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -18.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PositionWrap" type="CenterContainer" parent="Box"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -17.0
+offset_bottom = 17.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="PositionLabel" type="Label" parent="Box/PositionWrap"]
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"TitleCardSmall"
+text = "X 0   Y 0"
+horizontal_alignment = 1
+vertical_alignment = 1

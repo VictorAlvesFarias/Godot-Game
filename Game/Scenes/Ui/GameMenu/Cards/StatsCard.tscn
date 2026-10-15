@@ -1,0 +1,83 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/StatsCard.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="StatsCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(250, 462)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="TitleWrap" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap"]
+layout_mode = 2
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+theme_type_variation = &"TitleCardSmall"
+vertical_alignment = 1
+text = "Stats"
+horizontal_alignment = 1
+
+[node name="Box" type="Panel" parent="."]
+custom_minimum_size = Vector2(190.055, 220)
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 37
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Box/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CharacterNameLabel" type="Label" parent="Box/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Jogador #0"
+autowrap_mode = 2
+
+[node name="CharacterHealthLabel" type="Label" parent="Box/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Vida: 0/0"
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Box/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="BuffsTitle" type="Label" parent="Box/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Buffs"
+
+[node name="BuffsScroll" type="ScrollContainer" parent="Box/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BuffsListContainer" type="VBoxContainer" parent="Box/MarginContainer/VBoxContainer/BuffsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EmptyLabel" type="Label" parent="Box/MarginContainer/VBoxContainer/BuffsScroll/BuffsListContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+text = "Nenhum"

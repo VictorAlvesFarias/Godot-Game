@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/CraftingCard.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/RecipeRow.tscn" id="2_row"]
+
+[node name="CraftingCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(420, 940)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="TitleWrap" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap"]
+layout_mode = 2
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+theme_type_variation = &"TitleCardSmall"
+vertical_alignment = 1
+text = "CRIAÇÃO"
+horizontal_alignment = 1
+
+[node name="Box" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="Box/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SearchInput" type="LineEdit" parent="Box/MarginContainer/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+placeholder_text = "Buscar receita"
+clear_button_enabled = true
+
+[node name="Scroll" type="ScrollContainer" parent="Box/MarginContainer/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="RecipeList" type="VBoxContainer" parent="Box/MarginContainer/Content/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="RecipeRowPreview" parent="Box/MarginContainer/Content/Scroll/RecipeList" instance=ExtResource("2_row")]
+layout_mode = 2
+
+[node name="HintLabel" type="Label" parent="Box/MarginContainer/Content"]
+layout_mode = 2
+theme_type_variation = &"Hint"
+text = "Receitas de mesa aparecem perto de uma mesa de criação"
+autowrap_mode = 3

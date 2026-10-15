@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="PropertyLine" type="Label"]
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "Property line"
+autowrap_mode = 3
+theme = ExtResource("theme_pixel")

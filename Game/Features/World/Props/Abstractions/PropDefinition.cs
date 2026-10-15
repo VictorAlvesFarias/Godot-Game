@@ -9,6 +9,12 @@ namespace Jogo25D.Props
         public string Id { get; init; }
         public string ScenePath { get; init; }
 
+        // Item que coloca o prop e que cai quando ele e quebrado.
+        public string ItemId { get; init; }
+
+        // Estacao de criacao que o prop oferece (receitas com essa estacao), ou null.
+        public string Station { get; init; }
+
         #endregion
 
         #region Core - Spawn

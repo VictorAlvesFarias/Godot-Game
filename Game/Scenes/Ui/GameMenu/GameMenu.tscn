@@ -1,0 +1,296 @@
+[gd_scene format=3 uid="uid://du2rl5uua1bga"]
+
+[ext_resource type="Script" uid="uid://c6r8th756iqxu" path="res://Features/UI/GameMenu/View/GameMenuUI.cs" id="1"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/InventoryCard.tscn" id="2_inventory"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/CraftingCard.tscn" id="3_crafting"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/PlayerCard.tscn" id="4_player"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/StatsCard.tscn" id="5_stats"]
+[ext_resource type="PackedScene" uid="uid://fm1g31fd5a3p" path="res://Scenes/Ui/GameMenu/Cards/SkillTreeCard.tscn" id="6_skilltree"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/MapCard.tscn" id="7_map"]
+[ext_resource type="Texture2D" uid="uid://cq6ce2o7eunw7" path="res://Assets/Textures/UI/Menu/crafting.png" id="icon_crafting"]
+[ext_resource type="Texture2D" uid="uid://jhjg6b8mfxw4" path="res://Assets/Textures/UI/Menu/inventory.png" id="icon_inventory"]
+[ext_resource type="Texture2D" uid="uid://ugimlokvp505" path="res://Assets/Textures/UI/Menu/map.png" id="icon_map"]
+[ext_resource type="Texture2D" uid="uid://c8jtg36cpovtk" path="res://Assets/Textures/UI/Menu/skills.png" id="icon_skills"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="GameMenu" type="CanvasLayer" unique_id=1740603413]
+layer = 10
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="." unique_id=79010990]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("theme_pixel")
+
+[node name="Panel" type="Panel" parent="Root" unique_id=683490265]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Screen"
+
+[node name="Center" type="CenterContainer" parent="Root" unique_id=361680568]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="HBoxContainer" parent="Root/Center" unique_id=679876186]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Sidebar" type="VBoxContainer" parent="Root/Center/Layout" unique_id=810427745]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TopSpacer" type="Control" parent="Root/Center/Layout/Sidebar" unique_id=639839037]
+custom_minimum_size = Vector2(0, 7)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="InventoryTab" type="Button" parent="Root/Center/Layout/Sidebar" unique_id=1886152614]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "Inventário"
+focus_mode = 0
+toggle_mode = true
+
+[node name="Icon" type="TextureRect" parent="Root/Center/Layout/Sidebar/InventoryTab" unique_id=349927710]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 22.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("icon_inventory")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Key" type="Label" parent="Root/Center/Layout/Sidebar/InventoryTab" unique_id=2050753283]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -22.0
+offset_right = -6.0
+offset_bottom = -4.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.93, 0.72, 0.31, 1)
+theme_override_font_sizes/font_size = 16
+text = "I"
+horizontal_alignment = 2
+
+[node name="CraftingTab" type="Button" parent="Root/Center/Layout/Sidebar" unique_id=2077286060]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "Criação"
+focus_mode = 0
+toggle_mode = true
+
+[node name="Icon" type="TextureRect" parent="Root/Center/Layout/Sidebar/CraftingTab" unique_id=448792566]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 22.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("icon_crafting")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Key" type="Label" parent="Root/Center/Layout/Sidebar/CraftingTab" unique_id=1077962513]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -22.0
+offset_right = -6.0
+offset_bottom = -4.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.93, 0.72, 0.31, 1)
+theme_override_font_sizes/font_size = 16
+text = "C"
+horizontal_alignment = 2
+
+[node name="SkillsTab" type="Button" parent="Root/Center/Layout/Sidebar" unique_id=1659384179]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "Habilidades"
+focus_mode = 0
+toggle_mode = true
+
+[node name="Icon" type="TextureRect" parent="Root/Center/Layout/Sidebar/SkillsTab" unique_id=1321136355]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 22.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("icon_skills")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Key" type="Label" parent="Root/Center/Layout/Sidebar/SkillsTab" unique_id=1498071520]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -22.0
+offset_right = -6.0
+offset_bottom = -4.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.93, 0.72, 0.31, 1)
+theme_override_font_sizes/font_size = 16
+text = "K"
+horizontal_alignment = 2
+
+[node name="MapTab" type="Button" parent="Root/Center/Layout/Sidebar" unique_id=542771218]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+tooltip_text = "Mapa"
+focus_mode = 0
+toggle_mode = true
+
+[node name="Icon" type="TextureRect" parent="Root/Center/Layout/Sidebar/MapTab" unique_id=1961893683]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 22.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("icon_map")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Key" type="Label" parent="Root/Center/Layout/Sidebar/MapTab" unique_id=348443610]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -22.0
+offset_right = -6.0
+offset_bottom = -4.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.93, 0.72, 0.31, 1)
+theme_override_font_sizes/font_size = 16
+text = "M"
+horizontal_alignment = 2
+
+[node name="Pages" type="MarginContainer" parent="Root/Center/Layout" unique_id=1972302934]
+custom_minimum_size = Vector2(1174, 940)
+layout_mode = 2
+
+[node name="InventoryPage" type="HBoxContainer" parent="Root/Center/Layout/Pages" unique_id=1053364453]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="InventoryCard" parent="Root/Center/Layout/Pages/InventoryPage" unique_id=1580401518 instance=ExtResource("2_inventory")]
+
+[node name="Spacer" type="Control" parent="Root/Center/Layout/Pages/InventoryPage" unique_id=118879189]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="SideColumn" type="VBoxContainer" parent="Root/Center/Layout/Pages/InventoryPage" unique_id=950130573]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PlayerCard" parent="Root/Center/Layout/Pages/InventoryPage/SideColumn" unique_id=1489481785 instance=ExtResource("4_player")]
+
+[node name="StatsCard" parent="Root/Center/Layout/Pages/InventoryPage/SideColumn" unique_id=1671072509 instance=ExtResource("5_stats")]
+
+[node name="CraftingPage" type="HBoxContainer" parent="Root/Center/Layout/Pages" unique_id=1971598091]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="CraftingCard" parent="Root/Center/Layout/Pages/CraftingPage" unique_id=336352707 instance=ExtResource("3_crafting")]
+
+[node name="InventoryCard" parent="Root/Center/Layout/Pages/CraftingPage" unique_id=759195970 instance=ExtResource("2_inventory")]
+
+[node name="SkillsPage" type="HBoxContainer" parent="Root/Center/Layout/Pages" unique_id=647443808]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="SkillTreeCard" parent="Root/Center/Layout/Pages/SkillsPage" unique_id=829007981 instance=ExtResource("6_skilltree")]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Root/Center/Layout/Pages/SkillsPage" unique_id=721447100]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="SideColumn" type="VBoxContainer" parent="Root/Center/Layout/Pages/SkillsPage" unique_id=922221074]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PlayerCard" parent="Root/Center/Layout/Pages/SkillsPage/SideColumn" unique_id=2102468935 instance=ExtResource("4_player")]
+
+[node name="StatsCard" parent="Root/Center/Layout/Pages/SkillsPage/SideColumn" unique_id=1635800743 instance=ExtResource("5_stats")]
+
+[node name="MapPage" type="HBoxContainer" parent="Root/Center/Layout/Pages" unique_id=401046490]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="MapCard" parent="Root/Center/Layout/Pages/MapPage" unique_id=192878302 instance=ExtResource("7_map")]

@@ -4,7 +4,7 @@ using Jogo25D.Core;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
 using Jogo25D.Hitboxes;
-using Jogo25D.Portals;
+using Jogo25D.Props;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -99,9 +99,9 @@ namespace Jogo25D.Items
 
         private void UpdateMining(Player player, TileMapLayer layer, TileMapLayer baseLayer, Vector2I targetCell, float breakTimeSeconds)
         {
-            var portal = ResolveMiningTargetPortal(player, layer, targetCell);
+            var prop = ResolveMiningTargetProp(player, layer, targetCell);
 
-            if (portal == null && !IsSolid(layer, baseLayer, targetCell))
+            if (prop == null && !IsSolid(layer, baseLayer, targetCell))
             {
                 ResetMining();
 
@@ -124,9 +124,9 @@ namespace Jogo25D.Items
 
             ResetMining();
 
-            if (portal != null)
+            if (prop != null)
             {
-                portal.BreakClientRequest();
+                prop.BreakClientRequest();
             }
             else
             {
@@ -155,7 +155,8 @@ namespace Jogo25D.Items
             }
         }
 
-        private static Portal ResolveMiningTargetPortal(Player player, TileMapLayer layer, Vector2I targetCell)
+        // Prop (portal, mesa de criacao) cuja celula e a celula mirada.
+        private static Prop ResolveMiningTargetProp(Player player, TileMapLayer layer, Vector2I targetCell)
         {
             var parent = player.GetParent();
 
@@ -166,9 +167,9 @@ namespace Jogo25D.Items
 
             foreach (var child in parent.GetChildren())
             {
-                if (child is Portal portal && layer.LocalToMap(layer.ToLocal(portal.GlobalPosition)) == targetCell)
+                if (child is Prop prop && layer.LocalToMap(layer.ToLocal(prop.GlobalPosition)) == targetCell)
                 {
-                    return portal;
+                    return prop;
                 }
             }
 
@@ -247,7 +248,7 @@ namespace Jogo25D.Items
             return (false, default);
         }
 
-        // Alvo do indicador e da quebra. O portal sob o mouse tem prioridade. Depois, so ha alvo com o mouse na area de conexao
+        // Alvo do indicador e da quebra. O prop sob o mouse (portal, mesa) tem prioridade. Depois, so ha alvo com o mouse na area de conexao
         // de um bloco (a celula dele ou uma das 8 vizinhas e solida). Modo livre: o bloco sob o mouse, ou a vizinha mais proxima
         // do mouse. Modo de aproximacao: o primeiro bloco que o corpo do jogador encontra indo ate o mouse (ou, com o mouse no ar,
         // ate a vizinha mais proxima dele).
@@ -259,7 +260,7 @@ namespace Jogo25D.Items
 
             bool InReach(Vector2I cell) => CellCenter(layer, cell).DistanceTo(origin) <= reach;
 
-            if (ResolveMiningTargetPortal(player, layer, mouseCell) != null && InReach(mouseCell))
+            if (ResolveMiningTargetProp(player, layer, mouseCell) != null && InReach(mouseCell))
             {
                 return (true, mouseCell);
             }

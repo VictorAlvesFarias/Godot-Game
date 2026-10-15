@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://bwv7458yi4ofu" path="res://Scenes/Ui/Pause/Pause.tscn" id="1_0nsdw"]
 [ext_resource type="PackedScene" uid="uid://ckhxte1bcg3a6" path="res://Scenes/Ui/Hud/Hud.tscn" id="2_impxa"]
-[ext_resource type="PackedScene" uid="uid://du2rl5uua1bga" path="res://Scenes/Ui/Inventory/Inventory.tscn" id="3_ebkin"]
+[ext_resource type="PackedScene" uid="uid://du2rl5uua1bga" path="res://Scenes/Ui/GameMenu/GameMenu.tscn" id="3_ebkin"]
 [ext_resource type="PackedScene" uid="uid://b3on12lgpr7t0" path="res://Scenes/Ui/Console/Console.tscn" id="4_console"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Start/Start.tscn" id="7_start"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/WorldSelect/WorldSelect.tscn" id="8_worldselect"]
@@ -10,10 +10,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Common/ErrorModal.tscn" id="10_errormodal"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Common/HostModal.tscn" id="18_hostmodal"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/AddConnection/AddConnection.tscn" id="19_addconnection"]
-[ext_resource type="PackedScene" uid="uid://bli0n422x5i74" path="res://Scenes/Ui/SkillTree/SkillTree.tscn" id="11_skilltree"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/DeathScreen/DeathScreen.tscn" id="12_deathscreen"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/Loading/Loading.tscn" id="13_loading"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/Map/Map.tscn" id="14_map"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/CreateWorld/CreateWorld.tscn" id="15_createworld"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/CharacterSelect/CharacterSelect.tscn" id="16_characterselect"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/CreateCharacter/CreateCharacter.tscn" id="17_createcharacter"]
@@ -27,7 +25,7 @@ visible = false
 [node name="HudUI" parent="." unique_id=1297861463 instance=ExtResource("2_impxa")]
 visible = false
 
-[node name="InventoryUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
+[node name="GameMenuUI" parent="." unique_id=426197288 instance=ExtResource("3_ebkin")]
 visible = false
 
 [node name="ConsoleUI" parent="." unique_id=1263919536 instance=ExtResource("4_console")]
@@ -44,16 +42,10 @@ visible = false
 [node name="ErrorModalUI" parent="." unique_id=1186814461 instance=ExtResource("10_errormodal")]
 visible = false
 
-[node name="SkillTreeUI" parent="." unique_id=814967282 instance=ExtResource("11_skilltree")]
-visible = false
-
 [node name="DeathScreenUI" parent="." unique_id=50380233 instance=ExtResource("12_deathscreen")]
 visible = false
 
 [node name="LoadingUI" parent="." unique_id=1340005292 instance=ExtResource("13_loading")]
-visible = false
-
-[node name="FullscreenMapUI" parent="." unique_id=1636432684 instance=ExtResource("14_map")]
 visible = false
 
 [node name="CreateWorldUI" parent="." unique_id=1064203936 instance=ExtResource("15_createworld")]

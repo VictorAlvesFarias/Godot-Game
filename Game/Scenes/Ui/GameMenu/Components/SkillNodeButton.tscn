@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Components/SkillNodeButton.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Items/effect_poison_damage/icon.png" id="2_preview"]
+
+[node name="SkillNodeButton" type="Button"]
+custom_minimum_size = Vector2(120, 120)
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_type_variation = &"SkillSlot"
+clip_text = true
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Box" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="CenterBox" type="VBoxContainer" parent="MarginContainer/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/Box/CenterBox"]
+texture = ExtResource("2_preview")
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+mouse_filter = 2
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="MarginContainer/Box/CenterBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 11
+text = "Nome da Habilidade"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LevelLabel" type="Label" parent="MarginContainer/Box"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"Quantity"
+theme_override_font_sizes/font_size = 12
+text = "0/0"
+horizontal_alignment = 1

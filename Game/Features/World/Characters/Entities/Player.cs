@@ -4,6 +4,7 @@ using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
+using Jogo25D.Crafting;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Effects;
@@ -668,7 +669,7 @@ namespace Jogo25D.Characters
             }
         }
 
-        // E coleta o item mais proximo no raio de coleta, com ou sem coleta automatica. Sobre um portal, o E e do portal.
+        // E coleta o item mais proximo no raio de coleta, com ou sem coleta automatica. Sobre um prop interagivel, o E e do prop.
         public void HandleInteractPickup()
         {
             if (!Input.Interact || Dimension.Get(GetActiveDimensionId())?.Entities is not Node entities)
@@ -678,7 +679,7 @@ namespace Jogo25D.Characters
 
             var children = entities.GetChildren();
 
-            if (children.OfType<Portals.Portal>().Any(portal => portal.OverlappingLocalPlayer == this))
+            if (children.OfType<Props.Prop>().Any(prop => prop.Interactable && prop.OverlappingLocalPlayer == this))
             {
                 return;
             }
@@ -1520,6 +1521,107 @@ namespace Jogo25D.Characters
             }
 
             RpcId(1, nameof(DropItemReceive), instanceId, quantity);
+        }
+
+        public void CraftRequest(string recipeId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                CraftReceive(recipeId);
+
+                return;
+            }
+
+            RpcId(1, nameof(CraftReceive), recipeId);
+        }
+
+        // Servidor: confere a receita, a estacao e os ingredientes do proprio jogador, aplica a criacao em todos os peers
+        // e, se o resultado nao couber no inventario, solta no chao junto ao jogador.
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void CraftReceive(string recipeId)
+        {
+            var sender = Multiplayer?.GetRemoteSenderId() ?? 0;
+
+            if (!IsAuthoritative() || (sender != 0 && sender != PeerId))
+            {
+                return;
+            }
+
+            var recipe = RecipeDB.Get(recipeId);
+
+            if (recipe == null || ItemFactory.Create(recipe.ResultItemId) == null || !CraftingSystem.HasIngredients(Inventory, recipe))
+            {
+                return;
+            }
+
+            if (recipe.Station != null && !CraftingSystem.StationsNear(this).Contains(recipe.Station))
+            {
+                return;
+            }
+
+            var result = ItemFactory.CreateInstance(recipe.ResultItemId);
+
+            result.Quantity = recipe.ResultQuantity;
+
+            var removals = new Dictionary<long, int>();
+
+            foreach (var (instanceId, quantity) in IngredientSlots(Inventory, recipe))
+            {
+                removals[instanceId] = removals.GetValueOrDefault(instanceId) + quantity;
+            }
+
+            var toInventory = InventorySystem.CanAdd(Inventory, result, removals);
+            var resultData = GodotDictionaryParser.ToDictionary(result);
+
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                CraftApplyReceive(recipeId, resultData, toInventory);
+            }
+            else
+            {
+                Rpc(nameof(CraftApplyReceive), recipeId, resultData, toInventory);
+            }
+
+            if (!toInventory)
+            {
+                EntitySpawner.SpawnWorldItemRequest(result, GlobalPosition, GetActiveDimensionId());
+            }
+        }
+
+        // Todos os peers (so a pedido do servidor): tira os ingredientes e, se couber, poe o resultado com o InstanceId do servidor.
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void CraftApplyReceive(string recipeId, Godot.Collections.Dictionary resultData, bool toInventory)
+        {
+            var sender = Multiplayer?.GetRemoteSenderId() ?? 0;
+            var recipe = RecipeDB.Get(recipeId);
+
+            if ((sender != 0 && sender != 1) || recipe == null)
+            {
+                return;
+            }
+
+            foreach (var (instanceId, quantity) in IngredientSlots(Inventory, recipe))
+            {
+                InventorySystem.RemoveItem(Inventory, instanceId, quantity);
+                RemoveItemDefinitionIfGone(instanceId);
+            }
+
+            if (toInventory)
+            {
+                var item = GodotDictionaryParser.ToResource<ItemData>(resultData);
+
+                if (InventorySystem.AddItem(Inventory, item))
+                {
+                    EnsureItemDefinition(item);
+                }
+            }
+
+            EmitSignal(SignalName.InventoryChanged);
+        }
+
+        private static List<(long InstanceId, int Quantity)> IngredientSlots(InventoryData inventory, RecipeDefinition recipe)
+        {
+            return recipe.Ingredients.SelectMany(ingredient => InventorySystem.TakeItems(inventory, ingredient.ItemId, ingredient.Quantity)).ToList();
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

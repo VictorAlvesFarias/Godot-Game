@@ -29,7 +29,7 @@ OLD_FILES = ("item.png", "dropped.png", "blade.png")
 MAX_SCALE = 8
 OPAQUE_SHARE = 0.35
 
-SWORD, BOW, ARROW, POTION, PORTAL, TOOL = 20, 12, 10, 7, 13, 16
+SWORD, BOW, ARROW, POTION, PORTAL, TOOL, CRAFTING_TABLE = 20, 12, 10, 7, 13, 16, 16
 
 # Lado maior da arte, em pixels da grade do jogador (o jogador tem 19 de altura).
 TARGET_SIZE = {
@@ -41,6 +41,7 @@ TARGET_SIZE = {
     "poison_flask": POTION, "fire_damage_potion": POTION, "health_regen_potion": POTION,
     "speed_potion": POTION, "instant_heal_potion": POTION,
     "portal": PORTAL,
+    "crafting_table": CRAFTING_TABLE,
     "pickaxe_starting": TOOL, "pickaxe_onehit": TOOL, "wall_hammer": TOOL,
 }
 

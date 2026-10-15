@@ -156,12 +156,25 @@ namespace Jogo25D.Items
                     Cooldown = 0.25f,
                 },
 
-                ["portal"] = () => new PortalItemDefinition
+                ["portal"] = () => new PlacePropItemDefinition
                 {
                     Id = "portal",
+                    PropId = "portal",
                     Name = "Portal",
                     Type = ItemType.Misc,
                     Description = "Cria um portal que troca de dimensão ao interagir",
+                    Stackable = true,
+                    MaxStackSize = 99,
+                    Cooldown = 0.25f,
+                },
+
+                ["crafting_table"] = () => new PlacePropItemDefinition
+                {
+                    Id = "crafting_table",
+                    PropId = "crafting_table",
+                    Name = "Mesa de criação",
+                    Type = ItemType.Misc,
+                    Description = "Libera as receitas de mesa para quem está perto dela",
                     Stackable = true,
                     MaxStackSize = 99,
                     Cooldown = 0.25f,

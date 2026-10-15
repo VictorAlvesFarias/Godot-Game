@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/PlayerCard.cs" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://Assets/Textures/Characters/CharacterFrames.tres" id="2_frames"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="PlayerCard" type="VBoxContainer"]
+custom_minimum_size = Vector2(250, 462)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="TitleWrap" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap"]
+layout_mode = 2
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+theme_type_variation = &"TitleCardSmall"
+vertical_alignment = 1
+text = "Player"
+horizontal_alignment = 1
+
+[node name="Box" type="Panel" parent="."]
+custom_minimum_size = Vector2(190.055, 220)
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Box"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="CenterContainer" type="CenterContainer" parent="Box/VBoxContainer"]
+layout_mode = 2
+
+[node name="CharacterSprite" type="AnimatedSprite2D" parent="Box/VBoxContainer/CenterContainer"]
+texture_filter = 1
+scale = Vector2(8, 8)
+sprite_frames = ExtResource("2_frames")
+animation = &"idle"

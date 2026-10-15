@@ -29,8 +29,6 @@ namespace Jogo25D.UI
         public Panel AbilityTemplate { get; private set; }
         public HBoxContainer EffectsContainer { get; private set; }
         public Panel EffectTemplate { get; private set; }
-        public VBoxContainer HotkeysContainer { get; private set; }
-        public Panel HotkeySlot0 { get; private set; }
         public HBoxContainer HotbarContainer { get; private set; }
         public Panel Slot0 { get; private set; }
         public Panel Slot0Selected { get; private set; }
@@ -59,7 +57,7 @@ namespace Jogo25D.UI
 
         #region Node children references
 
-        public Panel MiningHint { get; set; }
+        public HotkeyHint MiningHint { get; private set; }
         public Panel[] HotbarSlotPanels { get; } = new Panel[8];
         public TextureRect[] HotbarIconRects { get; } = new TextureRect[8];
         public Label[] HotbarNameLabels { get; } = new Label[8];
@@ -76,10 +74,6 @@ namespace Jogo25D.UI
         public StyleBoxFlat HotbarSelectedStyle { get; set; }
 
         public override bool IsOverlay => false;
-
-        private static readonly Color COR_ICONE = new Color(0.93f, 0.72f, 0.31f);
-        private static readonly StringName VARIACAO_REDONDO = "SlotRound";
-        private static readonly StringName VARIACAO_REDONDO_HOVER = "SlotRoundHover";
 
         #endregion
 
@@ -158,8 +152,7 @@ namespace Jogo25D.UI
             AbilityTemplate = GetNode<Panel>("MarginContainer/VBoxContainer/AbilitiesContainer/AbilityTemplate");
             EffectsContainer = GetNode<HBoxContainer>("MarginContainer/VBoxContainer/EffectsContainer");
             EffectTemplate = GetNode<Panel>("MarginContainer/VBoxContainer/EffectsContainer/EffectTemplate");
-            HotkeysContainer = GetNode<VBoxContainer>("MarginContainer/TopRightColumn/HotkeysContainer");
-            HotkeySlot0 = GetNode<Panel>("MarginContainer/TopRightColumn/HotkeysContainer/HotkeySlot0");
+            MiningHint = GetNode<HotkeyHint>("MarginContainer/TopRightColumn/HotkeysContainer/MiningHint");
             HotbarContainer = GetNode<HBoxContainer>("MarginContainer/HotbarContainer");
             Slot0 = GetNode<Panel>("MarginContainer/HotbarContainer/Slot0");
             Slot0Selected = GetNode<Panel>("MarginContainer/HotbarContainer/Slot0Selected");
@@ -168,18 +161,6 @@ namespace Jogo25D.UI
         private void Initialize()
         {
             AbilityTemplate.Visible = false;
-
-            var hotkeySlot0 = HotkeySlot0;
-
-            ConfigureHotkeyHint(hotkeySlot0, "I", CreateInventoryIcon());
-            ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "M", CreateMapIcon());
-            ConfigureHotkeyHint(DuplicateHotkeySlot(hotkeySlot0), "K", CreateSkillTreeIcon());
-
-            MiningHint = DuplicateHotkeySlot(hotkeySlot0);
-
-            ConfigureHotkeyHint(MiningHint, "V", ItemFactory.Create("pickaxe_starting")?.Icon);
-
-            MiningHint.Visible = false;
 
             EffectTemplate.Visible = false;
 
@@ -669,49 +650,6 @@ namespace Jogo25D.UI
 
         #region Core - Hotkeys
 
-        public Panel DuplicateHotkeySlot(Panel template)
-        {
-            var panel = (Panel)template.Duplicate();
-
-            HotkeysContainer.AddChild(panel);
-
-            foreach (var child in panel.GetChildren())
-            {
-                if (child is Control control)
-                {
-                    control.MouseFilter = Control.MouseFilterEnum.Ignore;
-                }
-            }
-
-            panel.MouseEntered += () => panel.ThemeTypeVariation = VARIACAO_REDONDO_HOVER;
-            panel.MouseExited += () => panel.ThemeTypeVariation = VARIACAO_REDONDO;
-
-            return panel;
-        }
-
-        public void ConfigureHotkeyHint(Panel panel, string key, Texture2D icon)
-        {
-            var iconRect = panel.GetNode<TextureRect>("MarginContainer/CenterContainer/IconRect");
-            var keyLabel = panel.GetNode<Label>("MarginContainer/CenterContainer/KeyLabel");
-            var cornerLabel = panel.GetNode<Label>("CornerLabel");
-
-            if (icon != null)
-            {
-                iconRect.Texture = icon;
-                iconRect.Visible = true;
-                keyLabel.Visible = false;
-                cornerLabel.Text = key;
-                cornerLabel.Visible = true;
-            }
-            else
-            {
-                keyLabel.Text = key;
-                keyLabel.Visible = true;
-                iconRect.Visible = false;
-                cornerLabel.Visible = false;
-            }
-        }
-
         public void UpdateMiningHint()
         {
             if (MiningHint == null)
@@ -722,70 +660,6 @@ namespace Jogo25D.UI
             MiningHint.Visible = LocalPlayer != null
                 && IsInstanceValid(LocalPlayer)
                 && LocalPlayer.ItemDefinitions.Values.Any(def => def is ToolDefinition);
-        }
-
-        private static Texture2D CreateInventoryIcon()
-        {
-            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
-            var color = COR_ICONE;
-
-            image.FillRect(new Rect2I(2, 2, 8, 8), color);
-            image.FillRect(new Rect2I(12, 2, 8, 8), color);
-            image.FillRect(new Rect2I(2, 12, 8, 8), color);
-            image.FillRect(new Rect2I(12, 12, 8, 8), color);
-
-            return ImageTexture.CreateFromImage(image);
-        }
-
-        private static Texture2D CreateMapIcon()
-        {
-            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
-            var color = COR_ICONE;
-
-            image.FillRect(new Rect2I(1, 1, 20, 3), color);
-            image.FillRect(new Rect2I(1, 18, 20, 3), color);
-            image.FillRect(new Rect2I(1, 1, 3, 20), color);
-            image.FillRect(new Rect2I(18, 1, 3, 20), color);
-
-            FillCircle(image, new Vector2I(11, 11), 4, color);
-
-            return ImageTexture.CreateFromImage(image);
-        }
-
-        private static Texture2D CreateSkillTreeIcon()
-        {
-            var image = Image.CreateEmpty(22, 22, false, Image.Format.Rgba8);
-            var color = COR_ICONE;
-
-            image.FillRect(new Rect2I(4, 10, 14, 2), color);
-
-            FillCircle(image, new Vector2I(5, 11), 3, color);
-            FillCircle(image, new Vector2I(11, 11), 3, color);
-            FillCircle(image, new Vector2I(17, 11), 3, color);
-
-            return ImageTexture.CreateFromImage(image);
-        }
-
-        private static void FillCircle(Image image, Vector2I center, int radius, Color color)
-        {
-            for (int x = -radius; x <= radius; x++)
-            {
-                for (int y = -radius; y <= radius; y++)
-                {
-                    if (x * x + y * y > radius * radius)
-                    {
-                        continue;
-                    }
-
-                    var px = center.X + x;
-                    var py = center.Y + y;
-
-                    if (px >= 0 && px < image.GetWidth() && py >= 0 && py < image.GetHeight())
-                    {
-                        image.SetPixel(px, py, color);
-                    }
-                }
-            }
         }
 
         #endregion

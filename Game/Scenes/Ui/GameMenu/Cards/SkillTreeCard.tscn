@@ -1,0 +1,104 @@
+[gd_scene format=3 uid="uid://fm1g31fd5a3p"]
+
+[ext_resource type="Script" uid="uid://dqwp2jy3bv767" path="res://Features/UI/GameMenu/View/Cards/SkillTreeCard.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/SkillNodeButton.tscn" id="2_node"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+
+[node name="SkillTreeCard" type="VBoxContainer" unique_id=1461094255]
+custom_minimum_size = Vector2(826, 940)
+size_flags_vertical = 3
+theme = ExtResource("theme_pixel")
+theme_override_constants/separation = 16
+script = ExtResource("1_script")
+
+[node name="TitleWrap" type="MarginContainer" parent="." unique_id=498597373]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_bottom = -33
+
+[node name="Title" type="Label" parent="TitleWrap" unique_id=1503314446]
+z_index = 20
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"TitleCardSmall"
+text = "ÁRVORE DE HABILIDADES"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Box" type="PanelContainer" parent="." unique_id=286091239]
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"Box"
+
+[node name="MarginContainer" type="MarginContainer" parent="Box" unique_id=104313673]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="Box/MarginContainer" unique_id=1299949975]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PointsLabel" type="Label" parent="Box/MarginContainer/Content" unique_id=43067729]
+layout_mode = 2
+theme_type_variation = &"Hint"
+horizontal_alignment = 1
+
+[node name="Toolbar" type="HBoxContainer" parent="Box/MarginContainer/Content" unique_id=1781241803]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SearchInput" type="LineEdit" parent="Box/MarginContainer/Content/Toolbar" unique_id=2075317990]
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Buscar"
+
+[node name="ResetButton" type="Button" parent="Box/MarginContainer/Content/Toolbar" unique_id=2034455539]
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+text = "Resetar pontos"
+
+[node name="Scroll" type="ScrollContainer" parent="Box/MarginContainer/Content" unique_id=654153154]
+custom_minimum_size = Vector2(770, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridContainer" type="GridContainer" parent="Box/MarginContainer/Content/Scroll" unique_id=1535381164]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 6
+
+[node name="SkillNodePreview" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=1745084429 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview2" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=1221163318 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview3" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=768571397 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview4" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=953165527 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview5" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=973634642 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview6" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=584594231 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview7" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=1429509033 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview8" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=1968400322 instance=ExtResource("2_node")]
+layout_mode = 2
+
+[node name="SkillNodePreview9" parent="Box/MarginContainer/Content/Scroll/GridContainer" unique_id=1373467604 instance=ExtResource("2_node")]
+layout_mode = 2
