@@ -97,7 +97,7 @@ namespace Jogo25D.Items
                     Description = "Destroi uma area redonda de blocos em um unico golpe",
                     Cooldown = 0.35f,
                     BreakTimeSeconds = 0.01f,
-                    BreakRadius = 2,
+                    BreakRadius = 0,
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
