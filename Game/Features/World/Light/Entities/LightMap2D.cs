@@ -67,10 +67,13 @@ namespace Jogo25D.Light
 
         private static readonly LightPropagationDispatcher Propagation = new();
 
-        private static Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> _lightEmittingBlocks;
+        private static LightEmitterIndex _lightEmittingBlocks;
 
         private readonly HashSet<Vector2I> _loadedChunks = new();
         private readonly HashSet<Vector2I> _dirtyChunks = new();
+
+        // Chunks cujo terreno mudou: a mascara de terreno precisa ser refeita (luz que so se moveu reaproveita a mascara).
+        private readonly HashSet<Vector2I> _maskDirtyChunks = new();
         private readonly HashSet<Vector2I> _inFlightChunks = new();
         private readonly Dictionary<Vector2I, LightChunkOverlay> _chunkOverlays = new();
 
@@ -370,6 +373,8 @@ namespace Jogo25D.Light
 
             _poll = 0;
             _previewDirty = false;
+
+            TerrainCache.LoadOpacity(ComposeLayer?.TileSet);
 
             Terrain ??= new TerrainCache(0, "shadow-preview", 1, false);
 
@@ -855,14 +860,33 @@ namespace Jogo25D.Light
 
         #region Core - Chunks de luz
 
+        // Terreno (bloco ou parede) mudou na celula: luz e mascara dos chunks em volta.
         public void OnCellChanged(Vector2I cell)
         {
-            MarkDirtyWithNeighbors(CoordinateUtilities.CellToChunk(cell));
+            MarkDirtyWithNeighbors(CoordinateUtilities.CellToChunk(cell), terrainChanged: true);
+        }
+
+        // So uma fonte de luz entrou ou saiu da celula (LightSource2D): refaz a luz, reaproveitando a mascara.
+        public void OnLightChanged(Vector2I cell)
+        {
+            MarkDirtyWithNeighbors(CoordinateUtilities.CellToChunk(cell), terrainChanged: false);
         }
 
         private void AttachChunks()
         {
             if (_chunksAttached)
+            {
+                return;
+            }
+
+            // As camadas precisam estar resolvidas antes de escutar as edicoes: sem isso o primeiro frame anexava sem
+            // nenhuma camada e colocar ou quebrar blocos nunca atualizava a luz dos emissores.
+            if (_layers.Count == 0)
+            {
+                Resolve();
+            }
+
+            if (_layers.Count == 0)
             {
                 return;
             }
@@ -916,6 +940,7 @@ namespace Jogo25D.Light
             _chunkOverlays.Clear();
             _loadedChunks.Clear();
             _dirtyChunks.Clear();
+            _maskDirtyChunks.Clear();
             _inFlightChunks.Clear();
         }
 
@@ -938,13 +963,18 @@ namespace Jogo25D.Light
             }
         }
 
-        private void MarkDirtyWithNeighbors(Vector2I chunkCoord)
+        private void MarkDirtyWithNeighbors(Vector2I chunkCoord, bool terrainChanged = true)
         {
             for (var dx = -1; dx <= 1; dx++)
             {
                 for (var dy = -1; dy <= 1; dy++)
                 {
                     _dirtyChunks.Add(chunkCoord + new Vector2I(dx, dy));
+
+                    if (terrainChanged)
+                    {
+                        _maskDirtyChunks.Add(chunkCoord + new Vector2I(dx, dy));
+                    }
                 }
             }
         }
@@ -1061,10 +1091,21 @@ namespace Jogo25D.Light
             var layer = ComposeLayer;
             var baseLayer = BaseLayer;
             var walls = WallsLayer;
+            var terrain = (GetParent() as Dimension)?.Terrain;
+            var emitters = _lightEmittingBlocks;
 
+            // Com o cache do terreno, a varredura e toda em C# (sem ler os tiles celula a celula): o material diz se bloqueia
+            // luz e qual bloco emite. Sem cache (cena autoral no editor), le os tiles.
             bool IsSolid(Vector2I cell)
             {
-                return layer.GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1);
+                return terrain != null ? terrain.Opacity(cell.X, cell.Y) > 0 : TileQueries.Occludes(layer, baseLayer, cell);
+            }
+
+            BlockDefinition EmitterAt(Vector2I cell)
+            {
+                var material = terrain.EditedMaterial(cell.X, cell.Y);
+
+                return material >= 0 && emitters.ByMaterial.TryGetValue(material, out var block) ? block : null;
             }
 
             var sources = LightSourceScanner.CollectSources(
@@ -1074,7 +1115,8 @@ namespace Jogo25D.Light
                 _lightEmittingBlocks,
                 IsSolid,
                 includeSkylight: false,
-                hasBackground: cell => walls != null && walls.GetCellSourceId(cell) != -1);
+                hasBackground: cell => walls != null && walls.GetCellSourceId(cell) != -1,
+                emitterAt: terrain != null ? EmitterAt : null);
 
             _inFlightChunks.Add(chunkCoord);
 
@@ -1113,6 +1155,14 @@ namespace Jogo25D.Light
             {
                 overlay = new LightChunkOverlay(overlayRoot, chunkCoord, tileSize);
                 _chunkOverlays[chunkCoord] = overlay;
+                _maskDirtyChunks.Add(chunkCoord);
+            }
+
+            if (!_maskDirtyChunks.Remove(chunkCoord))
+            {
+                overlay.UpdateOutput(output, null, LightingConstants.CHUNK_PADDING, region.Size.X);
+
+                return;
             }
 
             var bounds = new Rect2I(chunkOrigin * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize);

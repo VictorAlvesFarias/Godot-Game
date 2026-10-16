@@ -37,7 +37,7 @@ namespace Jogo25D.Light
         private readonly HashSet<TileMapLayer> _watched = new();
         private readonly HashSet<TileSet> _watchedSets = new();
 
-        private Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> _lightEmittingBlocks;
+        private LightEmitterIndex _lightEmittingBlocks;
         private LightPropagationDispatcher _propagation;
         private LightTextureOutput _output;
         private ImageTexture _maskTexture;
@@ -351,7 +351,7 @@ namespace Jogo25D.Light
 
             bool IsSolid(Vector2I cell)
             {
-                return _layer.GetCellSourceId(cell) != -1 || (_baseLayer != null && _baseLayer.GetCellSourceId(cell) != -1);
+                return TileQueries.Occludes(_layer, _baseLayer, cell);
             }
 
             var sources = LightSourceScanner.CollectSources(

@@ -4,5 +4,6 @@ namespace Jogo25D.Constants
     {
         public const int LIME_LEAF = 7;
         public const int WOOD = 6;
+        public const int TORCH = 8;
     }
 }

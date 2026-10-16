@@ -20,6 +20,8 @@
 [ext_resource type="PackedScene" path="res://Scenes/World/Props/Campfire.tscn" id="90_campfire"]
 [ext_resource type="Script" uid="uid://chlkgh5rkku84" path="res://Features/World/Biomes/Singletons/WallLayer.cs" id="wall_script"]
 [ext_resource type="TileSet" uid="uid://dcmg5j46t4phg" path="res://Assets/Textures/Tiles/walls_tileset.tres" id="wall_tiles"]
+[ext_resource type="Script" path="res://Features/World/Biomes/Structures/TerrainConnectionRule.cs" id="torch_connection_rule"]
+[ext_resource type="Script" path="res://Features/World/Biomes/Structures/TerrainMatchOptions.cs" id="torch_match_options"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_owex7"]
 shader = ExtResource("8_0ofaq")
@@ -36,6 +38,19 @@ TerrainSet = 1
 AtlasCoord = Vector2i(1, 0)
 Directions = Array[int]([0, 8])
 metadata/_custom_type_script = "uid://dt4b1jkrrfrh1"
+
+[sub_resource type="Resource" id="Resource_torch_rule"]
+script = ExtResource("torch_connection_rule")
+TerrainSetA = 8
+TerrainSetB = -1
+BConnectsToA = false
+Directions = Array[int]([4, 8, 0])
+
+[sub_resource type="Resource" id="Resource_torch_options"]
+script = ExtResource("torch_match_options")
+TerrainSet = 8
+ConnectsToItself = false
+SidePreference = Array[int]([4, 8, 0])
 
 [node name="Upsidedown" type="Node2D" unique_id=726539886]
 script = ExtResource("0_dimupsidedown")
@@ -161,7 +176,9 @@ tile_map_data = PackedByteArray("AADS//D/AAABAAEAAADU//D/AAABAAEAAADV/+//AAABAAE
 tile_set = ExtResource("12_worldbiomes")
 rendering_quadrant_size = 32
 script = ExtResource("11_terrainlayer")
+Connections = Array[Resource]([SubResource("Resource_torch_rule")])
 UseConnections = true
+MatchOptions = Array[Resource]([SubResource("Resource_torch_options")])
 Relations = Array[Resource]([SubResource("Resource_blm8h"), SubResource("Resource_ufdy7")])
 
 [node name="LightMap" type="Node2D" parent="." unique_id=633027984]

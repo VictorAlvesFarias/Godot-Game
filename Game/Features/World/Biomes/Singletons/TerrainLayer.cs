@@ -29,6 +29,7 @@ namespace Jogo25D.Biomes
 
         private const string ConnectionsHint = "24/17:" + nameof(TerrainConnectionRule);
         private const string RelationsHint = "24/17:" + nameof(TileDirectionRelation);
+        private const string MatchOptionsHint = "24/17:" + nameof(TerrainMatchOptions);
 
         private static readonly Vector2I[] NeighborOffsets = new Vector2I[]
         {
@@ -60,7 +61,10 @@ namespace Jogo25D.Biomes
 
         private Godot.Collections.Array<Resource> _connections = new();
         private Godot.Collections.Array<Resource> _relations = new();
-        private ConnectionsMode _mode = ConnectionsMode.Blocklist;
+        private Godot.Collections.Array<Resource> _matchOptions = new();
+        private bool _connectByDefault = true;
+        private List<ConnectionRule> _rules = new();
+        private Dictionary<int, MatchOption> _options = new();
         private bool _useGodotNativeAutotile;
         private bool _useConnections;
         private bool _showTerrainSetDebug;
@@ -101,13 +105,26 @@ namespace Jogo25D.Biomes
             }
         }
 
+        // Terrenos diferentes sem regra para o par: conectados (true) ou nao.
         [Export]
-        public ConnectionsMode Mode
+        public bool ConnectByDefault
         {
-            get => _mode;
+            get => _connectByDefault;
             set
             {
-                _mode = value;
+                _connectByDefault = value;
+                NotifyConfigChanged();
+            }
+        }
+
+        [Export(PropertyHint.TypeString, MatchOptionsHint)]
+        public Godot.Collections.Array<Resource> MatchOptions
+        {
+            get => _matchOptions;
+            set
+            {
+                _matchOptions = value;
+                BuildConnectionRules();
                 NotifyConfigChanged();
             }
         }
@@ -173,6 +190,7 @@ namespace Jogo25D.Biomes
 
             BuildTerrainMap();
             BuildRelationSet();
+            BuildConnectionRules();
             RedrawDebugOverlay();
         }
 
@@ -200,11 +218,14 @@ namespace Jogo25D.Biomes
             TriggerRecalculate();
         }
 
-        public bool AreConnected(int terrainSetA, int terrainSetB)
+        // Os tiles de selfSet se encaixam num vizinho de neighborSet na direcao (vista de selfSet)? Mesmo terreno: sim, salvo
+        // ConnectsToItself = false. Senao vale a regra do par (a especifica vence a com coringa); fora dos lados dela, nao;
+        // sem regra, ConnectByDefault. Sem UseConnections, terrenos diferentes nunca se conectam.
+        public bool Connects(int selfSet, int neighborSet, TileSet.CellNeighbor direction)
         {
-            if (terrainSetA == terrainSetB)
+            if (selfSet == neighborSet)
             {
-                return true;
+                return ConnectsToItself(selfSet);
             }
 
             if (!UseConnections)
@@ -212,7 +233,57 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
-            var hasRule = false;
+            ConnectionRule? best = null;
+            var bestSpecific = false;
+            var bestFromA = true;
+
+            foreach (var rule in _rules)
+            {
+                foreach (var fromA in new[] { true, false })
+                {
+                    var self = fromA ? rule.A : rule.B;
+                    var other = fromA ? rule.B : rule.A;
+
+                    if ((self != selfSet && self != TerrainConnectionRule.AnyTerrain) || (other != neighborSet && other != TerrainConnectionRule.AnyTerrain))
+                    {
+                        continue;
+                    }
+
+                    var specific = self != TerrainConnectionRule.AnyTerrain && other != TerrainConnectionRule.AnyTerrain;
+
+                    if (best == null || (specific && !bestSpecific))
+                    {
+                        best = rule;
+                        bestSpecific = specific;
+                        bestFromA = fromA;
+                    }
+                }
+            }
+
+            if (best is not ConnectionRule found)
+            {
+                return ConnectByDefault;
+            }
+
+            var side = bestFromA ? direction : OppositeDirection(direction);
+
+            if (found.Directions.Count > 0 && !found.Directions.Contains(side))
+            {
+                return false;
+            }
+
+            return bestFromA ? found.AConnectsToB : found.BConnectsToA;
+        }
+
+        public bool ConnectsToItself(int terrainSet)
+        {
+            return !_options.TryGetValue(terrainSet, out var option) || option.ConnectsToItself;
+        }
+
+        private void BuildConnectionRules()
+        {
+            _rules = new List<ConnectionRule>();
+            _options = new Dictionary<int, MatchOption>();
 
             foreach (var resource in Connections)
             {
@@ -221,28 +292,44 @@ namespace Jogo25D.Biomes
                     continue;
                 }
 
-                var ruleAVariant = resource.Get(TerrainConnectionRule.PropertyName.TerrainSetA);
-                var ruleBVariant = resource.Get(TerrainConnectionRule.PropertyName.TerrainSetB);
+                var directions = new HashSet<TileSet.CellNeighbor>();
 
-                if (ruleAVariant.VariantType != Variant.Type.Int || ruleBVariant.VariantType != Variant.Type.Int)
+                foreach (var direction in resource.Get(TerrainConnectionRule.PropertyName.Directions).AsGodotArray<TileSet.CellNeighbor>())
+                {
+                    directions.Add(direction);
+                }
+
+                _rules.Add(new ConnectionRule(
+                    resource.Get(TerrainConnectionRule.PropertyName.TerrainSetA).AsInt32(),
+                    resource.Get(TerrainConnectionRule.PropertyName.TerrainSetB).AsInt32(),
+                    resource.Get(TerrainConnectionRule.PropertyName.AConnectsToB).AsBool(),
+                    resource.Get(TerrainConnectionRule.PropertyName.BConnectsToA).AsBool(),
+                    directions));
+            }
+
+            foreach (var resource in MatchOptions)
+            {
+                if (resource == null)
                 {
                     continue;
                 }
 
-                var ruleA = ruleAVariant.AsInt32();
-                var ruleB = ruleBVariant.AsInt32();
+                var preference = new List<TileSet.CellNeighbor>();
 
-                if ((ruleA == terrainSetA && ruleB == terrainSetB) || (ruleA == terrainSetB && ruleB == terrainSetA))
+                foreach (var side in resource.Get(TerrainMatchOptions.PropertyName.SidePreference).AsGodotArray<TileSet.CellNeighbor>())
                 {
-                    hasRule = true;
-                    break;
+                    preference.Add(side);
                 }
-            }
 
-            return Mode == ConnectionsMode.Blocklist
-                ? !hasRule
-                : hasRule;
+                _options[resource.Get(TerrainMatchOptions.PropertyName.TerrainSet).AsInt32()] = new MatchOption(
+                    resource.Get(TerrainMatchOptions.PropertyName.ConnectsToItself).AsBool(),
+                    preference);
+            }
         }
+
+        private readonly record struct ConnectionRule(int A, int B, bool AConnectsToB, bool BConnectsToA, HashSet<TileSet.CellNeighbor> Directions);
+
+        private readonly record struct MatchOption(bool ConnectsToItself, List<TileSet.CellNeighbor> SidePreference);
 
         private void BuildRelationSet()
         {
@@ -294,6 +381,7 @@ namespace Jogo25D.Biomes
             {
                 BuildTerrainMap();
                 BuildRelationSet();
+                BuildConnectionRules();
                 ReconnectExistingCells(GetUsedCells());
             }
             finally
@@ -550,7 +638,7 @@ namespace Jogo25D.Biomes
                 expected[i] = expected[flankAIndex] && expected[flankBIndex] && cornerConnected[i];
             }
 
-            if (!TryFindMatch(bySignature, expected, out match))
+            if (!FindMatch(terrainSet, bySignature, expected, out match))
             {
                 return false;
             }
@@ -567,13 +655,59 @@ namespace Jogo25D.Biomes
                     return true;
                 }
 
-                if (!TryFindMatch(bySignature, expected, out match))
+                if (!FindMatch(terrainSet, bySignature, expected, out match))
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        // Assinatura exata (descartando cantos, como sempre). Sem tile e com SidePreference no terreno, descarta os lados
+        // ligados do ultimo para o primeiro da preferencia (com os cantos que dependem deles) ate existir um tile.
+        private bool FindMatch(int terrainSet, Dictionary<int, TerrainTileMatch> bySignature, bool[] expected, out TerrainTileMatch match)
+        {
+            if (TryFindMatch(bySignature, expected, out match))
+            {
+                return true;
+            }
+
+            if (!_options.TryGetValue(terrainSet, out var option) || option.SidePreference.Count == 0)
+            {
+                return false;
+            }
+
+            var reduced = (bool[])expected.Clone();
+
+            for (var index = option.SidePreference.Count - 1; index >= 0; index--)
+            {
+                var sideIndex = System.Array.IndexOf(SignatureBits, option.SidePreference[index]);
+
+                if (sideIndex < 0 || !reduced[sideIndex])
+                {
+                    continue;
+                }
+
+                reduced[sideIndex] = false;
+
+                for (var corner = 0; corner < SignatureBits.Length; corner++)
+                {
+                    if (TryGetCornerFlanks(SignatureBits[corner], out var flankA, out var flankB) && (flankA == SignatureBits[sideIndex] || flankB == SignatureBits[sideIndex]))
+                    {
+                        reduced[corner] = false;
+                    }
+                }
+
+                if (TryFindMatch(bySignature, reduced, out match))
+                {
+                    System.Array.Copy(reduced, expected, expected.Length);
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool ApplySelfRelations(Vector2I cell, int terrainSet, Vector2I selfAtlasCoord, bool[] expected, bool[] cornerConnected)
@@ -767,7 +901,7 @@ namespace Jogo25D.Biomes
         {
             if (cellSet.Contains(neighborCell))
             {
-                return true;
+                return ConnectsToItself(terrainSet);
             }
 
             if (GetCellSourceId(neighborCell) == -1)
@@ -782,12 +916,12 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
+            var baseConnected = Connects(terrainSet, tileData.TerrainSet, direction);
+
             if (tileData.TerrainSet == terrainSet)
             {
-                return true;
+                return baseConnected;
             }
-
-            var baseConnected = AreConnected(terrainSet, tileData.TerrainSet);
 
             if (_relationSet == null)
             {
@@ -1015,6 +1149,32 @@ namespace Jogo25D.Biomes
             }
 
             Rpc(nameof(BreakBlockBroadcast), cell);
+
+            foreach (var offset in BlockSupport.DependentOffsets)
+            {
+                DropIfUnsupported(cell + offset);
+            }
+        }
+
+        // Servidor: um bloco que precisa de apoio (tocha) e quebra, com drop, quando nao tem mais apoio.
+        public void DropIfUnsupported(Vector2I cell)
+        {
+            if (Multiplayer.HasMultiplayerPeer() && !Multiplayer.IsServer())
+            {
+                return;
+            }
+
+            var terrain = (GetParent() as Dimension)?.EnsureTerrain().Terrain(cell.X, cell.Y) ?? -1;
+
+            if (terrain < 0 || GetCellSourceId(cell) == -1 || BlockDB.FindByTerrain(terrain) is not { NeedsSupport: true })
+            {
+                return;
+            }
+
+            if (!BlockSupport.HasSupport(this, _baseLayer, GetParent()?.GetNodeOrNull<TileMapLayer>("Walls"), cell))
+            {
+                ProcessBreakBlock(cell);
+            }
         }
 
         private string DropOf(Vector2I cell)
@@ -1053,7 +1213,12 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
-            if (GetCellSourceId(cell) != -1 || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
+            if (TileQueries.HasBlock(this, baseLayer, cell))
+            {
+                return false;
+            }
+
+            if (block.NeedsSupport && !BlockSupport.HasSupport(this, baseLayer, GetParent()?.GetNodeOrNull<TileMapLayer>("Walls"), cell))
             {
                 return false;
             }

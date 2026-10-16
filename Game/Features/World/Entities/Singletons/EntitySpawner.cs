@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Features.World.Items.Resources;
@@ -156,7 +157,7 @@ namespace Jogo25D.Entities
 
             var cell = layer.LocalToMap(layer.ToLocal(position));
 
-            if (layer.GetCellSourceId(cell) != -1 || layer.GetCellSourceId(cell + Vector2I.Down) == -1)
+            if (TileQueries.HasBlock(layer, dimension.BaseLayer, cell) || !TileQueries.Collides(layer, dimension.BaseLayer, cell + Vector2I.Down))
             {
                 return false;
             }

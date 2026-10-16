@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
@@ -51,7 +52,7 @@ namespace Jogo25D.Items
 
             var targetCell = ResolveCellInRange(player, layer, Reach);
 
-            if (!IsGroundedCell(layer, targetCell))
+            if (!IsGroundedCell(layer, player.GetActiveBaseLayer(), targetCell))
             {
                 return;
             }
@@ -76,9 +77,10 @@ namespace Jogo25D.Items
             return layer.LocalToMap(layer.ToLocal(targetWorldPos));
         }
 
-        private static bool IsGroundedCell(TileMapLayer layer, Vector2I cell)
+        // Celula sem bloco, com um bloco que colide embaixo.
+        private static bool IsGroundedCell(TileMapLayer layer, TileMapLayer baseLayer, Vector2I cell)
         {
-            return layer.GetCellSourceId(cell) == -1 && layer.GetCellSourceId(cell + Vector2I.Down) != -1;
+            return !TileQueries.HasBlock(layer, baseLayer, cell) && TileQueries.Collides(layer, baseLayer, cell + Vector2I.Down);
         }
 
         #endregion
@@ -105,7 +107,7 @@ namespace Jogo25D.Items
 
             var cell = ResolveCellInRange(player, layer, Reach);
 
-            if (!IsGroundedCell(layer, cell))
+            if (!IsGroundedCell(layer, player.GetActiveBaseLayer(), cell))
             {
                 HideIndicator(player);
 

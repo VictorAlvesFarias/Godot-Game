@@ -15,6 +15,12 @@ namespace Jogo25D.Blocks
         public int LightRadius { get; init; }
         public Color LightColor { get; init; } = Colors.White;
 
+        // Multiplica o tempo de quebra da ferramenta (1 = normal).
+        public float BreakTimeScale { get; init; } = 1f;
+
+        // So pode existir com apoio (BlockSupport): sem ele nao e colocado, e cai quando o perde.
+        public bool NeedsSupport { get; init; }
+
         #endregion
     }
 }

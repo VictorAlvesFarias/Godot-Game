@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/World/Props/Campfire.tscn" id="90_campfire"]
 [ext_resource type="Script" uid="uid://chlkgh5rkku84" path="res://Features/World/Biomes/Singletons/WallLayer.cs" id="wall_script"]
 [ext_resource type="TileSet" uid="uid://dcmg5j46t4phg" path="res://Assets/Textures/Tiles/walls_tileset.tres" id="wall_tiles"]
+[ext_resource type="Script" path="res://Features/World/Biomes/Structures/TerrainMatchOptions.cs" id="torch_match_options"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_j3rpr"]
 shader = ExtResource("8_w86p4")
@@ -25,6 +26,21 @@ shader = ExtResource("8_w86p4")
 [sub_resource type="Resource" id="Resource_40gko"]
 script = ExtResource("9_cg0d3")
 TerrainSetB = 1
+AConnectsToB = false
+BConnectsToA = false
+
+[sub_resource type="Resource" id="Resource_torch_rule"]
+script = ExtResource("9_cg0d3")
+TerrainSetA = 8
+TerrainSetB = -1
+BConnectsToA = false
+Directions = Array[int]([4, 8, 0])
+
+[sub_resource type="Resource" id="Resource_torch_options"]
+script = ExtResource("torch_match_options")
+TerrainSet = 8
+ConnectsToItself = false
+SidePreference = Array[int]([4, 8, 0])
 
 [node name="Overworld" type="Node2D" unique_id=1584147225]
 script = ExtResource("0_dimoverworld")
@@ -138,8 +154,9 @@ tile_map_data = PackedByteArray("AACm//D/AAAAAAAAAACm//H/AAAAAAEAAACn//D/AAABAAA
 tile_set = ExtResource("13_worldbiomes")
 rendering_quadrant_size = 32
 script = ExtResource("12_terrainlayer")
-Connections = Array[Resource]([SubResource("Resource_40gko")])
+Connections = Array[Resource]([SubResource("Resource_40gko"), SubResource("Resource_torch_rule")])
 UseConnections = true
+MatchOptions = Array[Resource]([SubResource("Resource_torch_options")])
 
 [node name="LightMap" type="Node2D" parent="." unique_id=1324493157]
 script = ExtResource("14_lightmap")

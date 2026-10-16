@@ -36,6 +36,9 @@ namespace Jogo25D.Dimensions
 
         private const int ProceduralInterior = int.MaxValue;
         private const int StripCacheLimit = 128;
+
+        private static readonly Dictionary<int, bool> _opaqueMaterials = new();
+        private static ulong _opacityTileSet;
         private const int InteriorTileCacheLimit = 512;
 
         public long Seed { get; }
@@ -75,17 +78,84 @@ namespace Jogo25D.Dimensions
             return terrain >= 0 ? terrain : layer.GetCellSourceId(cell);
         }
 
+        // Material que bloqueia luz: o que o tileset diz (LoadOpacity). Material desconhecido bloqueia, como o interior gerado.
         public static byte TerrainOpacity(int terrain)
         {
-            return terrain < 0 ? (byte)0 : (byte)255;
+            if (terrain < 0)
+            {
+                return 0;
+            }
+
+            return terrain == ProceduralInterior || !_opaqueMaterials.TryGetValue(terrain, out var opaque) || opaque ? (byte)255 : (byte)0;
         }
 
-        // Runs da coluna x dentro de [yFrom, yTo), ja com as edicoes aplicadas.
+        // Le do tileset quais materiais bloqueiam luz: um terreno, se os tiles dele tem oclusao ou, sendo de bioma, se a
+        // borda do bioma tem (a forma das celulas de bioma fica na borda, no Base); um source sem terreno, pelo proprio tile.
+        public static void LoadOpacity(TileSet tileSet)
+        {
+            if (tileSet == null || tileSet.GetInstanceId() == _opacityTileSet)
+            {
+                return;
+            }
+
+            var bySource = new Dictionary<int, bool>();
+            var byTerrain = new Dictionary<int, bool>();
+
+            for (var index = 0; index < tileSet.GetSourceCount(); index++)
+            {
+                var sourceId = tileSet.GetSourceId(index);
+
+                if (tileSet.GetSource(sourceId) is not TileSetAtlasSource atlas)
+                {
+                    continue;
+                }
+
+                for (var tile = 0; tile < atlas.GetTilesCount(); tile++)
+                {
+                    var coord = atlas.GetTileId(tile);
+                    var occludes = TileQueries.ShapeOf(tileSet, sourceId, coord).Occludes;
+                    var terrainSet = atlas.GetTileData(coord, 0).TerrainSet;
+
+                    bySource[sourceId] = bySource.GetValueOrDefault(sourceId) || occludes;
+
+                    if (terrainSet >= 0)
+                    {
+                        byTerrain[terrainSet] = byTerrain.GetValueOrDefault(terrainSet) || occludes;
+                    }
+                }
+            }
+
+            _opaqueMaterials.Clear();
+
+            foreach (var (sourceId, occludes) in bySource)
+            {
+                _opaqueMaterials[sourceId] = occludes;
+            }
+
+            foreach (var (terrainSet, occludes) in byTerrain)
+            {
+                var biome = BiomeDB.GetByTerrainSet(terrainSet);
+
+                _opaqueMaterials[terrainSet] = occludes || (biome != null && byTerrain.GetValueOrDefault(biome.BorderCapTerrainSet));
+            }
+
+            _opacityTileSet = tileSet.GetInstanceId();
+        }
+
+        // Runs opacas da coluna x dentro de [yFrom, yTo), ja com as edicoes aplicadas: materiais que nao bloqueiam luz
+        // (tocha) ficam de fora, entao nao fazem sombra do sol nem contam como superficie.
         public IReadOnlyList<Run> OpticalColumn(int x, int yFrom, int yTo)
         {
             var runs = BaseRuns(x, yFrom, yTo);
 
-            return _edits.TryGetValue(x, out var edits) ? MergeEdits(runs, edits, yFrom, yTo) : runs;
+            if (_edits.TryGetValue(x, out var edits))
+            {
+                runs = MergeEdits(runs, edits, yFrom, yTo);
+            }
+
+            return runs.Exists(run => TerrainOpacity(run.Terrain) == 0)
+                ? runs.FindAll(run => TerrainOpacity(run.Terrain) > 0)
+                : runs;
         }
 
         // Menor y solido da coluna a partir de OpticalSkyTop, procurando ate limit (exclusivo); limit quando nao ha solido.
@@ -122,6 +192,13 @@ namespace Jogo25D.Dimensions
             }
 
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(Seed, DimensionId, x, y)).TerrainSet;
+        }
+
+        // Material de uma edicao na celula (bloco colocado ou terreno autoral), ou -1: o terreno gerado nunca e bloco
+        // emissor, entao a luz procura emissores so aqui, sem gerar bioma celula a celula.
+        public int EditedMaterial(int x, int y)
+        {
+            return _edits.TryGetValue(x, out var edits) && edits.TryGetValue(y, out var material) ? material : -1;
         }
 
         public byte Opacity(int x, int y)

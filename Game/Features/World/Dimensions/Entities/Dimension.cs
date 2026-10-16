@@ -272,6 +272,8 @@ namespace Jogo25D.Dimensions
                 return _terrain;
             }
 
+            TerrainCache.LoadOpacity(Layer?.TileSet);
+
             _terrain = new TerrainCache(seed, DimensionId, scale, procedural);
 
             if (_walls != null)
@@ -638,7 +640,7 @@ namespace Jogo25D.Dimensions
                 _painted.Add(chunkCoord);
             }
 
-            _minimap.RecordChunk(DimensionId, layer, chunkCoord);
+            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord);
 
             _loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
 
@@ -891,7 +893,7 @@ namespace Jogo25D.Dimensions
 
             await _generator.PaintTilesAsync(layer, BaseLayer, Seed, DimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
-            _minimap.RecordChunk(DimensionId, layer, chunkCoord);
+            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord);
 
             ChunkLoaded?.Invoke(chunkCoord);
         }

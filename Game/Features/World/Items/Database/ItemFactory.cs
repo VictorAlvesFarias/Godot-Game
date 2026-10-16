@@ -156,6 +156,19 @@ namespace Jogo25D.Items
                     Cooldown = 0.25f,
                 },
 
+                ["torch"] = () => new BlockItemDefinition
+                {
+                    Id = "torch",
+                    Name = "Tocha",
+                    Type = ItemType.Block,
+                    Description = "Ilumina em volta. Precisa de uma parede atrás ou de um bloco embaixo ou ao lado",
+                    BlockId = "torch",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                    Cooldown = 0.25f,
+                    HeldLightColor = new Color(1f, 0.72f, 0.4f),
+                },
+
                 ["portal"] = () => new PlacePropItemDefinition
                 {
                     Id = "portal",

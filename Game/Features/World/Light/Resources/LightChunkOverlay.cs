@@ -49,7 +49,11 @@ namespace Jogo25D.Light
             var material = (ShaderMaterial)_sprite.Material;
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
 
-            TerrainLightMask.UpdateMaterial(material, ref _maskTexture, mask);
+            // Sem mascara nova (so a luz mudou), fica a do terreno ja aplicada.
+            if (mask != null)
+            {
+                TerrainLightMask.UpdateMaterial(material, ref _maskTexture, mask);
+            }
 
             material.SetShaderParameter("light_uv_rect", new Vector4(
                 (float)padding / regionSize,

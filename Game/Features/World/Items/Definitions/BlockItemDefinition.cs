@@ -142,6 +142,15 @@ namespace Jogo25D.Items
                 return;
             }
 
+            // Bloco que precisa de apoio (tocha): o indicador so aparece onde a colocacao seria aceita.
+            if (!Background && BlockDB.TryGet(BlockId, out var block) && block.NeedsSupport
+                && !BlockSupport.HasSupport(layer, baseLayer, layer.GetParent()?.GetNodeOrNull<TileMapLayer>("Walls"), cell))
+            {
+                HideIndicator(player);
+
+                return;
+            }
+
             EnsureIndicator(layer);
 
             Indicator.Position = layer.MapToLocal(cell);

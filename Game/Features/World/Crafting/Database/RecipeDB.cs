@@ -16,6 +16,13 @@ namespace Jogo25D.Crafting
             },
             new RecipeDefinition
             {
+                Id = "torch",
+                ResultItemId = "torch",
+                ResultQuantity = 4,
+                Ingredients = new List<(string, int)> { ("item_wood", 1) },
+            },
+            new RecipeDefinition
+            {
                 Id = "wall_wood",
                 ResultItemId = "wall_wood",
                 ResultQuantity = 4,

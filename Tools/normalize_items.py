@@ -52,6 +52,7 @@ BLOCK_TILES = {
     "block_dirt": (WORLD_TILESET, [1, 0], 1.0),   # Base: bordercap do bioma lime; Compose: lime_grass
     "item_wood": (WORLD_TILESET, [6], 1.0),
     "item_leaf": (WORLD_TILESET, [7], 1.0),
+    "torch": (WORLD_TILESET, [8], 1.0),           # tile da tocha sem conexao (presa na parede)
     "wall_wood": (WALLS_TILESET, [6], 0.65),      # Walls desenha com self_modulate 0.65
     "wall_dirt": (WALLS_TILESET, [1], 0.65),      # a parede de terra gerada usa o bordercap do bioma
 }

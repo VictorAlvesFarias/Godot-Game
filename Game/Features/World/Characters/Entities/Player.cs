@@ -15,6 +15,7 @@ using Jogo25D.Features.World.Resolver.Singletons;
 using Jogo25D.Hitboxes;
 using Jogo25D.Instances;
 using Jogo25D.Items;
+using Jogo25D.Light;
 using Jogo25D.Properties;
 using Jogo25D.SkillTree;
 using Jogo25D.Systems;
@@ -117,6 +118,7 @@ namespace Jogo25D.Characters
         public Node2D Visuals { get; set; }
         public AnimatedSprite2D Sprite { get; set; }
         public CollisionShape2D Shape { get; set; }
+        public LightSource2D HeldLight { get; private set; }
         public Node2D Labels { get; set; }
         public Label NameLabel { get; set; }
         public Label HealthLabel { get; set; }
@@ -167,6 +169,9 @@ namespace Jogo25D.Characters
             Labels = GetNodeOrNull<Node2D>("Labels");
             NameLabel = GetNodeOrNull<Label>("Labels/NameLabel");
             HealthLabel = GetNodeOrNull<Label>("Labels/HealthLabel");
+            HeldLight = GetNodeOrNull<LightSource2D>("HeldLight");
+
+            InventoryChanged += RefreshHeldLight;
 
             Sprite.Play("idle");
             InventorySystem.EnsureSize(Inventory);
@@ -798,7 +803,29 @@ namespace Jogo25D.Characters
 
             ItemDefinitions.GetValueOrDefault(item.InstanceId)?.OnEquip(this, item);
 
+            RefreshHeldLight();
+
             EmitSignal(SignalName.ItemEquipped, instanceId);
+        }
+
+        // Luz do item da mao: liga com a cor do item que ilumina (tocha), apaga sem ele (trocou de item ou acabou).
+        public void RefreshHeldLight()
+        {
+            if (HeldLight == null)
+            {
+                return;
+            }
+
+            var item = EquippedInstance();
+            var definition = item == null ? null : ItemDefinitions.GetValueOrDefault(item.InstanceId);
+
+            HeldLight.Enabled = definition?.HeldLightColor != null;
+
+            if (definition?.HeldLightColor is Color color)
+            {
+                HeldLight.LightColor = color;
+                HeldLight.Energy = definition.HeldLightEnergy;
+            }
         }
 
         public void GiveItem(ItemData item)

@@ -266,6 +266,12 @@ namespace Jogo25D.Biomes
                 Rpc(nameof(ReceiveEdit), cell, blockId, remove);
             }
 
+            // Sem a parede, uma tocha presa nela pode ter perdido o apoio.
+            if (remove)
+            {
+                (GetParent() as Dimension)?.Layer?.DropIfUnsupported(cell);
+            }
+
             return true;
         }
 

@@ -25,6 +25,10 @@ namespace Jogo25D.Items
         public Godot.Collections.Array<BasePropertyData> Modifiers { get; set; } = new();
         public Godot.Collections.Array<string> Effects { get; set; } = new();
 
+        // Luz em volta de quem segura o item (nulo = o item nao ilumina na mao).
+        public Color? HeldLightColor { get; init; }
+        public float HeldLightEnergy { get; init; } = 1f;
+
         // Imagens do item, na pasta com o seu id: a arte no tamanho real de pixel (item no mundo) e o icone do inventario/hotbar.
         public Texture2D Texture => LoadImage(ref _texture, "texture");
         public Texture2D Icon => LoadImage(ref _icon, "icon");

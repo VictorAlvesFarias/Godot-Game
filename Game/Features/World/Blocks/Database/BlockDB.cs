@@ -60,6 +60,19 @@ namespace Jogo25D.Blocks
                 AtlasCoord = new Vector2I(1, 1),
                 TerrainSet = TerrainsConstants.LIME_LEAF,
             },
+            // Tocha: sem colisao nem oclusao (o tile nao tem forma); a variacao (parede, chao, lados) vem da conexao.
+            ["torch"] = new BlockDefinition
+            {
+                Id = "torch",
+                DropItemId = "torch",
+                SourceId = TerrainsConstants.TORCH,
+                AtlasCoord = new Vector2I(0, 0),
+                TerrainSet = TerrainsConstants.TORCH,
+                LightRadius = 15,
+                LightColor = new Color(1f, 0.72f, 0.4f),
+                BreakTimeScale = 0.15f,
+                NeedsSupport = true,
+            },
         };
 
         #endregion

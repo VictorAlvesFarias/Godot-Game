@@ -47,23 +47,35 @@ namespace Jogo25D.Light
             EnsureViewports(parent);
 
             var sourcesRevision = SceneLightSources.Revision(parent.GetParent());
+            var fieldChanged = _world != world
+                || _revision != world.Revision
+                || _background != world.BackgroundRevision
+                || _origin != origin
+                || _size != size
+                || _angle != angle
+                || _penumbra != penumbra
+                || _shadowCurve != shadowCurve
+                || _ambientCurve != ambientCurve
+                || _depth != terrainDepth;
 
-            if (_sourceRevision == sourcesRevision
-                && _world == world
-                && _revision == world.Revision
-                && _background == world.BackgroundRevision
-                && _origin == origin
-                && _size == size
-                && _angle == angle
-                && _penumbra == penumbra
-                && _shadowCurve == shadowCurve
-                && _ambientCurve == ambientCurve
-                && _depth == terrainDepth)
+            if (!fieldChanged && _sourceRevision == sourcesRevision)
             {
                 return;
             }
 
             _sourceRevision = sourcesRevision;
+
+            // So as fontes de luz da cena mudaram (uma tocha na mao andando): refaz so o feixe local; o campo do ceu e o
+            // feixe do sol nao dependem delas.
+            if (!fieldChanged)
+            {
+                UpdateLocalBeam(parent.GetParent(), world, origin, size);
+
+                _localViewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
+
+                return;
+            }
+
             _world = world;
             _revision = world.Revision;
             _background = world.BackgroundRevision;

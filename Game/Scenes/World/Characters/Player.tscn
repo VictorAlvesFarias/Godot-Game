@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://sqp8fjxk0jd3" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
 [ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Textures/Characters/character.png" id="5_47fxu"]
 [ext_resource type="Script" uid="uid://dmqd33hgbos61" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
+[ext_resource type="Script" path="res://Features/World/Light/Entities/LightSource2D.cs" id="held_light"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
 atlas = ExtResource("5_47fxu")
@@ -513,6 +514,11 @@ position = Vector2(-1, 6)
 
 [node name="PlayerInput" type="Node" parent="Systems" unique_id=1094665518]
 script = ExtResource("6")
+
+[node name="HeldLight" type="Node2D" parent="."]
+position = Vector2(0, -4)
+script = ExtResource("held_light")
+Enabled = false
 
 [node name="Shape" type="CollisionShape2D" parent="." unique_id=857000654]
 shape = SubResource("RectangleShape2D_1")

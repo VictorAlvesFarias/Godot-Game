@@ -11,42 +11,60 @@ namespace Jogo25D.Light
     {
         #region Core - Indice de blocos
 
-        public static Dictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> BuildLightEmittingBlockIndex()
+        // Blocos que emitem luz: os de terreno emitem em qualquer tile do source deles (todas as variacoes do autotile);
+        // os sem terreno, so no tile cadastrado.
+        public static LightEmitterIndex BuildLightEmittingBlockIndex()
         {
-            var map = new Dictionary<(int, Vector2I), BlockDefinition>();
+            var index = new LightEmitterIndex();
 
             foreach (var block in BlockDB.All())
             {
-                if (block.LightRadius > 0)
+                if (block.LightRadius <= 0)
                 {
-                    map[(block.SourceId, block.AtlasCoord)] = block;
+                    continue;
+                }
+
+                index.ByMaterial[block.TerrainSet ?? block.SourceId] = block;
+
+                if (block.TerrainSet != null)
+                {
+                    index.BySource[block.SourceId] = block;
+                }
+                else
+                {
+                    index.ByTile[(block.SourceId, block.AtlasCoord)] = block;
                 }
             }
 
-            return map;
+            return index;
         }
 
         public static BlockDefinition FindLightEmittingBlockAt(
             TerrainLayer layer,
             TerrainLayer baseLayer,
             Vector2I cell,
-            IReadOnlyDictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> lightEmittingBlocks)
+            LightEmitterIndex lightEmittingBlocks)
         {
-            var sourceId = layer.GetCellSourceId(cell);
-            var atlasCoord = layer.GetCellAtlasCoords(cell);
+            var source = layer;
 
-            if (sourceId == -1 && baseLayer != null)
+            if (layer.GetCellSourceId(cell) == -1 && baseLayer != null)
             {
-                sourceId = baseLayer.GetCellSourceId(cell);
-                atlasCoord = baseLayer.GetCellAtlasCoords(cell);
+                source = baseLayer;
             }
+
+            var sourceId = source.GetCellSourceId(cell);
 
             if (sourceId == -1)
             {
                 return null;
             }
 
-            return lightEmittingBlocks.TryGetValue((sourceId, atlasCoord), out var block) ? block : null;
+            if (lightEmittingBlocks.BySource.TryGetValue(sourceId, out var block))
+            {
+                return block;
+            }
+
+            return lightEmittingBlocks.ByTile.Count > 0 && lightEmittingBlocks.ByTile.TryGetValue((sourceId, source.GetCellAtlasCoords(cell)), out block) ? block : null;
         }
 
         #endregion
@@ -57,10 +75,11 @@ namespace Jogo25D.Light
             TerrainLayer layer,
             TerrainLayer baseLayer,
             Rect2I region,
-            IReadOnlyDictionary<(int SourceId, Vector2I AtlasCoord), BlockDefinition> lightEmittingBlocks,
+            LightEmitterIndex lightEmittingBlocks,
             Func<Vector2I, bool> isSolid,
             bool includeSkylight = true,
-            Func<Vector2I, bool> hasBackground = null)
+            Func<Vector2I, bool> hasBackground = null,
+            Func<Vector2I, BlockDefinition> emitterAt = null)
         {
             if (hasBackground == null)
             {
@@ -84,7 +103,7 @@ namespace Jogo25D.Light
                         sources.Add(new LightSource(cell, Colors.White));
                     }
 
-                    var block = FindLightEmittingBlockAt(layer, baseLayer, cell, lightEmittingBlocks);
+                    var block = emitterAt != null ? emitterAt(cell) : FindLightEmittingBlockAt(layer, baseLayer, cell, lightEmittingBlocks);
 
                     if (block == null)
                     {

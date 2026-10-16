@@ -114,7 +114,7 @@ namespace Jogo25D.Light
         {
             if (!Engine.IsEditorHint())
             {
-                _level?.GetNodeOrNull<LightMap2D>("LightMap")?.OnCellChanged(cell);
+                _level?.GetNodeOrNull<LightMap2D>("LightMap")?.OnLightChanged(cell);
             }
         }
 

@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Biomes;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace Jogo25D.Systems
 
         #region Core - Registro
 
-        public void RecordChunk(string dimensionId, TileMapLayer layer, Vector2I chunkCoord)
+        public void RecordChunk(string dimensionId, TileMapLayer layer, TileMapLayer baseLayer, Vector2I chunkCoord)
         {
             if (layer == null)
             {
@@ -32,7 +33,7 @@ namespace Jogo25D.Systems
                 {
                     var cell = new Vector2I(baseCellX + localX, baseCellY + localY);
 
-                    if (layer.GetCellSourceId(cell) != -1)
+                    if (TileQueries.Occludes(layer, baseLayer, cell))
                     {
                         image.SetCell(cell, new Color(0.4f, 0.4f, 0.45f, 1f));
                     }
