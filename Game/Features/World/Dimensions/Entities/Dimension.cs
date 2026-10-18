@@ -306,6 +306,11 @@ namespace Jogo25D.Dimensions
         public void ApplyEdit(Vector2I cell, TerrainLayerType layer, string blockId)
         {
             EnsureTerrain().ApplyEdit(cell.X, cell.Y, layer, blockId);
+
+            if (layer == TerrainLayerType.Terrain)
+            {
+                UpdateColumnTop(cell);
+            }
         }
 
         private static void LoadAuthoredLayer(TerrainCache terrain, TileMapLayer layer)
@@ -432,6 +437,7 @@ namespace Jogo25D.Dimensions
             }
 
             ReleaseFarChunkData(playerChunks);
+            UpdateColumnBands(playersHere);
         }
 
         // Envia ao peer as edicoes (sem tiles) dos chunks da margem em volta dos chunks que ele tem, e esquece os que
@@ -811,6 +817,8 @@ namespace Jogo25D.Dimensions
             {
                 peers.Remove(peerId);
             }
+
+            _columnBands.Remove(peerId);
         }
 
         public void ResetState()
@@ -819,6 +827,7 @@ namespace Jogo25D.Dimensions
             _painted.Clear();
             _loadedPeers.Clear();
             _edgePeers.Clear();
+            _columnBands.Clear();
             _minimap.Reset();
         }
 

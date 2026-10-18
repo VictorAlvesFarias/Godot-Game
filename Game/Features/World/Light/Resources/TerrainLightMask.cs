@@ -10,6 +10,7 @@ namespace Jogo25D.Light
 
         private static readonly ConditionalWeakTable<Texture2D, TexturePixels> PixelCache = new();
         private static readonly ConditionalWeakTable<TileSet, ReachCache> ReachCaches = new();
+        private static readonly ConditionalWeakTable<TileSet, TileCache> TileCaches = new();
 
         #endregion
 
@@ -68,46 +69,54 @@ namespace Jogo25D.Light
             first = first.Max(used.Position);
             last = last.Min(used.End - Vector2I.One);
 
+            var context = new LayerContext
+            {
+                Layer = layer,
+                TileSet = layer.TileSet,
+                Tiles = TileCaches.GetOrCreateValue(layer.TileSet).Tiles,
+                ToOverlay = toOverlay,
+                Opacity = layer.Modulate.A * layer.SelfModulate.A,
+                TileSize = layer.TileSet.TileSize,
+                Square = layer.TileSet.TileShape == TileSet.TileShapeEnum.Square,
+            };
+
             for (var y = first.Y; y <= last.Y; y++)
             {
                 for (var x = first.X; x <= last.X; x++)
                 {
-                    BlitCell(bounds, layer, toOverlay, new Vector2I(x, y), pixels, textures);
+                    BlitCell(bounds, context, new Vector2I(x, y), pixels);
                 }
             }
         }
 
-        private static void BlitCell(Rect2I bounds, TileMapLayer layer, Transform2D toOverlay, Vector2I cell, byte[] pixels, Dictionary<Texture2D, (byte[] Data, int Width)> textures)
+        // Por celula sobram tres leituras do TileMapLayer (fonte, coordenada no atlas e alternativa); o resto do tile
+        // (textura, regiao, origem, flips e modulate) vem do cache por TileSet.
+        private static void BlitCell(Rect2I bounds, LayerContext context, Vector2I cell, byte[] pixels)
         {
+            var layer = context.Layer;
             var sourceId = layer.GetCellSourceId(cell);
 
-            if (sourceId == -1 || layer.TileSet.GetSource(sourceId) is not TileSetAtlasSource atlas || atlas.Texture == null)
+            if (sourceId == -1)
             {
                 return;
             }
 
-            var coords = layer.GetCellAtlasCoords(cell);
-            var data = layer.GetCellTileData(cell);
+            var key = (sourceId, layer.GetCellAtlasCoords(cell), layer.GetCellAlternativeTile(cell));
 
-            if (data == null)
+            if (!context.Tiles.TryGetValue(key, out var tile))
+            {
+                tile = DescribeTile(context.TileSet, key.sourceId, key.Item2, key.Item3);
+                context.Tiles[key] = tile;
+            }
+
+            if (tile == null)
             {
                 return;
             }
 
-            var source = atlas.GetTileTextureRegion(coords);
-            var alternative = layer.GetCellAlternativeTile(cell);
-            var tileTransform = Flips(data.Transpose, data.FlipH, data.FlipV);
-            var cellTransform = Flips(
-                (alternative & TileSetAtlasSource.TransformTranspose) != 0,
-                (alternative & TileSetAtlasSource.TransformFlipH) != 0,
-                (alternative & TileSetAtlasSource.TransformFlipV) != 0);
-            var transform = toOverlay
-                * new Transform2D(0, layer.MapToLocal(cell))
-                * cellTransform
-                * new Transform2D(0, -(Vector2)data.TextureOrigin)
-                * tileTransform
-                * new Transform2D(0, -(Vector2)source.Size * 0.5f);
-            var target = transform * new Rect2(Vector2.Zero, source.Size);
+            var center = context.Square ? ((Vector2)cell + Vector2.One * 0.5f) * context.TileSize : layer.MapToLocal(cell);
+            var transform = context.ToOverlay * new Transform2D(0, center) * tile.Local;
+            var target = transform * new Rect2(Vector2.Zero, tile.Region.Size);
             var start = new Vector2I(Mathf.FloorToInt(target.Position.X), Mathf.FloorToInt(target.Position.Y)).Max(bounds.Position);
             var end = new Vector2I(Mathf.CeilToInt(target.End.X), Mathf.CeilToInt(target.End.Y)).Min(bounds.End);
 
@@ -116,16 +125,8 @@ namespace Jogo25D.Light
                 return;
             }
 
-            if (!textures.TryGetValue(atlas.Texture, out var texture))
-            {
-                var cached = Pixels(atlas.Texture);
-
-                texture = (cached.Data, cached.Width);
-
-                textures.Add(atlas.Texture, texture);
-            }
-
-            var opacity = data.Modulate.A * layer.Modulate.A * layer.SelfModulate.A;
+            var texture = (tile.Pixels.Data, tile.Pixels.Width);
+            var opacity = tile.Opacity * context.Opacity;
             var aligned = transform.X == Vector2.Right
                 && transform.Y == Vector2.Down
                 && transform.Origin.X == Mathf.Floor(transform.Origin.X)
@@ -134,12 +135,47 @@ namespace Jogo25D.Light
 
             if (aligned)
             {
-                BlitAligned(bounds, source, transform, start, end, texture, pixels);
+                BlitAligned(bounds, tile.Region, transform, start, end, texture, pixels);
 
                 return;
             }
 
-            BlitSampled(bounds, source, transform, start, end, texture, opacity, pixels);
+            BlitSampled(bounds, tile.Region, transform, start, end, texture, opacity, pixels);
+        }
+
+        // O que nao depende da celula: textura, regiao, a transformacao do tile em volta do centro da celula e a opacidade
+        // do tile. Nulo para fonte que nao e atlas, sem textura ou sem o tile.
+        private static TileInfo DescribeTile(TileSet tileSet, int sourceId, Vector2I coords, int alternative)
+        {
+            if (tileSet.GetSource(sourceId) is not TileSetAtlasSource atlas || atlas.Texture == null || !atlas.HasTile(coords))
+            {
+                return null;
+            }
+
+            var data = atlas.GetTileData(coords, (int)(alternative & ~(TileSetAtlasSource.TransformTranspose | TileSetAtlasSource.TransformFlipH | TileSetAtlasSource.TransformFlipV)));
+
+            if (data == null)
+            {
+                return null;
+            }
+
+            var region = atlas.GetTileTextureRegion(coords);
+            var tileTransform = Flips(data.Transpose, data.FlipH, data.FlipV);
+            var cellTransform = Flips(
+                (alternative & TileSetAtlasSource.TransformTranspose) != 0,
+                (alternative & TileSetAtlasSource.TransformFlipH) != 0,
+                (alternative & TileSetAtlasSource.TransformFlipV) != 0);
+
+            return new TileInfo
+            {
+                Pixels = Pixels(atlas.Texture),
+                Region = region,
+                Local = cellTransform
+                    * new Transform2D(0, -(Vector2)data.TextureOrigin)
+                    * tileTransform
+                    * new Transform2D(0, -(Vector2)region.Size * 0.5f),
+                Opacity = data.Modulate.A,
+            };
         }
 
         private static void BlitAligned(Rect2I bounds, Rect2I source, Transform2D transform, Vector2I start, Vector2I end, (byte[] Data, int Width) texture, byte[] pixels)
@@ -204,6 +240,7 @@ namespace Jogo25D.Light
         {
             PixelCache.Clear();
             ReachCaches.Clear();
+            TileCaches.Clear();
         }
 
         public static void UpdateMaterial(ShaderMaterial material, ref ImageTexture texture, Image image)
@@ -312,6 +349,30 @@ namespace Jogo25D.Light
         {
             public float Value;
             public bool Valid;
+        }
+
+        private sealed class TileCache
+        {
+            public readonly Dictionary<(int, Vector2I, int), TileInfo> Tiles = new();
+        }
+
+        private sealed class TileInfo
+        {
+            public TexturePixels Pixels;
+            public Rect2I Region;
+            public Transform2D Local;
+            public float Opacity;
+        }
+
+        private sealed class LayerContext
+        {
+            public TileMapLayer Layer;
+            public TileSet TileSet;
+            public Dictionary<(int, Vector2I, int), TileInfo> Tiles;
+            public Transform2D ToOverlay;
+            public float Opacity;
+            public Vector2I TileSize;
+            public bool Square;
         }
 
         #endregion

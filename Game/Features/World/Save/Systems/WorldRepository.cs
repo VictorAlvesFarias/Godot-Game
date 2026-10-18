@@ -39,10 +39,14 @@ namespace Jogo25D.Systems
 
         #region Dinamic properties
 
-        public const int SchemaVersion = 1;
+        // 2: topos opticos por coluna (column_tops) e indice das edicoes por coluna.
+        public const int SchemaVersion = 2;
         public const string FileName = "world.db";
 
         public string FilePath { get; }
+
+        // Versao que o banco tinha ao abrir (0 = banco novo). Quem migra os dados sobe a versao com MarkSchemaCurrent.
+        public int StoredVersion { get; private set; }
 
         private readonly SqliteConnection _connection;
 
@@ -77,6 +81,11 @@ namespace Jogo25D.Systems
 
         private void EnsureSchema()
         {
+            using (var version = Command("PRAGMA user_version;"))
+            {
+                StoredVersion = Convert.ToInt32(version.ExecuteScalar());
+            }
+
             Execute(@"
                 CREATE TABLE IF NOT EXISTS world (
                     world_id TEXT PRIMARY KEY,
@@ -109,9 +118,22 @@ namespace Jogo25D.Systems
                     y REAL NOT NULL,
                     state TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS entities_by_chunk ON entities (dimension, cx, cy);");
+                CREATE INDEX IF NOT EXISTS entities_by_chunk ON entities (dimension, cx, cy);
+                CREATE TABLE IF NOT EXISTS column_tops (
+                    dimension TEXT NOT NULL,
+                    x INTEGER NOT NULL,
+                    top INTEGER NOT NULL,
+                    PRIMARY KEY (dimension, x)
+                ) WITHOUT ROWID;
+                CREATE INDEX IF NOT EXISTS cell_edits_by_column ON cell_edits (dimension, x, y);");
+        }
 
+        // Os dados ja estao no formato da versao atual (migracoes feitas): grava a versao no banco.
+        public void MarkSchemaCurrent()
+        {
             Execute($"PRAGMA user_version = {SchemaVersion};");
+
+            StoredVersion = SchemaVersion;
         }
 
         #endregion
@@ -248,6 +270,110 @@ namespace Jogo25D.Systems
             return result;
         }
 
+        // Topos opticos salvos das colunas em [fromX, toX] (so os que diferem do terreno gerado), por x.
+        public Dictionary<int, int> ReadColumnTops(string dimension, int fromX, int toX)
+        {
+            var result = new Dictionary<int, int>();
+
+            using var command = Command("SELECT x, top FROM column_tops WHERE dimension = $dimension AND x BETWEEN $from AND $to;");
+
+            command.Parameters.AddWithValue("$dimension", dimension);
+            command.Parameters.AddWithValue("$from", fromX);
+            command.Parameters.AddWithValue("$to", toX);
+
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                result[reader.GetInt32(0)] = reader.GetInt32(1);
+            }
+
+            return result;
+        }
+
+        // Menor topo optico salvo da dimensao (o mais alto do mundo), ignorando as colunas em `except`, ou nulo.
+        public int? ReadHighestColumnTop(string dimension, IReadOnlyCollection<int> except = null)
+        {
+            // Os x de `except` sao inteiros: entram direto no SQL, sem risco de injecao.
+            var filter = except == null || except.Count == 0 ? "" : $" AND x NOT IN ({string.Join(",", except)})";
+
+            using var command = Command($"SELECT MIN(top) FROM column_tops WHERE dimension = $dimension{filter};");
+
+            command.Parameters.AddWithValue("$dimension", dimension);
+
+            var value = command.ExecuteScalar();
+
+            return value is null or DBNull ? null : Convert.ToInt32(value);
+        }
+
+        // Grava o topo da coluna; nulo apaga (o topo voltou a ser o do terreno gerado).
+        public void WriteColumnTop(string dimension, int x, int? top)
+        {
+            InTransaction(transaction => WriteColumnTop(dimension, x, top, transaction));
+        }
+
+        private void WriteColumnTop(string dimension, int x, int? top, SqliteTransaction transaction)
+        {
+            using var command = top is int value
+                ? Command("INSERT OR REPLACE INTO column_tops (dimension, x, top) VALUES ($dimension, $x, $top);", transaction)
+                : Command("DELETE FROM column_tops WHERE dimension = $dimension AND x = $x;", transaction);
+
+            command.Parameters.AddWithValue("$dimension", dimension);
+            command.Parameters.AddWithValue("$x", x);
+
+            if (top is int stored)
+            {
+                command.Parameters.AddWithValue("$top", stored);
+            }
+
+            command.ExecuteNonQuery();
+        }
+
+        // Edicoes de terreno salvas da coluna x abaixo de fromY (y > fromY), em ordem de y. BlockId nulo = removido.
+        public List<(int Y, string BlockId)> ReadColumnEdits(string dimension, int x, int fromY)
+        {
+            var result = new List<(int, string)>();
+
+            using var command = Command(@"
+                SELECT y, block_id FROM cell_edits
+                WHERE dimension = $dimension AND x = $x AND y > $from AND layer = $layer
+                ORDER BY y;");
+
+            command.Parameters.AddWithValue("$dimension", dimension);
+            command.Parameters.AddWithValue("$x", x);
+            command.Parameters.AddWithValue("$from", fromY);
+            command.Parameters.AddWithValue("$layer", (int)TerrainLayerType.Terrain);
+
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                result.Add((reader.GetInt32(0), reader.IsDBNull(1) ? null : reader.GetString(1)));
+            }
+
+            return result;
+        }
+
+        // Colunas com alguma edicao de terreno salva na dimensao.
+        public List<int> ReadEditedColumns(string dimension)
+        {
+            var result = new List<int>();
+
+            using var command = Command("SELECT DISTINCT x FROM cell_edits WHERE dimension = $dimension AND layer = $layer;");
+
+            command.Parameters.AddWithValue("$dimension", dimension);
+            command.Parameters.AddWithValue("$layer", (int)TerrainLayerType.Terrain);
+
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                result.Add(reader.GetInt32(0));
+            }
+
+            return result;
+        }
+
         // Chunks com algum dado salvo na dimensao (edicao ou entidade).
         public List<Vector2I> ReadChunksWithData(string dimension)
         {
@@ -272,13 +398,19 @@ namespace Jogo25D.Systems
 
         // As edicoes de cada snapshot substituem as do chunk no banco; as entidades sao gravadas por chave.
         // Tudo numa transacao: edicoes e entidades dos snapshots, entidades destruidas e metadados.
-        public void WriteChunks(IEnumerable<ChunkSnapshot> snapshots, WorldSaveData meta = null, IEnumerable<string> deletedEntityIds = null)
+        public void WriteChunks(IEnumerable<ChunkSnapshot> snapshots, WorldSaveData meta = null, IEnumerable<string> deletedEntityIds = null,
+            IEnumerable<(string Dimension, int X, int? Top)> columnTops = null)
         {
             InTransaction(transaction =>
             {
                 foreach (var snapshot in snapshots)
                 {
                     WriteChunk(snapshot, transaction);
+                }
+
+                foreach (var (dimension, x, top) in columnTops ?? Enumerable.Empty<(string, int, int?)>())
+                {
+                    WriteColumnTop(dimension, x, top, transaction);
                 }
 
                 if (deletedEntityIds != null)

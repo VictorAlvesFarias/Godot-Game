@@ -5,6 +5,7 @@ using Jogo25D.Save;
 using Jogo25D.Save.Resources;
 using Jogo25D.Save.Structures;
 using Jogo25D.Utils.Coordinates;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,6 +23,12 @@ namespace Jogo25D.Systems
 
         // Entidades destruidas (item coletado, por exemplo) desde o ultimo save: saem do banco no proximo.
         private static readonly HashSet<string> _deletedEntities = new();
+
+        // Topos opticos mudados desde a ultima gravacao (nulo = a linha sai), gravados junto com as edicoes para o banco
+        // nunca ter topos de edicoes que nao foram salvas.
+        private static readonly Dictionary<(string Dimension, int X), int?> _pendingTops = new();
+
+        public static int StoredVersion => _repository?.StoredVersion ?? WorldRepository.SchemaVersion;
 
         #endregion
 
@@ -76,6 +83,20 @@ namespace Jogo25D.Systems
                     }
                 }
             }
+
+            // Mundo salvo antes dos topos opticos: calcula os topos uma vez, a partir das edicoes do banco.
+            if (_repository.StoredVersion < WorldRepository.SchemaVersion)
+            {
+                if (save.IsProcedural)
+                {
+                    foreach (var dimension in Dimension.All.Where(GodotObject.IsInstanceValid))
+                    {
+                        dimension.MigrateColumnTops();
+                    }
+                }
+
+                FinishColumnTopsMigration();
+            }
         }
 
         public static void Close()
@@ -84,6 +105,7 @@ namespace Jogo25D.Systems
             _repository = null;
 
             _deletedEntities.Clear();
+            _pendingTops.Clear();
         }
 
         #endregion
@@ -129,7 +151,7 @@ namespace Jogo25D.Systems
                 }
             }
 
-            _repository.WriteChunks(snapshots.Values, save, deleted);
+            _repository.WriteChunks(snapshots.Values, save, deleted, TakePendingTops());
 
             foreach (var (terrain, chunk) in cleaned)
             {
@@ -160,10 +182,98 @@ namespace Jogo25D.Systems
 
             snapshot.Edits.AddRange(terrain.CellEditsOf(chunk));
 
-            _repository.WriteChunks(new[] { snapshot });
+            _repository.WriteChunks(new[] { snapshot }, columnTops: TakePendingTops());
 
             terrain.MarkClean(chunk);
         }
+
+        #region Core - Topos opticos
+
+        // Topo optico salvo da coluna (com os pendentes por cima), ou nulo quando e o do terreno gerado.
+        public static int? ReadColumnTop(string dimension, int x)
+        {
+            if (_pendingTops.TryGetValue((dimension, x), out var pending))
+            {
+                return pending;
+            }
+
+            return _repository != null && _repository.ReadColumnTops(dimension, x, x).TryGetValue(x, out var top) ? top : null;
+        }
+
+        // Topos salvos das colunas em [fromX, toX], com os pendentes por cima.
+        public static Dictionary<int, int> ReadColumnTops(string dimension, int fromX, int toX)
+        {
+            var tops = _repository?.ReadColumnTops(dimension, fromX, toX) ?? new Dictionary<int, int>();
+
+            foreach (var ((pendingDimension, x), top) in _pendingTops)
+            {
+                if (pendingDimension != dimension || x < fromX || x > toX)
+                {
+                    continue;
+                }
+
+                if (top is int value)
+                {
+                    tops[x] = value;
+                }
+                else
+                {
+                    tops.Remove(x);
+                }
+            }
+
+            return tops;
+        }
+
+        // Menor topo da dimensao (o mais alto do mundo), com os pendentes por cima, ou nulo.
+        public static int? ReadHighestColumnTop(string dimension)
+        {
+            var pending = _pendingTops.Where(pair => pair.Key.Dimension == dimension).ToList();
+            var highest = _repository?.ReadHighestColumnTop(dimension, pending.Select(pair => pair.Key.X).ToList());
+
+            foreach (var (_, top) in pending)
+            {
+                if (top is int value && (highest == null || value < highest))
+                {
+                    highest = value;
+                }
+            }
+
+            return highest;
+        }
+
+        public static void SetColumnTop(string dimension, int x, int? top)
+        {
+            _pendingTops[(dimension, x)] = top;
+        }
+
+        public static List<(int Y, string BlockId)> ReadColumnEdits(string dimension, int x, int fromY)
+        {
+            return _repository?.ReadColumnEdits(dimension, x, fromY) ?? new List<(int, string)>();
+        }
+
+        public static List<int> ReadEditedColumns(string dimension)
+        {
+            return _repository?.ReadEditedColumns(dimension) ?? new List<int>();
+        }
+
+        // Os topos calculados na migracao vao direto para o banco, e a versao sobe.
+        public static void FinishColumnTopsMigration()
+        {
+            _repository?.WriteChunks(Array.Empty<ChunkSnapshot>(), columnTops: TakePendingTops());
+            _repository?.MarkSchemaCurrent();
+        }
+
+        private static List<(string, int, int?)> TakePendingTops()
+        {
+            var tops = _pendingTops.Select(pair => (pair.Key.Dimension, pair.Key.X, pair.Value)).ToList();
+
+            _pendingTops.Clear();
+
+            return tops;
+        }
+
+        #endregion
 
         public static List<EntityRow> ReadEntities(string dimension, Vector2I chunk)
         {

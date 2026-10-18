@@ -43,6 +43,17 @@ namespace Jogo25D.Light
         private Node2D _level;
         private Node2D _entities;
 
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ShaderMaterial, BindState> _bound = new();
+
+        // A textura do viewport da mascara e a mesma enquanto o viewport existir.
+        private Texture2D _texture;
+
+        private sealed class BindState
+        {
+            public Texture2D Texture;
+            public bool Enabled;
+        }
+
         #endregion
 
         #region Core - Atualizacao
@@ -103,6 +114,8 @@ namespace Jogo25D.Light
             _viewport.CanvasTransform = _source.CanvasTransform;
         }
 
+        // Grava a mascara no material so quando muda (material novo, outra textura ou outro estado): chamado a cada quadro
+        // para todos os overlays.
         public void Bind(ShaderMaterial material, bool enabled)
         {
             if (material == null)
@@ -110,7 +123,15 @@ namespace Jogo25D.Light
                 return;
             }
 
-            material.SetShaderParameter("entity_mask", _viewport.GetTexture());
+            var texture = _texture ??= _viewport.GetTexture();
+
+            if (_bound.TryGetValue(material, out var state) && state.Texture == texture && state.Enabled == enabled)
+            {
+                return;
+            }
+
+            _bound.AddOrUpdate(material, new BindState { Texture = texture, Enabled = enabled });
+            material.SetShaderParameter("entity_mask", texture);
             material.SetShaderParameter("entity_mask_ready", enabled);
         }
 

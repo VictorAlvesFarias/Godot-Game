@@ -39,7 +39,10 @@ namespace Jogo25D.Dimensions
 
         private static readonly Dictionary<int, bool> _opaqueMaterials = new();
         private static ulong _opacityTileSet;
-        private const int InteriorTileCacheLimit = 512;
+        // Tiles do interior gerado na memoria. O campo de ceu da luz percorre a janela inteira (do ceu ate a profundidade do
+        // jogador) a cada edicao: com menos tiles que a janela, o "mais antigo sai" faz toda leitura reconstruir o tile
+        // pelo ruido. Cada tile tem poucos KB.
+        private const int InteriorTileCacheLimit = 2048;
 
         public long Seed { get; }
         public string DimensionId { get; }
@@ -50,7 +53,10 @@ namespace Jogo25D.Dimensions
         public long Revision { get; private set; }
         public long BackgroundRevision { get; private set; }
 
-        public int OpticalSkyTop => Math.Min(SkyTop, _highestEdit);
+        public int OpticalSkyTop => Math.Min(SkyTop, Math.Min(_highestEdit, _highestKnownTop));
+
+        // Coluna sem nenhuma celula opaca (ate o limite da busca): o sol desce sem parar.
+        public const int OpenColumn = int.MaxValue;
 
         private readonly ChunkGeneratorSystem _generator = new();
         private readonly Dictionary<int, Strip> _strips = new();
@@ -66,6 +72,16 @@ namespace Jogo25D.Dimensions
 
         private long _clock;
         private int _highestEdit = int.MaxValue;
+
+        // Topos opticos conhecidos (vindos do servidor): y da celula opaca mais alta da coluna considerando todas as
+        // edicoes do mundo, inclusive as que nao estao nesta maquina. So colunas cujo topo difere do gerado; as outras
+        // seguem a geracao com as edicoes residentes. _highestKnownTop e o menor topo do mundo inteiro.
+        private readonly Dictionary<int, int> _knownTops = new();
+        private int _highestKnownTop = int.MaxValue;
+
+        // Faixa de colunas [From, To] dos topos conhecidos (a ultima recebida), ou nula.
+        public (int From, int To)? KnownTopsBand { get; private set; }
+
 
         #endregion
 
@@ -159,8 +175,14 @@ namespace Jogo25D.Dimensions
         }
 
         // Menor y solido da coluna a partir de OpticalSkyTop, procurando ate limit (exclusivo); limit quando nao ha solido.
+        // Com topo conhecido, o topo responde: ele ja considera as edicoes do mundo inteiro.
         public int FirstSolid(int x, int limit)
         {
+            if (_knownTops.TryGetValue(x, out var known))
+            {
+                return known < limit ? known : limit;
+            }
+
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
             var from = OpticalSkyTop;
 
@@ -194,6 +216,14 @@ namespace Jogo25D.Dimensions
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(Seed, DimensionId, x, y)).TerrainSet;
         }
 
+        // Ha edicao de terreno desta celula na memoria (material -1 = bloco removido).
+        public bool TryEdit(int x, int y, out int material)
+        {
+            material = -1;
+
+            return _edits.TryGetValue(x, out var edits) && edits.TryGetValue(y, out material);
+        }
+
         // Material de uma edicao na celula (bloco colocado ou terreno autoral), ou -1: o terreno gerado nunca e bloco
         // emissor, entao a luz procura emissores so aqui, sem gerar bioma celula a celula.
         public int EditedMaterial(int x, int y)
@@ -204,6 +234,86 @@ namespace Jogo25D.Dimensions
         public byte Opacity(int x, int y)
         {
             return TerrainOpacity(Material(x, y));
+        }
+
+        // Opacidade so pela geracao (sem edicoes).
+        public byte GeneratedOpacity(int x, int y)
+        {
+            return TerrainOpacity(GeneratedMaterial(x, y));
+        }
+
+        // Topo optico da geracao: primeira celula opaca da coluna a partir do ceu, sem edicoes, procurando ate limit
+        // (exclusivo); OpenColumn quando nao ha.
+        public int GeneratedTop(int x, int limit)
+        {
+            var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
+            var from = SkyTop;
+
+            while (from < limit)
+            {
+                var to = from < TerrainBottom
+                    ? Math.Min(limit, TerrainBottom)
+                    : Math.Min(limit, (CoordinateUtilities.CellToChunk(from) + 1) * chunkSize);
+
+                foreach (var run in BaseRuns(x, from, to))
+                {
+                    if (TerrainOpacity(run.Terrain) > 0)
+                    {
+                        return run.Start;
+                    }
+                }
+
+                from = to;
+            }
+
+            return OpenColumn;
+        }
+
+        // Topo conhecido da coluna (nulo = segue a geracao com as edicoes residentes).
+        public int? KnownTop(int x)
+        {
+            return _knownTops.TryGetValue(x, out var top) ? top : null;
+        }
+
+        // Troca o topo conhecido de uma coluna (nulo = sem entrada) e o menor topo do mundo; a luz refaz a sombra.
+        public void SetKnownTop(int x, int? top, int? highest)
+        {
+            if (top is int value)
+            {
+                _knownTops[x] = value;
+            }
+            else
+            {
+                _knownTops.Remove(x);
+            }
+
+            _highestKnownTop = highest ?? int.MaxValue;
+            Revision++;
+        }
+
+        // So o menor topo do mundo mudou (uma coluna fora da faixa).
+        public void SetHighestKnownTop(int? highest)
+        {
+            _highestKnownTop = highest ?? int.MaxValue;
+            Revision++;
+        }
+
+        // Troca os topos conhecidos pelos da faixa [fromX, toX] (o resto e esquecido) e o menor topo do mundo.
+        public void SetKnownTops(int fromX, int toX, IReadOnlyDictionary<int, int> tops, int? highest)
+        {
+            _knownTops.Clear();
+            KnownTopsBand = (fromX, toX);
+
+            foreach (var (x, top) in tops)
+            {
+                if (x >= fromX && x <= toX)
+                {
+                    _knownTops[x] = top;
+                }
+            }
+
+            _highestKnownTop = highest ?? int.MaxValue;
+            Revision++;
         }
 
         public bool HasBackground(int x, int y)
@@ -239,6 +349,11 @@ namespace Jogo25D.Dimensions
                 return edited;
             }
 
+            return GeneratedMaterial(x, y);
+        }
+
+        private int GeneratedMaterial(int x, int y)
+        {
             if (y >= TerrainBottom)
             {
                 if (!Procedural)
@@ -466,7 +581,7 @@ namespace Jogo25D.Dimensions
             return edits;
         }
 
-        private static int TerrainOf(string blockId)
+        public static int TerrainOf(string blockId)
         {
             return blockId != null && BlockDB.TryGet(blockId, out var block) ? block.TerrainSet ?? block.SourceId : -1;
         }

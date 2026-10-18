@@ -25,6 +25,12 @@ namespace Jogo25D.Light
         [Export]
         public bool LightMapEnabled { get; set; } = true;
 
+        // Ligada e com a dimensao na tela: a dimensao escondida (o SubViewportContainer dela invisivel) conta como luz
+        // desligada e nao calcula nada ate voltar a aparecer.
+        private bool On => LightMapEnabled && Shown;
+
+        private bool Shown => Engine.IsEditorHint() || GetViewport() is not SubViewport viewport || viewport.GetParent() is not CanvasItem container || container.IsVisibleInTree();
+
         [Export]
         public bool PreviewInEditor { get; set; } = true;
 
@@ -63,6 +69,7 @@ namespace Jogo25D.Light
         private TerrainLayer ComposeLayer => GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
         private TerrainLayer BaseLayer => GetNodeOrNull<TerrainLayer>(BaseLayerPath);
         private TileMapLayer WallsLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("Walls");
+
         public TerrainCache Terrain { get; private set; }
 
         private static readonly LightPropagationDispatcher Propagation = new();
@@ -74,7 +81,26 @@ namespace Jogo25D.Light
 
         // Chunks cujo terreno mudou: a mascara de terreno precisa ser refeita (luz que so se moveu reaproveita a mascara).
         private readonly HashSet<Vector2I> _maskDirtyChunks = new();
+
+        // Celulas em volta de uma edicao de terreno cuja mascara e refeita (o bloco, os vizinhos reconectados e a arte que
+        // passa da celula), e o retangulo pendente por chunk (em celulas, relativo ao chunk).
+        private const int TerrainPatchMargin = 4;
+        private readonly Dictionary<Vector2I, Rect2I> _terrainPatches = new();
+
+        // Algo mudou (terreno, fonte de luz, chunk novo) enquanto a luz estava desligada.
+        private bool _staleWhileOff;
+
+        // Suspend ja rodou desde que a luz foi desligada.
+        private bool _suspended;
         private readonly HashSet<Vector2I> _inFlightChunks = new();
+        private readonly Queue<PendingPublish> _publishQueue = new();
+
+        // Tempo por quadro para publicar chunks de luz prontos (a mascara de tiles custa ~10 ms por chunk novo).
+        private const double PublishBudgetMsec = 4;
+
+        // Intervalo minimo entre reconstrucoes de um chunk que ja tem luz.
+        private const ulong EditRebuildIntervalMsec = 120;
+        private readonly Dictionary<Vector2I, ulong> _rebuiltAt = new();
         private readonly Dictionary<Vector2I, LightChunkOverlay> _chunkOverlays = new();
 
         private Node2D _overlayRoot;
@@ -133,11 +159,19 @@ namespace Jogo25D.Light
 
         public override void _Process(double delta)
         {
+            // Com a luz desligada nada e recalculado: as edicoes so marcam a luz como velha, e ao religar os chunks
+            // carregados sao refeitos (ResumeStaleLight).
             if (!Engine.IsEditorHint() && DimensionId != null)
             {
                 AttachChunks();
                 EnsureAuthoredChunks();
-                RebuildChunks(LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME);
+
+                if (On)
+                {
+                    ResumeStaleLight();
+                    DrainPublishes();
+                    RebuildChunks(LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME);
+                }
             }
 
             UpdateEditorPreview();
@@ -146,15 +180,22 @@ namespace Jogo25D.Light
 
             if (terrainOverlay != null)
             {
-                terrainOverlay.Visible = LightMapEnabled;
+                terrainOverlay.Visible = On;
             }
 
-            if (!LightMapEnabled || (Engine.IsEditorHint() && !PreviewInEditor))
+            // Desligada: esconde e solta os materiais uma vez, na transicao, e nao faz mais nada a cada quadro.
+            if (!On || (Engine.IsEditorHint() && !PreviewInEditor))
             {
-                Suspend();
+                if (!_suspended)
+                {
+                    Suspend();
+                    _suspended = true;
+                }
 
                 return;
             }
+
+            _suspended = false;
 
             if (_layers.Count == 0)
             {
@@ -701,19 +742,9 @@ namespace Jogo25D.Light
 
             BindMaterial(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material as ShaderMaterial, grid, sunColor);
 
-            var runtimeOverlay = GetParent().GetNodeOrNull<Node2D>("LightOverlay");
-
-            if (runtimeOverlay == null)
+            foreach (var overlay in _chunkOverlays.Values)
             {
-                return;
-            }
-
-            foreach (var child in runtimeOverlay.GetChildren())
-            {
-                if (child is Sprite2D sprite)
-                {
-                    BindMaterial(sprite.Material as ShaderMaterial, grid, sunColor);
-                }
+                BindMaterial(overlay.Material, grid, sunColor);
             }
         }
 
@@ -804,19 +835,9 @@ namespace Jogo25D.Light
             _entityMask.Track(level, (level as Dimension)?.Entities ?? level.GetNodeOrNull<Node2D>("Entities"));
             _entityMask.Bind(EditorPreview?.GetNodeOrNull<Sprite2D>("PreviewSprite")?.Material as ShaderMaterial, !_debug);
 
-            var runtimeOverlay = level.GetNodeOrNull<Node2D>("LightOverlay");
-
-            if (runtimeOverlay == null)
+            foreach (var overlay in _chunkOverlays.Values)
             {
-                return;
-            }
-
-            foreach (var child in runtimeOverlay.GetChildren())
-            {
-                if (child is Sprite2D sprite)
-                {
-                    _entityMask.Bind(sprite.Material as ShaderMaterial, !_debug);
-                }
+                _entityMask.Bind(overlay.Material, !_debug);
             }
         }
 
@@ -860,10 +881,43 @@ namespace Jogo25D.Light
 
         #region Core - Chunks de luz
 
-        // Terreno (bloco ou parede) mudou na celula: luz e mascara dos chunks em volta.
+        // Terreno (bloco ou parede) mudou na celula: a luz dos chunks em volta e refeita, mas a mascara so num retangulo em
+        // volta da celula (o bloco e os vizinhos que se reconectam, com a arte que passa da celula). Refazer as mascaras
+        // inteiras dos 9 chunks custava ~200 ms por bloco quebrado.
         public void OnCellChanged(Vector2I cell)
         {
-            MarkDirtyWithNeighbors(CoordinateUtilities.CellToChunk(cell), terrainChanged: true);
+            if (!On)
+            {
+                _staleWhileOff = true;
+
+                return;
+            }
+
+            var chunk = CoordinateUtilities.CellToChunk(cell);
+            var margin = Vector2I.One * TerrainPatchMargin;
+            var area = new Rect2I(cell - margin, margin * 2 + Vector2I.One);
+            var size = ChunkStreamingConstants.CHUNK_SIZE;
+
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    var neighbor = chunk + new Vector2I(dx, dy);
+                    var origin = CoordinateUtilities.ChunkToCell(neighbor);
+                    var local = area.Intersection(new Rect2I(origin, Vector2I.One * size));
+
+                    if (local.Size.X <= 0 || local.Size.Y <= 0)
+                    {
+                        continue;
+                    }
+
+                    local.Position -= origin;
+
+                    _terrainPatches[neighbor] = _terrainPatches.TryGetValue(neighbor, out var rect) ? rect.Merge(local) : local;
+                }
+            }
+
+            MarkDirtyWithNeighbors(chunk, terrainChanged: false);
         }
 
         // So uma fonte de luz entrou ou saiu da celula (LightSource2D): refaz a luz, reaproveitando a mascara.
@@ -941,7 +995,13 @@ namespace Jogo25D.Light
             _loadedChunks.Clear();
             _dirtyChunks.Clear();
             _maskDirtyChunks.Clear();
+            _terrainPatches.Clear();
             _inFlightChunks.Clear();
+
+            while (_publishQueue.Count > 0)
+            {
+                _publishQueue.Dequeue().Output.Dispose();
+            }
         }
 
         private void OnChunkLoaded(Vector2I chunkCoord)
@@ -953,8 +1013,10 @@ namespace Jogo25D.Light
 
         private void OnChunkUnloaded(Vector2I chunkCoord)
         {
+            _rebuiltAt.Remove(chunkCoord);
             _loadedChunks.Remove(chunkCoord);
             _dirtyChunks.Remove(chunkCoord);
+            _terrainPatches.Remove(chunkCoord);
 
             if (_chunkOverlays.TryGetValue(chunkCoord, out var overlay))
             {
@@ -963,8 +1025,34 @@ namespace Jogo25D.Light
             }
         }
 
+        // Religou depois de mudancas com a luz desligada: todos os chunks carregados voltam a ser calculados, com a
+        // mascara (os remendos de terreno e de agua acumulados nao valem mais).
+        private void ResumeStaleLight()
+        {
+            if (!_staleWhileOff)
+            {
+                return;
+            }
+
+            _staleWhileOff = false;
+            _terrainPatches.Clear();
+
+            foreach (var chunkCoord in _loadedChunks)
+            {
+                _dirtyChunks.Add(chunkCoord);
+                _maskDirtyChunks.Add(chunkCoord);
+            }
+        }
+
         private void MarkDirtyWithNeighbors(Vector2I chunkCoord, bool terrainChanged = true)
         {
+            if (!On)
+            {
+                _staleWhileOff = true;
+
+                return;
+            }
+
             for (var dx = -1; dx <= 1; dx++)
             {
                 for (var dy = -1; dy <= 1; dy++)
@@ -1049,6 +1137,7 @@ namespace Jogo25D.Light
 
             var processed = 0;
             var toProcess = new List<Vector2I>();
+            var now = Time.GetTicksMsec();
 
             foreach (var chunkCoord in _dirtyChunks)
             {
@@ -1064,6 +1153,14 @@ namespace Jogo25D.Light
                     continue;
                 }
 
+                // Chunk que ja tem luz e mudou de novo (mineracao rapida): espera EditRebuildIntervalMsec desde a ultima
+                // reconstrucao, e as edicoes desse intervalo saem numa reconstrucao so. Chunk sem luz sai na hora.
+                if (_chunkOverlays.ContainsKey(chunkCoord) && _rebuiltAt.TryGetValue(chunkCoord, out var at) && now - at < EditRebuildIntervalMsec)
+                {
+                    continue;
+                }
+
+                _rebuiltAt[chunkCoord] = now;
                 toProcess.Add(chunkCoord);
 
                 processed++;
@@ -1120,6 +1217,8 @@ namespace Jogo25D.Light
 
             _inFlightChunks.Add(chunkCoord);
 
+            var queued = false;
+
             try
             {
                 var output = await Propagation.ComputeTextureAsync(region, IsSolid, sources);
@@ -1131,7 +1230,10 @@ namespace Jogo25D.Light
                     return;
                 }
 
-                PublishChunk(overlayRoot, chunkCoord, chunkOrigin, region, output);
+                // A publicacao (mascara de tiles, no thread principal) entra na fila e sai em DrainPublishes, com teto
+                // de tempo por quadro: andando, varios chunks prontos no mesmo quadro nao viram um pico.
+                _publishQueue.Enqueue(new PendingPublish(overlayRoot, chunkCoord, chunkOrigin, region, output));
+                queued = true;
             }
             catch (ObjectDisposedException)
             {
@@ -1142,9 +1244,47 @@ namespace Jogo25D.Light
             }
             finally
             {
-                _inFlightChunks.Remove(chunkCoord);
+                if (!queued)
+                {
+                    _inFlightChunks.Remove(chunkCoord);
+                }
             }
         }
+
+        // Publica os chunks prontos ate PublishBudgetMsec por quadro (sempre pelo menos um). O chunk sai de
+        // _inFlightChunks so ao publicar ou descartar, para nao ser recalculado enquanto espera.
+        private void DrainPublishes()
+        {
+            var started = Time.GetTicksUsec();
+            var published = 0;
+
+            while (_publishQueue.Count > 0 && (published == 0 || Time.GetTicksUsec() - started < PublishBudgetMsec * 1000))
+            {
+                var pending = _publishQueue.Dequeue();
+
+                _inFlightChunks.Remove(pending.Chunk);
+
+                if (!_loadedChunks.Contains(pending.Chunk) || !IsInstanceValid(pending.OverlayRoot))
+                {
+                    pending.Output.Dispose();
+
+                    continue;
+                }
+
+                try
+                {
+                    PublishChunk(pending.OverlayRoot, pending.Chunk, pending.Origin, pending.Region, pending.Output);
+                }
+                catch (Exception error)
+                {
+                    GD.PushError(error.ToString());
+                }
+
+                published++;
+            }
+        }
+
+        private readonly record struct PendingPublish(Node2D OverlayRoot, Vector2I Chunk, Vector2I Origin, Rect2I Region, LightTextureOutput Output);
 
         private void PublishChunk(Node2D overlayRoot, Vector2I chunkCoord, Vector2I chunkOrigin, Rect2I region, LightTextureOutput output)
         {
@@ -1162,8 +1302,23 @@ namespace Jogo25D.Light
             {
                 overlay.UpdateOutput(output, null, LightingConstants.CHUNK_PADDING, region.Size.X);
 
+                // Edicao de terreno: so o pedaco em volta da celula.
+                if (_terrainPatches.Remove(chunkCoord, out var cells))
+                {
+                    var patchBounds = new Rect2I((chunkOrigin + cells.Position) * tileSize, cells.Size * tileSize);
+
+                    using var patch = TerrainLightMask.Build(patchBounds, overlayRoot, WallsLayer, BaseLayer, ComposeLayer);
+
+                    if (!overlay.PatchTerrain(cells, patch))
+                    {
+                        _maskDirtyChunks.Add(chunkCoord);
+                    }
+                }
+
                 return;
             }
+
+            _terrainPatches.Remove(chunkCoord);
 
             var bounds = new Rect2I(chunkOrigin * tileSize, new Vector2I(chunkSize, chunkSize) * tileSize);
 
@@ -1205,6 +1360,8 @@ namespace Jogo25D.Light
 
         #region Utils
 
+        // Cada ajuste e lido do recurso uma vez por quadro (a leitura passa pela reflexao do Godot e e pedida varias vezes
+        // por quadro); mudancas no editor aparecem no quadro seguinte.
         private float Setting(string name, float fallback)
         {
             if (Settings == null)
@@ -1212,10 +1369,27 @@ namespace Jogo25D.Light
                 return fallback;
             }
 
-            var value = Settings.Get(name);
+            var frame = Engine.GetProcessFrames();
 
-            return value.VariantType == Variant.Type.Nil ? fallback : value.AsSingle();
+            if (frame != _settingsFrame)
+            {
+                _settingsFrame = frame;
+                _settingsCache.Clear();
+            }
+
+            if (!_settingsCache.TryGetValue(name, out var value))
+            {
+                var variant = Settings.Get(name);
+
+                value = variant.VariantType == Variant.Type.Nil ? float.NaN : variant.AsSingle();
+                _settingsCache[name] = value;
+            }
+
+            return float.IsNaN(value) ? fallback : value;
         }
+
+        private readonly Dictionary<string, float> _settingsCache = new();
+        private ulong _settingsFrame = ulong.MaxValue;
 
         private Color SunColor()
         {

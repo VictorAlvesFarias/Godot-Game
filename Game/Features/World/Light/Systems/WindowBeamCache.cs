@@ -29,6 +29,10 @@ namespace Jogo25D.Light
         private float _ambientCurve = Unset;
         private float _depth = Unset;
 
+        // Refazer o campo do ceu so por mudanca de terreno: no maximo uma vez a cada intervalo.
+        private const ulong TerrainRebuildIntervalMsec = 150;
+        private ulong _fieldBuiltAt;
+
         #endregion
 
         #region Node children references
@@ -57,6 +61,23 @@ namespace Jogo25D.Light
                 || _shadowCurve != shadowCurve
                 || _ambientCurve != ambientCurve
                 || _depth != terrainDepth;
+
+            // So o terreno mudou (blocos quebrados ou colocados, a janela parada): o campo do ceu percorre a janela inteira,
+            // entao e refeito no maximo a cada TerrainRebuildIntervalMsec. A revisao guardada continua velha e o proximo
+            // quadro depois do intervalo refaz.
+            var onlyTerrain = _world == world
+                && _origin == origin
+                && _size == size
+                && _angle == angle
+                && _penumbra == penumbra
+                && _shadowCurve == shadowCurve
+                && _ambientCurve == ambientCurve
+                && _depth == terrainDepth;
+
+            if (fieldChanged && onlyTerrain && Time.GetTicksMsec() - _fieldBuiltAt < TerrainRebuildIntervalMsec)
+            {
+                fieldChanged = false;
+            }
 
             if (!fieldChanged && _sourceRevision == sourcesRevision)
             {
@@ -88,6 +109,7 @@ namespace Jogo25D.Light
             _depth = terrainDepth;
 
             Revision++;
+            _fieldBuiltAt = Time.GetTicksMsec();
 
             UpdateSkyCells(world, origin, size, terrainDepth);
             UpdateSolarBeam(size, angle, penumbra, shadowCurve, ambientCurve);
