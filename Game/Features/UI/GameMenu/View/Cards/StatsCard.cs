@@ -62,6 +62,12 @@ namespace Jogo25D.UI
             UpdatePropertiesList();
         }
 
+        // Equipar ou desequipar com o menu aberto muda os stats.
+        public override void OnInventoryChanged()
+        {
+            UpdatePropertiesList();
+        }
+
         #endregion
 
         #region Core - Stats
@@ -102,7 +108,7 @@ namespace Jogo25D.UI
             {
                 properties = new Godot.Collections.Array<BasePropertyData>();
 
-                foreach (var property in LocalPlayer.ActiveProperties)
+                foreach (var property in LocalPlayer.Properties)
                 {
                     properties.Add(property);
                 }
@@ -112,14 +118,9 @@ namespace Jogo25D.UI
                     properties.Add(property);
                 }
 
-                var equippedInstance = LocalPlayer.EquippedInstance();
-
-                if (equippedInstance != null)
+                foreach (var property in LocalPlayer.EquippedProperties<BasePropertyData>())
                 {
-                    foreach (var property in equippedInstance.Properties)
-                    {
-                        properties.Add(property);
-                    }
+                    properties.Add(property);
                 }
             }
 

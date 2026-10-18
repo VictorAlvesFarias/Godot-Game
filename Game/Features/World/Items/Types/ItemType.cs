@@ -8,6 +8,7 @@ namespace Jogo25D.Items
         Material,
         Tool,
         Block,
+        Equipment,
         Misc
     }
 }

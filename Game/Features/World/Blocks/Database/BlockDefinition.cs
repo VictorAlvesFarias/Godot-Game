@@ -24,6 +24,9 @@ namespace Jogo25D.Blocks
         // Nao pode ser colocado na agua, e a agua que chega na celula o quebra (com drop).
         public bool BreaksInWater { get; init; }
 
+        // Nivel minimo da ferramenta para quebrar o bloco.
+        public int RequiredTier { get; init; } = 1;
+
         #endregion
     }
 }

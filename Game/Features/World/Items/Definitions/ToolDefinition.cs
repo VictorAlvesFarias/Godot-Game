@@ -23,6 +23,9 @@ namespace Jogo25D.Items
         // 0 = so o bloco mirado; N = quebra o circulo de raio N em volta dele (dx^2 + dy^2 <= N^2).
         public int BreakRadius { get; init; }
 
+        // Nivel da ferramenta: so quebra blocos cujo RequiredTier seja menor ou igual.
+        public int Tier { get; init; } = 1;
+
         public bool IsMining { get; set; }
         public Vector2I MiningCell { get; set; }
         public float MiningElapsed { get; set; }
@@ -103,7 +106,7 @@ namespace Jogo25D.Items
         {
             var prop = ResolveMiningTargetProp(player, layer, targetCell);
 
-            if (prop == null && !TileQueries.HasBlock(layer, baseLayer, targetCell))
+            if (prop == null && (!TileQueries.HasBlock(layer, baseLayer, targetCell) || !CanBreak(player, targetCell)))
             {
                 ResetMining();
 
@@ -132,11 +135,11 @@ namespace Jogo25D.Items
             }
             else
             {
-                BreakArea(layer, baseLayer, targetCell);
+                BreakArea(player, layer, baseLayer, targetCell);
             }
         }
 
-        private void BreakArea(TileMapLayer layer, TileMapLayer baseLayer, Vector2I center)
+        private void BreakArea(Player player, TileMapLayer layer, TileMapLayer baseLayer, Vector2I center)
         {
             if (layer is not TerrainLayer terrain)
             {
@@ -149,7 +152,7 @@ namespace Jogo25D.Items
                 {
                     var cell = center + new Vector2I(dx, dy);
 
-                    if (IsInBreakArea(dx, dy, BreakRadius) && TileQueries.HasBlock(layer, baseLayer, cell))
+                    if (IsInBreakArea(dx, dy, BreakRadius) && TileQueries.HasBlock(layer, baseLayer, cell) && CanBreak(player, cell))
                     {
                         terrain.BreakBlockClientRequest(cell);
                     }
@@ -178,12 +181,24 @@ namespace Jogo25D.Items
             return null;
         }
 
-        // Escala do tempo de quebra do bloco da celula (a tocha quebra bem mais rapido que a terra).
-        private static float BreakTimeScaleAt(Player player, Vector2I cell)
+        // Bloco da celula (o do terreno resolvido: gerado, minerio ou colocado), ou nulo.
+        private static BlockDefinition BlockAt(Player player, Vector2I cell)
         {
             var terrain = Dimension.Get(player.GetActiveDimensionId())?.EnsureTerrain().Terrain(cell.X, cell.Y) ?? -1;
 
-            return terrain < 0 ? 1f : BlockDB.FindByTerrain(terrain)?.BreakTimeScale ?? 1f;
+            return terrain < 0 ? null : BlockDB.FindByTerrain(terrain);
+        }
+
+        // Escala do tempo de quebra do bloco da celula (a tocha quebra bem mais rapido que a terra).
+        private static float BreakTimeScaleAt(Player player, Vector2I cell)
+        {
+            return BlockAt(player, cell)?.BreakTimeScale ?? 1f;
+        }
+
+        // A ferramenta tem nivel para o bloco da celula.
+        public bool CanBreak(Player player, Vector2I cell)
+        {
+            return (BlockAt(player, cell)?.RequiredTier ?? 1) <= Tier;
         }
 
         private static Vector2 CellCenter(TileMapLayer layer, Vector2I cell)
@@ -352,7 +367,10 @@ namespace Jogo25D.Items
 
             EnsureIndicator(layer);
 
-            Indicator.Color = new Color(1f, 1f, 1f, IsMining ? 0.45f : 0.15f);
+            // Ferramenta fraca para o bloco: mesmo alvo, em vermelho, e a quebra nao avanca.
+            Indicator.Color = CanBreak(player, cell)
+                ? new Color(1f, 1f, 1f, IsMining ? 0.45f : 0.15f)
+                : new Color(1f, 0.3f, 0.3f, 0.35f);
             Indicator.Position = layer.MapToLocal(cell);
             Indicator.Visible = true;
         }

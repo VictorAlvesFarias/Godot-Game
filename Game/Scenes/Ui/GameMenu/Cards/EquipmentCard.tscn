@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/EquipmentCard.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/EquipmentSlot.tscn" id="3_slot"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_head.png" id="4_head"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_chest.png" id="5_chest"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_legs.png" id="6_legs"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_accessory.png" id="7_accessory"]
+
+[node name="EquipmentCard" type="VBoxContainer"]
+size_flags_vertical = 0
+script = ExtResource("1_script")
+theme = ExtResource("theme_pixel")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_top = 17
+
+[node name="Slots" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeadSlot" parent="Margin/Slots" instance=ExtResource("3_slot")]
+layout_mode = 2
+OutlineTexture = ExtResource("4_head")
+
+[node name="ChestSlot" parent="Margin/Slots" instance=ExtResource("3_slot")]
+layout_mode = 2
+Index = 1
+OutlineTexture = ExtResource("5_chest")
+
+[node name="LegsSlot" parent="Margin/Slots" instance=ExtResource("3_slot")]
+layout_mode = 2
+Index = 2
+OutlineTexture = ExtResource("6_legs")
+
+[node name="Accessory1Slot" parent="Margin/Slots" instance=ExtResource("3_slot")]
+layout_mode = 2
+Index = 3
+OutlineTexture = ExtResource("7_accessory")
+
+[node name="Accessory2Slot" parent="Margin/Slots" instance=ExtResource("3_slot")]
+layout_mode = 2
+Index = 4
+OutlineTexture = ExtResource("7_accessory")

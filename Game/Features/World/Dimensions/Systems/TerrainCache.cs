@@ -233,6 +233,14 @@ namespace Jogo25D.Dimensions
                 return material;
             }
 
+            // Terra macica do interior: o minerio da celula, se houver; senao o terreno do bioma.
+            var ore = _generator.OreAt(Seed, DimensionId, x, y, y - GroundHeight(x), WorldScale);
+
+            if (ore != null && BlockDB.TryGet(ore.BlockId, out var block))
+            {
+                return block.TerrainSet ?? block.SourceId;
+            }
+
             return BiomeDB.Get(_generator.GetBiomeIdAtPosition(Seed, DimensionId, x, y)).TerrainSet;
         }
 
@@ -251,7 +259,7 @@ namespace Jogo25D.Dimensions
             return _edits.TryGetValue(x, out var edits) && edits.TryGetValue(y, out var material) ? material : -1;
         }
 
-        // Superficie gerada da coluna (sem edicoes), a referencia de profundidade das cavernas e da agua.
+        // Superficie gerada da coluna (sem edicoes), a referencia de profundidade das cavernas, dos minerios e da agua.
         public int GroundHeight(int x)
         {
             if (!_groundHeights.TryGetValue(x, out var height))

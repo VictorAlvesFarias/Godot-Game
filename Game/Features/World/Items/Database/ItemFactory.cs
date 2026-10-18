@@ -89,6 +89,30 @@ namespace Jogo25D.Items
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
+                ["copper_pickaxe"] = () => new ToolDefinition
+                {
+                    Id = "copper_pickaxe",
+                    Name = "Picareta de Cobre",
+                    Type = ItemType.Tool,
+                    Description = "Quebra blocos mais rápido e minera ferro",
+                    Cooldown = 0.35f,
+                    BreakTimeSeconds = 0.9f,
+                    Tier = 2,
+                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                },
+
+                ["iron_pickaxe"] = () => new ToolDefinition
+                {
+                    Id = "iron_pickaxe",
+                    Name = "Picareta de Ferro",
+                    Type = ItemType.Tool,
+                    Description = "Quebra blocos mais rápido e minera ouro",
+                    Cooldown = 0.35f,
+                    BreakTimeSeconds = 0.7f,
+                    Tier = 3,
+                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                },
+
                 ["pickaxe_onehit"] = () => new ToolDefinition
                 {
                     Id = "pickaxe_onehit",
@@ -98,6 +122,7 @@ namespace Jogo25D.Items
                     Cooldown = 0.35f,
                     BreakTimeSeconds = 0.01f,
                     BreakRadius = 0,
+                    Tier = 3,
                     HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
@@ -169,6 +194,209 @@ namespace Jogo25D.Items
                     HeldLightColor = new Color(1f, 0.72f, 0.4f),
                 },
 
+                ["copper_ore"] = () => new MaterialDefinition
+                {
+                    Id = "copper_ore",
+                    Name = "Minério de Cobre",
+                    Type = ItemType.Material,
+                    Description = "Funda na fornalha para fazer barras de cobre",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["iron_ore"] = () => new MaterialDefinition
+                {
+                    Id = "iron_ore",
+                    Name = "Minério de Ferro",
+                    Type = ItemType.Material,
+                    Description = "Funda na fornalha para fazer barras de ferro",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["gold_ore"] = () => new MaterialDefinition
+                {
+                    Id = "gold_ore",
+                    Name = "Minério de Ouro",
+                    Type = ItemType.Material,
+                    Description = "Funda na fornalha para fazer barras de ouro",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["copper_bar"] = () => new MaterialDefinition
+                {
+                    Id = "copper_bar",
+                    Name = "Barra de Cobre",
+                    Type = ItemType.Material,
+                    Description = "Usada para fazer ferramentas de cobre",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["iron_bar"] = () => new MaterialDefinition
+                {
+                    Id = "iron_bar",
+                    Name = "Barra de Ferro",
+                    Type = ItemType.Material,
+                    Description = "Usada para fazer ferramentas de ferro",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["gold_bar"] = () => new MaterialDefinition
+                {
+                    Id = "gold_bar",
+                    Name = "Barra de Ouro",
+                    Type = ItemType.Material,
+                    Description = "Metal raro e valioso",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["copper_helmet"] = () => new EquipmentDefinition
+                {
+                    Id = "copper_helmet",
+                    Name = "Capacete de Cobre",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Head,
+                    Description = "Reduz o dano físico recebido em 3%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.03f },
+                    },
+                },
+
+                ["copper_chestplate"] = () => new EquipmentDefinition
+                {
+                    Id = "copper_chestplate",
+                    Name = "Peitoral de Cobre",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Chest,
+                    Description = "Reduz o dano físico recebido em 5%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.05f },
+                    },
+                },
+
+                ["copper_leggings"] = () => new EquipmentDefinition
+                {
+                    Id = "copper_leggings",
+                    Name = "Calças de Cobre",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Legs,
+                    Description = "Reduz o dano físico recebido em 4%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.04f },
+                    },
+                },
+
+                ["iron_helmet"] = () => new EquipmentDefinition
+                {
+                    Id = "iron_helmet",
+                    Name = "Capacete de Ferro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Head,
+                    Description = "Reduz o dano físico recebido em 5%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.05f },
+                    },
+                },
+
+                ["iron_chestplate"] = () => new EquipmentDefinition
+                {
+                    Id = "iron_chestplate",
+                    Name = "Peitoral de Ferro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Chest,
+                    Description = "Reduz o dano físico recebido em 8%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.08f },
+                    },
+                },
+
+                ["iron_leggings"] = () => new EquipmentDefinition
+                {
+                    Id = "iron_leggings",
+                    Name = "Calças de Ferro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Legs,
+                    Description = "Reduz o dano físico recebido em 6%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.06f },
+                    },
+                },
+
+                ["gold_helmet"] = () => new EquipmentDefinition
+                {
+                    Id = "gold_helmet",
+                    Name = "Capacete de Ouro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Head,
+                    Description = "Reduz o dano físico recebido em 7%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.07f },
+                    },
+                },
+
+                ["gold_chestplate"] = () => new EquipmentDefinition
+                {
+                    Id = "gold_chestplate",
+                    Name = "Peitoral de Ouro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Chest,
+                    Description = "Reduz o dano físico recebido em 11%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.11f },
+                    },
+                },
+
+                ["gold_leggings"] = () => new EquipmentDefinition
+                {
+                    Id = "gold_leggings",
+                    Name = "Calças de Ouro",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Legs,
+                    Description = "Reduz o dano físico recebido em 9%",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new DamageResistencePropertyData { DamageType = DamageType.Physical, ResistanceFactor = 0.09f },
+                    },
+                },
+
+                ["swift_boots"] = () => new EquipmentDefinition
+                {
+                    Id = "swift_boots",
+                    Name = "Botas Ligeiras",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Accessory,
+                    Description = "Aumenta a velocidade de movimento",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new MovementPropertyData { Speed = 45f },
+                    },
+                },
+
+                ["life_amulet"] = () => new EquipmentDefinition
+                {
+                    Id = "life_amulet",
+                    Name = "Amuleto de Vida",
+                    Type = ItemType.Equipment,
+                    Kind = EquipmentKind.Accessory,
+                    Description = "Aumenta a vida máxima em 20",
+                    Properties = new Godot.Collections.Array<BasePropertyData>
+                    {
+                        new HealthPropertyData { MaxHealth = 20 },
+                    },
+                },
+
                 ["portal"] = () => new PlacePropItemDefinition
                 {
                     Id = "portal",
@@ -188,6 +416,30 @@ namespace Jogo25D.Items
                     Name = "Mesa de criação",
                     Type = ItemType.Misc,
                     Description = "Libera as receitas de mesa para quem está perto dela",
+                    Stackable = true,
+                    MaxStackSize = 99,
+                    Cooldown = 0.25f,
+                },
+
+                ["furnace"] = () => new PlacePropItemDefinition
+                {
+                    Id = "furnace",
+                    PropId = "furnace",
+                    Name = "Fornalha",
+                    Type = ItemType.Misc,
+                    Description = "Libera as receitas de barras de metal para quem está perto dela",
+                    Stackable = true,
+                    MaxStackSize = 99,
+                    Cooldown = 0.25f,
+                },
+
+                ["anvil"] = () => new PlacePropItemDefinition
+                {
+                    Id = "anvil",
+                    PropId = "anvil",
+                    Name = "Bigorna",
+                    Type = ItemType.Misc,
+                    Description = "Libera as receitas de armaduras e acessórios para quem está perto dela",
                     Stackable = true,
                     MaxStackSize = 99,
                     Cooldown = 0.25f,

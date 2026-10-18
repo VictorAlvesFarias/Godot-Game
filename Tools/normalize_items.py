@@ -30,6 +30,7 @@ MAX_SCALE = 8
 OPAQUE_SHARE = 0.35
 
 SWORD, BOW, ARROW, POTION, PORTAL, TOOL, CRAFTING_TABLE = 20, 12, 10, 7, 13, 16, 16
+ORE, BAR, ARMOR, ACCESSORY = 8, 10, 10, 10
 
 # Lado maior da arte, em pixels da grade do jogador (o jogador tem 19 de altura).
 TARGET_SIZE = {
@@ -42,7 +43,13 @@ TARGET_SIZE = {
     "speed_potion": POTION, "instant_heal_potion": POTION,
     "portal": PORTAL,
     "crafting_table": CRAFTING_TABLE,
-    "pickaxe_starting": TOOL, "pickaxe_onehit": TOOL, "wall_hammer": TOOL,
+    "furnace": CRAFTING_TABLE,
+    "anvil": CRAFTING_TABLE,
+    "pickaxe_starting": TOOL, "pickaxe_onehit": TOOL, "wall_hammer": TOOL, "copper_pickaxe": TOOL, "iron_pickaxe": TOOL,
+    "copper_ore": ORE, "iron_ore": ORE, "gold_ore": ORE,
+    "copper_bar": BAR, "iron_bar": BAR, "gold_bar": BAR,
+    **{f"{metal}_{piece}": ARMOR for metal in ("copper", "iron", "gold") for piece in ("helmet", "chestplate", "leggings")},
+    "swift_boots": ACCESSORY, "life_amulet": ACCESSORY,
 }
 
 # Blocos: tileset, fontes desenhadas de baixo para cima (como as camadas Base e Compose) e o modulate da camada.

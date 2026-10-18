@@ -5,6 +5,7 @@ using Jogo25D.Caves;
 using Jogo25D.Constants;
 using Jogo25D.Core;
 using Jogo25D.Dimensions;
+using Jogo25D.Ores;
 using Jogo25D.Structures;
 using Jogo25D.Utils.Coordinates;
 using System.Collections.Generic;
@@ -187,6 +188,26 @@ namespace Jogo25D.Chunks
             }
         }
 
+        // Minerio da celula do interior (terra macica ja decidida pelas cavernas), ou nulo. depth = celulas abaixo da
+        // superficie gerada da coluna, a mesma referencia das cavernas.
+        public OreDefinition OreAt(long seed, string dimensionId, int x, int y, int depth, int worldScale)
+        {
+            foreach (var ore in OreDB.All)
+            {
+                if (depth < ore.MinDepth * worldScale)
+                {
+                    continue;
+                }
+
+                if (Noise(seed, dimensionId, ore.Tag, ore.Frequency / worldScale).GetNoise2D(x, y) > ore.Threshold)
+                {
+                    return ore;
+                }
+            }
+
+            return null;
+        }
+
         private FastNoiseLite Noise(long seed, string dimension, string tag, float frequency)
         {
             var key = (seed, dimension, tag);
@@ -211,6 +232,12 @@ namespace Jogo25D.Chunks
                 Seed = (int)CombineBiomeSeed(seed, dimension, tag),
                 Frequency = frequency
             };
+
+            // Veios de minerio: uma oitava basta para a forma, e o ruido e avaliado em toda celula do interior.
+            if (tag.StartsWith("ore_"))
+            {
+                noise.FractalType = FastNoiseLite.FractalTypeEnum.None;
+            }
 
             if (tag == "biome_warp")
             {

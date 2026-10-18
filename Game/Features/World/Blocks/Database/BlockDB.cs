@@ -74,6 +74,36 @@ namespace Jogo25D.Blocks
                 NeedsSupport = true,
                 BreaksInWater = true,
             },
+            // Minerios: gerados no interior pelo OreDB; o tile tem forma propria (colide e bloqueia luz).
+            ["copper_ore"] = new BlockDefinition
+            {
+                Id = "copper_ore",
+                DropItemId = "copper_ore",
+                SourceId = TerrainsConstants.COPPER_ORE,
+                AtlasCoord = new Vector2I(1, 1),
+                TerrainSet = TerrainsConstants.COPPER_ORE,
+                RequiredTier = 1,
+            },
+            // Ferro: exige picareta de cobre.
+            ["iron_ore"] = new BlockDefinition
+            {
+                Id = "iron_ore",
+                DropItemId = "iron_ore",
+                SourceId = TerrainsConstants.IRON_ORE,
+                AtlasCoord = new Vector2I(1, 1),
+                TerrainSet = TerrainsConstants.IRON_ORE,
+                RequiredTier = 2,
+            },
+            // Ouro: exige picareta de ferro.
+            ["gold_ore"] = new BlockDefinition
+            {
+                Id = "gold_ore",
+                DropItemId = "gold_ore",
+                SourceId = TerrainsConstants.GOLD_ORE,
+                AtlasCoord = new Vector2I(1, 1),
+                TerrainSet = TerrainsConstants.GOLD_ORE,
+                RequiredTier = 3,
+            },
         };
 
         #endregion

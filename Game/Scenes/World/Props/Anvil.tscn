@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/World/Crafting/Entities/Anvil.cs" id="1_anvil"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Items/anvil/texture.png" id="2_texture"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_anvil"]
+size = Vector2(32, 18)
+
+[node name="Anvil" type="Area2D"]
+collision_layer = 0
+collision_mask = 8
+script = ExtResource("1_anvil")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 1
+position = Vector2(0, -1)
+scale = Vector2(2, 2)
+texture = ExtResource("2_texture")
+
+[node name="Shape" type="CollisionShape2D" parent="."]
+position = Vector2(0, -1)
+shape = SubResource("RectangleShape2D_anvil")

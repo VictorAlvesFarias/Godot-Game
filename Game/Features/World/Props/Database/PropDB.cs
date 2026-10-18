@@ -5,6 +5,8 @@ namespace Jogo25D.Props
     public static class PropDB
     {
         public const string CraftingTableStation = "crafting_table";
+        public const string FurnaceStation = "furnace";
+        public const string AnvilStation = "anvil";
 
         private static readonly Dictionary<string, PropDefinition> _props = new()
         {
@@ -20,6 +22,20 @@ namespace Jogo25D.Props
                 ScenePath = "res://Scenes/World/Props/CraftingTable.tscn",
                 ItemId = "crafting_table",
                 Station = CraftingTableStation,
+            },
+            ["furnace"] = new PropDefinition
+            {
+                Id = "furnace",
+                ScenePath = "res://Scenes/World/Props/Furnace.tscn",
+                ItemId = "furnace",
+                Station = FurnaceStation,
+            },
+            ["anvil"] = new PropDefinition
+            {
+                Id = "anvil",
+                ScenePath = "res://Scenes/World/Props/Anvil.tscn",
+                ItemId = "anvil",
+                Station = AnvilStation,
             },
         };
 

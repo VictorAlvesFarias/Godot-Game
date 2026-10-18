@@ -24,6 +24,7 @@ using Jogo25D.Utils.GodotDictionaryParser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using EquipmentSlot = Jogo25D.Items.EquipmentSlot;
 
 namespace Jogo25D.Characters
 {
@@ -36,6 +37,9 @@ namespace Jogo25D.Characters
 
         [Signal]
         public delegate void ItemEquippedEventHandler(long instanceId);
+
+        [Signal]
+        public delegate void EquipmentChangedEventHandler();
 
         [Signal]
         public delegate void EffectsChangedEventHandler();
@@ -67,6 +71,7 @@ namespace Jogo25D.Characters
         public Godot.Collections.Array<ActionDefinitionData> ActiveAbilities { get; set; } = new Godot.Collections.Array<ActionDefinitionData>();
         public Dictionary<string, ActionDefinition> ActionDefinitions { get; } = new();
         public Dictionary<long, ItemDefinition> ItemDefinitions { get; } = new();
+        private readonly Dictionary<string, EquipmentDefinition> _equipmentDefinitions = new();
 
         #endregion
 
@@ -105,6 +110,9 @@ namespace Jogo25D.Characters
 
         [GodotDictionaryField]
         public InventoryData Inventory { get; set; } = new InventoryData();
+
+        [GodotDictionaryField]
+        public EquipmentData Equipment { get; set; } = new EquipmentData();
 
         #endregion
 
@@ -175,6 +183,7 @@ namespace Jogo25D.Characters
 
             Sprite.Play("idle");
             InventorySystem.EnsureSize(Inventory);
+            Equipment ??= new EquipmentData();
 
             foreach (var item in Inventory.Items)
             {
@@ -489,9 +498,8 @@ namespace Jogo25D.Characters
 
             if (IsAuthoritative())
             {
-                var equippedInstance = EquippedInstance();
-                var equippedResistances = equippedInstance?.Properties.OfType<DamageResistencePropertyData>().ToList() ?? new List<DamageResistencePropertyData>();
-                var equippedResistanceMultipliers = equippedInstance?.Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList() ?? new List<DamageResistenceMultiplierPropertyData>();
+                var equippedResistances = EquippedProperties<DamageResistencePropertyData>();
+                var equippedResistanceMultipliers = EquippedProperties<DamageResistenceMultiplierPropertyData>();
                 var resolvedResistances = Resolver.Resolve(Properties.OfType<DamageResistencePropertyData>().ToList(), ActiveProperties.OfType<DamageResistencePropertyData>().ToList(), equippedResistances);
                 var resolvedResistanceMultipliers = Resolver.Resolve(Properties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), ActiveProperties.OfType<DamageResistenceMultiplierPropertyData>().ToList(), equippedResistanceMultipliers);
 
@@ -510,9 +518,7 @@ namespace Jogo25D.Characters
 
         public int GetMaxHealth()
         {
-            var equippedProperties = EquippedInstance()?.Properties.OfType<HealthPropertyData>().ToList() ?? new List<HealthPropertyData>();
-
-            return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), equippedProperties).MaxHealth;
+            return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), EquippedProperties<HealthPropertyData>()).MaxHealth;
         }
 
         #endregion
@@ -853,6 +859,57 @@ namespace Jogo25D.Characters
             return InventorySystem.FindItem(Inventory, EquippedItemId);
         }
 
+        // Propriedades do tipo T de tudo o que o jogador esta usando: o item da mao (como antes, as da instancia) e cada
+        // peca equipada (as da definicao e as da instancia).
+        public List<T> EquippedProperties<T>() where T : BasePropertyData
+        {
+            var result = EquippedInstance()?.Properties.OfType<T>().ToList() ?? new List<T>();
+
+            result.AddRange(EquipmentProperties<T>());
+
+            return result;
+        }
+
+        // Propriedades do tipo T so das pecas equipadas (a arma soma as dela e as da instancia por conta propria).
+        public List<T> EquipmentProperties<T>() where T : BasePropertyData
+        {
+            var result = new List<T>();
+
+            if (Equipment == null)
+            {
+                return result;
+            }
+
+            foreach (var piece in Equipment.Slots)
+            {
+                if (piece == null)
+                {
+                    continue;
+                }
+
+                result.AddRange(EquipmentDefinitionOf(piece)?.Properties.OfType<T>() ?? Enumerable.Empty<T>());
+                result.AddRange(piece.Properties.OfType<T>());
+            }
+
+            return result;
+        }
+
+        // Definicao de uma peca equipada (ela nao esta no inventario, entao nao entra em ItemDefinitions).
+        public EquipmentDefinition EquipmentDefinitionOf(ItemData piece)
+        {
+            if (piece == null)
+            {
+                return null;
+            }
+
+            if (!_equipmentDefinitions.TryGetValue(piece.Id, out var definition))
+            {
+                _equipmentDefinitions[piece.Id] = definition = ItemFactory.Create(piece.Id) as EquipmentDefinition;
+            }
+
+            return definition;
+        }
+
         private void EnsureItemDefinition(ItemData item)
         {
             if (item == null || ItemDefinitions.ContainsKey(item.InstanceId))
@@ -1078,11 +1135,10 @@ namespace Jogo25D.Characters
 
         public void HandleMovement(float delta)
         {
-            var equippedProperties = EquippedInstance()?.Properties.OfType<MovementPropertyData>().ToList() ?? new List<MovementPropertyData>();
             var movementProperties = Resolver.Resolve(
                 Properties.OfType<MovementPropertyData>().ToList(),
                 ActiveProperties.OfType<MovementPropertyData>().ToList(),
-                equippedProperties
+                EquippedProperties<MovementPropertyData>()
             );
 
             if (!CanUpdateMovement)
@@ -1688,6 +1744,155 @@ namespace Jogo25D.Characters
             }
 
             EmitSignal(SignalName.InventoryChanged);
+        }
+
+        public void EquipArmorRequest(long instanceId)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                EquipArmorReceive(instanceId);
+
+                return;
+            }
+
+            RpcId(1, nameof(EquipArmorReceive), instanceId);
+        }
+
+        // Servidor: a peca precisa estar no inventario do proprio jogador; o slot sai do tipo dela (acessorio: o primeiro
+        // vazio, senao troca com o primeiro).
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void EquipArmorReceive(long instanceId)
+        {
+            var sender = Multiplayer?.GetRemoteSenderId() ?? 0;
+
+            if (!IsAuthoritative() || (sender != 0 && sender != PeerId))
+            {
+                return;
+            }
+
+            var piece = InventorySystem.FindItem(Inventory, instanceId);
+
+            if (piece == null || ItemFactory.Create(piece.Id) is not EquipmentDefinition definition)
+            {
+                return;
+            }
+
+            ApplyEquipment(instanceId, (int)SlotFor(definition.Kind));
+        }
+
+        public void UnequipArmorRequest(int slot)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer())
+            {
+                UnequipArmorReceive(slot);
+
+                return;
+            }
+
+            RpcId(1, nameof(UnequipArmorReceive), slot);
+        }
+
+        // Servidor: so desequipa se a peca couber no inventario.
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void UnequipArmorReceive(int slot)
+        {
+            var sender = Multiplayer?.GetRemoteSenderId() ?? 0;
+
+            if (!IsAuthoritative() || (sender != 0 && sender != PeerId) || slot < 0 || slot >= EquipmentData.SlotCount)
+            {
+                return;
+            }
+
+            var piece = Equipment.Get((EquipmentSlot)slot);
+
+            if (piece == null || !InventorySystem.CanAdd(Inventory, piece))
+            {
+                return;
+            }
+
+            ApplyEquipment(0, slot);
+        }
+
+        // Servidor: aplica a troca em todos os peers e prende a vida ao novo maximo.
+        private void ApplyEquipment(long instanceId, int slot)
+        {
+            if (Multiplayer == null || !Multiplayer.HasMultiplayerPeer())
+            {
+                EquipmentApplyReceive(instanceId, slot);
+            }
+            else
+            {
+                Rpc(nameof(EquipmentApplyReceive), instanceId, slot);
+            }
+
+            if (CurrentHealth > GetMaxHealth())
+            {
+                SetHealthRequest(GetMaxHealth());
+            }
+        }
+
+        // Todos os peers (so a pedido do servidor). instanceId > 0: a peca do inventario vai para o slot e a anterior fica
+        // na posicao que ela liberou. instanceId == 0: a peca do slot volta para o inventario.
+        [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+        public void EquipmentApplyReceive(long instanceId, int slot)
+        {
+            var sender = Multiplayer?.GetRemoteSenderId() ?? 0;
+
+            if ((sender != 0 && sender != 1) || slot < 0 || slot >= EquipmentData.SlotCount)
+            {
+                return;
+            }
+
+            var previous = Equipment.Get((EquipmentSlot)slot);
+
+            if (instanceId > 0)
+            {
+                var index = InventorySystem.FindSlotIndex(Inventory, instanceId);
+
+                if (index < 0)
+                {
+                    return;
+                }
+
+                var wasInHand = EquippedItemId == instanceId;
+
+                Equipment.Set((EquipmentSlot)slot, Inventory.Items[index]);
+                Inventory.Items[index] = previous;
+                RemoveItemDefinitionIfGone(instanceId);
+                EnsureItemDefinition(previous);
+
+                if (wasInHand && previous != null)
+                {
+                    EquipItem(previous.InstanceId);
+                }
+            }
+            else
+            {
+                if (previous == null || !InventorySystem.AddItem(Inventory, previous))
+                {
+                    return;
+                }
+
+                Equipment.Set((EquipmentSlot)slot, null);
+                EnsureItemDefinition(previous);
+            }
+
+            EmitSignal(SignalName.EquipmentChanged);
+            EmitSignal(SignalName.InventoryChanged);
+        }
+
+        // Slot de uma peca pelo tipo; acessorio vai no primeiro slot de acessorio vazio, ou troca com o primeiro.
+        private EquipmentSlot SlotFor(EquipmentKind kind)
+        {
+            return kind switch
+            {
+                EquipmentKind.Head => EquipmentSlot.Head,
+                EquipmentKind.Chest => EquipmentSlot.Chest,
+                EquipmentKind.Legs => EquipmentSlot.Legs,
+                _ => Equipment.Get(EquipmentSlot.Accessory1) == null || Equipment.Get(EquipmentSlot.Accessory2) != null
+                    ? EquipmentSlot.Accessory1
+                    : EquipmentSlot.Accessory2,
+            };
         }
 
         private static List<(long InstanceId, int Quantity)> IngredientSlots(InventoryData inventory, RecipeDefinition recipe)

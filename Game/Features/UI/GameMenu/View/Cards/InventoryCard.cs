@@ -343,7 +343,12 @@ namespace Jogo25D.UI
         {
             var data = SelectedSlotIndex < 0 || !HasPlayer ? null : InventorySystem.GetSlot(LocalPlayer.Inventory, SelectedSlotIndex);
 
-            if (data != null)
+            // Peca de equipamento vai para o slot dela; o resto vai para a mao.
+            if (data != null && ItemFactory.Create(data.Id) is EquipmentDefinition)
+            {
+                LocalPlayer.EquipArmorRequest(data.InstanceId);
+            }
+            else if (data != null)
             {
                 LocalPlayer.EquipItemRequest(data.InstanceId);
             }

@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Components/EquipmentSlot.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_head.png" id="2_outline"]
+
+[node name="EquipmentSlot" type="Panel"]
+custom_minimum_size = Vector2(76, 76)
+theme_type_variation = &"Slot"
+script = ExtResource("1_script")
+OutlineTexture = ExtResource("2_outline")
+theme = ExtResource("theme_pixel")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="Outline" type="TextureRect" parent="MarginContainer"]
+modulate = Color(1, 1, 1, 0.22)
+texture_filter = 1
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Icon" type="TextureRect" parent="MarginContainer"]
+texture_filter = 1
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5

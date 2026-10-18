@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/StatsCard.tscn" id="5_stats"]
 [ext_resource type="PackedScene" uid="uid://fm1g31fd5a3p" path="res://Scenes/Ui/GameMenu/Cards/SkillTreeCard.tscn" id="6_skilltree"]
 [ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/MapCard.tscn" id="7_map"]
+[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Cards/EquipmentCard.tscn" id="8_equipment"]
 [ext_resource type="Texture2D" uid="uid://cq6ce2o7eunw7" path="res://Assets/Textures/UI/Menu/crafting.png" id="icon_crafting"]
 [ext_resource type="Texture2D" uid="uid://jhjg6b8mfxw4" path="res://Assets/Textures/UI/Menu/inventory.png" id="icon_inventory"]
 [ext_resource type="Texture2D" uid="uid://ugimlokvp505" path="res://Assets/Textures/UI/Menu/map.png" id="icon_map"]
@@ -248,6 +249,9 @@ theme_override_constants/separation = 20
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
+
+[node name="EquipmentCard" parent="Root/Center/Layout/Pages/InventoryPage" instance=ExtResource("8_equipment")]
+layout_mode = 2
 
 [node name="SideColumn" type="VBoxContainer" parent="Root/Center/Layout/Pages/InventoryPage" unique_id=950130573]
 custom_minimum_size = Vector2(250, 0)
