@@ -69,7 +69,10 @@ namespace Jogo25D.Light
         private TerrainLayer ComposeLayer => GetNodeOrNull<TerrainLayer>(ComposeLayerPath);
         private TerrainLayer BaseLayer => GetNodeOrNull<TerrainLayer>(BaseLayerPath);
         private TileMapLayer WallsLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("Walls");
+        private TileMapLayer WaterLayer => GetParent()?.GetNodeOrNull<TileMapLayer>("Water");
 
+        // Intervalo entre os remendos de mascara onde a agua mudou (o passo da agua): a agua so muda a cobertura, nao a luz.
+        private const double WaterMaskInterval = 0.1;
         public TerrainCache Terrain { get; private set; }
 
         private static readonly LightPropagationDispatcher Propagation = new();
@@ -87,11 +90,16 @@ namespace Jogo25D.Light
         private const int TerrainPatchMargin = 4;
         private readonly Dictionary<Vector2I, Rect2I> _terrainPatches = new();
 
-        // Algo mudou (terreno, fonte de luz, chunk novo) enquanto a luz estava desligada.
+        // Retangulo (em celulas, relativo ao chunk) da agua mudada desde o ultimo remendo, por chunk, e o campo escutado.
+        private readonly Dictionary<Vector2I, Rect2I> _waterMaskChunks = new();
+
+        // Algo mudou (terreno, fonte de luz, agua, chunk novo) enquanto a luz estava desligada.
         private bool _staleWhileOff;
 
         // Suspend ja rodou desde que a luz foi desligada.
         private bool _suspended;
+        private Water.WaterField _water;
+        private double _waterMaskClock;
         private readonly HashSet<Vector2I> _inFlightChunks = new();
         private readonly Queue<PendingPublish> _publishQueue = new();
 
@@ -171,6 +179,7 @@ namespace Jogo25D.Light
                     ResumeStaleLight();
                     DrainPublishes();
                     RebuildChunks(LightingConstants.MAX_CHUNK_REBUILDS_PER_FRAME);
+                    UpdateWaterMasks(delta);
                 }
             }
 
@@ -415,7 +424,7 @@ namespace Jogo25D.Light
             _poll = 0;
             _previewDirty = false;
 
-            TerrainCache.LoadOpacity(ComposeLayer?.TileSet);
+            TerrainCache.LoadMaterials(ComposeLayer?.TileSet);
 
             Terrain ??= new TerrainCache(0, "shadow-preview", 1, false);
 
@@ -1036,6 +1045,7 @@ namespace Jogo25D.Light
 
             _staleWhileOff = false;
             _terrainPatches.Clear();
+            _waterMaskChunks.Clear();
 
             foreach (var chunkCoord in _loadedChunks)
             {
@@ -1300,7 +1310,7 @@ namespace Jogo25D.Light
 
             if (!_maskDirtyChunks.Remove(chunkCoord))
             {
-                overlay.UpdateOutput(output, null, LightingConstants.CHUNK_PADDING, region.Size.X);
+                overlay.UpdateOutput(output, null, null, LightingConstants.CHUNK_PADDING, region.Size.X);
 
                 // Edicao de terreno: so o pedaco em volta da celula.
                 if (_terrainPatches.Remove(chunkCoord, out var cells))
@@ -1309,7 +1319,7 @@ namespace Jogo25D.Light
 
                     using var patch = TerrainLightMask.Build(patchBounds, overlayRoot, WallsLayer, BaseLayer, ComposeLayer);
 
-                    if (!overlay.PatchTerrain(cells, patch))
+                    if (!overlay.PatchTerrain(cells, patch, WaterRows(chunkOrigin, tileSize)))
                     {
                         _maskDirtyChunks.Add(chunkCoord);
                     }
@@ -1324,7 +1334,85 @@ namespace Jogo25D.Light
 
             using var mask = TerrainLightMask.Build(bounds, overlayRoot, WallsLayer, BaseLayer, ComposeLayer);
 
-            overlay.UpdateOutput(output, mask, LightingConstants.CHUNK_PADDING, region.Size.X);
+            overlay.UpdateOutput(output, mask, WaterRows(chunkOrigin, tileSize), LightingConstants.CHUNK_PADDING, region.Size.X);
+
+            _waterMaskChunks.Remove(chunkCoord);
+        }
+
+        // Linhas de pixel cobertas pela agua numa celula relativa ao chunk (a agua recebe a luz do mundo, sem bloquear),
+        // lidas do campo de agua: o tile de agua de altura h ocupa as h/8 linhas de baixo.
+        private Func<Vector2I, int> WaterRows(Vector2I chunkOrigin, int tileSize)
+        {
+            var water = (GetParent() as Dimension)?.Water;
+
+            return cell => water == null ? 0 : Water.WaterField.Height(water.Level(chunkOrigin + cell)) * tileSize / Water.WaterField.Heights;
+        }
+
+        // Escuta o campo de agua da dimensao (recriado ao trocar de mundo) e, a cada intervalo, remenda a mascara so no
+        // retangulo onde a agua mudou em cada chunk (a camada de agua ja desenhou nesse meio tempo).
+        private void UpdateWaterMasks(double delta)
+        {
+            var water = (GetParent() as Dimension)?.Water;
+
+            if (water != _water)
+            {
+                if (_water != null)
+                {
+                    _water.CellChanged -= OnWaterChanged;
+                }
+
+                _water = water;
+                _waterMaskChunks.Clear();
+
+                if (_water != null)
+                {
+                    _water.CellChanged += OnWaterChanged;
+                }
+            }
+
+            _waterMaskClock += delta;
+
+            if (_waterMaskClock < WaterMaskInterval || _waterMaskChunks.Count == 0)
+            {
+                return;
+            }
+
+            _waterMaskClock = 0;
+
+            if (ComposeLayer == null)
+            {
+                return;
+            }
+
+            var tileSize = ComposeLayer.TileSet.TileSize.X;
+
+            foreach (var (chunkCoord, cells) in _waterMaskChunks)
+            {
+                // Chunk ainda sem luz publicada, ou com terreno mudado: a proxima publicacao ja leva a agua.
+                if (_maskDirtyChunks.Contains(chunkCoord) || !_chunkOverlays.TryGetValue(chunkCoord, out var overlay))
+                {
+                    continue;
+                }
+
+                overlay.PatchWater(cells, WaterRows(CoordinateUtilities.ChunkToCell(chunkCoord), tileSize));
+            }
+
+            _waterMaskChunks.Clear();
+        }
+
+        private void OnWaterChanged(Vector2I cell, byte level)
+        {
+            if (!On)
+            {
+                _staleWhileOff = true;
+
+                return;
+            }
+
+            var chunk = CoordinateUtilities.CellToChunk(cell);
+            var local = new Rect2I(cell - CoordinateUtilities.ChunkToCell(chunk), Vector2I.One);
+
+            _waterMaskChunks[chunk] = _waterMaskChunks.TryGetValue(chunk, out var rect) ? rect.Merge(local) : local;
         }
 
         private Node2D OverlayRoot()

@@ -36,9 +36,11 @@ namespace Jogo25D.Dimensions
 
         private const int ProceduralInterior = int.MaxValue;
         private const int StripCacheLimit = 128;
+        private const int GroundHeightCacheLimit = 8192;
 
         private static readonly Dictionary<int, bool> _opaqueMaterials = new();
-        private static ulong _opacityTileSet;
+        private static readonly Dictionary<int, bool> _solidMaterials = new();
+        private static ulong _materialsTileSet;
         // Tiles do interior gerado na memoria. O campo de ceu da luz percorre a janela inteira (do ceu ate a profundidade do
         // jogador) a cada edicao: com menos tiles que a janela, o "mais antigo sai" faz toda leitura reconstruir o tile
         // pelo ruido. Cada tile tem poucos KB.
@@ -60,6 +62,7 @@ namespace Jogo25D.Dimensions
 
         private readonly ChunkGeneratorSystem _generator = new();
         private readonly Dictionary<int, Strip> _strips = new();
+        private readonly Dictionary<int, int> _groundHeights = new();
         private readonly Dictionary<Vector2I, InteriorTile> _tiles = new();
         private readonly Dictionary<int, SortedDictionary<int, int>> _edits = new();
         private readonly SortedDictionary<int, int> _placedHeights = new();
@@ -82,7 +85,6 @@ namespace Jogo25D.Dimensions
         // Faixa de colunas [From, To] dos topos conhecidos (a ultima recebida), ou nula.
         public (int From, int To)? KnownTopsBand { get; private set; }
 
-
         #endregion
 
         #region Core - Consulta
@@ -94,7 +96,7 @@ namespace Jogo25D.Dimensions
             return terrain >= 0 ? terrain : layer.GetCellSourceId(cell);
         }
 
-        // Material que bloqueia luz: o que o tileset diz (LoadOpacity). Material desconhecido bloqueia, como o interior gerado.
+        // Material que bloqueia luz: o que o tileset diz (LoadMaterials). Material desconhecido bloqueia, como o interior gerado.
         public static byte TerrainOpacity(int terrain)
         {
             if (terrain < 0)
@@ -105,15 +107,35 @@ namespace Jogo25D.Dimensions
             return terrain == ProceduralInterior || !_opaqueMaterials.TryGetValue(terrain, out var opaque) || opaque ? (byte)255 : (byte)0;
         }
 
-        // Le do tileset quais materiais bloqueiam luz: um terreno, se os tiles dele tem oclusao ou, sendo de bioma, se a
-        // borda do bioma tem (a forma das celulas de bioma fica na borda, no Base); um source sem terreno, pelo proprio tile.
-        public static void LoadOpacity(TileSet tileSet)
+        // Material que colide (segura a agua): o que o tileset diz (LoadMaterials). Material desconhecido colide.
+        public static bool TerrainCollides(int terrain)
         {
-            if (tileSet == null || tileSet.GetInstanceId() == _opacityTileSet)
+            if (terrain < 0)
+            {
+                return false;
+            }
+
+            return terrain == ProceduralInterior || !_solidMaterials.TryGetValue(terrain, out var solid) || solid;
+        }
+
+        // Le do tileset quais materiais bloqueiam luz e quais colidem: um terreno, se os tiles dele tem a forma ou, sendo
+        // de bioma, se a borda do bioma tem (a forma das celulas de bioma fica na borda, no Base); um source sem terreno,
+        // pelo proprio tile.
+        public static void LoadMaterials(TileSet tileSet)
+        {
+            if (tileSet == null || tileSet.GetInstanceId() == _materialsTileSet)
             {
                 return;
             }
 
+            LoadShape(tileSet, _opaqueMaterials, shape => shape.Occludes);
+            LoadShape(tileSet, _solidMaterials, shape => shape.Collides);
+
+            _materialsTileSet = tileSet.GetInstanceId();
+        }
+
+        private static void LoadShape(TileSet tileSet, Dictionary<int, bool> materials, Func<(bool Collides, bool Occludes), bool> has)
+        {
             var bySource = new Dictionary<int, bool>();
             var byTerrain = new Dictionary<int, bool>();
 
@@ -129,33 +151,31 @@ namespace Jogo25D.Dimensions
                 for (var tile = 0; tile < atlas.GetTilesCount(); tile++)
                 {
                     var coord = atlas.GetTileId(tile);
-                    var occludes = TileQueries.ShapeOf(tileSet, sourceId, coord).Occludes;
+                    var present = has(TileQueries.ShapeOf(tileSet, sourceId, coord));
                     var terrainSet = atlas.GetTileData(coord, 0).TerrainSet;
 
-                    bySource[sourceId] = bySource.GetValueOrDefault(sourceId) || occludes;
+                    bySource[sourceId] = bySource.GetValueOrDefault(sourceId) || present;
 
                     if (terrainSet >= 0)
                     {
-                        byTerrain[terrainSet] = byTerrain.GetValueOrDefault(terrainSet) || occludes;
+                        byTerrain[terrainSet] = byTerrain.GetValueOrDefault(terrainSet) || present;
                     }
                 }
             }
 
-            _opaqueMaterials.Clear();
+            materials.Clear();
 
-            foreach (var (sourceId, occludes) in bySource)
+            foreach (var (sourceId, present) in bySource)
             {
-                _opaqueMaterials[sourceId] = occludes;
+                materials[sourceId] = present;
             }
 
-            foreach (var (terrainSet, occludes) in byTerrain)
+            foreach (var (terrainSet, present) in byTerrain)
             {
                 var biome = BiomeDB.GetByTerrainSet(terrainSet);
 
-                _opaqueMaterials[terrainSet] = occludes || (biome != null && byTerrain.GetValueOrDefault(biome.BorderCapTerrainSet));
+                materials[terrainSet] = present || (biome != null && byTerrain.GetValueOrDefault(biome.BorderCapTerrainSet));
             }
-
-            _opacityTileSet = tileSet.GetInstanceId();
         }
 
         // Runs opacas da coluna x dentro de [yFrom, yTo), ja com as edicoes aplicadas: materiais que nao bloqueiam luz
@@ -229,6 +249,22 @@ namespace Jogo25D.Dimensions
         public int EditedMaterial(int x, int y)
         {
             return _edits.TryGetValue(x, out var edits) && edits.TryGetValue(y, out var material) ? material : -1;
+        }
+
+        // Superficie gerada da coluna (sem edicoes), a referencia de profundidade das cavernas e da agua.
+        public int GroundHeight(int x)
+        {
+            if (!_groundHeights.TryGetValue(x, out var height))
+            {
+                if (_groundHeights.Count > GroundHeightCacheLimit)
+                {
+                    _groundHeights.Clear();
+                }
+
+                _groundHeights[x] = height = _generator.GetGroundHeight(Seed, DimensionId, x, WorldScale);
+            }
+
+            return height;
         }
 
         public byte Opacity(int x, int y)
@@ -314,6 +350,18 @@ namespace Jogo25D.Dimensions
 
             _highestKnownTop = highest ?? int.MaxValue;
             Revision++;
+        }
+
+        // A celula tem bloco que colide (segura a agua). Pela leitura do cache, sem tocar nos tiles.
+        public bool Collides(int x, int y)
+        {
+            return TerrainCollides(Material(x, y));
+        }
+
+        // Como Collides, mas so pela geracao (sem edicoes): a agua gerada depende so da seed.
+        public bool GeneratedCollides(int x, int y)
+        {
+            return TerrainCollides(GeneratedMaterial(x, y));
         }
 
         public bool HasBackground(int x, int y)

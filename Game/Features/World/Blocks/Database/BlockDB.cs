@@ -72,6 +72,7 @@ namespace Jogo25D.Blocks
                 LightColor = new Color(1f, 0.72f, 0.4f),
                 BreakTimeScale = 0.15f,
                 NeedsSupport = true,
+                BreaksInWater = true,
             },
         };
 

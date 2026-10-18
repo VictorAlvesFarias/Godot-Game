@@ -1095,14 +1095,23 @@ namespace Jogo25D.Characters
             var v = Velocity;
 
             var steppingUp = StepUpRemaining > 0f;
+            var immersion = WaterImmersion();
+            var swimming = immersion >= PlayerConstants.SWIM_IMMERSION;
+            var speed = swimming ? movementProperties.Speed * PlayerConstants.SWIM_SPEED_FACTOR : movementProperties.Speed;
 
             if (!IsOnFloor() && !steppingUp)
             {
-                v.Y += Gravity * delta;
+                v.Y += Gravity * (swimming ? PlayerConstants.SWIM_GRAVITY_FACTOR : 1f) * delta;
             }
 
-            if (Input.Jump && (IsOnFloor() || steppingUp))
+            if (swimming)
             {
+                // Afunda devagar; segurando o pulo, sobe ate a superficie.
+                v.Y = Input.Jump ? -PlayerConstants.SWIM_RISE_SPEED : Mathf.Min(v.Y, PlayerConstants.SWIM_MAX_FALL_SPEED);
+            }
+            else if (Input.Jump && (IsOnFloor() || steppingUp || immersion > 0f && v.Y >= -PlayerConstants.SWIM_RISE_SPEED))
+            {
+                // No chao, ou na superficie da agua (com o corpo ainda molhado): o pulo normal tira o jogador da agua.
                 StepUpRemaining = 0f;
 
                 v.Y = movementProperties.JumpVelocity;
@@ -1112,20 +1121,55 @@ namespace Jogo25D.Characters
 
             if (Input.MoveX != 0)
             {
-                v.X = Input.MoveX * movementProperties.Speed;
+                v.X = Input.MoveX * speed;
             }
             else
             {
-                v.X = Mathf.MoveToward(v.X, 0, movementProperties.Speed);
+                v.X = Mathf.MoveToward(v.X, 0, speed);
             }
 
-            UpdateStepUp(delta, movementProperties.Speed * StepUpSpeedFactor, ref v);
+            UpdateStepUp(delta, speed * StepUpSpeedFactor, ref v);
 
             Velocity = v;
 
             MoveAndSlide();
 
             TryStepUp(delta);
+        }
+
+        // Fracao das celulas que o corpo ocupa com agua de pelo menos meia altura (0 fora da agua), pelo campo de agua
+        // da dimensao (sincronizado no cliente).
+        public float WaterImmersion()
+        {
+            var water = Dimension.Get(GetActiveDimensionId())?.Water;
+            var layer = GetActiveTileLayer();
+
+            if (water == null || layer == null || Shape?.Shape is not RectangleShape2D body)
+            {
+                return 0f;
+            }
+
+            var center = Shape.GlobalPosition;
+            var half = body.Size * Shape.GlobalScale.Abs() * 0.5f;
+            var first = layer.LocalToMap(layer.ToLocal(center - half));
+            var last = layer.LocalToMap(layer.ToLocal(center + half));
+            var cells = 0;
+            var wet = 0;
+
+            for (var y = first.Y; y <= last.Y; y++)
+            {
+                for (var x = first.X; x <= last.X; x++)
+                {
+                    cells++;
+
+                    if (Water.WaterField.Height(water.Level(x, y)) >= PlayerConstants.SWIM_MIN_HEIGHT)
+                    {
+                        wet++;
+                    }
+                }
+            }
+
+            return cells == 0 ? 0f : (float)wet / cells;
         }
 
         private void UpdateStepUp(float delta, float speed, ref Vector2 velocity)

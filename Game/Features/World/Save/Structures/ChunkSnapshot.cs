@@ -36,6 +36,9 @@ namespace Jogo25D.Save.Structures
         // Falso quando o snapshot nao traz as edicoes: as edicoes do chunk no banco ficam como estao.
         public bool IncludesEdits { get; set; } = true;
 
+        // Niveis de agua do chunk (byte[1024]); nulo = a agua do chunk no banco fica como esta.
+        public byte[] Water { get; set; }
+
         #endregion
     }
 }

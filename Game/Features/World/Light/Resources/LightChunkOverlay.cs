@@ -46,7 +46,8 @@ namespace Jogo25D.Light
         private LightTextureOutput _output;
         private ImageTexture _maskTexture;
 
-        // Mascara do terreno (Rg8), guardada para remendar so o pedaco em volta de uma edicao.
+        // Mascara so do terreno (Rg8, sem agua) e a aplicada (terreno + agua): a agua muda sem refazer o terreno.
+        private byte[] _terrainMask;
         private byte[] _mask;
         private Vector2I _maskSize;
 
@@ -54,9 +55,9 @@ namespace Jogo25D.Light
 
         #region Core - Atualizacao
 
-        // O terreno mudou nas celulas `cells` (relativas ao chunk): troca esse pedaco da mascara pelo `patch` (do tamanho do
-        // pedaco, em pixels). Falso sem mascara ainda.
-        public bool PatchTerrain(Rect2I cells, Image patch)
+        // O terreno mudou nas celulas `cells` (relativas ao chunk): troca esse pedaco da mascara do terreno pelo `patch`
+        // (do tamanho do pedaco, em pixels) e recompoe a agua nele. Falso sem mascara de terreno ainda.
+        public bool PatchTerrain(Rect2I cells, Image patch, Func<Vector2I, int> waterRows)
         {
             if (_mask == null)
             {
@@ -70,26 +71,45 @@ namespace Jogo25D.Light
             {
                 var target = ((cells.Position.Y * _tileSize + row) * _maskSize.X + cells.Position.X * _tileSize) * 2;
 
-                Array.Copy(data, row * rowBytes, _mask, target, rowBytes);
+                Array.Copy(data, row * rowBytes, _terrainMask, target, rowBytes);
             }
 
+            ApplyWater(cells, waterRows);
             UploadMask();
 
             return true;
         }
 
-        // mask: a mascara do terreno, ou nula quando so a luz mudou.
-        public void UpdateOutput(LightTextureOutput output, Image mask, int padding, int regionSize)
+        // A agua mudou nas celulas `cells` (relativas ao chunk): refaz so esse pedaco, do terreno guardado + agua, e mantem
+        // a luz. Falso sem mascara de terreno ainda.
+        public bool PatchWater(Rect2I cells, Func<Vector2I, int> waterRows)
+        {
+            if (_mask == null)
+            {
+                return false;
+            }
+
+            ApplyWater(cells, waterRows);
+            UploadMask();
+
+            return true;
+        }
+
+        // mask: a mascara do terreno (sem agua), ou nula quando so a luz mudou. waterRows: linhas de pixel cobertas pela
+        // agua na celula (relativa ao chunk), de baixo para cima.
+        public void UpdateOutput(LightTextureOutput output, Image mask, Func<Vector2I, int> waterRows, int padding, int regionSize)
         {
             var material = Material;
             var chunkSize = ChunkStreamingConstants.CHUNK_SIZE;
 
-            // Sem mascara nova (so a luz mudou), fica a ja aplicada.
+            // Sem mascara nova (so a luz mudou), fica a do terreno ja aplicada.
             if (mask != null)
             {
                 _maskSize = mask.GetSize();
-                _mask = mask.GetData();
+                _terrainMask = mask.GetData();
+                _mask = (byte[])_terrainMask.Clone();
 
+                ApplyWater(new Rect2I(Vector2I.Zero, Vector2I.One * chunkSize), waterRows);
                 UploadMask();
             }
 
@@ -107,6 +127,33 @@ namespace Jogo25D.Light
 
             _output?.Dispose();
             _output = output;
+        }
+
+        // A agua cobre a celula inteira na mascara (R cheio, sem parede exposta) nas linhas de baixo que ela ocupa, como o
+        // tile de agua; o resto da celula volta ao terreno.
+        private void ApplyWater(Rect2I cells, Func<Vector2I, int> waterRows)
+        {
+            var width = _maskSize.X;
+
+            for (var cy = cells.Position.Y; cy < cells.End.Y; cy++)
+            {
+                for (var cx = cells.Position.X; cx < cells.End.X; cx++)
+                {
+                    var rows = waterRows(new Vector2I(cx, cy));
+
+                    for (var py = 0; py < _tileSize; py++)
+                    {
+                        var wet = py >= _tileSize - rows;
+                        var index = ((cy * _tileSize + py) * width + cx * _tileSize) * 2;
+
+                        for (var px = 0; px < _tileSize; px++, index += 2)
+                        {
+                            _mask[index] = wet ? (byte)255 : _terrainMask[index];
+                            _mask[index + 1] = wet ? (byte)0 : _terrainMask[index + 1];
+                        }
+                    }
+                }
+            }
         }
 
         private void UploadMask()

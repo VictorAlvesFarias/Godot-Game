@@ -2,6 +2,7 @@ using Godot;
 using Jogo25D.Biomes;
 using Jogo25D.Chunks;
 using Jogo25D.Constants;
+using Jogo25D.Water;
 using System.Collections.Generic;
 
 namespace Jogo25D.Systems
@@ -16,7 +17,11 @@ namespace Jogo25D.Systems
 
         #region Core - Registro
 
-        public void RecordChunk(string dimensionId, TileMapLayer layer, TileMapLayer baseLayer, Vector2I chunkCoord)
+        private static readonly Color SolidColor = new(0.4f, 0.4f, 0.45f, 1f);
+        private static readonly Color WaterColor = new(0.25f, 0.45f, 0.8f, 1f);
+
+        // Terreno que bloqueia luz em cinza e, onde nao ha, a agua (se houver) em azul.
+        public void RecordChunk(string dimensionId, TileMapLayer layer, TileMapLayer baseLayer, Vector2I chunkCoord, WaterField water = null)
         {
             if (layer == null)
             {
@@ -35,10 +40,20 @@ namespace Jogo25D.Systems
 
                     if (TileQueries.Occludes(layer, baseLayer, cell))
                     {
-                        image.SetCell(cell, new Color(0.4f, 0.4f, 0.45f, 1f));
+                        image.SetCell(cell, SolidColor);
+                    }
+                    else if (water != null && water.IsWet(cell))
+                    {
+                        image.SetCell(cell, WaterColor);
                     }
                 }
             }
+        }
+
+        // A agua de uma celula mudou: azul com agua visivel, vazio sem (a celula de agua nunca e terreno solido).
+        public void RecordWater(string dimensionId, Vector2I cell, bool wet)
+        {
+            Resolve(dimensionId).SetCell(cell, wet ? WaterColor : Colors.Transparent);
         }
 
         #endregion

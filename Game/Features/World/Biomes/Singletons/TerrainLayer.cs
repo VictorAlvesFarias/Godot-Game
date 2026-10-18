@@ -1223,6 +1223,11 @@ namespace Jogo25D.Biomes
                 return false;
             }
 
+            if (block.BreaksInWater && BlockSupport.IsFlooded(this, cell))
+            {
+                return false;
+            }
+
             if (!PlaceBlock(cell, block))
             {
                 return false;

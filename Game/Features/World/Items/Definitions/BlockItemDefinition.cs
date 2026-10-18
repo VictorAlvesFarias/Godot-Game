@@ -142,9 +142,10 @@ namespace Jogo25D.Items
                 return;
             }
 
-            // Bloco que precisa de apoio (tocha): o indicador so aparece onde a colocacao seria aceita.
-            if (!Background && BlockDB.TryGet(BlockId, out var block) && block.NeedsSupport
-                && !BlockSupport.HasSupport(layer, baseLayer, layer.GetParent()?.GetNodeOrNull<TileMapLayer>("Walls"), cell))
+            // Bloco que precisa de apoio ou nao vai na agua (tocha): o indicador so aparece onde a colocacao seria aceita.
+            if (!Background && BlockDB.TryGet(BlockId, out var block)
+                && (block.NeedsSupport && !BlockSupport.HasSupport(layer, baseLayer, layer.GetParent()?.GetNodeOrNull<TileMapLayer>("Walls"), cell)
+                    || block.BreaksInWater && BlockSupport.IsFlooded(layer, cell)))
             {
                 HideIndicator(player);
 

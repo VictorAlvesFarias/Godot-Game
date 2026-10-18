@@ -36,6 +36,12 @@ namespace Jogo25D.Blocks
             return false;
         }
 
+        // A celula tem agua visivel (a da dimensao da camada).
+        public static bool IsFlooded(TileMapLayer layer, Vector2I cell)
+        {
+            return (layer.GetParent() as Dimensions.Dimension)?.Water?.IsWet(cell) ?? false;
+        }
+
         #endregion
     }
 }

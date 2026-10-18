@@ -5,6 +5,7 @@ using Jogo25D.Save;
 using Jogo25D.Save.Resources;
 using Jogo25D.Save.Structures;
 using Jogo25D.Utils.Coordinates;
+using Jogo25D.Water;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +45,9 @@ namespace Jogo25D.Systems
             {
                 _repository.WriteMeta(save);
             }
+
+            // Frentes de agua gravadas no save da sessao anterior viram adiadas comuns (o save desta sessao grava as suas).
+            _repository.PromoteSavedPendingWater();
 
             var streaming = WorldStreaming.Current;
             var streamed = streaming != null && streaming.Enabled;
@@ -122,11 +126,14 @@ namespace Jogo25D.Systems
 
             var snapshots = new Dictionary<(string, Vector2I), ChunkSnapshot>();
             var cleaned = new List<(TerrainCache Terrain, Vector2I Chunk)>();
+            var cleanedWater = new List<(WaterField Water, Vector2I Chunk)>();
             var deleted = _deletedEntities.ToList();
 
             foreach (var dimension in Dimension.All.Where(GodotObject.IsInstanceValid))
             {
                 var terrain = dimension.Terrain;
+
+                dimension.SnapshotWaterFronts();
 
                 if (terrain != null)
                 {
@@ -144,6 +151,18 @@ namespace Jogo25D.Systems
                     }
                 }
 
+                var water = dimension.Water;
+
+                if (water != null && water.Simulated)
+                {
+                    foreach (var chunk in water.DirtyChunks().ToList())
+                    {
+                        SnapshotOf(snapshots, dimension.DimensionId, chunk).Water = water.ChunkLevels(chunk);
+
+                        cleanedWater.Add((water, chunk));
+                    }
+                }
+
                 // As entidades na arvore; as descarregadas ja estao no banco.
                 foreach (var node in dimension.Entities?.GetChildren().OfType<Node2D>() ?? Enumerable.Empty<Node2D>())
                 {
@@ -156,6 +175,11 @@ namespace Jogo25D.Systems
             foreach (var (terrain, chunk) in cleaned)
             {
                 terrain.MarkClean(chunk);
+            }
+
+            foreach (var (water, chunk) in cleanedWater)
+            {
+                water.MarkClean(chunk);
             }
 
             _deletedEntities.ExceptWith(deleted);
@@ -274,6 +298,39 @@ namespace Jogo25D.Systems
         }
 
         #endregion
+
+        public static void WritePendingWater(string dimension, int kind, IReadOnlyCollection<Vector2I> frontier, IEnumerable<Vector2I> region)
+        {
+            _repository?.WritePendingWater(dimension, kind, frontier, region);
+        }
+
+        public static List<List<Vector2I>> TakePendingWaterAt(string dimension, Vector2I chunk)
+        {
+            return _repository?.TakePendingWaterAt(dimension, chunk) ?? new List<List<Vector2I>>();
+        }
+
+        public static void DeleteSavedPendingWater(string dimension)
+        {
+            _repository?.DeleteSavedPendingWater(dimension);
+        }
+
+        public static byte[] ReadWater(string dimension, Vector2I chunk)
+        {
+            return _repository?.ReadWater(dimension, chunk);
+        }
+
+        // Grava a agua de um chunk que vai sair da memoria.
+        public static void SaveWater(string dimension, WaterField water, Vector2I chunk)
+        {
+            if (_repository == null)
+            {
+                return;
+            }
+
+            _repository.WriteChunks(new[] { new ChunkSnapshot(dimension, chunk) { IncludesEdits = false, Water = water.ChunkLevels(chunk) } });
+
+            water.MarkClean(chunk);
+        }
 
         public static List<EntityRow> ReadEntities(string dimension, Vector2I chunk)
         {

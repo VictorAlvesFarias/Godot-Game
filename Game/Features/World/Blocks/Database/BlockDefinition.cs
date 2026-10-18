@@ -21,6 +21,9 @@ namespace Jogo25D.Blocks
         // So pode existir com apoio (BlockSupport): sem ele nao e colocado, e cai quando o perde.
         public bool NeedsSupport { get; init; }
 
+        // Nao pode ser colocado na agua, e a agua que chega na celula o quebra (com drop).
+        public bool BreaksInWater { get; init; }
+
         #endregion
     }
 }

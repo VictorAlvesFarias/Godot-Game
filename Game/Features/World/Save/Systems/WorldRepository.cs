@@ -119,13 +119,33 @@ namespace Jogo25D.Systems
                     state TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS entities_by_chunk ON entities (dimension, cx, cy);
+                CREATE TABLE IF NOT EXISTS water (
+                    dimension TEXT NOT NULL,
+                    cx INTEGER NOT NULL,
+                    cy INTEGER NOT NULL,
+                    data BLOB NOT NULL,
+                    PRIMARY KEY (dimension, cx, cy)
+                ) WITHOUT ROWID;
                 CREATE TABLE IF NOT EXISTS column_tops (
                     dimension TEXT NOT NULL,
                     x INTEGER NOT NULL,
                     top INTEGER NOT NULL,
                     PRIMARY KEY (dimension, x)
                 ) WITHOUT ROWID;
-                CREATE INDEX IF NOT EXISTS cell_edits_by_column ON cell_edits (dimension, x, y);");
+                CREATE INDEX IF NOT EXISTS cell_edits_by_column ON cell_edits (dimension, x, y);
+                CREATE TABLE IF NOT EXISTS water_pending (
+                    id INTEGER PRIMARY KEY,
+                    dimension TEXT NOT NULL,
+                    kind INTEGER NOT NULL,
+                    frontier BLOB NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS water_pending_chunks (
+                    dimension TEXT NOT NULL,
+                    cx INTEGER NOT NULL,
+                    cy INTEGER NOT NULL,
+                    pending_id INTEGER NOT NULL,
+                    PRIMARY KEY (dimension, cx, cy, pending_id)
+                ) WITHOUT ROWID;");
         }
 
         // Os dados ja estao no formato da versao atual (migracoes feitas): grava a versao no banco.
@@ -270,6 +290,14 @@ namespace Jogo25D.Systems
             return result;
         }
 
+        // Niveis de agua salvos do chunk, ou nulo quando o chunk nunca teve a agua gravada.
+        public byte[] ReadWater(string dimension, Vector2I chunk)
+        {
+            using var command = ChunkCommand("SELECT data FROM water", dimension, chunk);
+
+            return command.ExecuteScalar() as byte[];
+        }
+
         // Topos opticos salvos das colunas em [fromX, toX] (so os que diferem do terreno gerado), por x.
         public Dictionary<int, int> ReadColumnTops(string dimension, int fromX, int toX)
         {
@@ -374,6 +402,140 @@ namespace Jogo25D.Systems
             return result;
         }
 
+        // Agua adiada: a frente (celulas onde a agua parou) e a regiao que ela pode alcancar (chunks). kind 0 = adiada pela
+        // previsao; kind 1 = frente ativa gravada no save (vira 0 ao abrir o mundo, PromoteSavedPendingWater).
+        public void WritePendingWater(string dimension, int kind, IReadOnlyCollection<Vector2I> frontier, IEnumerable<Vector2I> region)
+        {
+            InTransaction(transaction =>
+            {
+                long id;
+
+                using (var insert = Command("INSERT INTO water_pending (dimension, kind, frontier) VALUES ($dimension, $kind, $frontier); SELECT last_insert_rowid();", transaction))
+                {
+                    insert.Parameters.AddWithValue("$dimension", dimension);
+                    insert.Parameters.AddWithValue("$kind", kind);
+                    insert.Parameters.AddWithValue("$frontier", PackCells(frontier));
+                    id = Convert.ToInt64(insert.ExecuteScalar());
+                }
+
+                using var chunk = Command("INSERT OR IGNORE INTO water_pending_chunks (dimension, cx, cy, pending_id) VALUES ($dimension, $cx, $cy, $id);", transaction);
+
+                chunk.Parameters.AddWithValue("$dimension", dimension);
+                chunk.Parameters.AddWithValue("$id", id);
+
+                var cx = chunk.Parameters.Add("$cx", SqliteType.Integer);
+                var cy = chunk.Parameters.Add("$cy", SqliteType.Integer);
+
+                foreach (var coord in region)
+                {
+                    cx.Value = coord.X;
+                    cy.Value = coord.Y;
+                    chunk.ExecuteNonQuery();
+                }
+            });
+        }
+
+        // Tira do banco e devolve as frentes de agua adiada cuja regiao contem o chunk.
+        public List<List<Vector2I>> TakePendingWaterAt(string dimension, Vector2I chunk)
+        {
+            var result = new List<List<Vector2I>>();
+            var ids = new List<long>();
+
+            using (var select = Command(@"
+                SELECT p.id, p.frontier FROM water_pending p
+                JOIN water_pending_chunks c ON c.pending_id = p.id
+                WHERE c.dimension = $dimension AND c.cx = $cx AND c.cy = $cy;"))
+            {
+                select.Parameters.AddWithValue("$dimension", dimension);
+                select.Parameters.AddWithValue("$cx", chunk.X);
+                select.Parameters.AddWithValue("$cy", chunk.Y);
+
+                using var reader = select.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    ids.Add(reader.GetInt64(0));
+                    result.Add(UnpackCells((byte[])reader.GetValue(1)));
+                }
+            }
+
+            if (ids.Count > 0)
+            {
+                InTransaction(transaction => DeletePendingWater(ids, transaction));
+            }
+
+            return result;
+        }
+
+        // Apaga as frentes gravadas pelo save (kind 1) da dimensao, para o save seguinte gravar as atuais.
+        public void DeleteSavedPendingWater(string dimension)
+        {
+            var ids = new List<long>();
+
+            using (var select = Command("SELECT id FROM water_pending WHERE dimension = $dimension AND kind = 1;"))
+            {
+                select.Parameters.AddWithValue("$dimension", dimension);
+
+                using var reader = select.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    ids.Add(reader.GetInt64(0));
+                }
+            }
+
+            InTransaction(transaction => DeletePendingWater(ids, transaction));
+        }
+
+        // Ao abrir o mundo: as frentes gravadas no save da sessao anterior viram adiadas comuns.
+        public void PromoteSavedPendingWater()
+        {
+            Execute("UPDATE water_pending SET kind = 0 WHERE kind = 1;");
+        }
+
+        private void DeletePendingWater(IEnumerable<long> ids, SqliteTransaction transaction)
+        {
+            using var pending = Command("DELETE FROM water_pending WHERE id = $id;", transaction);
+            using var chunks = Command("DELETE FROM water_pending_chunks WHERE pending_id = $id;", transaction);
+            var pendingId = pending.Parameters.Add("$id", SqliteType.Integer);
+            var chunksId = chunks.Parameters.Add("$id", SqliteType.Integer);
+
+            foreach (var id in ids)
+            {
+                pendingId.Value = id;
+                chunksId.Value = id;
+                pending.ExecuteNonQuery();
+                chunks.ExecuteNonQuery();
+            }
+        }
+
+        private static byte[] PackCells(IReadOnlyCollection<Vector2I> cells)
+        {
+            var data = new byte[cells.Count * 8];
+            var offset = 0;
+
+            foreach (var cell in cells)
+            {
+                BitConverter.TryWriteBytes(new Span<byte>(data, offset, 4), cell.X);
+                BitConverter.TryWriteBytes(new Span<byte>(data, offset + 4, 4), cell.Y);
+                offset += 8;
+            }
+
+            return data;
+        }
+
+        private static List<Vector2I> UnpackCells(byte[] data)
+        {
+            var cells = new List<Vector2I>(data.Length / 8);
+
+            for (var offset = 0; offset + 7 < data.Length; offset += 8)
+            {
+                cells.Add(new Vector2I(BitConverter.ToInt32(data, offset), BitConverter.ToInt32(data, offset + 4)));
+            }
+
+            return cells;
+        }
+
         // Chunks com algum dado salvo na dimensao (edicao ou entidade).
         public List<Vector2I> ReadChunksWithData(string dimension)
         {
@@ -453,6 +615,24 @@ namespace Jogo25D.Systems
             {
                 WriteEntities(snapshot, transaction);
             }
+
+            if (snapshot.Water != null)
+            {
+                WriteWater(snapshot, transaction);
+            }
+        }
+
+        private void WriteWater(ChunkSnapshot snapshot, SqliteTransaction transaction)
+        {
+            using var insert = Command(@"
+                INSERT OR REPLACE INTO water (dimension, cx, cy, data)
+                VALUES ($dimension, $cx, $cy, $data);", transaction);
+
+            insert.Parameters.AddWithValue("$dimension", snapshot.Dimension);
+            insert.Parameters.AddWithValue("$cx", snapshot.Chunk.X);
+            insert.Parameters.AddWithValue("$cy", snapshot.Chunk.Y);
+            insert.Parameters.AddWithValue("$data", snapshot.Water);
+            insert.ExecuteNonQuery();
         }
 
         private void WriteEdits(ChunkSnapshot snapshot, SqliteTransaction transaction)

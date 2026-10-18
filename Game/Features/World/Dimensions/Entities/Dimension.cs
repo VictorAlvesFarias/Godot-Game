@@ -120,6 +120,7 @@ namespace Jogo25D.Dimensions
         public override void _Ready()
         {
             ResolveChildren();
+            ConnectWaterToTerrain();
         }
 
         public override void _ExitTree()
@@ -272,7 +273,7 @@ namespace Jogo25D.Dimensions
                 return _terrain;
             }
 
-            TerrainCache.LoadOpacity(Layer?.TileSet);
+            TerrainCache.LoadMaterials(Layer?.TileSet);
 
             _terrain = new TerrainCache(seed, DimensionId, scale, procedural);
 
@@ -300,6 +301,8 @@ namespace Jogo25D.Dimensions
         public void DropTerrain()
         {
             _terrain = null;
+
+            DropWater();
         }
 
         // Edicao numa celula (blockId nulo = removido): vai para o cache, que marca o chunk como sujo para o save.
@@ -611,7 +614,9 @@ namespace Jogo25D.Dimensions
             }
 
             var radius = ChunkStreamingConstants.UNLOAD_RADIUS_CHUNKS + ChunkStreamingConstants.DATA_MARGIN_CHUNKS;
+            // Chunks so de dados da agua (e a margem deles) ficam enquanto a agua os usa.
             var far = _terrain.LoadedChunks
+                .Where(chunk => !_waterOnly.Any(water => CoordinateUtilities.ChunkDistance(chunk, water) <= ChunkStreamingConstants.DATA_MARGIN_CHUNKS))
                 .Where(chunk => playerChunks.All(playerChunk => CoordinateUtilities.ChunkDistance(chunk, playerChunk) > radius))
                 .ToList();
 
@@ -637,6 +642,8 @@ namespace Jogo25D.Dimensions
             _loaded.Add(chunkCoord);
 
             EnsureChunkDataAround(chunkCoord);
+            LoadWater(chunkCoord);
+            ResumePendingWater(chunkCoord);
 
             // O cache ja tem as edicoes do chunk: a pintura sai com elas, sem repetir mutacoes por cima.
             await _generator.PaintTilesAsync(layer, BaseLayer, Seed, DimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
@@ -646,7 +653,7 @@ namespace Jogo25D.Dimensions
                 _painted.Add(chunkCoord);
             }
 
-            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord);
+            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord, _water);
 
             _loadedPeers[chunkCoord] = new HashSet<long>(requestingPeers);
 
@@ -672,6 +679,8 @@ namespace Jogo25D.Dimensions
             }
 
             _painted.Remove(chunkCoord);
+
+            UnloadWater(chunkCoord);
 
             await _generator.EraseTilesAsync(Layer, BaseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
@@ -829,13 +838,15 @@ namespace Jogo25D.Dimensions
             _edgePeers.Clear();
             _columnBands.Clear();
             _minimap.Reset();
+
+            DropWater();
         }
 
         private void LoadChunkRequest(long peerId, Vector2I chunkCoord, Godot.Collections.Array payload)
         {
             if (IsPeerConnected(peerId))
             {
-                RpcId(peerId, nameof(LoadChunkReceive), chunkCoord, payload);
+                RpcId(peerId, nameof(LoadChunkReceive), chunkCoord, payload, WaterPayload(chunkCoord));
             }
         }
 
@@ -887,8 +898,12 @@ namespace Jogo25D.Dimensions
         #region Core - Rpc - Chunks
 
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-        public async void LoadChunkReceive(Vector2I chunkCoord, Godot.Collections.Array payload)
+        public async void LoadChunkReceive(Vector2I chunkCoord, Godot.Collections.Array payload, byte[] water)
         {
+            // A agua vem sempre do servidor, mesmo num chunk que o cliente ja pintou (pre-carga de teleporte).
+            // Antes do await: as mudancas de agua do chunk que chegarem depois ja encontram o chunk.
+            EnsureWater()?.LoadChunk(chunkCoord, water);
+
             if (_loaded.Contains(chunkCoord))
             {
                 return;
@@ -902,7 +917,7 @@ namespace Jogo25D.Dimensions
 
             await _generator.PaintTilesAsync(layer, BaseLayer, Seed, DimensionId, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
-            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord);
+            _minimap.RecordChunk(DimensionId, layer, BaseLayer, chunkCoord, _water);
 
             ChunkLoaded?.Invoke(chunkCoord);
         }
@@ -914,6 +929,8 @@ namespace Jogo25D.Dimensions
             {
                 return;
             }
+
+            _water?.UnloadChunk(chunkCoord);
 
             await _generator.EraseTilesAsync(Layer, BaseLayer, chunkCoord, ChunkStreamingConstants.CHUNK_SIZE);
 
