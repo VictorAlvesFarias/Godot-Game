@@ -38,6 +38,19 @@ namespace Jogo25D.Props
 
         #region Godot implementation
 
+        // Props na arvore: a mira da picareta procura o prop da celula aqui, sem varrer as entidades a cada passo.
+        public static readonly System.Collections.Generic.HashSet<Prop> Active = new();
+
+        public override void _EnterTree()
+        {
+            Active.Add(this);
+        }
+
+        public override void _ExitTree()
+        {
+            Active.Remove(this);
+        }
+
         public override void _Ready()
         {
             PromptLabel = GetNodeOrNull<Label>("Labels/PromptLabel");

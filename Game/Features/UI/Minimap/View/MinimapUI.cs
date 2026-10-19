@@ -75,7 +75,7 @@ namespace Jogo25D.UI
                 return;
             }
 
-            ScanTree(GetTree().Root, viewCenterWorldPos, center, scale);
+            DrawDimension(viewCenterWorldPos, center, scale);
             DrawPlayers(viewCenterWorldPos, center, scale);
         }
 
@@ -106,41 +106,23 @@ namespace Jogo25D.UI
 
         #region Core - Rendering
 
-        public void ScanTree(Node node, Vector2 playerPos, Vector2 center, float scale)
+        // O mapa descoberto da dimensao do jogador local, desenhado direto (sem varrer a cena: o custo nao cresce com itens
+        // e criaturas).
+        public void DrawDimension(Vector2 playerPos, Vector2 center, float scale)
         {
-            if (node is TileMapLayer layer && IsInstanceValid(layer))
-            {
-                var container = layer.GetParent()?.GetParent()?.GetParentOrNull<SubViewportContainer>();
+            var dimension = Dimension.Get(Dimension.IdOf(LocalPlayer));
+            var layer = dimension?.Layer;
 
-                if (container != null && container.Visible)
-                {
-                    DrawTileMapLayer(layer, playerPos, center, scale);
-                }
-            }
-
-            foreach (Node child in node.GetChildren())
-            {
-                ScanTree(child, playerPos, center, scale);
-            }
-        }
-
-        public void DrawTileMapLayer(TileMapLayer layer, Vector2 playerPos, Vector2 center, float scale)
-        {
-            if (!layer.Enabled)
+            if (layer == null || !layer.Enabled)
             {
                 return;
             }
 
-            Texture2D texture = null;
-            var origin = Vector2I.Zero;
+            var texture = dimension.GetDiscoveredTexture(out var origin);
 
-            texture = Dimension.Get(Dimension.IdOf(layer))?.GetDiscoveredTexture(out origin);
-
-                        if (texture != null)
+            if (texture != null)
             {
                 DrawDiscoveredTexture(layer, texture, origin, playerPos, center, scale);
-
-                return;
             }
         }
 

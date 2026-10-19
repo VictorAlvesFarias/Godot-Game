@@ -123,6 +123,18 @@ namespace Jogo25D.Entities
                 return 0;
             }
 
+            // Servidor: um item igual a ate um tile recebe a quantidade, e so o que nao couber vira item novo (os drops
+            // de um golpe que quebra varios blocos nascem como uma pilha so, sem criar nos nem fisica).
+            if (GameLoop.Multiplayer == null || !GameLoop.Multiplayer.HasMultiplayerPeer() || GameLoop.Multiplayer.IsServer())
+            {
+                var into = Items.WorldItem.AbsorbNearby(dimensionId, position, itemData, droppedBy ?? "");
+
+                if (into != null)
+                {
+                    return EntityRecord.InstanceIdOf(into);
+                }
+            }
+
             var instanceId = InstanceIdGenerator.NextInstanceId();
 
             var record = new Godot.Collections.Dictionary

@@ -80,7 +80,7 @@ namespace Jogo25D.Characters
         {
             if (Sprite.Animation == "dead" && IsAuthoritative())
             {
-                SetHealthRequest(GetMaxHealth());
+                SetHealthRequest(ComputeMaxHealth());
             }
         }
 

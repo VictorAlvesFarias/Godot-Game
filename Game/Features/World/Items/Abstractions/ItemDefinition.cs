@@ -99,6 +99,7 @@ namespace Jogo25D.Items
             if (chargesProp != null)
             {
                 data.ReloadTimer = chargesProp.ReloadCooldown;
+                _timed = data;
             }
         }
 
@@ -110,6 +111,7 @@ namespace Jogo25D.Items
             }
 
             data.CooldownRemainingTimer = Cooldown;
+            _timed = data;
         }
 
         public bool IsEmpty(ItemData data)
@@ -183,6 +185,33 @@ namespace Jogo25D.Items
             var hasCharges = infiniteCharges || data.CurrentCharges > 0;
 
             return data.CooldownRemainingTimer <= 0f && !IsReloading(data) && hasCharges;
+        }
+
+        // Item deste ItemDefinition com temporizador ligado (cada item do inventario tem a sua instancia de definicao): o
+        // jogador desconta so esses, sem percorrer o inventario a cada passo.
+        private ItemData _timed;
+
+        public void TrackTimers(ItemData data)
+        {
+            if (data != null && (data.CooldownRemainingTimer > 0 || data.ReloadTimer > 0))
+            {
+                _timed = data;
+            }
+        }
+
+        public void TickTimers(float delta)
+        {
+            if (_timed == null)
+            {
+                return;
+            }
+
+            Update(delta, _timed);
+
+            if (_timed.CooldownRemainingTimer <= 0 && _timed.ReloadTimer <= 0)
+            {
+                _timed = null;
+            }
         }
 
         public void Update(float delta, ItemData data)

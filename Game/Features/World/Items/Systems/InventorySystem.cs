@@ -11,8 +11,6 @@ namespace Jogo25D.Systems
 
         public static bool AddItem(InventoryData inv, ItemData item)
         {
-            GD.Print("[Inventory.AddItem] Starting method");
-
             if (inv == null || item == null)
             {
                 return false;
@@ -24,17 +22,13 @@ namespace Jogo25D.Systems
 
             if (definition == null)
             {
-                GD.Print($"[Inventory.AddItem] Unknown item id '{item.Id}'");
+                GD.PushWarning($"[Inventory.AddItem] Item desconhecido '{item.Id}'");
 
                 return false;
             }
 
-            GD.Print($"[Inventory.AddItem] Item received: {definition.Name} x{item.Quantity}");
-
             if (definition.Stackable)
             {
-                GD.Print($"[Inventory.AddItem] Item is stackable");
-
                 for (int i = 0; i < inv.Size; i++)
                 {
                     var slot = inv.Items[i];
@@ -53,8 +47,6 @@ namespace Jogo25D.Systems
 
                     var toAdd = Mathf.Min(item.Quantity, spaceLeft);
 
-                    GD.Print($"[Inventory.AddItem] Stacking {toAdd} onto existing slot {i}");
-
                     slot.Quantity += toAdd;
                     item.Quantity -= toAdd;
 
@@ -71,8 +63,6 @@ namespace Jogo25D.Systems
 
                 if (itemSlot == null)
                 {
-                    GD.Print($"[Inventory.AddItem] Placed {definition.Name} on slot {i}");
-
                     inv.Items[i] = item;
 
                     return true;
@@ -82,15 +72,11 @@ namespace Jogo25D.Systems
 
                 if (defSlot != null && defSlot.IsEmpty(itemSlot))
                 {
-                    GD.Print($"[Inventory.AddItem] Placed {definition.Name} on slot {i}");
-
                     inv.Items[i] = item;
 
                     return true;
                 }
             }
-
-            GD.Print("[Inventory.AddItem] No empty slot found, item was NOT placed");
 
             return false;
         }
@@ -182,8 +168,6 @@ namespace Jogo25D.Systems
 
         public static bool RemoveItem(InventoryData inv, long instanceId, int quantity = 1)
         {
-            GD.Print($"[Inventory.RemoveItem] Starting method, instanceId={instanceId} quantity={quantity}");
-
             var slotIndex = FindSlotIndex(inv, instanceId);
 
             if (slotIndex < 0)
@@ -205,8 +189,6 @@ namespace Jogo25D.Systems
 
         public static bool MoveItem(InventoryData inv, long instanceId, int toIndex)
         {
-            GD.Print($"[Inventory.MoveItem] Starting method, instanceId={instanceId} toIndex={toIndex}");
-
             if (inv == null || toIndex < 0 || toIndex >= inv.Size)
             {
                 return false;

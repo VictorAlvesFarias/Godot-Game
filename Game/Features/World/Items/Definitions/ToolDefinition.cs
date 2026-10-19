@@ -170,9 +170,9 @@ namespace Jogo25D.Items
                 return null;
             }
 
-            foreach (var child in parent.GetChildren())
+            foreach (var prop in Prop.Active)
             {
-                if (child is Prop prop && layer.LocalToMap(layer.ToLocal(prop.GlobalPosition)) == targetCell)
+                if (prop.GetParent() == parent && layer.LocalToMap(layer.ToLocal(prop.GlobalPosition)) == targetCell)
                 {
                     return prop;
                 }

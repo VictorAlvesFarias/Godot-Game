@@ -238,14 +238,16 @@ namespace Jogo25D.UI
             }
         }
 
+        // So as cartas da pagina aberta se refazem: as outras (e todas, com o menu fechado) se refazem ao abrir
+        // (OnOpened). Coletar varios itens com o menu fechado nao reconstroi nada.
         public void OnInventoryChanged()
         {
-            if (!IsInstanceValid(this))
+            if (!IsInstanceValid(this) || !Visible)
             {
                 return;
             }
 
-            foreach (var card in AllCards)
+            foreach (var card in _cards[CurrentPage])
             {
                 card.OnInventoryChanged();
             }

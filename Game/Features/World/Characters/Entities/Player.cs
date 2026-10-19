@@ -51,7 +51,17 @@ namespace Jogo25D.Characters
 
         #region Dinamic properties
 
-        public long PeerId { get; set; } = 1;
+        public long PeerId
+        {
+            get => _peerId;
+            set
+            {
+                _peerId = value;
+                Players.ForgetLocal();
+            }
+        }
+
+        private long _peerId = 1;
 
         public string CharacterId { get; set; } = "";
         public float Gravity { get; set; }
@@ -79,6 +89,10 @@ namespace Jogo25D.Characters
 
         [GodotDictionaryField]
         public int CurrentHealth { get; set; } = 50;
+
+        // Coleta automatica a cada tantos passos de fisica (a busca e pelo indice de itens).
+        private const int AutoPickupEverySteps = 6;
+        private int _autoPickupStep;
 
         [GodotDictionaryField]
         public bool CanUpdateMovement { get; set; } = true;
@@ -159,6 +173,11 @@ namespace Jogo25D.Characters
 
         #region Godot implementation
 
+        public override void _EnterTree()
+        {
+            Players.ForgetLocal();
+        }
+
         public override void _Ready()
         {
             AddToGroup("players");
@@ -223,6 +242,7 @@ namespace Jogo25D.Characters
                 HandleHotbarScroll();
                 HandleDropItem();
                 HandleInteractPickup();
+                HandleAutoPickup();
             }
 
             TestPositionRequest(Position);
@@ -278,27 +298,54 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            var hasName = !string.IsNullOrEmpty(DisplayName);
+            // So reescreve quando o nome ou a vida mudam.
+            var shown = (DisplayName, CurrentHealth, GetMaxHealth());
 
-            NameLabel.Visible = hasName;
+            if (_nameplate == shown)
+            {
+                return;
+            }
+
+            _nameplate = shown;
+
+            NameLabel.Visible = !string.IsNullOrEmpty(DisplayName);
             NameLabel.Text = DisplayName;
 
             HealthLabel.Visible = true;
-            HealthLabel.Text = $"{CurrentHealth}/{GetMaxHealth()}";
+            HealthLabel.Text = $"{CurrentHealth}/{_nameplate.Value.Item3}";
         }
 
+        private (string, int, int)? _nameplate;
+
+        // Desconta os temporizadores (recarga, cooldown) dos itens que tem um ligado. Uma vez por segundo o inventario e
+        // percorrido para achar temporizadores ligados por fora (item vindo do save no meio do cooldown).
         protected void UpdateItems(float dt)
         {
+            // A definicao pode ser nula (item com id que a fabrica nao conhece).
+            foreach (var definition in ItemDefinitions.Values)
+            {
+                definition?.TickTimers(dt);
+            }
+
+            _itemTimerScan += dt;
+
+            if (_itemTimerScan < 1f || Inventory == null)
+            {
+                return;
+            }
+
+            _itemTimerScan = 0f;
+
             foreach (var item in Inventory.Items)
             {
-                if (item == null)
+                if (item != null)
                 {
-                    continue;
+                    ItemDefinitions.GetValueOrDefault(item.InstanceId)?.TrackTimers(item);
                 }
-
-                ItemDefinitions.GetValueOrDefault(item.InstanceId)?.Update(dt, item);
             }
         }
+
+        private float _itemTimerScan = 1f;
 
         protected void UpdateAbilities(float dt)
         {
@@ -422,7 +469,6 @@ namespace Jogo25D.Characters
                 {
                     if (Sprite.Animation != "jump")
                     {
-                        GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> jump");
                         Sprite.Play("jump");
                     }
                 }
@@ -430,7 +476,6 @@ namespace Jogo25D.Characters
                 {
                     if (Sprite.Animation != "falling" && Sprite.Animation != "dash")
                     {
-                        GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> falling");
                         Sprite.Play("falling");
                     }
                 }
@@ -445,7 +490,6 @@ namespace Jogo25D.Characters
             {
                 if (Sprite.Animation != "run")
                 {
-                    GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> run");
                     Sprite.Play("run");
                 }
             }
@@ -453,8 +497,6 @@ namespace Jogo25D.Characters
             {
                 if (Sprite.Animation != "idle")
                 {
-                    GD.Print($"[Player.UpdateAnimation] {Sprite.Animation} -> idle");
-
                     Sprite.Play("idle");
                 }
             }
@@ -475,7 +517,7 @@ namespace Jogo25D.Characters
 
         public bool IsOwner()
         {
-            return PeerId == Multiplayer.GetUniqueId();
+            return PeerId == LocalNetwork().UniqueId;
         }
 
         public bool IsServer()
@@ -485,8 +527,30 @@ namespace Jogo25D.Characters
 
         public bool IsAuthoritative()
         {
-            return Multiplayer == null || !Multiplayer.HasMultiplayerPeer() || Multiplayer.IsServer();
+            return LocalNetwork().Authoritative;
         }
+
+        // Id do peer local e se esta maquina manda (servidor ou sem rede), lidos do Godot uma vez por quadro: varios
+        // jogadores perguntam varias vezes por passo de fisica.
+        private (long UniqueId, bool Authoritative) LocalNetwork()
+        {
+            var frame = Engine.GetProcessFrames();
+
+            if (frame != _networkFrame)
+            {
+                var multiplayer = Multiplayer;
+
+                _networkFrame = frame;
+                _network = multiplayer == null
+                    ? (1, true)
+                    : (multiplayer.GetUniqueId(), !multiplayer.HasMultiplayerPeer() || multiplayer.IsServer());
+            }
+
+            return _network;
+        }
+
+        private static ulong _networkFrame = ulong.MaxValue;
+        private static (long UniqueId, bool Authoritative) _network;
 
         #endregion
 
@@ -516,10 +580,32 @@ namespace Jogo25D.Characters
             }
         }
 
+        // Vida maxima para a interface (HUD, nome, status), recalculada no maximo a cada MaxHealthRefreshMsec: o calculo
+        // resolve as propriedades (cerca de 1 ms) e as telas pedem a cada quadro. A logica que prende a vida ao maximo
+        // usa ComputeMaxHealth.
         public int GetMaxHealth()
+        {
+            var now = Time.GetTicksMsec();
+
+            if (now - _maxHealthAt >= MaxHealthRefreshMsec || _maxHealthAt == 0)
+            {
+                _maxHealthAt = now;
+                _maxHealth = ComputeMaxHealth();
+            }
+
+            return _maxHealth;
+        }
+
+        private const ulong MaxHealthRefreshMsec = 250;
+
+        // Vida maxima agora (depois de equipar, renascer, curar ao maximo).
+        public int ComputeMaxHealth()
         {
             return Resolver.Resolve(Properties.OfType<HealthPropertyData>().ToList(), ActiveProperties.OfType<HealthPropertyData>().ToList(), EquippedProperties<HealthPropertyData>()).MaxHealth;
         }
+
+        private ulong _maxHealthAt;
+        private int _maxHealth;
 
         #endregion
 
@@ -695,15 +781,37 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            var nearest = children
-                .OfType<WorldItem>()
-                .Where(item => !item.IsQueuedForDeletion() && item.GlobalPosition.DistanceTo(GlobalPosition) <= WorldItem.PickupRadius)
-                .OrderBy(item => item.GlobalPosition.DistanceTo(GlobalPosition))
-                .FirstOrDefault();
+            var nearest = WorldItemIndex.Nearest(GetActiveDimensionId(), GlobalPosition, WorldItem.PickupRadius, item => !item.IsQueuedForDeletion());
 
             if (nearest != null)
             {
                 PickupItemRequest(EntityRecord.InstanceIdOf(nearest));
+            }
+        }
+
+        // Coleta automatica: a cada AutoPickupEverySteps passos, os itens no raio de coleta (pelo indice de itens, sem
+        // varrer a cena) que o jogador nao soltou. Cada item espera WorldItem.PickupRetryMsec entre pedidos (o servidor
+        // recusa com o inventario cheio).
+        private void HandleAutoPickup()
+        {
+            if (!AutoPickup || ++_autoPickupStep < AutoPickupEverySteps)
+            {
+                return;
+            }
+
+            _autoPickupStep = 0;
+
+            var now = Time.GetTicksMsec();
+
+            foreach (var item in WorldItemIndex.Near(GetActiveDimensionId(), GlobalPosition, WorldItem.PickupRadius))
+            {
+                if (item.IsQueuedForDeletion() || !item.CanAutoPickup(this) || now - item.LastPickupRequest < WorldItem.PickupRetryMsec)
+                {
+                    continue;
+                }
+
+                item.LastPickupRequest = now;
+                PickupItemRequest(EntityRecord.InstanceIdOf(item));
             }
         }
 
@@ -1171,8 +1279,6 @@ namespace Jogo25D.Characters
                 StepUpRemaining = 0f;
 
                 v.Y = movementProperties.JumpVelocity;
-
-                GD.Print("[HandleMovement] Pulando");
             }
 
             if (Input.MoveX != 0)
@@ -1490,8 +1596,6 @@ namespace Jogo25D.Characters
         [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
         public void SetHealthReceive(int health)
         {
-            GD.Print($"[Player.SetHealthReceive] - Tentando definir o valor da saude para o peer {PeerId} no {(Multiplayer.IsServer() ? "server" : "cliente")}");
-
             var previousHealth = CurrentHealth;
 
             CurrentHealth = health;
@@ -1825,9 +1929,9 @@ namespace Jogo25D.Characters
                 Rpc(nameof(EquipmentApplyReceive), instanceId, slot);
             }
 
-            if (CurrentHealth > GetMaxHealth())
+            if (CurrentHealth > ComputeMaxHealth())
             {
-                SetHealthRequest(GetMaxHealth());
+                SetHealthRequest(ComputeMaxHealth());
             }
         }
 
@@ -1915,9 +2019,17 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            // Inventario cheio: o item continua no chao.
+            // Inventario cheio: o item continua no chao. Cabendo so parte da pilha, o resto continua no chao com a
+            // quantidade que sobrou.
+            var before = worldItem.Item.Quantity;
+
             if (!InventorySystem.AddItem(Inventory, worldItem.Item))
             {
+                if (worldItem.Item.Quantity < before)
+                {
+                    EmitSignal(SignalName.InventoryChanged);
+                }
+
                 return;
             }
 
@@ -2088,7 +2200,7 @@ namespace Jogo25D.Characters
 
             GlobalPosition = position;
             Velocity = Vector2.Zero;
-            CurrentHealth = GetMaxHealth();
+            CurrentHealth = ComputeMaxHealth();
             Sprite?.Play("idle");
             Input?.RemoveBlocker("dead");
 

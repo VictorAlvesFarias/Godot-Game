@@ -12,6 +12,17 @@ namespace Jogo25D.Characters
 {
     public static class Players
     {
+        #region Properties
+
+        private const ulong LocalMissRetryMsec = 250;
+
+        private static Player _local;
+        private static ulong _localMissUntil;
+        private static ulong _peerFrame = ulong.MaxValue;
+        private static long _peerId;
+
+        #endregion
+
         #region Core - Consulta
 
         public static List<Player> All()
@@ -19,9 +30,33 @@ namespace Jogo25D.Characters
             return GameLoop.Tree?.GetNodesInGroup("players").OfType<Player>().ToList() ?? new List<Player>();
         }
 
+        // Jogador local guardado: HUD, menus e minimapa perguntam a cada quadro. So varre o grupo quando o guardado deixa
+        // de valer (saiu da arvore, foi liberado ou o peer mudou), e uma busca sem resultado nao se repete por
+        // LocalMissRetryMsec (um jogador entrando na arvore ou trocando de peer limpa isso na hora: ForgetLocal).
         public static Player GetLocal()
         {
-            return FindByPeerId(LocalPeerId());
+            var peerId = LocalPeerId();
+
+            if (_local != null && GodotObject.IsInstanceValid(_local) && _local.IsInsideTree() && _local.PeerId == peerId)
+            {
+                return _local;
+            }
+
+            if (Time.GetTicksMsec() < _localMissUntil)
+            {
+                return null;
+            }
+
+            _local = FindByPeerId(peerId);
+            _localMissUntil = _local == null ? Time.GetTicksMsec() + LocalMissRetryMsec : 0;
+
+            return _local;
+        }
+
+        public static void ForgetLocal()
+        {
+            _local = null;
+            _localMissUntil = 0;
         }
 
         public static Player FindByPeerId(long peerId)
@@ -200,7 +235,21 @@ namespace Jogo25D.Characters
 
         #region Utils - Peer local
 
+        // O peer local muda no maximo entre quadros: lido uma vez por quadro.
         private static long LocalPeerId()
+        {
+            var frame = Engine.GetProcessFrames();
+
+            if (frame != _peerFrame)
+            {
+                _peerFrame = frame;
+                _peerId = ReadLocalPeerId();
+            }
+
+            return _peerId;
+        }
+
+        private static long ReadLocalPeerId()
         {
             var multiplayer = GameLoop.Multiplayer;
 

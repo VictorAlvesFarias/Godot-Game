@@ -1,4 +1,5 @@
 using Godot;
+using Jogo25D.Items;
 using Jogo25D.Biomes;
 using Jogo25D.Blocks;
 using Jogo25D.Characters;
@@ -121,6 +122,28 @@ namespace Jogo25D.Dimensions
         {
             ResolveChildren();
             ConnectWaterToTerrain();
+            ConnectItemsToTerrain();
+        }
+
+        // Toda maquina: uma celula de terreno que muda acorda os itens do chao apoiados nela (eles voltam a cair se o apoio
+        // sumiu).
+        private void ConnectItemsToTerrain()
+        {
+            foreach (var layer in new[] { Layer, BaseLayer })
+            {
+                if (layer != null)
+                {
+                    layer.CellChanged += WakeItemsOn;
+                }
+            }
+        }
+
+        private void WakeItemsOn(Vector2I cell)
+        {
+            foreach (var item in WorldItemIndex.SupportedBy(DimensionId, cell))
+            {
+                item.Wake();
+            }
         }
 
         public override void _ExitTree()

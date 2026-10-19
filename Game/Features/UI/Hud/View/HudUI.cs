@@ -44,6 +44,12 @@ namespace Jogo25D.UI
         public double PingInterval { get; set; } = 1.0;
         public double LastPingSentTime { get; set; } = 0.0;
         public int CurrentPing { get; set; } = 0;
+
+        private const double FpsLabelInterval = 0.25;
+        private double _fpsLabelClock = FpsLabelInterval;
+
+        // Vida (maxima, atual) mostrada pela ultima vez.
+        private (int Max, int Current)? _shownHealth;
         public bool AbilityTemplateMissing { get; set; }
         public bool EffectTemplateMissing { get; set; }
 
@@ -206,44 +212,37 @@ namespace Jogo25D.UI
 
         #region Core - Ping
 
+        // O ping e enviado no intervalo dele; o texto de FPS e ping so e reescrito a cada FpsLabelInterval segundos.
         public void UpdateFpsDisplay(double delta)
         {
-            var fps = Engine.GetFramesPerSecond();
-            var fpsText = $"FPS: {fps}";
-
-            if (Multiplayer != null &&
+            var connected = Multiplayer != null &&
                 Multiplayer.MultiplayerPeer != null &&
-                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected)
+                Multiplayer.MultiplayerPeer.GetConnectionStatus() == MultiplayerPeer.ConnectionStatus.Connected;
+
+            if (connected && !Multiplayer.IsServer())
             {
-                try
-                {
-                    if (!Multiplayer.IsServer())
-                    {
-                        PingTimer += delta;
+                PingTimer += delta;
 
-                        if (PingTimer >= PingInterval)
-                        {
-                            PingTimer = 0.0;
-                            LastPingSentTime = Time.GetTicksMsec();
-                            RpcId(1, nameof(PingPong));
-                        }
-
-                        FpsLabel.Text = $"{fpsText} | Ping: {CurrentPing}ms";
-                    }
-                    else
-                    {
-                        FpsLabel.Text = $"{fpsText} | Ping: 0ms";
-                    }
-                }
-                catch
+                if (PingTimer >= PingInterval)
                 {
-                    FpsLabel.Text = fpsText;
+                    PingTimer = 0.0;
+                    LastPingSentTime = Time.GetTicksMsec();
+                    RpcId(1, nameof(PingPong));
                 }
             }
-            else
+
+            _fpsLabelClock += delta;
+
+            if (_fpsLabelClock < FpsLabelInterval)
             {
-                FpsLabel.Text = fpsText;
+                return;
             }
+
+            _fpsLabelClock = 0;
+
+            var fpsText = $"FPS: {Engine.GetFramesPerSecond()}";
+
+            FpsLabel.Text = !connected ? fpsText : Multiplayer.IsServer() ? $"{fpsText} | Ping: 0ms" : $"{fpsText} | Ping: {CurrentPing}ms";
         }
 
         [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false)]
@@ -278,6 +277,14 @@ namespace Jogo25D.UI
 
             var maxHealth = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.GetMaxHealth() : (int)50f;
             var currentHealth = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.CurrentHealth : maxHealth;
+
+            // So refaz o indicador quando a vida maxima ou a atual mudam.
+            if (_shownHealth == (maxHealth, currentHealth))
+            {
+                return;
+            }
+
+            _shownHealth = (maxHealth, currentHealth);
 
             LayoutHealthBar(maxHealth, currentHealth);
             UpdateLegacyHealthBar(maxHealth, currentHealth);
