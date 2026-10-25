@@ -252,6 +252,8 @@ namespace Jogo25D.Entities
                 return;
             }
 
+            Enemies.EnemySpawner.Tick((float)delta);
+
             _evaluateTimer += (float)delta;
 
             if (_evaluateTimer < ChunkStreamingConstants.ENTITY_EVALUATE_INTERVAL_SECONDS)
@@ -478,7 +480,8 @@ namespace Jogo25D.Entities
         {
             foreach (var node in Streamed())
             {
-                if (ChunkDistance(aroundPosition, node.Position) > ChunkStreamingConstants.ENTITY_RADIUS_CHUNKS)
+                // Entidades globais existem em todos os peers (as carregadas estao perto de algum jogador): vao todas.
+                if (ReadMode(node) != UnloadMode.Global && ChunkDistance(aroundPosition, node.Position) > ChunkStreamingConstants.ENTITY_RADIUS_CHUNKS)
                 {
                     continue;
                 }

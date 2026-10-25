@@ -600,6 +600,92 @@ namespace Jogo25D.UI
             );
 
             Register(
+                name: "slime",
+                usage: "slime [quantidade]",
+                description: "Faz nascer slimes ao lado do jogador local (so no servidor ou sozinho)",
+                execute: (args, console) =>
+                {
+                    var count = 1;
+
+                    if (args.Length >= 1 && (!int.TryParse(args[0], out count) || count < 1))
+                    {
+                        console.PrintError("Quantidade invalida.");
+
+                        return;
+                    }
+
+                    var player = Players.GetLocal();
+                    var dimension = player == null ? null : Jogo25D.Dimensions.Dimension.Get(player.GetActiveDimensionId());
+
+                    if (dimension == null || Multiplayer.HasMultiplayerPeer() && !Multiplayer.IsServer())
+                    {
+                        console.PrintError("So o servidor (ou o jogo sozinho) faz slimes nascerem.");
+
+                        return;
+                    }
+
+                    var spawned = 0;
+
+                    for (var i = 0; i < count; i++)
+                    {
+                        var around = player.GlobalPosition + new Vector2((i % 2 == 0 ? 1 : -1) * (48f + 24f * (i / 2)), 0f);
+
+                        if (Jogo25D.Enemies.EnemySpawner.FindGround(dimension, around) is Vector2 spot)
+                        {
+                            Jogo25D.Enemies.EnemySpawner.SpawnSlime(dimension, spot);
+                            spawned++;
+                        }
+                    }
+
+                    console.PrintSuccess($"{spawned} slime(s) criados.");
+                },
+                getCompletions: _ => new List<string>()
+            );
+
+            Register(
+                name: "bat",
+                usage: "bat [quantidade]",
+                description: "Faz nascer morcegos no ar perto do jogador local (so no servidor ou sozinho)",
+                execute: (args, console) =>
+                {
+                    var count = 1;
+
+                    if (args.Length >= 1 && (!int.TryParse(args[0], out count) || count < 1))
+                    {
+                        console.PrintError("Quantidade invalida.");
+
+                        return;
+                    }
+
+                    var player = Players.GetLocal();
+                    var dimension = player == null ? null : Jogo25D.Dimensions.Dimension.Get(player.GetActiveDimensionId());
+
+                    if (dimension == null || Multiplayer.HasMultiplayerPeer() && !Multiplayer.IsServer())
+                    {
+                        console.PrintError("So o servidor (ou o jogo sozinho) faz morcegos nascerem.");
+
+                        return;
+                    }
+
+                    var spawned = 0;
+
+                    for (var i = 0; i < count; i++)
+                    {
+                        var around = player.GlobalPosition + new Vector2((i % 2 == 0 ? 1 : -1) * (64f + 24f * (i / 2)), -48f);
+
+                        if (Jogo25D.Enemies.EnemySpawner.FindAir(dimension, around) is Vector2 spot)
+                        {
+                            Jogo25D.Enemies.EnemySpawner.SpawnBat(dimension, spot);
+                            spawned++;
+                        }
+                    }
+
+                    console.PrintSuccess($"{spawned} morcego(s) criados.");
+                },
+                getCompletions: _ => new List<string>()
+            );
+
+            Register(
                 name: "reset",
                 usage: "reset",
                 description: "Reseta o jogador local (mesma coisa que morrer e reviver - vida cheia, de volta pro spawn)",

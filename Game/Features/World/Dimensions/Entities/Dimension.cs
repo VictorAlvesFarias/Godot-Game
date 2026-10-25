@@ -556,6 +556,11 @@ namespace Jogo25D.Dimensions
             }
         }
 
+        public bool IsChunkLoaded(Vector2I chunkCoord)
+        {
+            return _loaded.Contains(chunkCoord);
+        }
+
         public async Task PreloadSpawnAreaAsync(Vector2 worldPosition)
         {
             var centerChunk = CoordinateUtilities.WorldToChunk(worldPosition, TileSize);

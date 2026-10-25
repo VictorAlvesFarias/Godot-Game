@@ -224,6 +224,26 @@ namespace Jogo25D.Items
                     MaxStackSize = 999,
                 },
 
+                ["slime_gel"] = () => new MaterialDefinition
+                {
+                    Id = "slime_gel",
+                    Name = "Gosma",
+                    Type = ItemType.Material,
+                    Description = "Gosma de slime. Ainda sem uso",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
+                ["bat_wing"] = () => new MaterialDefinition
+                {
+                    Id = "bat_wing",
+                    Name = "Asa de morcego",
+                    Type = ItemType.Material,
+                    Description = "Asa de um morcego das cavernas. Ainda sem uso",
+                    Stackable = true,
+                    MaxStackSize = 999,
+                },
+
                 ["copper_bar"] = () => new MaterialDefinition
                 {
                     Id = "copper_bar",

@@ -1,0 +1,150 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/World/Enemies/Entities/Bat.cs" id="1_bat"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/fly.png" id="2_fly"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/attack.png" id="3_attack"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/hurt.png" id="4_hurt"]
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_0"]
+atlas = ExtResource("2_fly")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_1"]
+atlas = ExtResource("2_fly")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_2"]
+atlas = ExtResource("2_fly")
+region = Rect2(128, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_3"]
+atlas = ExtResource("2_fly")
+region = Rect2(192, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_4"]
+atlas = ExtResource("2_fly")
+region = Rect2(256, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_5"]
+atlas = ExtResource("2_fly")
+region = Rect2(320, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_fly_6"]
+atlas = ExtResource("2_fly")
+region = Rect2(384, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_attack_0"]
+atlas = ExtResource("3_attack")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_attack_1"]
+atlas = ExtResource("3_attack")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_attack_2"]
+atlas = ExtResource("3_attack")
+region = Rect2(128, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_attack_3"]
+atlas = ExtResource("3_attack")
+region = Rect2(192, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_attack_4"]
+atlas = ExtResource("3_attack")
+region = Rect2(256, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_hurt_0"]
+atlas = ExtResource("4_hurt")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_hurt_1"]
+atlas = ExtResource("4_hurt")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_bat"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_fly_6")
+}],
+"loop": true,
+"name": &"fly",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_attack_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_attack_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_attack_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_attack_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_attack_4")
+}],
+"loop": false,
+"name": &"attack",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("Atlas_hurt_0")
+}, {
+"duration": 1.0,
+"texture": SubResource("Atlas_hurt_1")
+}],
+"loop": false,
+"name": &"hurt",
+"speed": 8.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(20, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_contact"]
+size = Vector2(30, 20)
+
+[node name="Bat" type="CharacterBody2D"]
+collision_layer = 16
+collision_mask = 1
+motion_mode = 1
+script = ExtResource("1_bat")
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+texture_filter = 1
+position = Vector2(0, 0)
+sprite_frames = SubResource("SpriteFrames_bat")
+animation = &"fly"
+
+[node name="Shape" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="Contact" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 8
+
+[node name="Shape" type="CollisionShape2D" parent="Contact"]
+shape = SubResource("RectangleShape2D_contact")

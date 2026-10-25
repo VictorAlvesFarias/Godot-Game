@@ -31,7 +31,7 @@ OPAQUE_SHARE = 0.35
 
 SWORD, BOW, ARROW, POTION, PORTAL, TOOL, CRAFTING_TABLE = 20, 12, 10, 7, 13, 16, 16
 ORE, BAR, ARMOR, ACCESSORY = 8, 10, 10, 10
-FURNACE, TRAINING_DUMMY = 38, 19  # a forja na mesma escala do sheet que a bigorna (o dobro do jogador); o boneco tem a altura dele
+FURNACE, TRAINING_DUMMY, SLIME_GEL, BAT_WING = 38, 19, 10, 12  # a forja na mesma escala do sheet que a bigorna (o dobro do jogador); o boneco tem a altura dele
 
 # Lado maior da arte, em pixels da grade do jogador (o jogador tem 19 de altura).
 TARGET_SIZE = {
@@ -46,6 +46,8 @@ TARGET_SIZE = {
     "crafting_table": CRAFTING_TABLE,
     "furnace": FURNACE,
     "training_dummy": TRAINING_DUMMY,
+    "slime_gel": SLIME_GEL,
+    "bat_wing": BAT_WING,
     "anvil": CRAFTING_TABLE,
     "pickaxe_starting": TOOL, "pickaxe_onehit": TOOL, "wall_hammer": TOOL, "copper_pickaxe": TOOL, "iron_pickaxe": TOOL,
     "copper_ore": ORE, "iron_ore": ORE, "gold_ore": ORE,
