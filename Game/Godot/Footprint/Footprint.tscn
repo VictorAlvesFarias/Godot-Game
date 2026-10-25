@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="TileSet" path="res://Godot/Footprint/footprint_tileset.tres" id="1_tileset"]
+
+[node name="Footprint" type="TileMapLayer"]
+z_index = 10
+position = Vector2(-8, -8)
+tile_set = ExtResource("1_tileset")

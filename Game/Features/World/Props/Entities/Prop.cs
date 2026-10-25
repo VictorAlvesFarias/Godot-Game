@@ -28,6 +28,11 @@ namespace Jogo25D.Props
 
         public PropDefinition Definition => PropDB.Get(PropId);
 
+        // Celulas do mundo ocupadas pela forma do prop (ancora + Footprint), registradas em PropCells enquanto ele existe.
+        public Vector2I[] OccupiedCells { get; private set; } = System.Array.Empty<Vector2I>();
+
+        private string _occupiedDimension;
+
         #endregion
 
         #region Node children references
@@ -49,11 +54,22 @@ namespace Jogo25D.Props
         public override void _ExitTree()
         {
             Active.Remove(this);
+            ReleaseCells();
         }
 
         public override void _Ready()
         {
             PromptLabel = GetNodeOrNull<Label>("Labels/PromptLabel");
+
+            // A forma em celulas (Footprint) e desenhada so para o editor.
+            var footprint = GetNodeOrNull<TileMapLayer>(PropFootprints.NodeName);
+
+            if (footprint != null)
+            {
+                footprint.Visible = false;
+            }
+
+            OccupyCells();
 
             if (PromptLabel != null)
             {
@@ -72,6 +88,48 @@ namespace Jogo25D.Props
             }
 
             Interact(OverlappingLocalPlayer);
+        }
+
+        #endregion
+
+        #region Core - Celulas
+
+        // O registro (PropId e posicao) ja foi aplicado antes de o prop entrar na arvore, tanto ao nascer quanto ao carregar.
+        private void OccupyCells()
+        {
+            var dimensionId = Dimension.IdOf(this);
+            var layer = Dimension.Get(dimensionId)?.Layer;
+
+            if (layer == null)
+            {
+                return;
+            }
+
+            var anchor = layer.LocalToMap(layer.ToLocal(GlobalPosition));
+            var offsets = PropFootprints.Read(this);
+            var cells = new Vector2I[offsets.Length];
+
+            for (var i = 0; i < offsets.Length; i++)
+            {
+                cells[i] = anchor + offsets[i];
+            }
+
+            OccupiedCells = cells;
+            _occupiedDimension = dimensionId;
+            PropCells.Occupy(this, dimensionId, cells);
+        }
+
+        private void ReleaseCells()
+        {
+            if (_occupiedDimension == null)
+            {
+                return;
+            }
+
+            PropCells.Release(this, _occupiedDimension, OccupiedCells);
+
+            OccupiedCells = System.Array.Empty<Vector2I>();
+            _occupiedDimension = null;
         }
 
         #endregion

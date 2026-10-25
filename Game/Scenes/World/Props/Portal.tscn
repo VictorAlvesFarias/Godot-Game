@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c5gnxh4unn6pv" path="res://Features/World/Portals/Entities/Portal.cs" id="1_portal"]
 [ext_resource type="Texture2D" path="res://Assets/Textures/Items/portal/texture.png" id="2_texture"]
+[ext_resource type="PackedScene" path="res://Godot/Footprint/Footprint.tscn" id="9_footprint"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_portal"]
 size = Vector2(26, 26)
@@ -33,3 +34,6 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = "Pressione [E] para viajar"
 horizontal_alignment = 1
+
+[node name="Footprint" parent="." instance=ExtResource("9_footprint")]
+tile_map_data = PackedByteArray("AAD/////AAAAAAAAAAD//wAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAAAAAAAAAABAP//AAAAAAAAAAABAAAAAAAAAAAAAAA=")

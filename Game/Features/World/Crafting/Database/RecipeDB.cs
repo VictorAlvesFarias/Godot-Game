@@ -52,6 +52,13 @@ namespace Jogo25D.Crafting
             },
             new RecipeDefinition
             {
+                Id = "training_dummy",
+                ResultItemId = "training_dummy",
+                Ingredients = new List<(string, int)> { ("item_wood", 12) },
+                Station = PropDB.CraftingTableStation,
+            },
+            new RecipeDefinition
+            {
                 Id = "furnace",
                 ResultItemId = "furnace",
                 Ingredients = new List<(string, int)> { ("block_dirt", 20), ("item_wood", 4) },

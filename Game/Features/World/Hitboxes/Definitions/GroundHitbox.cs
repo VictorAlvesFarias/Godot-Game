@@ -14,6 +14,7 @@ namespace Jogo25D.Hitboxes
         public float Timer { get; set; }
 
         private readonly HashSet<Player> _alreadyHit = new();
+        private readonly HashSet<IHitTarget> _alreadyHitTargets = new();
 
         #endregion
 
@@ -37,6 +38,26 @@ namespace Jogo25D.Hitboxes
         {
             if (body == Owner)
             {
+                return;
+            }
+
+            // Alvo que nao e jogador (boneco de treino): uma vez por golpe, com o dano so no servidor.
+            if (body is not Player && HitTargetOf(body) is IHitTarget hitTarget)
+            {
+                if (_alreadyHitTargets.Add(hitTarget) && CanApplyImpact())
+                {
+                    foreach (var damage in Damages)
+                    {
+                        hitTarget.ReceiveHit(damage, Owner);
+                    }
+
+                    // Para longe de quem bateu (o centro do golpe pode ficar alem de um alvo colado no jogador).
+                    if (KnockbackForce > 0f && body is Node2D struck)
+                    {
+                        hitTarget.ApplyKnockback(struck.GlobalPosition - (Owner?.GlobalPosition ?? GlobalPosition), KnockbackForce);
+                    }
+                }
+
                 return;
             }
 

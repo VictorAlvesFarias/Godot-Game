@@ -170,12 +170,12 @@ namespace Jogo25D.Items
                 return null;
             }
 
-            foreach (var prop in Prop.Active)
+            // Qualquer celula da forma do prop (PropCells), na dimensao do jogador.
+            var prop = PropCells.At(Dimension.IdOf(player), targetCell);
+
+            if (prop != null && prop.GetParent() == parent)
             {
-                if (prop.GetParent() == parent && layer.LocalToMap(layer.ToLocal(prop.GlobalPosition)) == targetCell)
-                {
-                    return prop;
-                }
+                return prop;
             }
 
             return null;

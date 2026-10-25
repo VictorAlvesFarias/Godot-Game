@@ -8,6 +8,7 @@ using Jogo25D.Entities;
 using Jogo25D.Instances;
 using Jogo25D.Items;
 using Jogo25D.Light;
+using Jogo25D.Props;
 using Jogo25D.Save.Types;
 using Jogo25D.Systems;
 using System.Collections.Generic;
@@ -1214,6 +1215,12 @@ namespace Jogo25D.Biomes
             }
 
             if (TileQueries.HasBlock(this, baseLayer, cell))
+            {
+                return false;
+            }
+
+            // Celula ocupada pela forma de um prop.
+            if (PropCells.At(Dimension.IdOf(this), cell) != null)
             {
                 return false;
             }

@@ -3,6 +3,7 @@ using Jogo25D.Blocks;
 using Jogo25D.Biomes;
 using Jogo25D.Characters;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Props;
 
 namespace Jogo25D.Items
 {
@@ -136,6 +137,14 @@ namespace Jogo25D.Items
             var baseLayer = Background ? null : player.GetActiveBaseLayer();
 
             if ((RemoveBackground ? layer.GetCellSourceId(cell) == -1 : layer.GetCellSourceId(cell) != -1) || (baseLayer != null && baseLayer.GetCellSourceId(cell) != -1))
+            {
+                HideIndicator(player);
+
+                return;
+            }
+
+            // Celula ocupada pela forma de um prop: o servidor recusa o bloco de terreno.
+            if (!Background && PropCells.At(player.GetActiveDimensionId(), cell) != null)
             {
                 HideIndicator(player);
 

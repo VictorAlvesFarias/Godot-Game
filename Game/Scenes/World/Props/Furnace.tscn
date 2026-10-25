@@ -2,9 +2,10 @@
 
 [ext_resource type="Script" path="res://Features/World/Crafting/Entities/Furnace.cs" id="1_furnace"]
 [ext_resource type="Texture2D" path="res://Assets/Textures/Items/furnace/texture.png" id="2_texture"]
+[ext_resource type="PackedScene" path="res://Godot/Footprint/Footprint.tscn" id="9_footprint"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_furnace"]
-size = Vector2(32, 28)
+size = Vector2(58, 76)
 
 [node name="Furnace" type="Area2D"]
 collision_layer = 0
@@ -13,10 +14,13 @@ script = ExtResource("1_furnace")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(0, -6)
+position = Vector2(0, -30)
 scale = Vector2(2, 2)
 texture = ExtResource("2_texture")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
-position = Vector2(0, -6)
+position = Vector2(0, -30)
 shape = SubResource("RectangleShape2D_furnace")
+
+[node name="Footprint" parent="." instance=ExtResource("9_footprint")]
+tile_map_data = PackedByteArray("AAD+//z/AAAAAAAAAAD+//3/AAAAAAAAAAD+//7/AAAAAAAAAAD+////AAAAAAAAAAD+/wAAAAAAAAAAAAD///z/AAAAAAAAAAD///3/AAAAAAAAAAD///7/AAAAAAAAAAD/////AAAAAAAAAAD//wAAAAAAAAAAAAAAAPz/AAAAAAAAAAAAAP3/AAAAAAAAAAAAAP7/AAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAAAAAAAAAABAPz/AAAAAAAAAAABAP3/AAAAAAAAAAABAP7/AAAAAAAAAAABAP//AAAAAAAAAAABAAAAAAAAAAAAAAACAPz/AAAAAAAAAAACAP3/AAAAAAAAAAACAP7/AAAAAAAAAAACAP//AAAAAAAAAAACAAAAAAAAAAAAAAA=")

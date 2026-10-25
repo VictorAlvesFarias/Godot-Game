@@ -2,9 +2,10 @@
 
 [ext_resource type="Script" path="res://Features/World/Crafting/Entities/Anvil.cs" id="1_anvil"]
 [ext_resource type="Texture2D" path="res://Assets/Textures/Items/anvil/texture.png" id="2_texture"]
+[ext_resource type="PackedScene" path="res://Godot/Footprint/Footprint.tscn" id="9_footprint"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_anvil"]
-size = Vector2(32, 18)
+size = Vector2(32, 16)
 
 [node name="Anvil" type="Area2D"]
 collision_layer = 0
@@ -13,10 +14,12 @@ script = ExtResource("1_anvil")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(0, -1)
+position = Vector2(0, 0)
 scale = Vector2(2, 2)
 texture = ExtResource("2_texture")
 
 [node name="Shape" type="CollisionShape2D" parent="."]
-position = Vector2(0, -1)
 shape = SubResource("RectangleShape2D_anvil")
+
+[node name="Footprint" parent="." instance=ExtResource("9_footprint")]
+tile_map_data = PackedByteArray("AAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAA=")

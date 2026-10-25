@@ -5,10 +5,11 @@ using Jogo25D.Core;
 using Jogo25D.Dimensions;
 using Jogo25D.Entities;
 using Jogo25D.Features.World.Items.Resources;
+using Jogo25D.Props;
 
 namespace Jogo25D.Items
 {
-    // Item que coloca um prop do PropDB (portal, mesa de criacao) numa celula vazia com chao embaixo.
+    // Item que coloca um prop do PropDB (portal, mesa de criacao) onde a forma inteira dele cabe (PropPlacement).
     public class PlacePropItemDefinition : ItemDefinition
     {
         #region Dinamic properties
@@ -52,7 +53,7 @@ namespace Jogo25D.Items
 
             var targetCell = ResolveCellInRange(player, layer, Reach);
 
-            if (!IsGroundedCell(layer, player.GetActiveBaseLayer(), targetCell))
+            if (!PropPlacement.CanPlace(Dimension.Get(player.GetActiveDimensionId()), PropId, targetCell))
             {
                 return;
             }
@@ -75,12 +76,6 @@ namespace Jogo25D.Items
             }
 
             return layer.LocalToMap(layer.ToLocal(targetWorldPos));
-        }
-
-        // Celula sem bloco, com um bloco que colide embaixo.
-        private static bool IsGroundedCell(TileMapLayer layer, TileMapLayer baseLayer, Vector2I cell)
-        {
-            return !TileQueries.HasBlock(layer, baseLayer, cell) && TileQueries.Collides(layer, baseLayer, cell + Vector2I.Down);
         }
 
         #endregion
@@ -107,7 +102,7 @@ namespace Jogo25D.Items
 
             var cell = ResolveCellInRange(player, layer, Reach);
 
-            if (!IsGroundedCell(layer, player.GetActiveBaseLayer(), cell))
+            if (!PropPlacement.CanPlace(Dimension.Get(player.GetActiveDimensionId()), PropId, cell))
             {
                 HideIndicator(player);
 
@@ -154,23 +149,34 @@ namespace Jogo25D.Items
             {
                 ZIndex = 10,
                 Color = new Color(0.6f, 0.3f, 1f, 0.3f),
-                Polygon = BuildTileQuad(layer),
             };
+
+            BuildFootprintQuads(Indicator, layer, PropFootprints.Of(PropId));
 
             layer.AddChild(Indicator);
         }
 
-        private static Vector2[] BuildTileQuad(TileMapLayer layer)
+        // Um quadrado por celula da forma do prop, relativo a celula da ancora (a posicao do indicador).
+        private static void BuildFootprintQuads(Polygon2D indicator, TileMapLayer layer, System.Collections.Generic.IReadOnlyList<Vector2I> cells)
         {
-            var half = (Vector2)layer.TileSet.TileSize / 2f;
+            var size = (Vector2)layer.TileSet.TileSize;
+            var half = size / 2f;
+            var points = new Vector2[cells.Count * 4];
+            var polygons = new Godot.Collections.Array();
 
-            return new[]
+            for (var i = 0; i < cells.Count; i++)
             {
-                new Vector2(-half.X, -half.Y),
-                new Vector2(half.X, -half.Y),
-                new Vector2(half.X, half.Y),
-                new Vector2(-half.X, half.Y),
-            };
+                var center = new Vector2(cells[i].X * size.X, cells[i].Y * size.Y);
+
+                points[i * 4] = center + new Vector2(-half.X, -half.Y);
+                points[i * 4 + 1] = center + new Vector2(half.X, -half.Y);
+                points[i * 4 + 2] = center + new Vector2(half.X, half.Y);
+                points[i * 4 + 3] = center + new Vector2(-half.X, half.Y);
+                polygons.Add(new[] { i * 4, i * 4 + 1, i * 4 + 2, i * 4 + 3 });
+            }
+
+            indicator.Polygon = points;
+            indicator.Polygons = polygons;
         }
 
         #endregion

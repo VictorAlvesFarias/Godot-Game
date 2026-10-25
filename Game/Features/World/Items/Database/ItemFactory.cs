@@ -433,6 +433,18 @@ namespace Jogo25D.Items
                     Cooldown = 0.25f,
                 },
 
+                ["training_dummy"] = () => new PlacePropItemDefinition
+                {
+                    Id = "training_dummy",
+                    PropId = "training_dummy",
+                    Name = "Boneco de treino",
+                    Type = ItemType.Misc,
+                    Description = "Recebe golpes sem cair e mostra o dano, o DPS e o total da sequência",
+                    Stackable = true,
+                    MaxStackSize = 99,
+                    Cooldown = 0.25f,
+                },
+
                 ["anvil"] = () => new PlacePropItemDefinition
                 {
                     Id = "anvil",

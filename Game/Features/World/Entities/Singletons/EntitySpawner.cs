@@ -168,15 +168,10 @@ namespace Jogo25D.Entities
             }
 
             var cell = layer.LocalToMap(layer.ToLocal(position));
-
-            if (TileQueries.HasBlock(layer, dimension.BaseLayer, cell) || !TileQueries.Collides(layer, dimension.BaseLayer, cell + Vector2I.Down))
-            {
-                return false;
-            }
-
             var definition = PropDB.Get(propId);
 
-            if (definition == null)
+            // A forma inteira do prop precisa caber: celulas livres e chao embaixo de cada coluna.
+            if (definition == null || !PropPlacement.CanPlace(dimension, propId, cell))
             {
                 return false;
             }

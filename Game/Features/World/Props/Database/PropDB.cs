@@ -37,6 +37,12 @@ namespace Jogo25D.Props
                 ItemId = "anvil",
                 Station = AnvilStation,
             },
+            ["training_dummy"] = new PropDefinition
+            {
+                Id = "training_dummy",
+                ScenePath = "res://Scenes/World/Props/TrainingDummy.tscn",
+                ItemId = "training_dummy",
+            },
         };
 
         public static IEnumerable<PropDefinition> All => _props.Values;

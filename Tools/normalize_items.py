@@ -31,6 +31,7 @@ OPAQUE_SHARE = 0.35
 
 SWORD, BOW, ARROW, POTION, PORTAL, TOOL, CRAFTING_TABLE = 20, 12, 10, 7, 13, 16, 16
 ORE, BAR, ARMOR, ACCESSORY = 8, 10, 10, 10
+FURNACE, TRAINING_DUMMY = 38, 19  # a forja na mesma escala do sheet que a bigorna (o dobro do jogador); o boneco tem a altura dele
 
 # Lado maior da arte, em pixels da grade do jogador (o jogador tem 19 de altura).
 TARGET_SIZE = {
@@ -43,7 +44,8 @@ TARGET_SIZE = {
     "speed_potion": POTION, "instant_heal_potion": POTION,
     "portal": PORTAL,
     "crafting_table": CRAFTING_TABLE,
-    "furnace": CRAFTING_TABLE,
+    "furnace": FURNACE,
+    "training_dummy": TRAINING_DUMMY,
     "anvil": CRAFTING_TABLE,
     "pickaxe_starting": TOOL, "pickaxe_onehit": TOOL, "wall_hammer": TOOL, "copper_pickaxe": TOOL, "iron_pickaxe": TOOL,
     "copper_ore": ORE, "iron_ore": ORE, "gold_ore": ORE,
@@ -51,6 +53,9 @@ TARGET_SIZE = {
     **{f"{metal}_{piece}": ARMOR for metal in ("copper", "iron", "gold") for piece in ("helmet", "chestplate", "leggings")},
     "swift_boots": ACCESSORY, "life_amulet": ACCESSORY,
 }
+
+# texture.png ajustada a mao depois da reducao (a forja: contorno completado pixel a pixel). A ferramenta nao a regrava.
+MANUAL_TEXTURE = {"furnace"}
 
 # Blocos: tileset, fontes desenhadas de baixo para cima (como as camadas Base e Compose) e o modulate da camada.
 WORLD_TILESET = "world_biomes_tileset.tres"
@@ -216,7 +221,7 @@ def main():
             kind = TARGET_SIZE.get(folder.name, "?")
         print(f"{folder.name:<24}{str(kind):<10}{icon.width}x{icon.height:<6}{str(k):<7}{texture.width}x{texture.height}")
 
-        if write:
+        if write and folder.name not in MANUAL_TEXTURE:
             texture.save(folder / "texture.png")
             if folder.name in BLOCK_TILES:
                 texture.save(folder / "icon.png")

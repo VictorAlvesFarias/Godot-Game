@@ -79,6 +79,28 @@ namespace Jogo25D.Hitboxes
                 return;
             }
 
+            // Alvo que nao e jogador (boneco de treino): recebe o dano no servidor e conta como acerto, como um jogador.
+            if (HitTargetOf(body) is IHitTarget hitTarget)
+            {
+                if (CanApplyImpact())
+                {
+                    foreach (var damage in Damages)
+                    {
+                        hitTarget.ReceiveHit(damage, Owner);
+                    }
+
+                    // Para longe de quem bateu (o centro do golpe pode ficar alem de um alvo colado no jogador).
+                    if (KnockbackForce > 0f && body is Node2D struck)
+                    {
+                        hitTarget.ApplyKnockback(struck.GlobalPosition - (Owner?.GlobalPosition ?? GlobalPosition), KnockbackForce);
+                    }
+                }
+
+                RegisterHitOrDestroy();
+
+                return;
+            }
+
             if (!DestroyInAllBodies)
             {
                 return;
@@ -112,6 +134,12 @@ namespace Jogo25D.Hitboxes
         #endregion
 
         #region Core - Utils
+
+        // O corpo atingido, ou o pai dele (o corpo do boneco e um filho do prop), quando e um alvo.
+        protected static IHitTarget HitTargetOf(Node body)
+        {
+            return body as IHitTarget ?? body?.GetParent() as IHitTarget;
+        }
 
         protected bool IsPvpBlocked(Player target)
         {
