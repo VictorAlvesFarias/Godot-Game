@@ -8,11 +8,11 @@ The project follows a feature-based folder architecture with a clear separation 
 
 ## Folder structure
 
-The Godot project lives in `Game/`; the solution file sits at the repository root.
+The Godot project lives in `src/Game/`; the solution file sits at the repository root.
 
 ```
 root/
-├── Game/
+├── src/Game/
 │   ├── Assets/
 │   │   ├── Audio/
 │   │   ├── Fonts/
@@ -90,7 +90,7 @@ User interface features. Each screen/UI component lives in its own folder inside
 
 ### Features/World/
 
-Game world features (gameplay). Each game domain lives in its own folder inside `World/`. There is no top-level `Managers/` feature and there are no manager nodes: state that does not exist in the scene tree lives in a static context in that domain's `Context/` folder (`Save/Context/SaveContext.cs`, `Session/Context/SessionContext.cs`, `Network/Context/NetworkContext.cs`). Everything else is a plain static class named after what it does, in that domain's `Singletons/` folder (`Characters/Singletons/Players.cs`, `Entities/Singletons/EntitySpawner.cs`). See `Game/Docs/Arquitetura-Managers-Contexto.md` for the rule. `Core` holds the central pieces of the World feature; the other domains sit as siblings of `Core`.
+Game world features (gameplay). Each game domain lives in its own folder inside `World/`. There is no top-level `Managers/` feature and there are no manager nodes: state that does not exist in the scene tree lives in a static context in that domain's `Context/` folder (`Save/Context/SaveContext.cs`, `Session/Context/SessionContext.cs`, `Network/Context/NetworkContext.cs`). Everything else is a plain static class named after what it does, in that domain's `Singletons/` folder (`Characters/Singletons/Players.cs`, `Entities/Singletons/EntitySpawner.cs`). See `src/Game/Docs/Arquitetura-Managers-Contexto.md` for the rule. `Core` holds the central pieces of the World feature; the other domains sit as siblings of `Core`.
 
 **Sublayers:**
 
@@ -110,7 +110,7 @@ Game world features (gameplay). Each game domain lives in its own folder inside 
 
 - Namespaces start at `Jogo25D` (`Jogo25D.Light`, `Jogo25D.Utils.Coordinates`). A `Core/` subfolder does not add a namespace segment.
 - Identifiers are in English. Text shown to the player and log/error messages stay in Portuguese.
-- No comments in code. The reasoning behind a design lives in `Game/Docs/`.
+- No comments in code. The reasoning behind a design lives in `src/Game/Docs/`.
 - Four spaces, block-scoped namespaces, braces on their own line and on every `if`/`for`/`foreach`/`while` body, one statement per line, methods with block bodies.
 - `using` order: `Godot`, then `Jogo25D.*`, then `System.*`, each group alphabetical.
 - Regions use the project vocabulary (`Dinamic properties`, `Node references`, `Godot implementation`, `Core - <topic>`, `Utils`, `Types`), with a blank line after `#region` and before `#endregion`.
@@ -654,10 +654,10 @@ shadows, sky access through openings, window transmission and RGB local emitters
 runs on a compute shader with a CPU fallback; sky access and geometry preparation
 still use the CPU. No engine Light2D is required by this path.
 
-Start at the [feature README](Game/Features/World/Light/README.md); see also
-[current architecture](Game/Docs/LightMap.md),
-[restoration guide](Game/Docs/DepthSkylight-Restauracao.md) and
-[performance](Game/Docs/LightingPerformance.md).
+Start at the [feature README](src/Game/Features/World/Light/README.md); see also
+[current architecture](src/Game/Docs/LightMap.md),
+[restoration guide](src/Game/Docs/DepthSkylight-Restauracao.md) and
+[performance](src/Game/Docs/LightingPerformance.md).
 
 ---
 

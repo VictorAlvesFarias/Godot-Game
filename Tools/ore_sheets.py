@@ -5,7 +5,7 @@ metal desenhados so dentro da parte opaca de cada tile, longe das bordas transpa
 (semente por minerio e por tile), entao rodar de novo da a mesma arte.
 
 Uso:
-  py Tools/ore_sheets.py            # gera em Game/Assets/Textures/Tiles/ores/
+  py Tools/ore_sheets.py            # gera em src/Game/Assets/Textures/Tiles/ores/
 """
 
 import random
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PIL import Image
 
-GAME = Path(__file__).resolve().parent.parent / "Game"
+GAME = Path(__file__).resolve().parent.parent / "src" / "Game"
 SOURCE = GAME / "Assets" / "Textures" / "Tiles" / "lime" / "lime_bordercap_texture.png"
 OUT = GAME / "Assets" / "Textures" / "Tiles" / "ores"
 REGION = 24

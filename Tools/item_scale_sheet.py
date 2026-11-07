@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from normalize_items import BLOCK_TILES
 
-ROOT = Path(__file__).resolve().parent.parent / "Game"
+ROOT = Path(__file__).resolve().parent.parent / "src" / "Game"
 ITEMS_DIR = ROOT / "Assets" / "Textures" / "Items"
 PLAYER_SCENE = ROOT / "Scenes" / "World" / "Characters" / "Player.tscn"
 ITEM_DEFINITION = ROOT / "Features" / "World" / "Items" / "Abstractions" / "ItemDefinition.cs"

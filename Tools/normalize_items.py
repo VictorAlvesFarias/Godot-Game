@@ -1,6 +1,6 @@
 """Gera a texture.png de cada item, no tamanho de pixel real e no tamanho do tipo dele.
 
-Cada pasta de item em Game/Assets/Textures/Items/<id>/ fica so com:
+Cada pasta de item em src/Game/Assets/Textures/Items/<id>/ fica so com:
   - icon.png: icone do inventario/hotbar (de itens comuns, nao e alterado e e a arte de origem);
   - texture.png: a arte usada no mundo (item caido e cenas de uso).
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 from PIL import Image
 
-GAME = Path(__file__).resolve().parent.parent / "Game"
+GAME = Path(__file__).resolve().parent.parent / "src" / "Game"
 ITEMS_DIR = GAME / "Assets" / "Textures" / "Items"
 TILES_DIR = GAME / "Assets" / "Textures" / "Tiles"
 OLD_FILES = ("item.png", "dropped.png", "blade.png")
