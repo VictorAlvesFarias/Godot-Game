@@ -16,7 +16,7 @@ namespace Jogo25D.Light
 
             Material = new ShaderMaterial
             {
-                Shader = GD.Load<Shader>("res://Assets/Shaders/terrain_light_overlay.gdshader")
+                Shader = GD.Load<Shader>("res://src/Game/Assets/Shaders/terrain_light_overlay.gdshader")
             };
 
             _sprite = new Sprite2D

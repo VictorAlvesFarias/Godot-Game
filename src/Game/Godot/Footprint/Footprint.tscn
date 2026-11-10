@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="TileSet" path="res://Godot/Footprint/footprint_tileset.tres" id="1_tileset"]
+[ext_resource type="TileSet" path="res://src/Game/Godot/Footprint/footprint_tileset.tres" id="1_tileset"]
 
 [node name="Footprint" type="TileMapLayer"]
 z_index = 10

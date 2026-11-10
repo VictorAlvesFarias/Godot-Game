@@ -2,9 +2,9 @@ namespace Jogo25D.Constants
 {
     public static class UiConstants
     {
-        public const string CURSOR_PATH = "res://Assets/Textures/Ui/cursor.png";
-        public const string CROSSHAIR_PATH = "res://Assets/Textures/Ui/crosshair.png";
-        public const string POINTER_PATH = "res://Assets/Textures/Ui/pointer.png";
+        public const string CURSOR_PATH = "res://src/Game/Assets/Textures/Ui/cursor.png";
+        public const string CROSSHAIR_PATH = "res://src/Game/Assets/Textures/Ui/crosshair.png";
+        public const string POINTER_PATH = "res://src/Game/Assets/Textures/Ui/pointer.png";
 
         public const float POINTER_HOTSPOT_X = 9f;
 

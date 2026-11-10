@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cpiu7snreleqs"
-path="res://.godot/imported/texture.png-fddc6370cc88587aa82e6ccfdf088659.ctex"
+path="res://.godot/imported/texture.png-4632ac21585230bb1f5c9fc05b9421c5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/blue_fire_sword_alt/texture.png"
-dest_files=["res://.godot/imported/texture.png-fddc6370cc88587aa82e6ccfdf088659.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/blue_fire_sword_alt/texture.png"
+dest_files=["res://.godot/imported/texture.png-4632ac21585230bb1f5c9fc05b9421c5.ctex"]
 
 [params]
 

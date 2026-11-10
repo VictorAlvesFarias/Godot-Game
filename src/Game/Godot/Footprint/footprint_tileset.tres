@@ -1,6 +1,6 @@
 [gd_resource type="TileSet" load_steps=3 format=3]
 
-[ext_resource type="Texture2D" path="res://Godot/Footprint/footprint_tile.png" id="1_tile"]
+[ext_resource type="Texture2D" path="res://src/Game/Godot/Footprint/footprint_tile.png" id="1_tile"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_footprint"]
 texture = ExtResource("1_tile")

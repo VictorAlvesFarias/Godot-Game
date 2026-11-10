@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bsjb0pdtl1osy"
-path="res://.godot/imported/icon.png-2d6f3c2b8c37bf75d9f0d6335b9bdab1.ctex"
+path="res://.godot/imported/icon.png-59338357331149d218cb50f32f749478.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/fire_slash_sword/icon.png"
-dest_files=["res://.godot/imported/icon.png-2d6f3c2b8c37bf75d9f0d6335b9bdab1.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/fire_slash_sword/icon.png"
+dest_files=["res://.godot/imported/icon.png-59338357331149d218cb50f32f749478.ctex"]
 
 [params]
 

@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/InventoryCard.cs" id="1_script"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/InventorySlot.tscn" id="2_slot"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Cards/InventoryCard.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://src/Game/Scenes/Ui/GameMenu/Components/InventorySlot.tscn" id="2_slot"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="InventoryCard" type="VBoxContainer"]
 custom_minimum_size = Vector2(734, 940)

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://co23jcdnp1oqw"
-path="res://.godot/imported/root-healthbar_Healthbar-Back.png-638c6dccfb1c1ac1c01dad78398f5526.ctex"
+path="res://.godot/imported/root-healthbar_Healthbar-Back.png-7e63d17ba51339b8309d66da53b8026c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/UI/root-healthbar_Healthbar-Back.png"
-dest_files=["res://.godot/imported/root-healthbar_Healthbar-Back.png-638c6dccfb1c1ac1c01dad78398f5526.ctex"]
+source_file="res://src/Game/Assets/Textures/UI/root-healthbar_Healthbar-Back.png"
+dest_files=["res://.godot/imported/root-healthbar_Healthbar-Back.png-7e63d17ba51339b8309d66da53b8026c.ctex"]
 
 [params]
 

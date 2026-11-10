@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3f5d7gi7agf3"
-path="res://.godot/imported/icon.png-949039fddc2da80e8cbfdb93b62956fc.ctex"
+path="res://.godot/imported/icon.png-48bc0e39ce83bab823ab9dc997fa1144.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/whip/icon.png"
-dest_files=["res://.godot/imported/icon.png-949039fddc2da80e8cbfdb93b62956fc.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/whip/icon.png"
+dest_files=["res://.godot/imported/icon.png-48bc0e39ce83bab823ab9dc997fa1144.ctex"]
 
 [params]
 

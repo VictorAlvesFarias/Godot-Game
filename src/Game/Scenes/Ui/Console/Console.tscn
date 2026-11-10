@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://b3on12lgpr7t0"]
 
-[ext_resource type="Script" uid="uid://d3e4lgu1kqkvd" path="res://Features/UI/Console/View/ConsoleUI.cs" id="1_console"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://d3e4lgu1kqkvd" path="res://src/Game/Features/UI/Console/View/ConsoleUI.cs" id="1_console"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="GameConsole" type="CanvasLayer" unique_id=1342680249]
 visible = false

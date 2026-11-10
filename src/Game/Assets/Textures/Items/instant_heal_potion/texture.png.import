@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dn14atdwtx17u"
-path="res://.godot/imported/texture.png-e2c1e12dde44a10a8fd40171c3ef2565.ctex"
+path="res://.godot/imported/texture.png-a333a1c087f176a75fd4cd611f94e0a7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/instant_heal_potion/texture.png"
-dest_files=["res://.godot/imported/texture.png-e2c1e12dde44a10a8fd40171c3ef2565.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/instant_heal_potion/texture.png"
+dest_files=["res://.godot/imported/texture.png-a333a1c087f176a75fd4cd611f94e0a7.ctex"]
 
 [params]
 

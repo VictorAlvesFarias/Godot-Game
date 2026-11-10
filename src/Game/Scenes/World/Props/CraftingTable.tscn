@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/World/Crafting/Entities/CraftingTable.cs" id="1_table"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Items/crafting_table/texture.png" id="2_texture"]
-[ext_resource type="PackedScene" path="res://Godot/Footprint/Footprint.tscn" id="9_footprint"]
+[ext_resource type="Script" path="res://src/Game/Features/World/Crafting/Entities/CraftingTable.cs" id="1_table"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/Items/crafting_table/texture.png" id="2_texture"]
+[ext_resource type="PackedScene" path="res://src/Game/Godot/Footprint/Footprint.tscn" id="9_footprint"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_table"]
 size = Vector2(32, 20)

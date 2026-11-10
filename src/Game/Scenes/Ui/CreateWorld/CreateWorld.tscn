@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://b7dgfprgskcih"]
 
-[ext_resource type="Script" uid="uid://bs2kdfjyhwlsq" path="res://Features/UI/CreateWorld/View/CreateWorldUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://bs2kdfjyhwlsq" path="res://src/Game/Features/UI/CreateWorld/View/CreateWorldUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="CreateWorldMenu" type="CanvasLayer" unique_id=1495434738]
 layer = 20

@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/StatsCard.cs" id="1_script"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Cards/StatsCard.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="StatsCard" type="VBoxContainer"]
 custom_minimum_size = Vector2(250, 462)

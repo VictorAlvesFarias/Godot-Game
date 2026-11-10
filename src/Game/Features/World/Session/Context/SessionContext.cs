@@ -125,7 +125,7 @@ namespace Jogo25D.Session
                 return;
             }
 
-            var world = GD.Load<PackedScene>("res://Scenes/World/World.tscn").Instantiate<Node2D>();
+            var world = GD.Load<PackedScene>("res://src/Game/Scenes/World/World.tscn").Instantiate<Node2D>();
 
             main.AddChild(world);
 
@@ -259,7 +259,7 @@ namespace Jogo25D.Session
                 return;
             }
 
-            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+            var player = GD.Load<PackedScene>("res://src/Game/Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
             player.Name = $"Player{id}";
             player.Position = Godot.Vector2.Zero;

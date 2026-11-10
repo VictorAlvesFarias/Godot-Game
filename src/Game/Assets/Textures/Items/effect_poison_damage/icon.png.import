@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dqi4c4xrpvi2s"
-path="res://.godot/imported/icon.png-9453f51bddee0ee43e84ceda325b93c7.ctex"
+path="res://.godot/imported/icon.png-3ce85aa32cff55f7fc30e2fb53b24b42.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/effect_poison_damage/icon.png"
-dest_files=["res://.godot/imported/icon.png-9453f51bddee0ee43e84ceda325b93c7.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/effect_poison_damage/icon.png"
+dest_files=["res://.godot/imported/icon.png-3ce85aa32cff55f7fc30e2fb53b24b42.ctex"]
 
 [params]
 

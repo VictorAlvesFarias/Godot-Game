@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bfmx4paj68ds1"
-path="res://.godot/imported/icon.png-2dab8eb92fc3e1836a25417d7693b4c9.ctex"
+path="res://.godot/imported/icon.png-254971ef09821ae0c0d9d03ff79ca143.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/iron_ore/icon.png"
-dest_files=["res://.godot/imported/icon.png-2dab8eb92fc3e1836a25417d7693b4c9.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/iron_ore/icon.png"
+dest_files=["res://.godot/imported/icon.png-254971ef09821ae0c0d9d03ff79ca143.ctex"]
 
 [params]
 

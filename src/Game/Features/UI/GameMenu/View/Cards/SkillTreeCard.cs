@@ -19,7 +19,7 @@ namespace Jogo25D.UI
 
         #region Dinamic properties
 
-        private static readonly PackedScene NodeButtonScene = GD.Load<PackedScene>("res://Scenes/Ui/GameMenu/Components/SkillNodeButton.tscn");
+        private static readonly PackedScene NodeButtonScene = GD.Load<PackedScene>("res://src/Game/Scenes/Ui/GameMenu/Components/SkillNodeButton.tscn");
 
         public Dictionary<string, SkillNodeButton> NodeButtons { get; } = new();
 

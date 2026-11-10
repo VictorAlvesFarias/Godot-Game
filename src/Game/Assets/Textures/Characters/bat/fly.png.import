@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://jgrqvdu74uiq"
-path="res://.godot/imported/fly.png-a8cd85d97ce099fe256ec87de873bcb8.ctex"
+path="res://.godot/imported/fly.png-b14317abd6d7ad5f88eda046b0f054df.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Characters/bat/fly.png"
-dest_files=["res://.godot/imported/fly.png-a8cd85d97ce099fe256ec87de873bcb8.ctex"]
+source_file="res://src/Game/Assets/Textures/Characters/bat/fly.png"
+dest_files=["res://.godot/imported/fly.png-b14317abd6d7ad5f88eda046b0f054df.ctex"]
 
 [params]
 

@@ -12,7 +12,7 @@ using System.Linq;
 namespace Jogo25D.Items
 {
     [Unload(UnloadMode.Global)]
-    [SaveScene("worldItem", "res://Scenes/World/Items/WorldItem.tscn")]
+    [SaveScene("worldItem", "res://src/Game/Scenes/World/Items/WorldItem.tscn")]
     public partial class WorldItem : CharacterBody2D
     {
         #region Properties

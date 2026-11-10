@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cki2jn7i1le67"
-path="res://.godot/imported/texture.png-eba1a82a932eb75b67a6618cd25c03b7.ctex"
+path="res://.godot/imported/texture.png-3d344fd4adc31e9a0d5540be167ded24.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/poison_flask/texture.png"
-dest_files=["res://.godot/imported/texture.png-eba1a82a932eb75b67a6618cd25c03b7.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/poison_flask/texture.png"
+dest_files=["res://.godot/imported/texture.png-3d344fd4adc31e9a0d5540be167ded24.ctex"]
 
 [params]
 

@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://brkswqlporsuv"]
 
-[ext_resource type="Script" uid="uid://du565o11otkfr" path="res://Features/UI/Start/View/StartUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="Script" path="res://Features/UI/Common/Objects/PixelTriangleRect.cs" id="script_triangulo"]
+[ext_resource type="Script" uid="uid://du565o11otkfr" path="res://src/Game/Features/UI/Start/View/StartUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/Common/Objects/PixelTriangleRect.cs" id="script_triangulo"]
 
 [node name="StartMenu" type="CanvasLayer" unique_id=1868631527]
 layer = 20

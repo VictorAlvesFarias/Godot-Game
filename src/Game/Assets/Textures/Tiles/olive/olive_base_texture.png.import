@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dpxfnyq2t3vbp"
-path="res://.godot/imported/olive_base_texture.png-61e29bf33b1bca1ab815ec3b7075c744.ctex"
+path="res://.godot/imported/olive_base_texture.png-36dd746a5788612d609627186ab2e641.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/olive/olive_base_texture.png"
-dest_files=["res://.godot/imported/olive_base_texture.png-61e29bf33b1bca1ab815ec3b7075c744.ctex"]
+source_file="res://src/Game/Assets/Textures/Tiles/olive/olive_base_texture.png"
+dest_files=["res://.godot/imported/olive_base_texture.png-36dd746a5788612d609627186ab2e641.ctex"]
 
 [params]
 

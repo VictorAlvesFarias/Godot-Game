@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://cssl4qiyytpn4"]
 
-[ext_resource type="FontFile" uid="uid://dlsm4tbof7u0k" path="res://Assets/Fonts/Planes_ValMore.ttf" id="1_font"]
+[ext_resource type="FontFile" uid="uid://dlsm4tbof7u0k" path="res://src/Game/Assets/Fonts/Planes_ValMore.ttf" id="1_font"]
 
 [sub_resource type="StyleBoxFlat" id="S_Caixa"]
 content_margin_left = 8.0

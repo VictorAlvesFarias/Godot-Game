@@ -99,7 +99,7 @@ namespace Jogo25D.Characters
 
         public static void ApplySpawn(long peerId, Vector2 position, Godot.Collections.Dictionary data)
         {
-            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+            var player = GD.Load<PackedScene>("res://src/Game/Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
             player.Name = $"Player{peerId}";
             player.Position = position;
@@ -113,7 +113,7 @@ namespace Jogo25D.Characters
         public static void SpawnLocal(CharacterSaveData character)
         {
             var spawnDimension = Dimension.Get(ChunkStreamingConstants.UPSIDEDOWN_ID);
-            var localPlayer = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+            var localPlayer = GD.Load<PackedScene>("res://src/Game/Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
             localPlayer.Name = "Player";
             localPlayer.PeerId = 1;
@@ -147,7 +147,7 @@ namespace Jogo25D.Characters
                 return;
             }
 
-            var npc = GD.Load<PackedScene>("res://Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
+            var npc = GD.Load<PackedScene>("res://src/Game/Scenes/World/Characters/NPC.tscn").Instantiate<Player>();
 
             npc.Name = "NPC_Dummy";
             npc.Position = position;

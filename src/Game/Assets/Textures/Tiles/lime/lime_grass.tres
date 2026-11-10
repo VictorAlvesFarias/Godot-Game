@@ -1,6 +1,6 @@
 [gd_resource type="TileSet" format=3 uid="uid://kffbndtjr7chd"]
 
-[ext_resource type="Texture2D" uid="uid://afwcqkvsm7i39" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
+[ext_resource type="Texture2D" uid="uid://afwcqkvsm7i39" path="res://src/Game/Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_grass"]
 texture = ExtResource("1_lime_grass")

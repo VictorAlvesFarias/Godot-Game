@@ -166,7 +166,7 @@ namespace Jogo25D.Light
 
             _material = new ShaderMaterial
             {
-                Shader = GD.Load<Shader>("res://Assets/Shaders/window_beam_cache.gdshader")
+                Shader = GD.Load<Shader>("res://src/Game/Assets/Shaders/window_beam_cache.gdshader")
             };
 
             _viewport = new SubViewport

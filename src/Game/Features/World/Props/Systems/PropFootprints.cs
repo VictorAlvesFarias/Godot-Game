@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Jogo25D.Props
 {
     // Forma em celulas de cada prop, pintada no editor na camada Footprint da cena dele (instancia de
-    // res://Godot/Footprint/Footprint.tscn, com a celula (0,0) na ancora). Lida da cena uma vez por id: a colocacao precisa
+    // res://src/Game/Godot/Footprint/Footprint.tscn, com a celula (0,0) na ancora). Lida da cena uma vez por id: a colocacao precisa
     // dela antes de o prop existir.
     public static class PropFootprints
     {

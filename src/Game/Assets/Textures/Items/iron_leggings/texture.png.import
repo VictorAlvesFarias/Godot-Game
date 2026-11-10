@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cnc431a35jucd"
-path="res://.godot/imported/texture.png-b8134aad8aa019b246be7207b78e4fdd.ctex"
+path="res://.godot/imported/texture.png-d7810b790810e1019c831f62aa956729.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/iron_leggings/texture.png"
-dest_files=["res://.godot/imported/texture.png-b8134aad8aa019b246be7207b78e4fdd.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/iron_leggings/texture.png"
+dest_files=["res://.godot/imported/texture.png-d7810b790810e1019c831f62aa956729.ctex"]
 
 [params]
 

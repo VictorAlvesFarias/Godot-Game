@@ -1,7 +1,7 @@
 [gd_scene load_steps=10 format=3]
 
-[ext_resource type="Texture2D" uid="uid://dtft1n1u5n461" path="res://Assets/Textures/Objects/campfire/sprite.png" id="1_tex"]
-[ext_resource type="Script" uid="uid://bjx5ixls54s3q" path="res://Features/World/Light/Entities/LightSource2D.cs" id="2_light"]
+[ext_resource type="Texture2D" uid="uid://dtft1n1u5n461" path="res://src/Game/Assets/Textures/Objects/campfire/sprite.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bjx5ixls54s3q" path="res://src/Game/Features/World/Light/Entities/LightSource2D.cs" id="2_light"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_fire0"]
 atlas = ExtResource("1_tex")

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cgpxosuly27f6"
-path="res://.godot/imported/texture.png-2ad117d4ece5a969823ca282782ef822.ctex"
+path="res://.godot/imported/texture.png-c8bcdd749c8113d1772d9fe177562e5d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/gold_chestplate/texture.png"
-dest_files=["res://.godot/imported/texture.png-2ad117d4ece5a969823ca282782ef822.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/gold_chestplate/texture.png"
+dest_files=["res://.godot/imported/texture.png-c8bcdd749c8113d1772d9fe177562e5d.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://df6il8lobcoki"
-path="res://.godot/imported/texture.png-95bc2405e08909d52f68fe9024370178.ctex"
+path="res://.godot/imported/texture.png-53b2c70f7a3d6ff11ef54bf67ff2a2f1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/iron_bar/texture.png"
-dest_files=["res://.godot/imported/texture.png-95bc2405e08909d52f68fe9024370178.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/iron_bar/texture.png"
+dest_files=["res://.godot/imported/texture.png-53b2c70f7a3d6ff11ef54bf67ff2a2f1.ctex"]
 
 [params]
 

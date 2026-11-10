@@ -139,7 +139,7 @@ namespace Jogo25D.Entities
 
             var record = new Godot.Collections.Dictionary
             {
-                { EntityRecord.SCENE, "res://Scenes/World/Items/WorldItem.tscn" },
+                { EntityRecord.SCENE, "res://src/Game/Scenes/World/Items/WorldItem.tscn" },
                 { EntityRecord.DIMENSION, dimensionId },
                 { EntityRecord.INSTANCE, instanceId },
                 { EntityRecord.POSITION, EntityRecord.WriteVector(position) },

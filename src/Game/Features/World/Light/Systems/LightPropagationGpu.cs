@@ -36,7 +36,7 @@ namespace Jogo25D.Light
 
         #region Dinamic properties
 
-        private const string ShaderPath = "res://Assets/Shaders/light_propagation.glsl";
+        private const string ShaderPath = "res://src/Game/Assets/Shaders/light_propagation.glsl";
         private const int GroupSize = 8;
         private const int SeedStride = 16;
 

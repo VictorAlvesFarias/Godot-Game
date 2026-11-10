@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dca8gqmnxqiy2"
-path="res://.godot/imported/icon.png-1f248213b54f7426d772306721e934e5.ctex"
+path="res://.godot/imported/icon.png-1f91f70e6706c9491eb7dbe7bdb43fe6.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Skills/vitality_1/icon.png"
-dest_files=["res://.godot/imported/icon.png-1f248213b54f7426d772306721e934e5.ctex"]
+source_file="res://src/Game/Assets/Textures/Skills/vitality_1/icon.png"
+dest_files=["res://.godot/imported/icon.png-1f91f70e6706c9491eb7dbe7bdb43fe6.ctex"]
 
 [params]
 

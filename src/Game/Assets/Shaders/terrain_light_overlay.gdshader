@@ -2,8 +2,8 @@ shader_type canvas_item;
 render_mode blend_disabled, unshaded;
 uniform sampler2D scene_color : hint_screen_texture, filter_nearest, repeat_disable;
 
-#include "res://Assets/Shaders/window_beam_sampling.gdshaderinc"
-#include "res://Assets/Shaders/projected_shadow.gdshaderinc"
+#include "res://src/Game/Assets/Shaders/window_beam_sampling.gdshaderinc"
+#include "res://src/Game/Assets/Shaders/projected_shadow.gdshaderinc"
 uniform bool geometry_ready = false;
 uniform float shadow_strength = 0.65;
 uniform float ambient_light_influence = 0.75;

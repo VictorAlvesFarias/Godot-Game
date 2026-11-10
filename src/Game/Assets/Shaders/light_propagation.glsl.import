@@ -3,12 +3,12 @@
 importer="glsl"
 type="RDShaderFile"
 uid="uid://b15xxi17m0dop"
-path="res://.godot/imported/light_propagation.glsl-e4d3885c00367cdd90863fc9ede32e58.res"
+path="res://.godot/imported/light_propagation.glsl-06022326c152a2056ed46fb2d7e6d4e6.res"
 
 [deps]
 
-source_file="res://Assets/Shaders/light_propagation.glsl"
-dest_files=["res://.godot/imported/light_propagation.glsl-e4d3885c00367cdd90863fc9ede32e58.res"]
+source_file="res://src/Game/Assets/Shaders/light_propagation.glsl"
+dest_files=["res://.godot/imported/light_propagation.glsl-06022326c152a2056ed46fb2d7e6d4e6.res"]
 
 [params]
 

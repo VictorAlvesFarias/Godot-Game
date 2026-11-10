@@ -9,7 +9,7 @@ namespace Jogo25D.Props
     // Boneco de treino: recebe os golpes das armas sem morrer e mostra o dano de cada acerto, o DPS e o total da sequencia.
     // O servidor calcula o dano (com o critico da arma) e manda cada acerto para todos; cada peer conta a sequencia com os
     // mesmos acertos. Nada disso e salvo.
-    [SaveScene("training_dummy", "res://Scenes/World/Props/TrainingDummy.tscn")]
+    [SaveScene("training_dummy", "res://src/Game/Scenes/World/Props/TrainingDummy.tscn")]
     public partial class TrainingDummy : Prop, IHitTarget
     {
         #region Properties

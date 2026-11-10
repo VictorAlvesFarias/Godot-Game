@@ -1,8 +1,8 @@
 [gd_resource type="TileSet" format=3 uid="uid://wopbwnukg07am"]
 
-[ext_resource type="Texture2D" uid="uid://hv3cogf0hgdji" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
-[ext_resource type="Texture2D" uid="uid://8y4v7v5c10ndh" path="res://Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
-[ext_resource type="Texture2D" uid="uid://lvm4ylbchslu9" path="res://Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
+[ext_resource type="Texture2D" uid="uid://hv3cogf0hgdji" path="res://src/Game/Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
+[ext_resource type="Texture2D" uid="uid://8y4v7v5c10ndh" path="res://src/Game/Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
+[ext_resource type="Texture2D" uid="uid://lvm4ylbchslu9" path="res://src/Game/Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_grass"]
 texture = ExtResource("1_lime_grass")

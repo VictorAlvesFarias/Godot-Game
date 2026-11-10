@@ -54,7 +54,7 @@ namespace Jogo25D.Actions
 						new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
 						new AttackPropertyData { AttackRange = 1500f, AttackArea = 50f, ProjectileSpeed = 800f },
 					},
-					HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Fireball.tscn")
+					HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Projectiles/Fireball.tscn")
 				},
 
 				["ground_strike"] = () => new GroundStrikeDefinition
@@ -70,7 +70,7 @@ namespace Jogo25D.Actions
 						new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.Physical },
 						new AttackPropertyData { AttackArea = 20f, AttackRange = 1000f },
 					},
-					HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/GroundStrike.tscn")
+					HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Projectiles/GroundStrike.tscn")
 				},
 			};
 

@@ -277,7 +277,7 @@ namespace Jogo25D.Systems
 
         private static Godot.Collections.Dictionary BuildStarterState()
         {
-            var player = GD.Load<PackedScene>("res://Scenes/World/Characters/Player.tscn").Instantiate<Player>();
+            var player = GD.Load<PackedScene>("res://src/Game/Scenes/World/Characters/Player.tscn").Instantiate<Player>();
 
             try
             {

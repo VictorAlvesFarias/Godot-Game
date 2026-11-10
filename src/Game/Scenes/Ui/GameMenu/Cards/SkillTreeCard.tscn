@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://fm1g31fd5a3p"]
 
-[ext_resource type="Script" uid="uid://dqwp2jy3bv767" path="res://Features/UI/GameMenu/View/Cards/SkillTreeCard.cs" id="1_script"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/SkillNodeButton.tscn" id="2_node"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://dqwp2jy3bv767" path="res://src/Game/Features/UI/GameMenu/View/Cards/SkillTreeCard.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://src/Game/Scenes/Ui/GameMenu/Components/SkillNodeButton.tscn" id="2_node"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="SkillTreeCard" type="VBoxContainer" unique_id=1461094255]
 custom_minimum_size = Vector2(826, 940)

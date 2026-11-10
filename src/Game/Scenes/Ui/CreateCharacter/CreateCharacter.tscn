@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://dgey7tinumya2"]
 
-[ext_resource type="Script" uid="uid://07l0hbw7beu" path="res://Features/UI/CreateCharacter/View/CreateCharacterUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://07l0hbw7beu" path="res://src/Game/Features/UI/CreateCharacter/View/CreateCharacterUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="CreateCharacterMenu" type="CanvasLayer" unique_id=1062162452]
 layer = 20

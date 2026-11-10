@@ -19,8 +19,8 @@ namespace Jogo25D.Enemies
     {
         #region Properties
 
-        public const string SlimeScene = "res://Scenes/World/Enemies/Slime.tscn";
-        public const string BatScene = "res://Scenes/World/Enemies/Bat.tscn";
+        public const string SlimeScene = "res://src/Game/Scenes/World/Enemies/Slime.tscn";
+        public const string BatScene = "res://src/Game/Scenes/World/Enemies/Bat.tscn";
 
         private const float Interval = 4f;
         private const int LimitPerPlayer = 3;

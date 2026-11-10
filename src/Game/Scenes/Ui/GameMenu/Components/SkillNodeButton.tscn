@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Components/SkillNodeButton.cs" id="1_script"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Items/effect_poison_damage/icon.png" id="2_preview"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Components/SkillNodeButton.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/Items/effect_poison_damage/icon.png" id="2_preview"]
 
 [node name="SkillNodeButton" type="Button"]
 custom_minimum_size = Vector2(120, 120)

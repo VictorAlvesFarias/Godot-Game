@@ -617,7 +617,7 @@ namespace Jogo25D.Light
 
             white.Fill(Colors.White);
 
-            _debugShader = GD.Load<Shader>("res://Assets/Shaders/projected_shadow_debug.gdshader");
+            _debugShader = GD.Load<Shader>("res://src/Game/Assets/Shaders/projected_shadow_debug.gdshader");
 
             _material = new ShaderMaterial
             {
@@ -626,7 +626,7 @@ namespace Jogo25D.Light
 
             _wallMaterial = new ShaderMaterial
             {
-                Shader = GD.Load<Shader>("res://Assets/Shaders/wall_projected_shadow.gdshader")
+                Shader = GD.Load<Shader>("res://src/Game/Assets/Shaders/wall_projected_shadow.gdshader")
             };
 
             _overlay = new Sprite2D

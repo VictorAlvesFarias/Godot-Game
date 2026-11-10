@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2i1hhfs3lrt7"
-path="res://.godot/imported/texture.png-538a93ce92fedd3966676269a1f92e30.ctex"
+path="res://.godot/imported/texture.png-2296b450189ac8d46e1864b645c6a003.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/whip/texture.png"
-dest_files=["res://.godot/imported/texture.png-538a93ce92fedd3966676269a1f92e30.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/whip/texture.png"
+dest_files=["res://.godot/imported/texture.png-2296b450189ac8d46e1864b645c6a003.ctex"]
 
 [params]
 

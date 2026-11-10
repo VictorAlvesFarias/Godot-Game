@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://h7hdifl5l77t"
-path="res://.godot/imported/slot_chest.png-1fc4eb8d5711143e55870fea8e91ed70.ctex"
+path="res://.godot/imported/slot_chest.png-da7bee5c1f23ba4e4194a7a74c138e69.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/UI/Menu/slot_chest.png"
-dest_files=["res://.godot/imported/slot_chest.png-1fc4eb8d5711143e55870fea8e91ed70.ctex"]
+source_file="res://src/Game/Assets/Textures/UI/Menu/slot_chest.png"
+dest_files=["res://.godot/imported/slot_chest.png-da7bee5c1f23ba4e4194a7a74c138e69.ctex"]
 
 [params]
 

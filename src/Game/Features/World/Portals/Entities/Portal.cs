@@ -5,7 +5,7 @@ using Jogo25D.Save;
 
 namespace Jogo25D.Portals
 {
-    [SaveScene("portal", "res://Scenes/World/Props/Portal.tscn")]
+    [SaveScene("portal", "res://src/Game/Scenes/World/Props/Portal.tscn")]
     public partial class Portal : Prop
     {
         #region Dinamic properties

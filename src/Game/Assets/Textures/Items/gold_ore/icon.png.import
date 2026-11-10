@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxmkv061levj"
-path="res://.godot/imported/icon.png-3f011c81ba94ecdb880d2627c36a966f.ctex"
+path="res://.godot/imported/icon.png-6eecd3194483ea1b47c4f5eaf8c866da.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/gold_ore/icon.png"
-dest_files=["res://.godot/imported/icon.png-3f011c81ba94ecdb880d2627c36a966f.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/gold_ore/icon.png"
+dest_files=["res://.godot/imported/icon.png-6eecd3194483ea1b47c4f5eaf8c866da.ctex"]
 
 [params]
 

@@ -1,6 +1,6 @@
 shader_type canvas_item;
 render_mode blend_mul, unshaded;
-#include "res://Assets/Shaders/projected_shadow.gdshaderinc"
+#include "res://src/Game/Assets/Shaders/projected_shadow.gdshaderinc"
 uniform float shadow_strength = 0.65;
 uniform bool geometry_ready = false;
 void fragment()

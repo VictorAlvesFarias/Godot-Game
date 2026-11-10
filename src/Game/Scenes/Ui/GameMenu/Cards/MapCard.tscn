@@ -1,12 +1,12 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/MapCard.cs" id="1_script"]
-[ext_resource type="Script" uid="uid://dwh48p6b8gesa" path="res://Features/UI/Minimap/View/MinimapUI.cs" id="2"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/zoom.png" id="3_zoom"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/pan.png" id="4_pan"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/mouse_wheel.png" id="5_wheel"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/mouse_middle.png" id="6_middle"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Cards/MapCard.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://dwh48p6b8gesa" path="res://src/Game/Features/UI/Minimap/View/MinimapUI.cs" id="2"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/UI/Menu/zoom.png" id="3_zoom"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/UI/Menu/pan.png" id="4_pan"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/UI/Menu/mouse_wheel.png" id="5_wheel"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/UI/Menu/mouse_middle.png" id="6_middle"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="MapCard" type="VBoxContainer"]
 custom_minimum_size = Vector2(1174, 940)

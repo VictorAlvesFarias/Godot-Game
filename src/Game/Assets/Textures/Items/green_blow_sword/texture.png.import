@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bbl0gmvcgri5p"
-path="res://.godot/imported/texture.png-373b9e97e133f78ad26ff3615d3a3a5d.ctex"
+path="res://.godot/imported/texture.png-2c61eb6a5573d9e4ad9d11b65a6734c3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/green_blow_sword/texture.png"
-dest_files=["res://.godot/imported/texture.png-373b9e97e133f78ad26ff3615d3a3a5d.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/green_blow_sword/texture.png"
+dest_files=["res://.godot/imported/texture.png-2c61eb6a5573d9e4ad9d11b65a6734c3.ctex"]
 
 [params]
 

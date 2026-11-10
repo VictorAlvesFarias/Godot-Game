@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dg14rpfbcygio"
-path="res://.godot/imported/texture.png-25b7b020a36f8a35a9401899a9155491.ctex"
+path="res://.godot/imported/texture.png-a39d0161ede685e35e4338e20c300f40.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/iron_chestplate/texture.png"
-dest_files=["res://.godot/imported/texture.png-25b7b020a36f8a35a9401899a9155491.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/iron_chestplate/texture.png"
+dest_files=["res://.godot/imported/texture.png-a39d0161ede685e35e4338e20c300f40.ctex"]
 
 [params]
 

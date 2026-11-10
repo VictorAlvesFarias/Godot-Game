@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ckrj4lovpeiwe"
-path="res://.godot/imported/layer_1.png-38a3ef026e45a38606e9140b61f0a479.ctex"
+path="res://.godot/imported/layer_1.png-0ded9eb4125ab19c58f6464490cf46f7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Backgrounds/white_blue_sky/layer_1.png"
-dest_files=["res://.godot/imported/layer_1.png-38a3ef026e45a38606e9140b61f0a479.ctex"]
+source_file="res://src/Game/Assets/Textures/Backgrounds/white_blue_sky/layer_1.png"
+dest_files=["res://.godot/imported/layer_1.png-0ded9eb4125ab19c58f6464490cf46f7.ctex"]
 
 [params]
 

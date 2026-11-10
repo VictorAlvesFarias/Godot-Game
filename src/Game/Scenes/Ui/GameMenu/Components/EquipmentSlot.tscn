@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Components/EquipmentSlot.cs" id="1_script"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/UI/Menu/slot_head.png" id="2_outline"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Components/EquipmentSlot.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/UI/Menu/slot_head.png" id="2_outline"]
 
 [node name="EquipmentSlot" type="Panel"]
 custom_minimum_size = Vector2(76, 76)

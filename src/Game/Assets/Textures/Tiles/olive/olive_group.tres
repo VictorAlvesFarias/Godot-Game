@@ -1,8 +1,8 @@
 [gd_resource type="TileSet" format=3 uid="uid://rt41kgt4pwkb9"]
 
-[ext_resource type="Texture2D" uid="uid://pralgclorkxui" path="res://Assets/Textures/Tiles/olive/olive_grass_texture.png" id="1_olive_grass"]
-[ext_resource type="Texture2D" uid="uid://jsvofaln5tk9n" path="res://Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="2_olive_bordercap"]
-[ext_resource type="Texture2D" uid="uid://8yhhu3zdp9ph4" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="3_olive_base"]
+[ext_resource type="Texture2D" uid="uid://pralgclorkxui" path="res://src/Game/Assets/Textures/Tiles/olive/olive_grass_texture.png" id="1_olive_grass"]
+[ext_resource type="Texture2D" uid="uid://jsvofaln5tk9n" path="res://src/Game/Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="2_olive_bordercap"]
+[ext_resource type="Texture2D" uid="uid://8yhhu3zdp9ph4" path="res://src/Game/Assets/Textures/Tiles/olive/olive_base_texture.png" id="3_olive_base"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_olive_grass"]
 texture = ExtResource("1_olive_grass")

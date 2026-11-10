@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dj15626nlgrr5"
-path="res://.godot/imported/texture.png-726ad06a78c1f327a09701c09632efc6.ctex"
+path="res://.godot/imported/texture.png-5c390f54889e1875ac1043eb87d58cd4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/dark_slash_sword/texture.png"
-dest_files=["res://.godot/imported/texture.png-726ad06a78c1f327a09701c09632efc6.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/dark_slash_sword/texture.png"
+dest_files=["res://.godot/imported/texture.png-5c390f54889e1875ac1043eb87d58cd4.ctex"]
 
 [params]
 

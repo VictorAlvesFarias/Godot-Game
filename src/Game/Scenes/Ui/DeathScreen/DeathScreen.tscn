@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://cvgnii6om4fou"]
 
-[ext_resource type="Script" uid="uid://yepug78fx5ue" path="res://Features/UI/DeathScreen/View/DeathScreenUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://yepug78fx5ue" path="res://src/Game/Features/UI/DeathScreen/View/DeathScreenUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="DeathScreenUI" type="CanvasLayer" unique_id=2129216581]
 layer = 25

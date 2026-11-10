@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c6dbpb2b7bdb0"
-path="res://.godot/imported/icon.png-8ba45d4e01c05863509497cfee5279c7.ctex"
+path="res://.godot/imported/icon.png-086c505f5a74e2c00ee16b1eefc2d7b7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/ground_strike/icon.png"
-dest_files=["res://.godot/imported/icon.png-8ba45d4e01c05863509497cfee5279c7.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/ground_strike/icon.png"
+dest_files=["res://.godot/imported/icon.png-086c505f5a74e2c00ee16b1eefc2d7b7.ctex"]
 
 [params]
 

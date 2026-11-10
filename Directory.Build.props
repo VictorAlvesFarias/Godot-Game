@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <GodotProjectDir>$(MSBuildThisFileDirectory)</GodotProjectDir>
+    <GodotProjectDirBase64>$([MSBuild]::ConvertToBase64('$(GodotProjectDir)'))</GodotProjectDirBase64>
+    <BaseOutputPath>$(GodotProjectDir).godot\mono\temp\bin\</BaseOutputPath>
+    <OutputPath>$(GodotProjectDir).godot\mono\temp\bin\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+</Project>

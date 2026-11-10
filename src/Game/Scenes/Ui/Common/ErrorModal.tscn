@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://dlgcdtv47s6j1"]
 
-[ext_resource type="Script" uid="uid://c3ddlyoy3jxuk" path="res://Features/UI/Common/View/ErrorModalUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://c3ddlyoy3jxuk" path="res://src/Game/Features/UI/Common/View/ErrorModalUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="ErrorModal" type="CanvasLayer" unique_id=1230022521]
 layer = 30

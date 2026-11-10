@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _initialize():
-	var tile_set: TileSet = load("res://Assets/Textures/Tiles/TileSet.tres")
+	var tile_set: TileSet = load("res://src/Game/Assets/Textures/Tiles/TileSet.tres")
 	var atlas_source: TileSetAtlasSource = tile_set.get_source(7)
 
 	var bit_order = [

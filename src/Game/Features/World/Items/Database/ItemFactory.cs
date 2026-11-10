@@ -38,7 +38,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada bÃ¡sica para combate corpo a corpo",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordStarting.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/SwordStarting.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -54,7 +54,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponRanged,
                     Description = "Um arco para ataques Ã  distÃ¢ncia",
                     Cooldown = 0.8f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Physical },
@@ -70,7 +70,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponRanged,
                     Description = "Um arco melhorado para ataques Ã  distÃ¢ncia",
                     Cooldown = 1f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 5, DamageType = DamageType.Fire },
@@ -86,7 +86,7 @@ namespace Jogo25D.Items
                     Type = ItemType.Tool,
                     Description = "Usada para quebrar blocos do mundo",
                     Cooldown = 0.35f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
                 ["copper_pickaxe"] = () => new ToolDefinition
@@ -98,7 +98,7 @@ namespace Jogo25D.Items
                     Cooldown = 0.35f,
                     BreakTimeSeconds = 0.9f,
                     Tier = 2,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
                 ["iron_pickaxe"] = () => new ToolDefinition
@@ -110,7 +110,7 @@ namespace Jogo25D.Items
                     Cooldown = 0.35f,
                     BreakTimeSeconds = 0.7f,
                     Tier = 3,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
                 ["pickaxe_onehit"] = () => new ToolDefinition
@@ -123,7 +123,7 @@ namespace Jogo25D.Items
                     BreakTimeSeconds = 0.01f,
                     BreakRadius = 0,
                     Tier = 3,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Tools/PickaxeStarting.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Tools/PickaxeStarting.tscn"),
                 },
 
                 ["wall_wood"] = () => new BlockItemDefinition
@@ -497,7 +497,7 @@ namespace Jogo25D.Items
                     Name = "Espada BÃ¡sica",
                     Type = ItemType.WeaponMelee,
                     Cooldown = 0.6f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SwordBasic.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/SwordBasic.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -514,7 +514,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em chamas",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/FireSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/FireSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 16, DamageType = DamageType.Fire },
@@ -530,7 +530,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em chamas geladas",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/IceSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
@@ -546,7 +546,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Variação da espada congelante",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/IceSwordAlt.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/IceSwordAlt.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 14, DamageType = DamageType.Ice },
@@ -562,7 +562,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada envolta em energia sombria - o dano ignora resistências",
                     Cooldown = 0.65f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/DarkSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/DarkSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 20, DamageType = DamageType.True },
@@ -578,7 +578,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Alcance maior, dano menor",
                     Cooldown = 0.4f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/WhipSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/WhipSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Physical },
@@ -594,7 +594,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de verdade",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/RealSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/RealSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -610,7 +610,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma lâmina impregnada de veneno",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/PoisonSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/PoisonSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Poison },
@@ -626,7 +626,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de ouro",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/GoldSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/GoldSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -642,7 +642,7 @@ namespace Jogo25D.Items
                     Type = ItemType.WeaponMelee,
                     Description = "Uma espada de prata",
                     Cooldown = 0.5f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Swords/SilverSword.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Swords/SilverSword.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 15, DamageType = DamageType.Physical },
@@ -657,7 +657,7 @@ namespace Jogo25D.Items
                     Name = "Arco BÃ¡sico",
                     Type = ItemType.WeaponRanged,
                     Cooldown = 0.8f,
-                    HitboxScene = GD.Load<PackedScene>("res://Scenes/World/Projectiles/Projectile.tscn"),
+                    HitboxScene = GD.Load<PackedScene>("res://src/Game/Scenes/World/Projectiles/Projectile.tscn"),
                     Properties = new Godot.Collections.Array<BasePropertyData>
                     {
                         new DamagePropertyData { DamageAmount = 10, DamageType = DamageType.Physical },

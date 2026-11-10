@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dquqjeqall1sl"
-path="res://.godot/imported/copper_ore_texture.png-3777f19af39b8464653b00c3ffc1f8eb.ctex"
+path="res://.godot/imported/copper_ore_texture.png-1f4d39a96f51c47a353f5da2b6535ac1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Tiles/ores/copper_ore_texture.png"
-dest_files=["res://.godot/imported/copper_ore_texture.png-3777f19af39b8464653b00c3ffc1f8eb.ctex"]
+source_file="res://src/Game/Assets/Textures/Tiles/ores/copper_ore_texture.png"
+dest_files=["res://.godot/imported/copper_ore_texture.png-1f4d39a96f51c47a353f5da2b6535ac1.ctex"]
 
 [params]
 

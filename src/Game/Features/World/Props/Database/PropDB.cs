@@ -13,34 +13,34 @@ namespace Jogo25D.Props
             ["portal"] = new PropDefinition
             {
                 Id = "portal",
-                ScenePath = "res://Scenes/World/Props/Portal.tscn",
+                ScenePath = "res://src/Game/Scenes/World/Props/Portal.tscn",
                 ItemId = "portal",
             },
             ["crafting_table"] = new PropDefinition
             {
                 Id = "crafting_table",
-                ScenePath = "res://Scenes/World/Props/CraftingTable.tscn",
+                ScenePath = "res://src/Game/Scenes/World/Props/CraftingTable.tscn",
                 ItemId = "crafting_table",
                 Station = CraftingTableStation,
             },
             ["furnace"] = new PropDefinition
             {
                 Id = "furnace",
-                ScenePath = "res://Scenes/World/Props/Furnace.tscn",
+                ScenePath = "res://src/Game/Scenes/World/Props/Furnace.tscn",
                 ItemId = "furnace",
                 Station = FurnaceStation,
             },
             ["anvil"] = new PropDefinition
             {
                 Id = "anvil",
-                ScenePath = "res://Scenes/World/Props/Anvil.tscn",
+                ScenePath = "res://src/Game/Scenes/World/Props/Anvil.tscn",
                 ItemId = "anvil",
                 Station = AnvilStation,
             },
             ["training_dummy"] = new PropDefinition
             {
                 Id = "training_dummy",
-                ScenePath = "res://Scenes/World/Props/TrainingDummy.tscn",
+                ScenePath = "res://src/Game/Scenes/World/Props/TrainingDummy.tscn",
                 ItemId = "training_dummy",
             },
         };

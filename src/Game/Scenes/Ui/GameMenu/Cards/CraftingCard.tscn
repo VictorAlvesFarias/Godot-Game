@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/UI/GameMenu/View/Cards/CraftingCard.cs" id="1_script"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="PackedScene" path="res://Scenes/Ui/GameMenu/Components/RecipeRow.tscn" id="2_row"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/GameMenu/View/Cards/CraftingCard.cs" id="1_script"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="PackedScene" path="res://src/Game/Scenes/Ui/GameMenu/Components/RecipeRow.tscn" id="2_row"]
 
 [node name="CraftingCard" type="VBoxContainer"]
 custom_minimum_size = Vector2(420, 940)

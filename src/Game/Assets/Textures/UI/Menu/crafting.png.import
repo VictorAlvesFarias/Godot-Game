@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cq6ce2o7eunw7"
-path="res://.godot/imported/crafting.png-74392d85b83a406b3e23a66840e9a500.ctex"
+path="res://.godot/imported/crafting.png-577017edc52187e06be7983f51443f24.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/UI/Menu/crafting.png"
-dest_files=["res://.godot/imported/crafting.png-74392d85b83a406b3e23a66840e9a500.ctex"]
+source_file="res://src/Game/Assets/Textures/UI/Menu/crafting.png"
+dest_files=["res://.godot/imported/crafting.png-577017edc52187e06be7983f51443f24.ctex"]
 
 [params]
 

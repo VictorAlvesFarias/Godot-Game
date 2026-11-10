@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cx20uk54gx75w"
-path="res://.godot/imported/icon.png-de938a4d255d59fa9284a3f221445c6d.ctex"
+path="res://.godot/imported/icon.png-3955f572ef585041a1a764a250443dcc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/iron_chestplate/icon.png"
-dest_files=["res://.godot/imported/icon.png-de938a4d255d59fa9284a3f221445c6d.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/iron_chestplate/icon.png"
+dest_files=["res://.godot/imported/icon.png-3955f572ef585041a1a764a250443dcc.ctex"]
 
 [params]
 

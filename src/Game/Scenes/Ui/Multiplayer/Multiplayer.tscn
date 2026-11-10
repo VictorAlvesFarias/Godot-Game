@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://bbai8tstmimsa"]
 
-[ext_resource type="Script" uid="uid://cac2ymli8x48c" path="res://Features/UI/Multiplayer/View/MultiplayerUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://cac2ymli8x48c" path="res://src/Game/Features/UI/Multiplayer/View/MultiplayerUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="MultiplayerMenu" type="CanvasLayer" unique_id=1343173139]
 layer = 20

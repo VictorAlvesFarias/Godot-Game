@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="LightMapData" format=3 uid="uid://dejmyfrw0ttci"]
 
-[ext_resource type="Script" uid="uid://dkdyxx0ctqg3w" path="res://Features/World/Light/Resources/LightMapData.cs" id="1_eycpx"]
+[ext_resource type="Script" uid="uid://dkdyxx0ctqg3w" path="res://src/Game/Features/World/Light/Resources/LightMapData.cs" id="1_eycpx"]
 
 [resource]
 script = ExtResource("1_eycpx")

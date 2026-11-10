@@ -22,7 +22,7 @@ namespace Jogo25D.UI
 
         #region Dinamic properties
 
-        private static readonly PackedScene PropertyLineScene = GD.Load<PackedScene>("res://Scenes/Ui/GameMenu/Components/PropertyLine.tscn");
+        private static readonly PackedScene PropertyLineScene = GD.Load<PackedScene>("res://src/Game/Scenes/Ui/GameMenu/Components/PropertyLine.tscn");
 
         #endregion
 

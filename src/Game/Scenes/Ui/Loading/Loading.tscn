@@ -1,8 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://do3nmql37qihd"]
 
-[ext_resource type="Script" uid="uid://da54s7ax32su3" path="res://Features/UI/Loading/View/LoadingUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="Script" path="res://Features/UI/Common/Objects/PixelSpinner.cs" id="script_spinner"]
+[ext_resource type="Script" uid="uid://da54s7ax32su3" path="res://src/Game/Features/UI/Loading/View/LoadingUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/Common/Objects/PixelSpinner.cs" id="script_spinner"]
 
 [node name="LoadingUI" type="CanvasLayer" unique_id=1982732397]
 layer = 30

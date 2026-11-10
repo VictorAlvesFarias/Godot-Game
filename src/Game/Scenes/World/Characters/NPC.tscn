@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://chwu1s7hmglan"]
 
-[ext_resource type="PackedScene" uid="uid://db2c5m47jt7cb" path="res://Scenes/World/Characters/Player.tscn" id="1"]
-[ext_resource type="Script" uid="uid://bnusuopx148o" path="res://Features/World/Characters/Entities/NPC.cs" id="2"]
+[ext_resource type="PackedScene" uid="uid://db2c5m47jt7cb" path="res://src/Game/Scenes/World/Characters/Player.tscn" id="1"]
+[ext_resource type="Script" uid="uid://bnusuopx148o" path="res://src/Game/Features/World/Characters/Entities/NPC.cs" id="2"]
 
 [node name="NPC" unique_id=1689291308 instance=ExtResource("1")]
 script = ExtResource("2")

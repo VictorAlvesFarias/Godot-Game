@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3hqo61hd6la5"
-path="res://.godot/imported/icon.png-072c307b2e58d5bb7a570be556bdce21.ctex"
+path="res://.godot/imported/icon.png-11612c09ed67e28909bf150f7bf7fa9e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/icon_sword_52/icon.png"
-dest_files=["res://.godot/imported/icon.png-072c307b2e58d5bb7a570be556bdce21.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/icon_sword_52/icon.png"
+dest_files=["res://.godot/imported/icon.png-11612c09ed67e28909bf150f7bf7fa9e.ctex"]
 
 [params]
 

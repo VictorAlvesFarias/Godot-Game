@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://bwv7458yi4ofu"]
 
-[ext_resource type="Script" uid="uid://dl60vxvt2o2a" path="res://Features/UI/Pause/View/PauseUI.cs" id="1"]
-[ext_resource type="Theme" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
-[ext_resource type="Script" path="res://Features/UI/Common/Objects/PixelTriangleRect.cs" id="script_triangulo"]
+[ext_resource type="Script" uid="uid://dl60vxvt2o2a" path="res://src/Game/Features/UI/Pause/View/PauseUI.cs" id="1"]
+[ext_resource type="Theme" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" path="res://src/Game/Features/UI/Common/Objects/PixelTriangleRect.cs" id="script_triangulo"]
 
 [node name="PauseMenu" type="CanvasLayer" unique_id=1739659831]
 process_mode = 3

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://xx2qbci1hvwy"
-path="res://.godot/imported/icon.png-296a339dc7f6e279de4d279625580fbb.ctex"
+path="res://.godot/imported/icon.png-a17841272d396793dfa3ec5226d1131b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/bat_wing/icon.png"
-dest_files=["res://.godot/imported/icon.png-296a339dc7f6e279de4d279625580fbb.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/bat_wing/icon.png"
+dest_files=["res://.godot/imported/icon.png-a17841272d396793dfa3ec5226d1131b.ctex"]
 
 [params]
 

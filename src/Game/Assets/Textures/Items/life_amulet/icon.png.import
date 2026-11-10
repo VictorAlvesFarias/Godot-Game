@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxsmlme8tgoe5"
-path="res://.godot/imported/icon.png-66a6dfe6b0a5e445adc101005311d527.ctex"
+path="res://.godot/imported/icon.png-9383f392c9a79cfb19710749375633ec.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/life_amulet/icon.png"
-dest_files=["res://.godot/imported/icon.png-66a6dfe6b0a5e445adc101005311d527.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/life_amulet/icon.png"
+dest_files=["res://.godot/imported/icon.png-9383f392c9a79cfb19710749375633ec.ctex"]
 
 [params]
 

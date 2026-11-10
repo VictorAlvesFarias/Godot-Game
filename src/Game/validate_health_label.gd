@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init():
-	var player_scene = load("res://Scenes/World/Characters/Player.tscn")
+	var player_scene = load("res://src/Game/Scenes/World/Characters/Player.tscn")
 	var player = player_scene.instantiate()
 	root.add_child(player)
 

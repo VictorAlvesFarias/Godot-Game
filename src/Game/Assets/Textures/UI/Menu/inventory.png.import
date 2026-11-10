@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://jhjg6b8mfxw4"
-path="res://.godot/imported/inventory.png-183a22b04c954df50dc4fc558aa8b731.ctex"
+path="res://.godot/imported/inventory.png-4474214b5f96b5dff52bb2f401480fb4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/UI/Menu/inventory.png"
-dest_files=["res://.godot/imported/inventory.png-183a22b04c954df50dc4fc558aa8b731.ctex"]
+source_file="res://src/Game/Assets/Textures/UI/Menu/inventory.png"
+dest_files=["res://.godot/imported/inventory.png-4474214b5f96b5dff52bb2f401480fb4.ctex"]
 
 [params]
 

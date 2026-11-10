@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://Features/World/Items/Entities/WorldItem.cs" id="1"]
-[ext_resource type="Shader" path="res://Assets/Shaders/world_item_bob.gdshader" id="2"]
+[ext_resource type="Script" path="res://src/Game/Features/World/Items/Entities/WorldItem.cs" id="1"]
+[ext_resource type="Shader" path="res://src/Game/Assets/Shaders/world_item_bob.gdshader" id="2"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bob"]
 shader = ExtResource("2")

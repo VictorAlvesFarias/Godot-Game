@@ -7,7 +7,7 @@ namespace Jogo25D.Enemies
     // Slime: anda aos pulos, persegue o jogador mais perto pulando atras dele, da dano por contato e solta Gosma ao morrer.
     // Nasce na superficie da dimensao invertida (EnemySpawner).
     [Unload(UnloadMode.Global)]
-    [SaveScene("slime", "res://Scenes/World/Enemies/Slime.tscn")]
+    [SaveScene("slime", "res://src/Game/Scenes/World/Enemies/Slime.tscn")]
     public partial class Slime : Enemy
     {
         #region Properties

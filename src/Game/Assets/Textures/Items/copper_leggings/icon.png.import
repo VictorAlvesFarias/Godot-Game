@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ctxj4sgryqdjy"
-path="res://.godot/imported/icon.png-b0a814880c68529112c8e20667ce4a99.ctex"
+path="res://.godot/imported/icon.png-3315793662bbcd524f7fa6850a6a7ac0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/copper_leggings/icon.png"
-dest_files=["res://.godot/imported/icon.png-b0a814880c68529112c8e20667ce4a99.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/copper_leggings/icon.png"
+dest_files=["res://.godot/imported/icon.png-3315793662bbcd524f7fa6850a6a7ac0.ctex"]
 
 [params]
 

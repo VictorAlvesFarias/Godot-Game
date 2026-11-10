@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://db2c5m47jt7cb"]
 
-[ext_resource type="Script" uid="uid://sqp8fjxk0jd3" path="res://Features/World/Characters/Entities/Player.cs" id="1"]
-[ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://Assets/Textures/Characters/character.png" id="5_47fxu"]
-[ext_resource type="Script" uid="uid://dmqd33hgbos61" path="res://Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
-[ext_resource type="Script" path="res://Features/World/Light/Entities/LightSource2D.cs" id="held_light"]
+[ext_resource type="Script" uid="uid://sqp8fjxk0jd3" path="res://src/Game/Features/World/Characters/Entities/Player.cs" id="1"]
+[ext_resource type="Texture2D" uid="uid://bi43plw8iye44" path="res://src/Game/Assets/Textures/Characters/character.png" id="5_47fxu"]
+[ext_resource type="Script" uid="uid://dmqd33hgbos61" path="res://src/Game/Features/World/Inputs/Systems/PlayerInput.cs" id="6"]
+[ext_resource type="Script" path="res://src/Game/Features/World/Light/Entities/LightSource2D.cs" id="held_light"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xa1bu"]
 atlas = ExtResource("5_47fxu")

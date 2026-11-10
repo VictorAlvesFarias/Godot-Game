@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://xtigttoj5asj"]
 
-[ext_resource type="Script" uid="uid://d3nt8u8ri3ndw" path="res://Features/UI/AddConnection/View/AddConnectionUI.cs" id="1"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://d3nt8u8ri3ndw" path="res://src/Game/Features/UI/AddConnection/View/AddConnectionUI.cs" id="1"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="AddConnectionMenu" type="CanvasLayer" unique_id=511004727]
 layer = 20

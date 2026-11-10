@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bf4415slytqt6"
-path="res://.godot/imported/texture.png-7708eae6d0ccf50623aa925be044e1c3.ctex"
+path="res://.godot/imported/texture.png-fb5c220816df11decf1f75913b3154ca.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/health_regen_potion/texture.png"
-dest_files=["res://.godot/imported/texture.png-7708eae6d0ccf50623aa925be044e1c3.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/health_regen_potion/texture.png"
+dest_files=["res://.godot/imported/texture.png-fb5c220816df11decf1f75913b3154ca.ctex"]
 
 [params]
 

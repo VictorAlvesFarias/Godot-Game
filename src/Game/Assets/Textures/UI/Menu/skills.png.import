@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c8jtg36cpovtk"
-path="res://.godot/imported/skills.png-52c297ec592917c20fa63dba721cf303.ctex"
+path="res://.godot/imported/skills.png-cb8115b8794f0caafcf0f5a192b7fab9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/UI/Menu/skills.png"
-dest_files=["res://.godot/imported/skills.png-52c297ec592917c20fa63dba721cf303.ctex"]
+source_file="res://src/Game/Assets/Textures/UI/Menu/skills.png"
+dest_files=["res://.godot/imported/skills.png-cb8115b8794f0caafcf0f5a192b7fab9.ctex"]
 
 [params]
 

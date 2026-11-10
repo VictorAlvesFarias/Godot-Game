@@ -1,13 +1,13 @@
 [gd_resource type="TileSet" format=3 uid="uid://dcmg5j46t4phg"]
 
-[ext_resource type="Texture2D" uid="uid://chqbrrdyg2fn5" path="res://Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
-[ext_resource type="Texture2D" uid="uid://i1sppgx8b2cq" path="res://Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
-[ext_resource type="Texture2D" uid="uid://dl2ts7mjci0ns" path="res://Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
-[ext_resource type="Texture2D" uid="uid://bk1io2nc6nxe4" path="res://Assets/Textures/Tiles/olive/olive_grass_texture.png" id="4_olive_grass"]
-[ext_resource type="Texture2D" uid="uid://dvkeh42ry74vs" path="res://Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="5_olive_bordercap"]
-[ext_resource type="Texture2D" uid="uid://dpxfnyq2t3vbp" path="res://Assets/Textures/Tiles/olive/olive_base_texture.png" id="6_olive_base"]
-[ext_resource type="Texture2D" uid="uid://b6sfnibk7cj2g" path="res://Assets/Textures/Tiles/wood/wood_texture.png" id="7_wood"]
-[ext_resource type="Texture2D" uid="uid://dp7r58op6spql" path="res://Assets/Textures/Tiles/lime_leaf/sheet_texture.png" id="8_sheet"]
+[ext_resource type="Texture2D" uid="uid://chqbrrdyg2fn5" path="res://src/Game/Assets/Textures/Tiles/lime/lime_grass_texture.png" id="1_lime_grass"]
+[ext_resource type="Texture2D" uid="uid://i1sppgx8b2cq" path="res://src/Game/Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="2_lime_bordercap"]
+[ext_resource type="Texture2D" uid="uid://dl2ts7mjci0ns" path="res://src/Game/Assets/Textures/Tiles/lime/lime_base_texture.png" id="3_lime_base"]
+[ext_resource type="Texture2D" uid="uid://bk1io2nc6nxe4" path="res://src/Game/Assets/Textures/Tiles/olive/olive_grass_texture.png" id="4_olive_grass"]
+[ext_resource type="Texture2D" uid="uid://dvkeh42ry74vs" path="res://src/Game/Assets/Textures/Tiles/olive/olive_bordercap_texture.png" id="5_olive_bordercap"]
+[ext_resource type="Texture2D" uid="uid://dpxfnyq2t3vbp" path="res://src/Game/Assets/Textures/Tiles/olive/olive_base_texture.png" id="6_olive_base"]
+[ext_resource type="Texture2D" uid="uid://b6sfnibk7cj2g" path="res://src/Game/Assets/Textures/Tiles/wood/wood_texture.png" id="7_wood"]
+[ext_resource type="Texture2D" uid="uid://dp7r58op6spql" path="res://src/Game/Assets/Textures/Tiles/lime_leaf/sheet_texture.png" id="8_sheet"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_grass"]
 texture = ExtResource("1_lime_grass")

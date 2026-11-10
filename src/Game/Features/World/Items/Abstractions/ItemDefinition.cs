@@ -36,7 +36,7 @@ namespace Jogo25D.Items
         // Pixels do mundo por pixel da arte: a mesma grade do jogador (character.png em pixel real, desenhada em escala 2).
         public virtual float WorldPixelScale => 2f;
 
-        private const string TexturesDir = "res://Assets/Textures/Items";
+        private const string TexturesDir = "res://src/Game/Assets/Textures/Items";
 
         private (bool Loaded, Texture2D Texture) _texture;
         private (bool Loaded, Texture2D Texture) _icon;

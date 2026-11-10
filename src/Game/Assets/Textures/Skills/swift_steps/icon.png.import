@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b11mu41fxjwpp"
-path="res://.godot/imported/icon.png-7b9895875fc027fe74f7a09a650df943.ctex"
+path="res://.godot/imported/icon.png-30a243c655f37822c1250f742ae9d4b2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Skills/swift_steps/icon.png"
-dest_files=["res://.godot/imported/icon.png-7b9895875fc027fe74f7a09a650df943.ctex"]
+source_file="res://src/Game/Assets/Textures/Skills/swift_steps/icon.png"
+dest_files=["res://.godot/imported/icon.png-30a243c655f37822c1250f742ae9d4b2.ctex"]
 
 [params]
 

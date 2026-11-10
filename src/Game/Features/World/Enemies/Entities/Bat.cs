@@ -8,7 +8,7 @@ namespace Jogo25D.Enemies
     // dele e da rasantes, com dano por contato. Morre caindo e piscando, e solta Asa de morcego. Nasce no subterraneo da
     // dimensao invertida (EnemySpawner).
     [Unload(UnloadMode.Global)]
-    [SaveScene("bat", "res://Scenes/World/Enemies/Bat.tscn")]
+    [SaveScene("bat", "res://src/Game/Scenes/World/Enemies/Bat.tscn")]
     public partial class Bat : Enemy
     {
         #region Properties

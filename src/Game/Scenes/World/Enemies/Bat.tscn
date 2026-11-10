@@ -1,9 +1,9 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Features/World/Enemies/Entities/Bat.cs" id="1_bat"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/fly.png" id="2_fly"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/attack.png" id="3_attack"]
-[ext_resource type="Texture2D" path="res://Assets/Textures/Characters/bat/hurt.png" id="4_hurt"]
+[ext_resource type="Script" path="res://src/Game/Features/World/Enemies/Entities/Bat.cs" id="1_bat"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/Characters/bat/fly.png" id="2_fly"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/Characters/bat/attack.png" id="3_attack"]
+[ext_resource type="Texture2D" path="res://src/Game/Assets/Textures/Characters/bat/hurt.png" id="4_hurt"]
 
 [sub_resource type="AtlasTexture" id="Atlas_fly_0"]
 atlas = ExtResource("2_fly")

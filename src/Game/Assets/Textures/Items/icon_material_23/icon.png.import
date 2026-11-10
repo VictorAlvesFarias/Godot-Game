@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dnxmraoki433y"
-path="res://.godot/imported/icon.png-f3012d16928f99485c35ae945eaf4a82.ctex"
+path="res://.godot/imported/icon.png-5ee3dc3ea131b9af0745c44c4d5df45a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/icon_material_23/icon.png"
-dest_files=["res://.godot/imported/icon.png-f3012d16928f99485c35ae945eaf4a82.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/icon_material_23/icon.png"
+dest_files=["res://.godot/imported/icon.png-5ee3dc3ea131b9af0745c44c4d5df45a.ctex"]
 
 [params]
 

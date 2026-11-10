@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://doqaucmg6lco6"]
 
-[ext_resource type="Script" uid="uid://36nhqt565xb8" path="res://Features/UI/Common/View/HostModalUI.cs" id="1"]
-[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://Assets/Themes/PixelTheme.tres" id="theme_pixel"]
+[ext_resource type="Script" uid="uid://36nhqt565xb8" path="res://src/Game/Features/UI/Common/View/HostModalUI.cs" id="1"]
+[ext_resource type="Theme" uid="uid://cssl4qiyytpn4" path="res://src/Game/Assets/Themes/PixelTheme.tres" id="theme_pixel"]
 
 [node name="HostModal" type="CanvasLayer" unique_id=1256554899]
 layer = 30

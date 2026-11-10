@@ -24,7 +24,7 @@ namespace Jogo25D.UI
         // Intervalo, em segundos, entre as checagens de estacoes proximas com a tela aberta.
         private const double StationCheckInterval = 0.25;
 
-        private static readonly PackedScene RecipeRowScene = GD.Load<PackedScene>("res://Scenes/Ui/GameMenu/Components/RecipeRow.tscn");
+        private static readonly PackedScene RecipeRowScene = GD.Load<PackedScene>("res://src/Game/Scenes/Ui/GameMenu/Components/RecipeRow.tscn");
 
         private HashSet<string> _nearStations = new();
         private double _stationCheckElapsed;

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d2s5vb1qv6vyy"
-path="res://.godot/imported/texture.png-9b0be6ade39fbc46fbf6afe8951f7a1c.ctex"
+path="res://.godot/imported/texture.png-b6b83c1082b8772ba529ab5017e081d8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/copper_bar/texture.png"
-dest_files=["res://.godot/imported/texture.png-9b0be6ade39fbc46fbf6afe8951f7a1c.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/copper_bar/texture.png"
+dest_files=["res://.godot/imported/texture.png-b6b83c1082b8772ba529ab5017e081d8.ctex"]
 
 [params]
 

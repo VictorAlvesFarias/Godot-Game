@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://brocco443adsu"
-path="res://.godot/imported/icon.png-15885196ca56c41580fcddb0b82b9698.ctex"
+path="res://.godot/imported/icon.png-9ad318486ef9e9e167f72e8dccdf24c4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/swift_boots/icon.png"
-dest_files=["res://.godot/imported/icon.png-15885196ca56c41580fcddb0b82b9698.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/swift_boots/icon.png"
+dest_files=["res://.godot/imported/icon.png-9ad318486ef9e9e167f72e8dccdf24c4.ctex"]
 
 [params]
 

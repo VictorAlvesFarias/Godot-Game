@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://ba33q55cib503"
-path="res://.godot/imported/icon.png-98ffbf3b71f6a29fe6f582116788ff4a.ctex"
+path="res://.godot/imported/icon.png-20dd5631f2d5862c669626387c9ff8a4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Textures/Items/wall_hammer/icon.png"
-dest_files=["res://.godot/imported/icon.png-98ffbf3b71f6a29fe6f582116788ff4a.ctex"]
+source_file="res://src/Game/Assets/Textures/Items/wall_hammer/icon.png"
+dest_files=["res://.godot/imported/icon.png-20dd5631f2d5862c669626387c9ff8a4.ctex"]
 
 [params]
 

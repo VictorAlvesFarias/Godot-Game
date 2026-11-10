@@ -1,6 +1,6 @@
 [gd_resource type="TileSet" format=3 uid="uid://5ph75ebb6yihr"]
 
-[ext_resource type="Texture2D" uid="uid://ct2lu7jdjvcug" path="res://Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="1_lime_bordercap"]
+[ext_resource type="Texture2D" uid="uid://ct2lu7jdjvcug" path="res://src/Game/Assets/Textures/Tiles/lime/lime_bordercap_texture.png" id="1_lime_bordercap"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lime_bordercap"]
 texture = ExtResource("1_lime_bordercap")
